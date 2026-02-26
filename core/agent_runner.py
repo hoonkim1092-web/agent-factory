@@ -89,8 +89,11 @@ class AgentRunner:
         if not lines and isinstance(agent.get("persona"), dict):
             lines = agent["persona"].get("signature_lines")
         if isinstance(lines, list):
-            return [str(x) for x in lines if str(x).strip()]
-        return []
+            normalized = [str(x).strip() for x in lines if str(x).strip()]
+            if normalized:
+                return normalized
+        role = str(agent.get("role", "General")).strip() or "General"
+        return [f"{role} 진행 시작합니다."]
 
     def _build_policy(self, agent: dict, loaded_skill_ids: list[str]) -> dict:
         rr = agent.get("runtime_rules", {}) if isinstance(agent, dict) else {}

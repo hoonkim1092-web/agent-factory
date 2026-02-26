@@ -107,6 +107,16 @@ def _save_registry(data: Dict):
     _generate_docs(normalized)
 
 
+def load_registry() -> Dict:
+    """Public registry read API used by runtime modules."""
+    return _load_registry()
+
+
+def save_registry(data: Dict):
+    """Public registry write API used by runtime modules."""
+    _save_registry(data)
+
+
 def _generate_docs(registry_data: Dict):
     skills = registry_data.get("skills", {}) if isinstance(registry_data, dict) else {}
     docs_content = [

@@ -2229,6 +2229,366 @@
       "approval_rejects": 0,
       "build_enabled": true,
       "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:32:36",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": [
+        "new_skill"
+      ]
+    },
+    {
+      "ts": "2026-02-26T02:32:36",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:32:36",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "track issues",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:32:37",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "do something new",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:32:37",
+      "type": "workflow_run",
+      "project_id": "default",
+      "workflow_path": "D:\\agent-factory\\tests\\_tmp\\af-test-2c90abf0\\wf.yaml",
+      "stage_count": 2,
+      "run_count": 4,
+      "base_roles": [
+        "Lilith",
+        "Himari"
+      ],
+      "ok": true,
+      "state_path": "D:\\agent-factory\\projects\\default\\runs\\wf_1772040757\\state.json"
+    },
+    {
+      "ts": "2026-02-26T02:37:45",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "track issues",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:37:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "do something new",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:37:46",
+      "type": "workflow_run",
+      "project_id": "default",
+      "workflow_path": "D:\\agent-factory\\tests\\_tmp\\af-test-c672c914\\wf.yaml",
+      "stage_count": 2,
+      "run_count": 4,
+      "base_roles": [
+        "Lilith",
+        "Himari"
+      ],
+      "ok": true,
+      "state_path": "D:\\agent-factory\\projects\\default\\runs\\wf_1772041066\\state.json"
+    },
+    {
+      "ts": "2026-02-26T02:37:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": [
+        "new_skill"
+      ]
+    },
+    {
+      "ts": "2026-02-26T02:37:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:38:20",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "track issues",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:38:20",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "do something new",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:38:20",
+      "type": "workflow_run",
+      "project_id": "default",
+      "workflow_path": "D:\\agent-factory\\tests\\_tmp\\af-test-8d0920f8\\wf.yaml",
+      "stage_count": 2,
+      "run_count": 4,
+      "base_roles": [
+        "Lilith",
+        "Himari"
+      ],
+      "ok": true,
+      "state_path": "D:\\agent-factory\\projects\\default\\runs\\wf_1772041100\\state.json"
+    },
+    {
+      "ts": "2026-02-26T02:38:21",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": [
+        "new_skill"
+      ]
+    },
+    {
+      "ts": "2026-02-26T02:38:21",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:09",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "track issues",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:09",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "do something new",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:09",
+      "type": "workflow_run",
+      "project_id": "default",
+      "workflow_path": "D:\\agent-factory\\tests\\_tmp\\af-test-3616e20f\\wf.yaml",
+      "stage_count": 2,
+      "run_count": 4,
+      "base_roles": [
+        "Lilith",
+        "Himari"
+      ],
+      "ok": true,
+      "state_path": "D:\\agent-factory\\projects\\default\\runs\\wf_1772041209\\state.json"
+    },
+    {
+      "ts": "2026-02-26T02:40:09",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": [
+        "new_skill"
+      ]
+    },
+    {
+      "ts": "2026-02-26T02:40:09",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "track issues",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "do something new",
+      "skills_loaded": [],
+      "ok": false,
+      "reason": "",
+      "latency_ms": 0,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
+    },
+    {
+      "ts": "2026-02-26T02:40:46",
+      "type": "workflow_run",
+      "project_id": "default",
+      "workflow_path": "D:\\agent-factory\\tests\\_tmp\\af-test-e74554ce\\wf.yaml",
+      "stage_count": 2,
+      "run_count": 4,
+      "base_roles": [
+        "Lilith",
+        "Himari"
+      ],
+      "ok": true,
+      "state_path": "D:\\agent-factory\\projects\\default\\runs\\wf_1772041246\\state.json"
+    },
+    {
+      "ts": "2026-02-26T02:40:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": [
+        "new_skill"
+      ]
+    },
+    {
+      "ts": "2026-02-26T02:40:46",
+      "type": "single_run",
+      "project_id": "default",
+      "role": "General",
+      "task": "x",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "gemini",
+      "latency_ms": 1,
+      "approval_rejects": 0,
+      "build_enabled": true,
+      "missing_skills_detected": []
     }
   ]
 }

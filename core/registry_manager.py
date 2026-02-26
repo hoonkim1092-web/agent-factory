@@ -7,17 +7,22 @@ from core.utils import (
     read_skill_lock, lock_skill_state, append_dashboard_run
 )
 from core.config_paths import (
-    REGISTRY_PATH, SKILLS_DIR, EXTERNAL_CACHE_DIR, WORKFLOW_PATH
+    SKILLS_DIR, EXTERNAL_CACHE_DIR, WORKFLOW_PATH
 )
 from core.policy import resolve_quality_gate_policy
+from core import skill_registry as skill_registry_api
 
 def read_project_policies():
     from core.config_paths import POLICIES_PATH
     return read_yaml(POLICIES_PATH)
 
 def ensure_registry_files():
-    if not os.path.exists(REGISTRY_PATH):
-        write_yaml(REGISTRY_PATH, {"skills": {}, "install_candidates": {}})
+    reg = skill_registry_api.load_registry()
+    if not isinstance(reg, dict):
+        reg = {"skills": {}, "install_candidates": {}}
+    reg.setdefault("skills", {})
+    reg.setdefault("install_candidates", {})
+    skill_registry_api.save_registry(reg)
 
 class RegistryManager:
     """Manages the global skill registry and external skill installations."""
@@ -26,7 +31,7 @@ class RegistryManager:
         self._normalize_registry_paths()
 
     def _read_registry(self) -> dict:
-        reg = read_yaml(REGISTRY_PATH)
+        reg = skill_registry_api.load_registry()
         if not isinstance(reg, dict):
             reg = {}
         reg.setdefault("skills", {})
@@ -37,7 +42,7 @@ class RegistryManager:
         reg = reg if isinstance(reg, dict) else {}
         reg.setdefault("skills", {})
         reg.setdefault("install_candidates", {})
-        write_yaml(REGISTRY_PATH, reg)
+        skill_registry_api.save_registry(reg)
 
     def _tokenize(self, text: str) -> set[str]:
         return {t for t in safe_id(text).split("_") if t}
@@ -185,6 +190,7 @@ class RegistryManager:
         sid = safe_id(need_id)
         src = self._resolve_path(source_path)
         if not src: return False, "source_not_found"
+        stage = safe_id(self._quality_gate_policy().get("default_stage_on_build", "candidate"))
 
         skill_py: str | None = None
         if os.path.isdir(src):
@@ -203,18 +209,18 @@ class RegistryManager:
 
         meta = {
             "id": sid, "name": sid, "version": "1.0.0", "capabilities": [sid],
-            "status": "active", "updated_at": now_iso(), "source": source_label, "source_path": skill_py,
+            "status": stage, "updated_at": now_iso(), "source": source_label, "source_path": skill_py,
         }
         write_yaml(target_meta, meta)
 
         reg = self._read_registry()
         reg["skills"][sid] = {
-            "id": sid, "name": sid, "status": "active", "version": "1.0.0",
+            "id": sid, "name": sid, "status": stage, "version": "1.0.0",
             "capabilities": [sid], "path": to_portable_path(target_py),
             "meta_path": to_portable_path(target_meta), "updated_at": now_iso(), "last_test_ok": True,
         }
         self._write_registry(reg)
-        lock_skill_state(sid, {"version": "1.0.0", "status": "active"})
+        lock_skill_state(sid, {"version": "1.0.0", "status": stage})
         return True, sid
 
     def resolve_and_install_external(self, needs: list[str], reqs: dict | None = None) -> dict[str, str]:

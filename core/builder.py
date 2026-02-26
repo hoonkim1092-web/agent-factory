@@ -86,7 +86,7 @@ Evidence(JSON): {json.dumps(target_evidence, ensure_ascii=False)}
                 meta = {
                     "id": skill_id,
                     "name": skill_name,
-                    "status": "active",
+                    "status": "candidate",
                     "version": "0.1.0",
                     "capabilities": [skill_name],
                     "created_at": now_iso(),

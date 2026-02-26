@@ -4,10 +4,11 @@ import subprocess
 import sys
 import google.generativeai as genai
 from core.utils import (
-    safe_id, read_yaml, write_yaml, now_iso, get_random_signature,
+    safe_id, read_yaml, now_iso, get_random_signature,
     print_agent_msg, safe_json_load, resolve_skill_paths, resolve_existing_path
 )
-from core.config_paths import AGENTS_DIR, REGISTRY_PATH
+from core.config_paths import AGENTS_DIR
+from core import skill_registry as skill_registry_api
 from core.research_engine import query_notebooklm
 
 class HimariResearchAgent:
@@ -30,7 +31,7 @@ class HimariResearchAgent:
             return False
 
     def _registry_skill_index(self) -> dict:
-        reg = read_yaml(REGISTRY_PATH)
+        reg = skill_registry_api.load_registry()
         items = reg.get("skills", {}) if isinstance(reg, dict) else {}
         idx: dict = {}
         for sid, meta in items.items():

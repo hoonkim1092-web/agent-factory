@@ -68,7 +68,7 @@ if not os.path.exists(DASHBOARD_PATH):
 if not os.path.exists(PROJECT_WORKFLOW_PATH):
     with open(PROJECT_WORKFLOW_PATH, "w", encoding="utf-8") as f:
         yaml.dump(
-            {"owner_agent": "General", "stages": [{"id": "MAIN", "name": "Main", "objective": "기본 워크플로우"}]},
+            {"owner_agent": "Lilith", "stages": [{"id": "MAIN", "name": "Main", "objective": "기본 워크플로우"}]},
             f,
             allow_unicode=True,
             default_flow_style=False,
@@ -402,7 +402,7 @@ class AgentFactory:
         stages = wf.get("stages", []) if isinstance(wf.get("stages"), list) else []
         picked_roles = [r.strip() for r in (role_specs or []) if str(r).strip()]
         if not picked_roles:
-            picked_roles = [owner] if owner else ["General"]
+            picked_roles = [owner] if owner else ["Lilith"]
 
         if not stages:
             stages = [{"id": "MAIN", "name": "Main", "objective": task_input}]
@@ -497,6 +497,7 @@ if __name__ == "__main__":
         task_input=task_input,
         role_spec="General",
     )
+
 
 
 
