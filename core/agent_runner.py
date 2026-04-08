@@ -91,6 +91,22 @@ class FallbackRejectedError(RuntimeError):
 # [중복 제거 완료] quick_guard, BANNED_*, build_child_env, run_isolated ->
 # core/security_guard.py에 정의, core/utils.py를 통해 re-export됨.
 
+# 4-a) Async helper — safe bridge for sync→async calls
+# =============================================================================
+def _run_async_safe(coro):
+    """asyncio.run() 대체: 이미 event loop이 돌고 있으면 별도 스레드에서 실행."""
+    import asyncio as _aio
+    try:
+        loop = _aio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(_aio.run, coro).result(timeout=10)
+    return _aio.run(coro)
+
+
 # 4) Agent / Requirements
 # =============================================================================
 class AgentRunner:
@@ -871,7 +887,22 @@ class AgentRunner:
                     _safe_print(f"[Feedback] runtime event write failed: {exc}")
                     break
 
+        _mem_ki_hook = None
+        _mem_mc_hook = None
+        _mem_facade = None
+
         def _flush_trace(result: dict):
+            # ── Memory Shutdown: 에피소드 flush + 어댑터 정리 ──
+            if _mem_mc_hook:
+                try:
+                    _run_async_safe(_mem_mc_hook.flush(timeout=5.0))
+                except Exception:
+                    pass
+            if _mem_facade:
+                try:
+                    _run_async_safe(_mem_facade.shutdown())
+                except Exception:
+                    pass
             # 글로벌 토큰 예산 기록
             try:
                 from core.run_budget import get_run_budget
@@ -950,10 +981,7 @@ class AgentRunner:
         except Exception as _dr_err:
             _safe_print(f"[Runner] DesignReviewHook registration failed: {_dr_err}")
 
-        _mem_ki_hook = None
-        _mem_mc_hook = None
         try:
-            import asyncio as _asyncio
             from core.memory_system.knowledge_injection import KnowledgeInjectionHook
             from core.hooks.memory_consolidation import MemoryConsolidationHook
             from core.memory_system.facade import UnifiedMemoryFacade
@@ -964,13 +992,50 @@ class AgentRunner:
             _mem_mc_hook = MemoryConsolidationHook()
 
             _agent_name = str(agent.get("name", ""))
-            _mem_facade = UnifiedMemoryFacade(project_id=str(project_id or "agent_factory"))
+            _pid = str(project_id or "agent_factory")
+            _mem_facade = UnifiedMemoryFacade(project_id=_pid)
+
+            # ── 항상 등록 (외부 의존성 없음) ─────────────────────
             _mem_graph_adapter = KnowledgeGraphAdapter(workspace=str(target_workspace))
             _mem_facade.register_adapter(CoreMemoryAdapter(agent_id=_agent_name or None))
             _mem_facade.register_adapter(_mem_graph_adapter)
+
             try:
-                _asyncio.run(_mem_facade.initialise())
-            except RuntimeError:
+                from core.memory_system.adapters.ast_hub import AstHubAdapter
+                _mem_facade.register_adapter(AstHubAdapter(workspace=str(target_workspace)))
+            except Exception as _e:
+                _safe_print(f"[Memory] AstHubAdapter skipped: {_e}")
+
+            try:
+                from core.memory_system.adapters.continuity import ContinuityAdapter
+                _mem_facade.register_adapter(ContinuityAdapter(workspace=str(target_workspace)))
+            except Exception as _e:
+                _safe_print(f"[Memory] ContinuityAdapter skipped: {_e}")
+
+            try:
+                from core.memory_system.adapters.trace_log import TraceLogAdapter
+                _trace_logs = os.path.join(str(target_workspace), ".system_generated", "logs")
+                _mem_facade.register_adapter(TraceLogAdapter(logs_dir=_trace_logs))
+            except Exception as _e:
+                _safe_print(f"[Memory] TraceLogAdapter skipped: {_e}")
+
+            # ── 조건부 등록 (외부 의존성) ─────────────────────
+            try:
+                from core.memory_system.adapters.cortex_vector import CortexVectorAdapter
+                _mem_facade.register_adapter(CortexVectorAdapter(project_id=_pid))
+            except Exception as _e:
+                _safe_print(f"[Memory] CortexVectorAdapter skipped: {_e}")
+
+            try:
+                from core.memory_system.adapters.sync_compyne import SyncCompyneAdapter
+                _mem_facade.register_adapter(SyncCompyneAdapter(project_path=str(target_workspace)))
+            except Exception as _e:
+                _safe_print(f"[Memory] SyncCompyneAdapter skipped: {_e}")
+
+            # ── 초기화 ──
+            try:
+                _run_async_safe(_mem_facade.initialise())
+            except Exception:
                 pass
 
             _mem_mc_hook.set_facade(_mem_facade)
@@ -980,6 +1045,8 @@ class AgentRunner:
 
             bus.register(_mem_ki_hook)
             bus.register(_mem_mc_hook)
+
+            _safe_print(f"[Memory] adapters={_mem_facade.adapter_names}")
         except Exception as _mem_err:
             _safe_print(f"[Runner] Memory hooks registration failed: {_mem_err}")
 

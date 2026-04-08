@@ -40,7 +40,9 @@
       "Bash(codex mcp-server:*)",
       "Bash(claude mcp:*)",
       "Bash(claude plugin:*)",
-      "Bash(cat D:/hoonProJect/worktrees/agent-factory/.af_review_queue/pending/*.json)"
+      "Bash(cat D:/hoonProJect/worktrees/agent-factory/.af_review_queue/pending/*.json)",
+      "Bash(./end_db agent-factory:*)",
+      "Bash(bash start_db:*)"
     ]
   },
   "hooks": {
