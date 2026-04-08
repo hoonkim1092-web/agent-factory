@@ -151,9 +151,14 @@ def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_p
 
     factory.agent_mgr.get_or_create = _get_or_create
     procure_calls = []
-    factory.procurer.procure_multiple = lambda **kwargs: procure_calls.append(
-        (kwargs["agent"]["role"], list(kwargs["skill_names"]), kwargs["workspace"])
-    ) or list(kwargs["skill_names"])
+    def _mock_procure(**kwargs):
+        procure_calls.append(
+            (kwargs["agent"]["role"], list(kwargs["skill_names"]), kwargs["workspace"])
+        )
+        skills = list(kwargs["skill_names"])
+        manifest = [{"skill_id": s, "requested": True, "installed": True, "decision_mode": "direct_install", "reused_from": None, "forge_run_id": None, "fallback_chain": []} for s in skills]
+        return skills, manifest
+    factory.procurer.procure_multiple = _mock_procure
 
     import core.project_pipeline as pp
 
@@ -212,10 +217,10 @@ def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_p
     assert board_data["tasks"]
 
     plan_doc = (tmp_path / "docs" / "task_execution_plan.md").read_text(encoding="utf-8")
-    assert "# 작업 실행 계획" in plan_doc
-    assert "## 단계별 진행 순서" in plan_doc
-    assert "## 역할별 모듈 분해" in plan_doc
-    assert "## 역할 간 handoff 규칙" in plan_doc
+    assert "# Task Execution Plan" in plan_doc
+    assert "## Stage Order" in plan_doc
+    assert "## Module Breakdown By Role" in plan_doc
+    assert "## Handoff Rules" in plan_doc
 
     todo_text = (tmp_path / ".todo.md").read_text(encoding="utf-8")
     assert "Frontend Dev:" in todo_text

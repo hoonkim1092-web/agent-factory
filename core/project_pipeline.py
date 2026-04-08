@@ -111,6 +111,28 @@ class ProjectPipeline:
             tmp = f.name
         os.replace(tmp, path)
 
+    def _write_skill_manifest(self, workspace: str, role_id: str, run_id: str, entries: list[dict]) -> None:
+        """agents/{role_id}/skill_manifest.json — 스킬 조달 경로 기록 (projection)."""
+        rid = safe_id(role_id)
+        manifest_dir = os.path.join(workspace, "agents", rid)
+        os.makedirs(manifest_dir, exist_ok=True)
+        now_str = now_iso()
+        manifest = {
+            "role_id": rid,
+            "run_id": f"{run_id}_{rid}",
+            "skills": entries,
+            "summary": {
+                "requested": len(entries),
+                "installed": sum(1 for e in entries if e.get("installed")),
+                "by_mode": {},
+            },
+            "generated_at": now_str,
+        }
+        for e in entries:
+            mode = e.get("decision_mode", "unknown")
+            manifest["summary"]["by_mode"][mode] = manifest["summary"]["by_mode"].get(mode, 0) + 1
+        self._write_json(os.path.join(manifest_dir, "skill_manifest.json"), manifest)
+
     def _planning_dir(self, workspace: str) -> str:
         planning_dir = os.path.join(workspace, "planning")
         os.makedirs(planning_dir, exist_ok=True)
@@ -481,13 +503,30 @@ class ProjectPipeline:
             }
             write_yaml(agent_path, agent_data)
 
+            # role_spec.json — 역할 계약만 분리한 파생 뷰 (projection)
+            role_spec = {
+                "role_id": role_id,
+                "name": role_name,
+                "objective": objective,
+                "required_skills": required_skills,
+                "owned_modules": agent_data["project_role"]["owned_modules"],
+                "feature_slices": feature_slices,
+                "planning_steps": agent_data["project_role"]["planning_steps"],
+                "source": "planning/role_plan.json",
+                "generated_at": now_iso(),
+            }
+            spec_dir = os.path.join(workspace, "agents", role_id)
+            os.makedirs(spec_dir, exist_ok=True)
+            self._write_json(os.path.join(spec_dir, "role_spec.json"), role_spec)
+
+            manifest_entries: list[dict] = []
             if required_skills and enable_build:
                 reqs = {
                     "goal": objective or project_brief.get("goal") or role_name,
                     "constraints": list(project_brief.get("constraints") or []),
                     "missing_skills": required_skills,
                 }
-                installed = self.procurer.procure_multiple(
+                installed, manifest_entries = self.procurer.procure_multiple(
                     agent=agent_data,
                     skill_names=required_skills,
                     reqs=reqs,
@@ -500,8 +539,16 @@ class ProjectPipeline:
             elif required_skills:
                 self.agent_mgr.install_skills(role_id, required_skills, workspace=workspace)
                 installed_map[role_id] = list(required_skills)
+                manifest_entries = [
+                    {"skill_id": s, "requested": True, "installed": True, "decision_mode": "direct_install", "reused_from": None, "forge_run_id": None, "fallback_chain": []}
+                    for s in required_skills
+                ]
             else:
                 installed_map[role_id] = []
+
+            # skill_manifest.json 저장 (projection)
+            if manifest_entries:
+                self._write_skill_manifest(workspace, role_id, run_id, manifest_entries)
 
             roles.append(role_id)
 

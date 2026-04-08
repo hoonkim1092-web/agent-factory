@@ -56,7 +56,7 @@ def test_procure_multiple_reuses_high_confidence_candidate(monkeypatch, tmp_path
     agent_mgr = _AgentMgr()
     registry = _Registry()
     orchestrator = sp.SkillOrchestrator(registry, _Research(), _Builder(), agent_mgr)
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -67,6 +67,69 @@ def test_procure_multiple_reuses_high_confidence_candidate(monkeypatch, tmp_path
     assert registry.lock_calls == ["candidate_skill"]
     assert agent_mgr.calls == [("General", ["candidate_skill"], None)]
 
+
+def test_shadow_reuse_approval_denied_records_manifest_entry(monkeypatch, tmp_path):
+    sp = _load_skill_procurer()
+    candidate_path = tmp_path / "candidate_skill.py"
+    candidate_path.write_text("def apply(ctx):\n    return {'ok': True}\n", encoding="utf-8")
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda sid: (str(candidate_path), None) if sid == "candidate_skill" else (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            del build_targets
+            return {
+                "evidence_pack": {
+                    "targets": {
+                        "new_skill": {
+                            "top_candidate": "candidate_skill",
+                            "verified": True,
+                            "top_score": 65,
+                            "candidates": [],
+                        }
+                    }
+                }
+            }
+
+    class _Registry:
+        def __init__(self):
+            self.registered = []
+
+        def resolve_and_install_external_detailed(self, needs, reqs=None, evidence_pack=None):
+            return {"installed": {}, "results": {needs[0]: {"need_id": needs[0], "installed_skill_id": "", "installed_from": "", "attempts": []}}}
+
+        def register_built(self, meta, skill_dir):
+            self.registered.append((meta["id"], skill_dir))
+
+        def workflow_apply(self, metas):
+            pass
+
+        def is_installable(self, _skill_id):
+            return True
+
+    class _Builder:
+        def build_skill(self, **kwargs):
+            raise AssertionError("builder should not run when approval denied")
+
+    def _deny_build_only(role, skill_ids, action, auto_approve):
+        return action != "build"
+
+    agent_mgr = _AgentMgr()
+    builder = _Builder()
+    registry = _Registry()
+    orchestrator = sp.SkillOrchestrator(registry, _Research(), builder, agent_mgr)
+    installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "General"},
+        skill_names=["new_skill"],
+        reqs={"goal": "g", "constraints": []},
+        run_id="run_shadow_denied",
+        approval_gate=_deny_build_only,
+    )
+
+    assert installed == []
+    shadow_entries = [m for m in manifest if m["decision_mode"] == "shadow_reuse"]
+    assert len(shadow_entries) == 1
+    assert shadow_entries[0]["installed"] is False
+    assert shadow_entries[0]["reused_from"] == "candidate_skill"
 
 
 def test_procure_multiple_medium_confidence_candidate_prefers_adaptation_build(monkeypatch):
@@ -82,7 +145,7 @@ def test_procure_multiple_medium_confidence_candidate_prefers_adaptation_build(m
                         "new_skill": {
                             "top_candidate": "candidate_skill",
                             "verified": True,
-                            "top_score": 70,
+                            "top_score": 65,
                             "candidates": [],
                         }
                     }
@@ -93,9 +156,6 @@ def test_procure_multiple_medium_confidence_candidate_prefers_adaptation_build(m
         def __init__(self):
             self.registered = []
             self.workflow_calls = []
-
-        def resolve_and_install_external_detailed(self, needs, reqs=None, evidence_pack=None):
-            raise AssertionError("external install should be skipped for shadow_reuse adaptation")
 
         def register_built(self, meta, skill_dir):
             self.registered.append((meta["id"], skill_dir))
@@ -118,7 +178,7 @@ def test_procure_multiple_medium_confidence_candidate_prefers_adaptation_build(m
     builder = _Builder()
     registry = _Registry()
     orchestrator = sp.SkillOrchestrator(registry, _Research(), builder, agent_mgr)
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -151,7 +211,7 @@ def test_procure_multiple_writes_feedback_events_for_shadow_reuse(monkeypatch, t
                         "new_skill": {
                             "top_candidate": "candidate_skill",
                             "verified": True,
-                            "top_score": 70,
+                            "top_score": 65,
                             "candidates": [],
                         }
                     }
@@ -184,7 +244,7 @@ def test_procure_multiple_writes_feedback_events_for_shadow_reuse(monkeypatch, t
     project_root.mkdir(parents=True, exist_ok=True)
 
     orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -296,7 +356,7 @@ def test_procure_multiple_promotes_built_skill_before_install(monkeypatch, tmp_p
     agent_mgr = _AgentMgr()
     registry = _Registry()
     orchestrator = sp.SkillOrchestrator(registry, _Research(), _Builder(), agent_mgr)
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},

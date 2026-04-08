@@ -41,7 +41,7 @@ def test_procure_multiple_logs_no_key_builder_guidance(monkeypatch):
             return False, None, {"last_test_detail": {"reason": "no_api_key"}}
 
     orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -66,7 +66,7 @@ def test_procure_multiple_logs_cli_builder_failure_detail(monkeypatch):
             return False, None, {"last_test_detail": {"reason": "gemini_cli", "detail": "timeout"}}
 
     orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},

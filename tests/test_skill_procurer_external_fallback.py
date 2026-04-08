@@ -61,7 +61,7 @@ def test_procure_multiple_passes_external_attempts_to_builder(monkeypatch):
             return False, None, {"last_test_detail": {"reason": "no_api_key"}}
 
     orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -101,7 +101,7 @@ def test_procure_multiple_denied_external_install_can_still_build(monkeypatch):
         return action == "build"
 
     orchestrator = sp.SkillOrchestrator(_RegistryNoExternal(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["new_skill"],
         reqs={"goal": "g", "constraints": []},
@@ -142,7 +142,7 @@ def test_procure_multiple_legacy_external_miss_stays_as_miss(monkeypatch):
             return False, None, {"last_test_detail": {"reason": "no_api_key"}}
 
     orchestrator = sp.SkillOrchestrator(_LegacyRegistry(), _Research(), _Builder(), _AgentMgr())
-    installed = orchestrator.procure_multiple(
+    installed, _manifest = orchestrator.procure_multiple(
         agent={"role": "General"},
         skill_names=["legacy_skill"],
         reqs={"goal": "g", "constraints": []},

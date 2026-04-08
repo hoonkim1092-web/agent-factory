@@ -33,8 +33,13 @@
 - 빌드 zip은 LFS로 `dist/af-{version}.zip` 커밋
 - 태그 형식: `af-fsa_v{version}`
 
-## Hook 설치 (레포 클론 후 1회)
+## 개발 환경 설정 (새 PC / 클론 후 1회)
 
+```bash
+setup-dev.cmd
+```
+
+또는 수동:
 ```bash
 git config core.hooksPath .githooks
 ```

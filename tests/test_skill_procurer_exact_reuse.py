@@ -50,7 +50,7 @@ def test_procure_multiple_prefers_exact_skill_reuse(monkeypatch, tmp_path):
         called["install"].append(list(skill_ids)) or list(skill_ids)
     )
 
-    res = factory.procurer.procure_multiple(
+    res, manifest = factory.procurer.procure_multiple(
         agent={"role": "General"},
         skill_names=["issue_tracker"],
         reqs={"goal": "track issues", "constraints": [], "missing_skills": ["issue_tracker"]},
@@ -59,6 +59,8 @@ def test_procure_multiple_prefers_exact_skill_reuse(monkeypatch, tmp_path):
     )
 
     assert res == ["issue_tracker"]
+    assert len(manifest) == 1
+    assert manifest[0]["decision_mode"] == "exact_match"
     assert called["research"] == 0
     assert called["build"] == 0
     assert called["install"] == [["issue_tracker"]]

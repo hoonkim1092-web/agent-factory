@@ -11,17 +11,19 @@ scripts/design_review_watcher.py
   - 수동: python scripts/design_review_watcher.py <workspace>
   - 동기: python scripts/design_review_watcher.py <workspace> --sync <rel_path>
 
-idle 60초 후 자동 종료.
+idle 180초 후 자동 종료. heartbeat 기반 생존 증명.
 """
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -40,7 +42,8 @@ PROMPTS_DIR = os.path.join("scripts", "prompts")
 
 POLL_INTERVAL = 10   # seconds
 QUIET_PERIOD = 8     # seconds — 연속 편집 대기
-IDLE_TIMEOUT = 60    # seconds — 무활동 시 자동 종료
+IDLE_TIMEOUT = 180   # seconds — 무활동 시 자동 종료 (설계 문서 작성 2-5분 고려)
+MAX_PENDING_AGE = 900  # seconds — 이보다 오래된 pending은 stuck으로 간주
 REVIEW_TIMEOUT = 600 # seconds — 단일 리뷰 실행 제한 (codex 자율 탐색 고려)
 
 JUDGE_PRIORITY = ["claude", "codex", "gemini"]
@@ -459,10 +462,16 @@ def process_queue(workspace: str) -> int:
 # ── PID 관리 ──────────────────────────────────────────────────────────────────
 
 def _write_pid(workspace: str) -> None:
-    os.makedirs(os.path.join(workspace, QUEUE_DIR), exist_ok=True)
+    pid_dir = os.path.join(workspace, QUEUE_DIR)
+    os.makedirs(pid_dir, exist_ok=True)
     pid_path = os.path.join(workspace, PID_FILE)
-    with open(pid_path, "w") as f:
-        f.write(str(os.getpid()))
+    now = time.time()
+    data = {"pid": os.getpid(), "start_time": now, "heartbeat": now}
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=pid_dir)
+    with os.fdopen(tmp_fd, "w") as f:
+        json.dump(data, f)
+    os.replace(tmp_path, pid_path)
+    atexit.register(_remove_pid, workspace)
 
 
 def _remove_pid(workspace: str) -> None:
@@ -473,10 +482,38 @@ def _remove_pid(workspace: str) -> None:
         pass
 
 
+# ── pending 상태 확인 ─────────────────────────────────────────────────────────
+
+def _has_actionable_pending(workspace: str) -> bool:
+    """quiet period를 경과한 처리 가능한 pending이 있는지 확인.
+    stuck 파일(MAX_PENDING_AGE 초과)은 무시하여 watcher 영구 생존 방지."""
+    pending_dir = os.path.join(workspace, PENDING_DIR)
+    if not os.path.isdir(pending_dir):
+        return False
+    now = time.time()
+    for fname in os.listdir(pending_dir):
+        if not fname.endswith(".json"):
+            continue
+        fpath = os.path.join(pending_dir, fname)
+        try:
+            age = now - os.path.getmtime(fpath)
+        except OSError:
+            continue
+        if QUIET_PERIOD <= age <= MAX_PENDING_AGE:
+            return True
+    return False
+
+
 # ── 메인 루프 ─────────────────────────────────────────────────────────────────
 
 def run_daemon(workspace: str) -> None:
-    """폴링 데몬. idle timeout 후 자동 종료."""
+    """폴링 데몬. idle timeout 후 자동 종료. heartbeat로 생존 증명."""
+    # core/ 모듈에서 heartbeat 유틸 import (watcher에서 처음 사용)
+    try:
+        from core.design_review_utils import _update_heartbeat
+    except ImportError:
+        _update_heartbeat = None  # type: ignore[assignment]
+
     _write_pid(workspace)
     print(f"[watcher] Started (pid={os.getpid()}, idle_timeout={IDLE_TIMEOUT}s)")
 
@@ -487,6 +524,14 @@ def run_daemon(workspace: str) -> None:
             processed = process_queue(workspace)
             if processed > 0:
                 last_activity = time.time()
+
+            # actionable pending이 있으면 idle 타이머 리셋
+            if _has_actionable_pending(workspace):
+                last_activity = time.time()
+
+            # heartbeat 갱신
+            if _update_heartbeat is not None:
+                _update_heartbeat(workspace)
 
             # idle timeout 체크
             if time.time() - last_activity > IDLE_TIMEOUT:

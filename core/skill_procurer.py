@@ -895,9 +895,10 @@ class SkillOrchestrator:
     ):
         installed: list[str] = []
         built_metas: list[dict] = []
+        manifest_entries: list[dict] = []  # skill_manifest.json 수집용
         targets = [normalize_skill_id(name) for name in skill_names if normalize_skill_id(name)]
         if not targets:
-            return installed
+            return installed, manifest_entries
 
         feedback_loop = self._feedback_loop(workspace)
         agent_role = str(agent.get("role") or "")
@@ -922,6 +923,7 @@ class SkillOrchestrator:
         auto_approve = execution_mode == "fsa"
 
         for name in targets:
+            fallback_chain: list[str] = []
             if name in exact_matches:
                 install_ok = self._maybe_install_skill(agent, name, approval_gate, auto_approve)
                 if install_ok:
@@ -935,6 +937,7 @@ class SkillOrchestrator:
                     agent_role=agent_role,
                     payload={"path": exact_matches[name]},
                 )
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": install_ok, "decision_mode": "exact_match", "reused_from": None, "forge_run_id": None, "fallback_chain": []})
                 continue
 
             evidence = evidence_targets.get(name, {}) if isinstance(evidence_targets, dict) else {}
@@ -960,7 +963,9 @@ class SkillOrchestrator:
                 )
                 if install_ok:
                     installed.append(candidate_id)
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "ranked_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
                     continue
+                fallback_chain.append("ranked_reuse")
 
             if decision.mode == "enhance" and candidate_id and candidate_path:
                 self._log_reuse_decision(name, decision, candidate_path, outcome="enhance")
@@ -993,7 +998,9 @@ class SkillOrchestrator:
                     )
                     if install_ok:
                         installed.append(enhanced_id)
+                        manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "enhance", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
                         continue
+                    fallback_chain.append("enhance")
                 else:
                     # enhance 실패 → forge fallback
                     log("ENHANCE", f"enhance 실패 for '{name}': {enhanced.get('reason')}, forge로 fallback")
@@ -1007,6 +1014,7 @@ class SkillOrchestrator:
                         decision=decision,
                         payload={"enhance_reason": str(enhanced.get("reason", ""))},
                     )
+                    fallback_chain.append("enhance_fallback_forge")
                     # forge fallback은 아래 forge 블록에서 처리
 
             if decision.mode == "shadow_reuse" and candidate_id and candidate_path:
@@ -1032,6 +1040,7 @@ class SkillOrchestrator:
                         decision=decision,
                         payload={"candidate_path": candidate_path},
                     )
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
                     continue
                 built_id = self._build_and_register(
                     agent=agent,
@@ -1049,6 +1058,7 @@ class SkillOrchestrator:
                         installable = bool(self.registry.is_installable(built_id))
                     if installable:
                         installed.append(built_id)
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain)})
                 continue
 
             external_skill_id = ""
@@ -1094,7 +1104,9 @@ class SkillOrchestrator:
                     installable = bool(self.registry.is_installable(external_skill_id))
                 if installable:
                     installed.append(external_skill_id)
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "external_install", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
                     continue
+            fallback_chain.append("external_miss")
 
             if approval_gate and not approval_gate(agent.get("role"), [name], "build", auto_approve):
                 self._record_selection_feedback(
@@ -1105,6 +1117,7 @@ class SkillOrchestrator:
                     run_id=run_id,
                     agent_role=agent_role,
                 )
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "forge_approval_denied", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
                 continue
 
             self._record_selection_feedback(
@@ -1125,6 +1138,7 @@ class SkillOrchestrator:
                 feedback_loop=feedback_loop,
                 workspace=workspace,
             )
+            manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "forge", "reused_from": None, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain)})
             if built_id:
                 installable = True
                 if hasattr(self.registry, "is_installable"):
@@ -1141,6 +1155,6 @@ class SkillOrchestrator:
                 self.agent_mgr.install_skills(*install_args, workspace=workspace)
             else:
                 self.agent_mgr.install_skills(*install_args)
-        return list(dict.fromkeys(installed))
+        return list(dict.fromkeys(installed)), manifest_entries
 
 

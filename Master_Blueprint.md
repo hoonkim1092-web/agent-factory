@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-03 | version: 1.2.16 -->
+<!-- last_updated: 2026-04-08 | version: 1.2.18 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -92,7 +92,7 @@
 | `core/skill_eval_harness.py` | 계약/숨겨진/섀도우 테스트 | `SkillEvalHarness` |
 | `core/skill_evolution_bus.py:1-241` | 7단계 캐시 무효화 체인 | `SkillEvolutionBus.on_skill_evolved()` |
 | `core/skill_forge.py` | 코드 생성→비평→수정 루프 | `SkillForge` |
-| `core/skill_procurer.py` | 스킬 조달·forge·평가·승격 | `procure_skill()`, `forge_new_skill()`, `evaluate_and_promote()`, `SkillOrchestrator` |
+| `core/skill_procurer.py` | 스킬 조달·forge·평가·승격 + manifest 수집 | `procure_multiple()` → `tuple[list[str], list[dict]]` (installed + manifest_entries) |
 | `core/skill_loader.py` | 런타임 스킬 동적 로딩 | `AdaptiveSkillLoader` |
 | `core/skill_promotion.py` | 스킬 라이프사이클 전환 | `SkillPromotionManager` |
 | `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | `SkillRegistry` (싱글톤) |
@@ -875,6 +875,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-08 | v1.2.18 | feat(projection): skill_manifest.json + role_spec.json — _materialize_roles()에서 projection 뷰 생성. procure_multiple() 반환 타입 tuple 확장. design_review_watcher heartbeat 기반 PID 검증 + atomic write + IDLE_TIMEOUT 180s |
 | 2026-04-08 | v1.2.18 | fix(config_paths): PyInstaller exe에서 BASE_DIR이 임시 언팩 폴더(_MEI...)로 잡히는 버그 수정 — sys.frozen 감지 후 sys.executable 기준으로 전환, 프로젝트가 올바른 경로(af.exe 옆)에 생성됨 |
 | 2026-04-07 | v1.0.3 | feat(forge): forge 스킬 품질 파이프라인 — forge_new_skill() 3-helper 분할, evaluate_and_promote() 공통 추출, FORGE_POLICIES, LLM budget 카운터(MAX_LLM_CALLS=15), directory 구조(forge/{name}/{name}.py), sys.path forge guard, propose/apply/test 함수 시그니처, evals.yml 자동 생성(MIN_EVAL_CASES=3), Registry 직접 등록 |
 | 2026-04-04 | v1.0.3 | feat(session): revision_loop 학습 루프 (critique_fn + revision_history + best_artifact), run_factory_cli .env 자동로드, JudgmentLedger 설계, 세션 핸드오프 문서 |

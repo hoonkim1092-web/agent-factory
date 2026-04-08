@@ -446,7 +446,7 @@ class AgentFactory:
             approval_policy = self._read_approval_policy()
             approval_gate = self._ask_skill_change_approval if approval_policy.get("require_skill_change_approval", False) else None
             # [GAP-3] Unified Pipeline: Himari(Skeleton) -> Builder(Release) -> Registry
-            installed = self.procurer.procure_multiple(
+            installed, _manifest = self.procurer.procure_multiple(
                 agent=agent,
                 skill_names=initial_targets,
                 reqs=reqs,

@@ -18,6 +18,7 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
 import time
 from fnmatch import fnmatch
 from pathlib import Path
@@ -123,22 +124,64 @@ def enqueue(filepath: str, workspace: str, source: str = "unknown") -> str | Non
 
 # ── watcher 관리 ──────────────────────────────────────────────────────────────
 
+HEARTBEAT_STALE_THRESHOLD = 660  # REVIEW_TIMEOUT(600) + POLL_INTERVAL(10) * 6
+
+
 def _is_watcher_alive(workspace: str) -> bool:
-    """PID 파일 기반 watcher 생존 확인."""
+    """PID 파일 기반 watcher 생존 확인 (heartbeat 방식)."""
     pid_path = os.path.join(workspace, PID_FILE)
     if not os.path.exists(pid_path):
         return False
     try:
         with open(pid_path) as f:
-            pid = int(f.read().strip())
-        os.kill(pid, 0)
+            raw = f.read().strip()
+        # 하위호환: 순수 숫자면 구형 포맷 → 무조건 stale 판정
+        if raw.isdigit():
+            raise OSError("legacy pid format, treat as stale")
+
+        data = json.loads(raw)
+        pid = int(data["pid"])
+        heartbeat = float(data.get("heartbeat", data.get("start_time", 0)))
+
+        os.kill(pid, 0)  # 프로세스 존재 확인
+
+        # heartbeat 기반 stale 감지:
+        # process_review()가 최대 REVIEW_TIMEOUT(600s) 동기 블로킹하므로
+        # HEARTBEAT_STALE_THRESHOLD(660s) 이상 미갱신이면 다른 프로세스
+        if (time.time() - heartbeat) > HEARTBEAT_STALE_THRESHOLD:
+            raise OSError("stale heartbeat")
+
         return True
-    except (ValueError, OSError, ProcessLookupError):
+    except (ValueError, OSError, ProcessLookupError, json.JSONDecodeError, KeyError):
         try:
             os.remove(pid_path)
         except OSError:
             pass
         return False
+
+
+def _update_heartbeat(workspace: str) -> None:
+    """매 poll마다 호출하여 watcher 생존을 증명. atomic write 사용."""
+    pid_path = os.path.join(workspace, PID_FILE)
+    if not os.path.exists(pid_path):
+        return
+    try:
+        with open(pid_path) as f:
+            data = json.load(f)
+        data["heartbeat"] = time.time()
+        pid_dir = os.path.dirname(pid_path)
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=pid_dir)
+        try:
+            with os.fdopen(tmp_fd, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp_path, pid_path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+    except Exception:
+        pass
 
 
 def _start_watcher(workspace: str) -> None:
@@ -154,12 +197,16 @@ def _start_watcher(workspace: str) -> None:
     else:
         kwargs["start_new_session"] = True
 
+    env = os.environ.copy()
+    env["PYTHONPATH"] = workspace + os.pathsep + env.get("PYTHONPATH", "")
+
     try:
         subprocess.Popen(
             [sys.executable, watcher_script, workspace],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=workspace,
+            env=env,
             **kwargs,
         )
     except Exception:
