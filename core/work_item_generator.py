@@ -525,6 +525,60 @@ def generate_work_items(
     return files
 
 
+def _refine_document(
+    original: str,
+    feedback: str,
+    project_brief: dict[str, Any] | None = None,
+) -> str:
+    """
+    교차검증 피드백을 반영하여 문서를 부분 수정한다.
+
+    LLM에게 원본 문서 + 피드백 + 원천 데이터를 주고 수정본을 생성한다.
+    원천 데이터(project_brief)도 함께 참조하여 문서↔원천 정합성을 유지한다.
+
+    Args:
+        original: 원본 마크다운 문서 내용
+        feedback: Judge의 수정 지시 (ACCEPT 항목의 Action Required)
+        project_brief: 원천 데이터 (정합성 검증용, 없으면 None)
+
+    Returns:
+        수정된 마크다운 문서 내용
+    """
+    try:
+        from core.control_plane_llm import ControlPlaneLLM
+    except ImportError:
+        return original
+
+    context_parts = [
+        "[원본 문서]\n" + original,
+        "\n\n[교차검증 수정 지시]\n" + feedback,
+    ]
+    if project_brief:
+        import json
+        brief_summary = json.dumps(project_brief, ensure_ascii=False, indent=2)[:2000]
+        context_parts.append(
+            "\n\n[원천 데이터 (project_brief) — 수정 후에도 이 데이터와 정합성을 유지하라]\n"
+            + brief_summary
+        )
+
+    prompt = "\n".join(context_parts) + (
+        "\n\n위 수정 지시를 반영하여 문서를 수정하라. "
+        "수정 지시에 해당하지 않는 부분은 변경하지 마라. "
+        "원천 데이터와의 정합성을 유지하라. "
+        "마크다운 형식으로 전체 문서를 출력하라."
+    )
+
+    try:
+        llm = ControlPlaneLLM()
+        refined = llm.generate(prompt).strip()
+        if refined and len(refined) > 100:
+            return refined
+    except Exception:
+        pass
+
+    return original
+
+
 def _copy_extra_templates(template_dir: str, work_dir: str) -> None:
     if not os.path.isdir(template_dir):
         return

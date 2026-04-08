@@ -123,6 +123,9 @@ a = Analysis(
         'core.hooks.code_review_doc',
         'core.hooks.design_review_hook',
         'core.design_review_utils',
+        'core.review_report',
+        'core.review_runner',
+        'core.pipeline_quality',
         # ── core.memory_system ──
         'core.memory_system',
         'core.memory_system.models',

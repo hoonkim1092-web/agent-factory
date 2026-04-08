@@ -43,10 +43,40 @@ EXCLUDE_PATTERNS = [
     "docs/reviews/*",
 ]
 
+# ── 코드 교차검증 패턴 ──────────────────────────────────────────────────────
+
+CODE_INCLUDE_PATTERNS = [
+    "core/**/*.py",
+    "scripts/**/*.py",
+    "skills/**/*.py",
+]
+
+CODE_EXCLUDE_PATTERNS = [
+    "tests/**",
+    "build/**",
+    "dist/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+]
+
+MIN_DIFF_LINES = 5  # 최소 변경량 (미만이면 스킵)
+
+SKIP_DIFF_PATTERNS = [
+    r"^[\+\-]\s*(import |from .+ import )",
+    r"^[\+\-]\s*(\"\"\"|\'\'\').*",
+    r"^[\+\-]\s*#",
+]
+
+# ── 큐 디렉토리 (design/code 분리) ──────────────────────────────────────────
+
 QUEUE_DIR = ".af_review_queue"
+PENDING_DESIGN_DIR = os.path.join(QUEUE_DIR, "pending", "design")
+PENDING_CODE_DIR = os.path.join(QUEUE_DIR, "pending", "code")
+# 하위호환: 기존 pending/ 경로도 유지
 PENDING_DIR = os.path.join(QUEUE_DIR, "pending")
 NOTIFICATIONS_DIR = os.path.join(QUEUE_DIR, "notifications")
 PID_FILE = os.path.join(QUEUE_DIR, ".watcher.pid")
+CODE_REVIEW_COUNT_FILE = os.path.join(QUEUE_DIR, ".code_review_count")
 
 
 # ── 경로 매칭 ────────────────────────────────────────────────────────────────
@@ -95,6 +125,59 @@ def is_design_doc(filepath: str, workspace: str) -> bool:
     return False
 
 
+def is_code_file(filepath: str, workspace: str) -> bool:
+    """파일이 코드 교차검증 트리거 대상인지 판정."""
+    rel = normalize_path(filepath, workspace)
+
+    for pattern in CODE_EXCLUDE_PATTERNS:
+        if _matches_glob(rel, pattern):
+            return False
+
+    for pattern in CODE_INCLUDE_PATTERNS:
+        if _matches_glob(rel, pattern):
+            return True
+
+    return False
+
+
+def check_code_review_budget(workspace: str) -> bool:
+    """일일 코드 리뷰 횟수 제한 확인. True면 실행 가능."""
+    count_path = os.path.join(workspace, CODE_REVIEW_COUNT_FILE)
+    today = time.strftime("%Y-%m-%d")
+    count = 0
+
+    if os.path.exists(count_path):
+        try:
+            with open(count_path) as f:
+                data = json.load(f)
+            if data.get("date") == today:
+                count = data.get("count", 0)
+        except Exception:
+            pass
+
+    return count < 5  # 일일 최대 5회
+
+
+def increment_code_review_count(workspace: str) -> None:
+    """코드 리뷰 횟수 증가."""
+    count_path = os.path.join(workspace, CODE_REVIEW_COUNT_FILE)
+    today = time.strftime("%Y-%m-%d")
+    count = 0
+
+    if os.path.exists(count_path):
+        try:
+            with open(count_path) as f:
+                data = json.load(f)
+            if data.get("date") == today:
+                count = data.get("count", 0)
+        except Exception:
+            pass
+
+    os.makedirs(os.path.dirname(count_path), exist_ok=True)
+    with open(count_path, "w", encoding="utf-8") as f:
+        json.dump({"date": today, "count": count + 1}, f)
+
+
 # ── 큐 관리 ──────────────────────────────────────────────────────────────────
 
 def pathhash(rel_path: str) -> str:
@@ -102,11 +185,23 @@ def pathhash(rel_path: str) -> str:
     return hashlib.md5(rel_path.encode("utf-8")).hexdigest()[:12]
 
 
-def enqueue(filepath: str, workspace: str, source: str = "unknown") -> str | None:
+def _get_pending_dir(workspace: str, review_type: str = "design") -> str:
+    """review_type별 pending 디렉토리 경로."""
+    if review_type == "code":
+        return os.path.join(workspace, PENDING_CODE_DIR)
+    return os.path.join(workspace, PENDING_DESIGN_DIR)
+
+
+def enqueue(
+    filepath: str,
+    workspace: str,
+    source: str = "unknown",
+    review_type: str = "design",
+) -> str | None:
     """pending 큐에 리뷰 요청 추가. 이미 있으면 timestamp만 갱신."""
     rel = normalize_path(filepath, workspace)
     ph = pathhash(rel)
-    pending_dir = os.path.join(workspace, PENDING_DIR)
+    pending_dir = _get_pending_dir(workspace, review_type)
     os.makedirs(pending_dir, exist_ok=True)
 
     queue_file = os.path.join(pending_dir, f"{ph}.json")
@@ -115,6 +210,7 @@ def enqueue(filepath: str, workspace: str, source: str = "unknown") -> str | Non
         "timestamp": time.time(),
         "trigger_source": source,
         "workspace": workspace,
+        "review_type": review_type,
     }
     with open(queue_file, "w", encoding="utf-8") as f:
         json.dump(entry, f, indent=2)
@@ -221,31 +317,53 @@ def ensure_watcher(workspace: str) -> None:
 
 # ── 상태 조회 ─────────────────────────────────────────────────────────────────
 
+def _count_pending(directory: str) -> list[dict]:
+    """pending 디렉토리의 큐 항목을 읽어 반환."""
+    items = []
+    if not os.path.isdir(directory):
+        return items
+    for f in os.listdir(directory):
+        if not f.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(directory, f)) as fh:
+                items.append(json.load(fh))
+        except Exception:
+            items.append({"file_path": f"{f} (unreadable)"})
+    return items
+
+
 def show_status(workspace: str) -> None:
     """큐 상태 출력."""
-    pending_dir = os.path.join(workspace, PENDING_DIR)
+    design_items = _count_pending(os.path.join(workspace, PENDING_DESIGN_DIR))
+    code_items = _count_pending(os.path.join(workspace, PENDING_CODE_DIR))
+    # 하위호환: 기존 pending/ 루트에 있는 항목도 수집
+    legacy_items = _count_pending(os.path.join(workspace, PENDING_DIR))
+    legacy_items = [
+        i for i in legacy_items
+        if not i.get("review_type")  # 신규 포맷은 review_type 필드가 있음
+    ]
+
     notif_dir = os.path.join(workspace, NOTIFICATIONS_DIR)
-
-    pending = []
-    if os.path.isdir(pending_dir):
-        pending = [f for f in os.listdir(pending_dir) if f.endswith(".json")]
-
     notifs = []
     if os.path.isdir(notif_dir):
         notifs = [f for f in os.listdir(notif_dir) if f.endswith(".txt")]
 
     alive = _is_watcher_alive(workspace)
 
-    print(f"[design-review] Watcher: {'running' if alive else 'stopped'}")
-    print(f"[design-review] Pending: {len(pending)}")
-    for p in pending:
-        try:
-            with open(os.path.join(pending_dir, p)) as f:
-                data = json.load(f)
-            print(f"  - {data.get('file_path', '?')}")
-        except Exception:
-            print(f"  - {p} (unreadable)")
-    print(f"[design-review] Notifications: {len(notifs)}")
+    print(f"[review] Watcher: {'running' if alive else 'stopped'}")
+    print(f"[review] Design pending: {len(design_items) + len(legacy_items)}")
+    for item in design_items + legacy_items:
+        print(f"  - {item.get('file_path', '?')}")
+    print(f"[review] Code pending: {len(code_items)}")
+    for item in code_items:
+        print(f"  - {item.get('file_path', '?')}")
+    print(f"[review] Notifications: {len(notifs)}")
+
+    # 코드 리뷰 예산
+    budget_ok = check_code_review_budget(workspace)
+    if not budget_ok:
+        print("[review] Code review daily limit reached (5/5)")
 
 
 # ── 동기 실행 ─────────────────────────────────────────────────────────────────

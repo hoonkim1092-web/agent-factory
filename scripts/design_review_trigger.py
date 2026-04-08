@@ -26,8 +26,10 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from core.design_review_utils import (  # noqa: E402
+    check_code_review_budget,
     enqueue,
     ensure_watcher,
+    is_code_file,
     is_design_doc,
     normalize_path,
     run_sync,
@@ -67,16 +69,28 @@ def main() -> None:
 
     filepath = os.path.abspath(args.filepath)
 
-    if not is_design_doc(filepath, workspace):
+    # 설계 문서 트리거
+    if is_design_doc(filepath, workspace):
+        if args.sync:
+            run_sync(filepath, workspace, args.source)
+        else:
+            enqueue(filepath, workspace, args.source, review_type="design")
+            ensure_watcher(workspace)
+            rel = normalize_path(filepath, workspace)
+            print(f"[design-review] queued: {rel}")
         sys.exit(0)
 
-    if args.sync:
-        run_sync(filepath, workspace, args.source)
-    else:
-        enqueue(filepath, workspace, args.source)
+    # 코드 파일 트리거
+    if is_code_file(filepath, workspace):
+        if not check_code_review_budget(workspace):
+            sys.exit(0)  # 일일 한도 도달 — 조용히 스킵
+        enqueue(filepath, workspace, args.source, review_type="code")
         ensure_watcher(workspace)
         rel = normalize_path(filepath, workspace)
-        print(f"[design-review] queued: {rel}")
+        print(f"[code-review] queued: {rel}")
+        sys.exit(0)
+
+    # 어느 패턴에도 해당 안 함
 
     sys.exit(0)
 

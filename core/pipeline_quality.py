@@ -3,7 +3,7 @@ core/pipeline_quality.py
 ========================
 파이프라인 품질 집계 및 장애 복구 유틸리티.
 
-1. AggregatedVerdict   — 5차원 가중 공식 기반 최종 판정
+1. AggregatedVerdict   — 6차원 가중 공식 기반 최종 판정
 2. PipelineStageGuard  — 단계별 graceful degradation wrapper
 """
 from __future__ import annotations
@@ -27,18 +27,22 @@ class VerdictResult:
     semantic_status: str = ""
     structural_status: str = ""
     execution_status: str = ""
+    cross_review_verdict: str = ""          # "PASS" | "WARN" | "BLOCK"
+    cross_review_confidence: float = 0.0    # 0.0~1.0
+    cross_review_report_path: str = ""      # verification-report.md 경로
 
 
 class AggregatedVerdict:
     """
-    5차원 가중 공식으로 최종 판정을 내린다.
+    6차원 가중 공식으로 최종 판정을 내린다.
 
     차원 가중치:
-      evidence_quality  0.15
-      semantic_quality  0.25
-      structural_quality 0.20
-      execution_quality  0.25
-      grounding_ratio    0.15
+      evidence_quality     0.12
+      semantic_quality     0.22
+      structural_quality   0.18
+      execution_quality    0.22
+      grounding_ratio      0.12
+      cross_verification   0.14
 
     판정 규칙:
       accepted             total >= 0.80 AND min_dimension >= 0.10
@@ -47,12 +51,15 @@ class AggregatedVerdict:
     """
 
     _WEIGHTS = {
-        "evidence_quality":   0.15,
-        "semantic_quality":   0.25,
-        "structural_quality": 0.20,
-        "execution_quality":  0.25,
-        "grounding_ratio":    0.15,
+        "evidence_quality":   0.12,
+        "semantic_quality":   0.22,
+        "structural_quality": 0.18,
+        "execution_quality":  0.22,
+        "grounding_ratio":    0.12,
+        "cross_verification": 0.14,
     }
+
+    _VERDICT_SCORE_MAP = {"PASS": 1.0, "WARN": 0.6, "BLOCK": 0.2}
 
     def evaluate(
         self,
@@ -61,6 +68,7 @@ class AggregatedVerdict:
         gate_v: dict,
         qa_v: dict | None = None,
         rewrite_v: dict | None = None,
+        cross_v: dict | None = None,
     ) -> VerdictResult:
         """각 단계 결과를 받아 최종 판정을 반환한다.
 
@@ -104,18 +112,37 @@ class AggregatedVerdict:
         else:
             grounding = 0.5  # 정보 없으면 중립
 
+        # ── 교차검증 차원 ──
+        if cross_v:
+            cv_confidence = float(cross_v.get("confidence", 0.0))
+            cv_verdict = cross_v.get("verdict", "")
+            cv_verdict_score = self._VERDICT_SCORE_MAP.get(cv_verdict, 0.0)
+            cv_score = cv_verdict_score * 0.6 + cv_confidence * 0.4
+        else:
+            cv_score = 0.0  # 교차검증 미실행
+
         dimensions = {
             "evidence_quality":   ev_score,
             "semantic_quality":   sem_score,
             "structural_quality": struct_score,
             "execution_quality":  exec_score,
             "grounding_ratio":    grounding,
+            "cross_verification": cv_score,
         }
 
         # ── 가중 합산 ──
+        # 교차검증 미실행(cv_score==0) 시 가중치를 나머지에 비례 배분
+        weights = dict(self._WEIGHTS)
+        if not cross_v:
+            cv_weight = weights.pop("cross_verification", 0.0)
+            remaining_sum = sum(weights.values())
+            if remaining_sum > 0:
+                for k in weights:
+                    weights[k] += cv_weight * (weights[k] / remaining_sum)
+
         total = sum(
-            dimensions[k] * self._WEIGHTS[k]
-            for k in self._WEIGHTS
+            dimensions.get(k, 0.0) * weights.get(k, 0.0)
+            for k in weights
         )
         total = round(min(1.0, max(0.0, total)), 3)
 
@@ -147,6 +174,9 @@ class AggregatedVerdict:
             semantic_status="pass" if sem_score >= 0.75 else "partial",
             structural_status=str(gate_v.get("status") or ""),
             execution_status="pass" if exec_score >= 0.7 else "partial",
+            cross_review_verdict=cross_v.get("verdict", "") if cross_v else "",
+            cross_review_confidence=float(cross_v.get("confidence", 0.0)) if cross_v else 0.0,
+            cross_review_report_path=cross_v.get("report_path", "") if cross_v else "",
         )
 
 

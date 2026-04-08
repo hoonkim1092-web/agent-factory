@@ -33,6 +33,8 @@ from pathlib import Path
 
 QUEUE_DIR = ".af_review_queue"
 PENDING_DIR = os.path.join(QUEUE_DIR, "pending")
+PENDING_DESIGN_DIR = os.path.join(QUEUE_DIR, "pending", "design")
+PENDING_CODE_DIR = os.path.join(QUEUE_DIR, "pending", "code")
 FAILED_DIR = os.path.join(QUEUE_DIR, "failed")
 NOTIFICATIONS_DIR = os.path.join(QUEUE_DIR, "notifications")
 PID_FILE = os.path.join(QUEUE_DIR, ".watcher.pid")
@@ -41,53 +43,38 @@ RESULTS_DIR = os.path.join("docs", "reviews")
 PROMPTS_DIR = os.path.join("scripts", "prompts")
 
 POLL_INTERVAL = 10   # seconds
-QUIET_PERIOD = 8     # seconds — 연속 편집 대기
+QUIET_PERIOD_DESIGN = 8     # seconds — 설계 문서 연속 편집 대기
+QUIET_PERIOD_CODE = 15      # seconds — 코드 연속 편집 대기 (빈번하므로 길게)
 IDLE_TIMEOUT = 180   # seconds — 무활동 시 자동 종료 (설계 문서 작성 2-5분 고려)
 MAX_PENDING_AGE = 900  # seconds — 이보다 오래된 pending은 stuck으로 간주
 REVIEW_TIMEOUT = 600 # seconds — 단일 리뷰 실행 제한 (codex 자율 탐색 고려)
 
 JUDGE_PRIORITY = ["claude", "codex", "gemini"]
 
-# ── 프로바이더 탐지 ───────────────────────────────────────────────────────────
+# ── 공유 함수 (core/review_runner.py에서 import) ─────────────────────────────
+# frozen build에서도 동작하도록 core/ 레이어에 위치.
 
-CLI_COMMANDS = {
-    "claude": "claude",
-    "codex": "codex",
-    "gemini": "gemini",
-}
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-
-def detect_providers() -> list[str]:
-    """설치된 CLI 프로바이더 목록 반환."""
-    available = []
-    for name, cmd in CLI_COMMANDS.items():
-        if shutil.which(cmd):
-            available.append(name)
-    return available
+from core.review_runner import (  # noqa: E402
+    detect_providers,
+    select_review_pair,
+    select_judge,
+)
 
 
-def select_review_pair(providers: list[str]) -> tuple[str, str]:
-    """critic과 cross에 서로 다른 프로바이더 배정."""
-    if len(providers) >= 2:
-        return providers[0], providers[1]
-    return providers[0], providers[0]
-
-
-def select_judge(providers: list[str]) -> str:
-    """취합 판정자 선택. claude > codex > gemini 우선순위."""
-    for p in JUDGE_PRIORITY:
-        if p in providers:
-            return p
-    return providers[0]
-
-
-# ── 프롬프트 로드 ─────────────────────────────────────────────────────────────
-
-def _load_prompt(workspace: str, name: str) -> str:
-    """scripts/prompts/<name>.txt 로드."""
-    path = os.path.join(workspace, PROMPTS_DIR, f"{name}.txt")
-    with open(path, encoding="utf-8") as f:
-        return f.read()
+from core.review_runner import (  # noqa: E402
+    _load_prompt,
+    _run_provider,
+    _build_review_prompt,
+    run_critic,
+    run_critic_review,
+    run_cross,
+    run_cross_review,
+    run_aggregation,
+)
 
 
 def _read_document(workspace: str, rel_path: str) -> str:
@@ -150,117 +137,8 @@ def _read_project_context(workspace: str) -> str:
         return "(읽기 실패)"
 
 
-# ── CLI 실행 ──────────────────────────────────────────────────────────────────
 
-def _resolve_cli(name: str) -> str:
-    """CLI 이름을 실제 실행 가능 경로로 해석. Windows .cmd 래퍼 대응."""
-    resolved = shutil.which(name)
-    return resolved if resolved else name
-
-
-def _build_exec_command(provider: str) -> list[str]:
-    """프로바이더별 실행 명�� 구성 (프롬프트는 stdin으로 전달)."""
-    if provider == "codex":
-        return [_resolve_cli("codex"), "exec", "-s", "danger-full-access"]
-    elif provider == "claude":
-        return [_resolve_cli("claude"), "-p", "--output-format", "text"]
-    elif provider == "gemini":
-        return [_resolve_cli("gemini"), "-p"]
-    else:
-        return [_resolve_cli("codex"), "exec", "-s", "danger-full-access"]
-
-
-def _run_provider(provider: str, prompt: str, workspace: str) -> str:
-    """프로바이더 CLI 실행. 프롬프트는 stdin으로 전달."""
-    cmd = _build_exec_command(provider)
-    try:
-        result = subprocess.run(
-            cmd,
-            input=prompt.encode("utf-8"),
-            capture_output=True,
-            timeout=REVIEW_TIMEOUT,
-            cwd=workspace,
-        )
-        stdout = result.stdout.decode("utf-8", errors="replace").strip()
-        stderr = result.stderr.decode("utf-8", errors="replace").strip()
-        if not stdout and stderr:
-            return f"(provider error: {stderr[:500]})"
-        return stdout or "(empty response)"
-    except subprocess.TimeoutExpired:
-        return f"(timeout: {REVIEW_TIMEOUT}s)"
-    except FileNotFoundError:
-        return f"(provider not found: {provider})"
-    except Exception as e:
-        return f"(execution error: {e})"
-
-
-# ── 리뷰 실행 ─────────────────────────────────────────────────────────────────
-
-# 자율 탐색 가능 프로바이더: 파일 경로만 전달, 직접 읽기
-_AUTONOMOUS_PROVIDERS = {"codex", "gemini"}
-
-
-def _build_review_prompt(
-    template: str,
-    provider: str,
-    doc_content: str,
-    context: str,
-    rel_path: str,
-    context_path: str,
-) -> str:
-    """프로바이더 특성에 맞는 프롬프트 구성.
-
-    자율 탐색 프로바이더(codex, gemini): 파일 경로만 전달.
-    비자율 프로바이더(claude): 내용 임베딩.
-    """
-    if provider in _AUTONOMOUS_PROVIDERS:
-        return (
-            f"{template}\n\n---\n\n"
-            f"## 지시사항\n\n"
-            f"1. 먼저 `{context_path}` 파일을 읽어 프로젝트 컨텍스트를 파악하라.\n"
-            f"2. 그 다음 `{rel_path}` 파일을 읽고 리뷰하라.\n"
-            f"3. 변경 파일의 호출자/피호출자도 직접 찾아서 읽어라.\n"
-        )
-    return f"{template}\n\n---\n\n## Project Context\n\n{context}\n\n---\n\n## Design Document to Review\n\n{doc_content}"
-
-
-def run_critic(
-    provider: str, doc_content: str, context: str, workspace: str,
-    *, rel_path: str = "", context_path: str = "",
-) -> str:
-    """critic 리뷰 실행."""
-    template = _load_prompt(workspace, "design_critic")
-    prompt = _build_review_prompt(template, provider, doc_content, context, rel_path, context_path)
-    return _run_provider(provider, prompt, workspace)
-
-
-def run_cross(
-    provider: str, doc_content: str, context: str, workspace: str,
-    *, rel_path: str = "", context_path: str = "",
-) -> str:
-    """cross 리뷰 실행."""
-    template = _load_prompt(workspace, "design_cross_review")
-    prompt = _build_review_prompt(template, provider, doc_content, context, rel_path, context_path)
-    return _run_provider(provider, prompt, workspace)
-
-
-def run_aggregation(
-    judge: str,
-    critic_result: str,
-    cross_result: str,
-    doc_content: str,
-    workspace: str,
-) -> str:
-    """취합 판정 실행."""
-    template = _load_prompt(workspace, "design_aggregation")
-    prompt = (
-        f"{template}\n\n---\n\n"
-        f"## Critic Review\n\n{critic_result}\n\n---\n\n"
-        f"## Cross Review\n\n{cross_result}\n\n---\n\n"
-        f"## Original Document (for reference)\n\n{doc_content[:10000]}"
-    )
-    return _run_provider(judge, prompt, workspace)
-
+# ── 리뷰 실행 함수는 core/review_runner.py에서 import됨 (위쪽 참조) ──────────
 
 # ── 결과 저장 ─────────────────────────────────────────────────────────────────
 
@@ -271,6 +149,7 @@ def _write_result(
     mode: str,
     verdict_content: str,
     trigger_source: str,
+    review_type: str = "design",
 ) -> str:
     """docs/reviews/ 에 결과 파일 저장. 파일 경로 반환."""
     results_dir = os.path.join(workspace, RESULTS_DIR)
@@ -279,14 +158,18 @@ def _write_result(
     stem = Path(rel_path).stem
     now = datetime.now()
     ts = now.strftime("%Y-%m-%d-%H%M%S")
-    filename = f"{ts}-{stem}-review.md"
+    filename = f"{ts}-{stem}-{review_type}-review.md"
     result_path = os.path.join(results_dir, filename)
 
+    type_label = {"design": "Design", "code": "Code", "document": "Document"}.get(
+        review_type, review_type.title()
+    )
     providers_str = ", ".join(f"{role}={name}" for role, name in providers_used.items())
     header = (
-        f"# Design Review: {stem}\n\n"
+        f"# {type_label} Review: {stem}\n\n"
         f"> Source: {rel_path}\n"
         f"> Date: {now.strftime('%Y-%m-%d %H:%M')}\n"
+        f"> Type: {review_type}\n"
         f"> Providers: {providers_str}\n"
         f"> Mode: {mode}\n"
         f"> Trigger: {trigger_source}\n\n"
@@ -316,8 +199,18 @@ def _write_notification(workspace: str, rel_path: str, result_path: str) -> None
 
 # ── 단일 문서 리뷰 처리 ───────────────────────────────────────────────────────
 
-def process_review(workspace: str, rel_path: str, trigger_source: str) -> None:
-    """하나의 설계 문서에 대해 리뷰 실행."""
+def _prompt_prefix_for_type(review_type: str) -> str:
+    """review_type별 프롬프트 파일 접두사."""
+    return {"code": "code", "document": "doc"}.get(review_type, "design")
+
+
+def process_review(
+    workspace: str,
+    rel_path: str,
+    trigger_source: str,
+    review_type: str = "design",
+) -> None:
+    """하나의 파일에 대해 리뷰 실행. review_type에 따라 프롬프트 분기."""
     providers = detect_providers()
 
     if not providers:
@@ -325,54 +218,80 @@ def process_review(workspace: str, rel_path: str, trigger_source: str) -> None:
         _write_notification_skip(workspace, rel_path, "프로바이더 없음")
         return
 
-    doc_content = _read_document(workspace, rel_path)
+    # review_type에 따라 프롬프트 접두사 결정
+    prefix = _prompt_prefix_for_type(review_type)
+    critic_prompt = f"{prefix}_critic"
+    cross_prompt = f"{prefix}_cross_review"
+    agg_prompt = f"{prefix}_aggregation"
+
+    # 코드 리뷰일 때: git diff를 doc_content로 사용
+    if review_type == "code":
+        try:
+            result = subprocess.run(
+                ["git", "diff", "HEAD", "--", rel_path],
+                capture_output=True, text=True, timeout=10, cwd=workspace,
+            )
+            doc_content = result.stdout[:8000] if result.stdout else f"(no diff for {rel_path})"
+        except Exception:
+            doc_content = _read_document(workspace, rel_path)
+    else:
+        doc_content = _read_document(workspace, rel_path)
+
     context = _read_project_context(workspace)
     context_path = os.path.join("docs", "code_review", "code-review.md")
 
     if len(providers) == 1:
         # ── 단일 프로바이더: critic만 ──
-        print(f"[watcher] Single provider ({providers[0]}), critic only: {rel_path}")
+        print(f"[watcher] Single provider ({providers[0]}), {review_type} critic: {rel_path}")
         critic_result = run_critic(
             providers[0], doc_content, context, workspace,
             rel_path=rel_path, context_path=context_path,
+            prompt_name=critic_prompt,
         )
 
         result_path = _write_result(
             workspace, rel_path,
             {"critic": providers[0]},
-            "single-provider (critic only)",
+            f"single-provider ({review_type} critic only)",
             critic_result,
             trigger_source,
+            review_type=review_type,
         )
     else:
         # ── 복수 프로바이더: critic + cross + 취합 ──
         p_a, p_b = select_review_pair(providers)
         judge = select_judge(providers)
-        print(f"[watcher] Cross review: critic={p_a}, cross={p_b}, judge={judge}: {rel_path}")
+        print(f"[watcher] {review_type} cross review: critic={p_a}, cross={p_b}, judge={judge}: {rel_path}")
 
         # 병렬 실행
         with ThreadPoolExecutor(max_workers=2) as pool:
             future_critic = pool.submit(
                 run_critic, p_a, doc_content, context, workspace,
                 rel_path=rel_path, context_path=context_path,
+                prompt_name=critic_prompt,
             )
             future_cross = pool.submit(
                 run_cross, p_b, doc_content, context, workspace,
                 rel_path=rel_path, context_path=context_path,
+                prompt_name=cross_prompt,
             )
 
             critic_result = future_critic.result()
             cross_result = future_cross.result()
 
         # 취합 판정
-        final = run_aggregation(judge, critic_result, cross_result, doc_content, workspace)
+        final = run_aggregation(
+            judge, critic_result, cross_result, doc_content, workspace,
+            prompt_name=agg_prompt,
+        )
 
         result_path = _write_result(
             workspace, rel_path,
             {"critic": p_a, "cross": p_b, "judge": judge},
-            f"cross-review ({len(providers)} providers)",
+            f"cross-review ({review_type}, {len(providers)} providers)",
             final,
             trigger_source,
+            review_type=review_type,
         )
 
     _write_notification(workspace, rel_path, result_path)
@@ -409,27 +328,30 @@ def _move_to_failed(workspace: str, queue_file: str, error: str) -> None:
         pass
 
 
-def process_queue(workspace: str) -> int:
-    """pending 큐에서 리뷰 처리. 처리 건수 반환."""
-    pending_dir = os.path.join(workspace, PENDING_DIR)
-    if not os.path.isdir(pending_dir):
-        return 0
+def _scan_pending_dir(
+    workspace: str,
+    pending_dir: str,
+    quiet_period: float,
+    review_type: str,
+) -> list[tuple[str, dict, str]]:
+    """pending 디렉토리에서 처리 가능한 항목 수집.
 
-    files = sorted(
-        [f for f in os.listdir(pending_dir) if f.endswith(".json")],
-    )
-    if not files:
-        return 0
+    Returns:
+        list of (queue_file_path, data_dict, review_type)
+    """
+    full_dir = os.path.join(workspace, pending_dir)
+    if not os.path.isdir(full_dir):
+        return []
 
-    processed = 0
-    for fname in files:
-        queue_file = os.path.join(pending_dir, fname)
+    items = []
+    for fname in sorted(f for f in os.listdir(full_dir) if f.endswith(".json")):
+        queue_file = os.path.join(full_dir, fname)
 
         # quiet period 체크
         try:
             mtime = os.path.getmtime(queue_file)
-            if time.time() - mtime < QUIET_PERIOD:
-                continue  # 아직 편집 중일 수 있음
+            if time.time() - mtime < quiet_period:
+                continue
         except OSError:
             continue
 
@@ -440,6 +362,27 @@ def process_queue(workspace: str) -> int:
             os.remove(queue_file)
             continue
 
+        items.append((queue_file, data, data.get("review_type", review_type)))
+
+    return items
+
+
+def process_queue(workspace: str) -> int:
+    """pending 큐에서 리뷰 처리. design + code 양쪽 폴링. 처리 건수 반환."""
+    # 하위호환: 기존 pending/ 루트에 있는 항목 (design으로 간주)
+    items = _scan_pending_dir(workspace, PENDING_DIR, QUIET_PERIOD_DESIGN, "design")
+    # 신규: design/code 분리 큐
+    items += _scan_pending_dir(workspace, PENDING_DESIGN_DIR, QUIET_PERIOD_DESIGN, "design")
+    items += _scan_pending_dir(workspace, PENDING_CODE_DIR, QUIET_PERIOD_CODE, "code")
+
+    if not items:
+        return 0
+
+    # 코드 리뷰 예산 체크
+    from core.design_review_utils import check_code_review_budget, increment_code_review_count
+
+    processed = 0
+    for queue_file, data, review_type in items:
         rel_path = data.get("file_path", "")
         trigger_source = data.get("trigger_source", "unknown")
 
@@ -448,10 +391,19 @@ def process_queue(workspace: str) -> int:
             os.remove(queue_file)
             continue
 
+        # 코드 리뷰 예산 체크
+        if review_type == "code" and not check_code_review_budget(workspace):
+            _write_notification_skip(workspace, rel_path, "일일 한도(5회) 도달")
+            os.remove(queue_file)
+            continue
+
         try:
-            process_review(workspace, rel_path, trigger_source)
+            process_review(workspace, rel_path, trigger_source, review_type=review_type)
             os.remove(queue_file)
             processed += 1
+
+            if review_type == "code":
+                increment_code_review_count(workspace)
         except Exception as e:
             print(f"[watcher] Error processing {rel_path}: {e}", file=sys.stderr)
             _move_to_failed(workspace, queue_file, str(e))
@@ -486,21 +438,27 @@ def _remove_pid(workspace: str) -> None:
 
 def _has_actionable_pending(workspace: str) -> bool:
     """quiet period를 경과한 처리 가능한 pending이 있는지 확인.
-    stuck 파일(MAX_PENDING_AGE 초과)은 무시하여 watcher 영구 생존 방지."""
-    pending_dir = os.path.join(workspace, PENDING_DIR)
-    if not os.path.isdir(pending_dir):
-        return False
+    stuck 파일(MAX_PENDING_AGE 초과)은 무시하여 watcher 영구 생존 방지.
+    design + code + 기존 루트 큐 모두 검사."""
+    dirs_and_quiet = [
+        (os.path.join(workspace, PENDING_DIR), QUIET_PERIOD_DESIGN),
+        (os.path.join(workspace, PENDING_DESIGN_DIR), QUIET_PERIOD_DESIGN),
+        (os.path.join(workspace, PENDING_CODE_DIR), QUIET_PERIOD_CODE),
+    ]
     now = time.time()
-    for fname in os.listdir(pending_dir):
-        if not fname.endswith(".json"):
+    for pending_dir, quiet_period in dirs_and_quiet:
+        if not os.path.isdir(pending_dir):
             continue
-        fpath = os.path.join(pending_dir, fname)
-        try:
-            age = now - os.path.getmtime(fpath)
-        except OSError:
-            continue
-        if QUIET_PERIOD <= age <= MAX_PENDING_AGE:
-            return True
+        for fname in os.listdir(pending_dir):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(pending_dir, fname)
+            try:
+                age = now - os.path.getmtime(fpath)
+            except OSError:
+                continue
+            if quiet_period <= age <= MAX_PENDING_AGE:
+                return True
     return False
 
 

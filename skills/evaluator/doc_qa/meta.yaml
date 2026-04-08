@@ -1,0 +1,11 @@
+skill_id: doc-qa
+name: doc-qa
+version: "0.1.0"
+category: eval
+skill_type: tool
+description: "Work-item 문서 세트의 품질 + 정합성 교차검증 QA"
+tags:
+  - qa
+  - document
+  - cross-verification
+  - pipeline

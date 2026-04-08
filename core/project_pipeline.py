@@ -713,6 +713,85 @@ class ProjectPipeline:
             task_board=task_board,
         )
 
+        # -- 구조 검증 (run_structural_gate 연결) --
+        try:
+            gate_result = self.run_structural_gate(
+                os.path.join(doc_root, "docs", "work-items", slug),
+                "work_item",
+            )
+            if gate_result and gate_result.get("errors"):
+                _safe_print(f"[Pipeline] structural gate warnings: {gate_result.get('errors', [])}")
+        except Exception as _gate_err:
+            _safe_print(f"[Pipeline] structural gate skipped: {_gate_err}")
+
+        # -- 문서 교차검증 QA --
+        cross_review_result = None
+        try:
+            from core.review_report import DocumentReviewSession
+            _level = str(project_brief.get("pipeline_level", "dynamic"))
+            if _level != "starter":
+                # 문서 내용 수집
+                _documents = {}
+                for _doc_name, _doc_path in work_item_files.items():
+                    if _doc_name.endswith(".md") and _doc_name != "approval-gate.md":
+                        try:
+                            with open(_doc_path, encoding="utf-8") as _df:
+                                _documents[_doc_name] = _df.read()
+                        except Exception:
+                            pass
+
+                if _documents:
+                    _session = DocumentReviewSession(
+                        workspace=target_workspace,
+                        slug=slug,
+                        level=_level,
+                        max_rounds=2 if _level == "enterprise" else 1,
+                    )
+                    for _round in range(1, _session.max_rounds + 1):
+                        _report = _session.run_review(
+                            documents=_documents,
+                            round_num=_round,
+                            project_brief=project_brief,
+                        )
+                        _verdict = (_report.judge.verdict if _report.judge else "PASS")
+
+                        if _verdict == "PASS":
+                            _rpath = _report.save(target_workspace)
+                            cross_review_result = {
+                                "verdict": "PASS",
+                                "confidence": 1.0,
+                                "report_path": _rpath,
+                            }
+                            break
+
+                        if _verdict == "WARN" or _round == _session.max_rounds:
+                            _rpath = _report.save(target_workspace)
+                            cross_review_result = {
+                                "verdict": "WARN",
+                                "confidence": 0.6,
+                                "report_path": "",
+                            }
+                            break
+
+                        # BLOCK → 문서 수정 후 재시도
+                        if _report.judge and _report.judge.fix_instructions:
+                            from core.work_item_generator import _refine_document
+                            for _dtype, _instr in _report.judge.fix_instructions.items():
+                                if _dtype in _documents:
+                                    _documents[_dtype] = _refine_document(
+                                        original=_documents[_dtype],
+                                        feedback=_instr,
+                                        project_brief=project_brief,
+                                    )
+                                    # 수정된 문서 파일에 반영
+                                    if _dtype in work_item_files:
+                                        from core.file_io import write_text
+                                        write_text(work_item_files[_dtype], _documents[_dtype])
+
+                    _safe_print(f"[Pipeline] doc cross-review: {cross_review_result}")
+        except Exception as _cr_err:
+            _safe_print(f"[Pipeline] doc cross-review skipped: {_cr_err}")
+
         planning_files = [
             to_portable_path(research_evidence_path),
             to_portable_path(project_brief_path),
