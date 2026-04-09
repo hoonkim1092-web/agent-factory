@@ -82,6 +82,7 @@ a = Analysis(
         'core.skill_creator',
         'core.skill_enricher',
         'core.skill_eval_harness',
+        'core.skill_quality_gate',
         'core.skill_evolution_bus',
         'core.skill_feedback',
         'core.skill_forge',
@@ -104,6 +105,7 @@ a = Analysis(
         'core.web_search',
         'core.work_item_generator',
         'core.work_item_parser',
+        'core.plan_verifier',
         # ── core.continuity ──
         'core.continuity',
         'core.continuity.manifest_store',

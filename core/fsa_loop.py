@@ -70,6 +70,11 @@ class FSALoop:
         agent_name = agent.get("name", "Agent") if isinstance(agent, dict) else "Agent"
 
         current_task = task_input
+        evolved_skill_name = None
+        gate_result = None
+        cycle = 0
+        result = {"ok": False, "reason": "초기값"}
+
         for cycle in range(1, self.max_cycles + 1):
             if self._visualizer:
                 self._visualizer.update_from_fsa_step(agent_name, "execute", cycle, self.max_cycles)
@@ -96,6 +101,7 @@ class FSALoop:
                     self._visualizer.mark_completed(agent_name)
                 else:
                     print(f"✅ [Cycle {cycle}] 성공적으로 완료됨.")
+                self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
                 return result
 
             # ── Step 3: Failure & Rollback (workspace tracked 파일만) ──
@@ -116,24 +122,30 @@ class FSALoop:
             action = eval_res.get("action", "abort")
             if action == "abort":
                 print_agent_msg("Evaluator", f"Catastrophic failure. Aborting sequence. Reason: {eval_res.get('reasoning')}", "🛑")
-                return {"ok": False, "reason": "Evaluator aborted task."}
+                abort_result = {"ok": False, "reason": "Evaluator aborted task."}
+                self._record_episode(task_input, abort_result, evolved_skill_name, gate_result, cycle)
+                return abort_result
 
             # ── Step 5: SUMMARIZE + DATASETS — handled by evaluator agent's skills ──
             # (trace_execution, summarize_failure, generate_eval_dataset are in evaluator's skill set)
 
             # ── Step 5b: SKILL EVOLVE — 실패 원인이 특정 스킬이면 자동 진화 시도 ──
-            self._try_evolve_failed_skill(
+            gate_result = self._try_evolve_failed_skill(
                 error_reason=result.get("reason", ""),
                 eval_reasoning=eval_res.get("reasoning", ""),
                 run_id=run_id,
                 cycle=cycle,
             )
+            if gate_result is not None:
+                evolved_skill_name = gate_result.skill_path.split(os.sep)[-1] if gate_result.skill_path else None
 
             # ── Step 6: REFLECT — inject feedback into next cycle's task ──
             print_agent_msg("Evaluator", f"Decision: {action.upper()} | Reasoning: {eval_res.get('reasoning')}", "💡")
             current_task = f"[EVALUATOR {action.upper()} ADVICE]\n{eval_res.get('new_instruction')}\n\n[Original Task]\n{task_input}"
 
-        return {"ok": False, "reason": "최대 재시도 횟수(5회) 초과로 중단되었습니다."}
+        final_result = {"ok": False, "reason": "최대 재시도 횟수(5회) 초과로 중단되었습니다."}
+        self._record_episode(task_input, final_result, evolved_skill_name, gate_result, cycle)
+        return final_result
 
     def _try_evolve_failed_skill(
         self, error_reason: str, eval_reasoning: str, run_id: str, cycle: int
@@ -145,12 +157,15 @@ class FSALoop:
           1. 에러 로그/평가에서 스킬 디렉토리 식별
           2. evolve_skill()로 LLM 기반 코드 개선
           3. security_guard.run_isolated()로 샌드박스 검증
-          4. 검증 통과 시 레지스트리 핫리로딩
+          4. 품질 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 호출
           5. 실패 시 .bak 롤백 유지
+
+        Returns:
+            GateResult | None: 품질 게이트 결과 (진화 미발생 시 None)
         """
         skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
         if not skill_dir:
-            return
+            return None
 
         skill_name = os.path.basename(skill_dir)
         print_agent_msg("SkillEvolve", f"스킬 진화 시도: {skill_name} (cycle {cycle})", "🧬")
@@ -176,7 +191,7 @@ class FSALoop:
 
             if not success:
                 print_agent_msg("SkillEvolve", f"진화 실패, 기존 코드 유지: {skill_name}", "⚠️")
-                return
+                return None
 
             # 메타데이터도 함께 보강 (키워드/태그/설명 최신화)
             enrich_skill_metadata(skill_dir, coding_engine=coding_engine, force=True)
@@ -187,9 +202,23 @@ class FSALoop:
                 verified = self._verify_evolved_skill(skill_py, skill_name)
                 if not verified:
                     self._rollback_skill(skill_dir, skill_name)
-                    return
+                    return None
 
             new_version = self._read_skill_version(skill_dir)
+
+            # ── Quality Gate: 진화된 스킬 품질 검사 후 레지스트리 등재 ──
+            gate_result = self._run_quality_gate(skill_dir, skill_name)
+            if gate_result is not None and not gate_result.passed:
+                for reason in gate_result.failure_reasons:
+                    print_agent_msg("SkillEvolve", reason, "⚠️")
+                print_agent_msg("SkillEvolve", f"품질 게이트 실패 — hot_reload 스킵: {skill_name}", "🚫")
+                return gate_result
+            elif gate_result is not None and gate_result.passed:
+                # 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 둘 다 호출
+                self._hot_reload_registry(skill_name)
+            else:
+                # gate_result가 None(예외 발생)이면 기존 방식으로 핫리로딩
+                self._hot_reload_registry(skill_name)
 
             # EvolutionBus: 전체 캐시 체인 무효화 + 이벤트 브로드캐스트
             evo_bus = SkillEvolutionBus.get_instance()
@@ -203,9 +232,11 @@ class FSALoop:
             )
 
             print_agent_msg("SkillEvolve", f"스킬 진화 성공 + 전체 캐시 무효화: {skill_name}", "✅")
+            return gate_result
 
         except Exception as e:
             print_agent_msg("SkillEvolve", f"진화 프로세스 예외: {e}", "⚠️")
+            return None
 
     def _detect_failed_skill_dir(self, error_reason: str, eval_reasoning: str) -> str | None:
         """에러 로그에서 실패한 스킬 디렉토리를 추출합니다."""
@@ -285,6 +316,52 @@ class FSALoop:
                     print_agent_msg("SkillEvolve", f"롤백 실패: {skill_name}/{filename}: {e}", "⚠️")
         if not restored:
             print_agent_msg("SkillEvolve", f"롤백 대상 .bak 파일 없음: {skill_name}", "⚠️")
+
+    def _run_quality_gate(self, skill_dir: str, skill_name: str):
+        """품질 게이트를 실행하여 GateResult를 반환합니다. 실패 시 None."""
+        try:
+            from core.skill_quality_gate import SkillQualityGate
+            gate = SkillQualityGate()
+            result = gate.validate(skill_dir, auto_register=True)
+            print_agent_msg(
+                "SkillEvolve",
+                f"품질 게이트 결과: {skill_name} — {'통과' if result.passed else '실패'} "
+                f"(pass_rate={result.pass_rate:.1%}, stage={result.recommended_stage})",
+                "🔬",
+            )
+            return result
+        except Exception as e:
+            print_agent_msg("SkillEvolve", f"품질 게이트 예외 ({skill_name}): {e}", "⚠️")
+            return None
+
+    def _record_episode(
+        self,
+        task_input: str,
+        result: dict,
+        evolved_skill_name: str | None,
+        gate_result,
+        cycle: int,
+    ) -> None:
+        """실행 에피소드를 UnifiedMemoryFacade에 비동기 기록합니다 (graceful degradation)."""
+        try:
+            from core.memory_system.facade import UnifiedMemoryFacade
+            from core.memory_system.models import EpisodeRecord
+            facade = UnifiedMemoryFacade.get_instance()
+            if facade._initialised:
+                episode = EpisodeRecord(
+                    task_input=task_input,
+                    outcome="success" if result.get("ok") else "failure",
+                    metadata={
+                        "failure_patterns": result.get("failure_patterns", []),
+                        "skill_evolved": evolved_skill_name or "",
+                        "gate_result": gate_result.pass_rate if gate_result else 0.0,
+                        "cycle_count": cycle,
+                    },
+                )
+                from core.agent_runner import _run_async_safe
+                _run_async_safe(facade.record_episode(episode))
+        except Exception:
+            pass
 
     def _hot_reload_registry(self, skill_name: str):
         """레지스트리를 강제 리로딩하여 진화된 스킬을 반영합니다 (하위 호환용)."""

@@ -579,6 +579,30 @@ class ProjectPipeline:
         planning_dir = self._planning_dir(target_workspace)
         run_id = f"project_run_{int(time.time())}"
 
+        # -- Memory Plane 조기 초기화 + 메모리 회상 (Planning 전에 필요) --
+        memory_context: dict = {}
+        try:
+            from core.memory_system.facade import UnifiedMemoryFacade
+            _facade = UnifiedMemoryFacade.get_instance()
+            if not _facade._initialised:
+                from core.agent_runner import _run_async_safe
+                from core.memory_system.adapters.core_memory import CoreMemoryAdapter
+                from core.memory_system.adapters.knowledge_graph import KnowledgeGraphAdapter
+                _facade.register_adapter(CoreMemoryAdapter())
+                _facade.register_adapter(KnowledgeGraphAdapter(workspace=target_workspace))
+                _run_async_safe(_facade.initialise())
+            # Planning 전 메모리 회상
+            from core.control.intake import ControlPlaneIntake
+            _intake_inst = ControlPlaneIntake.__new__(ControlPlaneIntake)
+            memory_context = _intake_inst._recall_from_memory(task_input)
+            if memory_context.get("recall_count", 0) > 0:
+                print(
+                    f"[Pipeline] memory recalled: {memory_context['recall_count']} records "
+                    f"({memory_context.get('recall_time_ms', 0):.0f}ms)"
+                )
+        except Exception:
+            pass
+
         # -- Research --
         research_agent = build_bootstrap_agent("research_director")
         risk_level = str((route or {}).get("risk_level") or "normal").strip()
@@ -668,7 +692,11 @@ class ProjectPipeline:
         pd_agent = build_bootstrap_agent("pd_director")
 
         def _gen_role_plan():
-            raw = self.planner.plan(task_input, project_brief)
+            try:
+                raw = self.planner.plan(task_input, project_brief, memory_context=memory_context)
+            except TypeError:
+                # memory_context 미지원 planner (테스트 목업 등) 폴백
+                raw = self.planner.plan(task_input, project_brief)
             return enrich_role_plan(task_input, project_brief, raw)
 
         role_plan = _guard.run(
@@ -712,6 +740,28 @@ class ProjectPipeline:
             role_plan=role_plan,
             task_board=task_board,
         )
+
+        # -- Plan-Critique-Verify 사전 루프 --
+        try:
+            from core.plan_verifier import PlanVerifier
+            _pv = PlanVerifier()
+            _wi_paths = list(work_item_files.values())
+            _plan_result = _pv.verify(task_input, _wi_paths, project_brief)
+            if not _plan_result.passed and _plan_result.issues:
+                print(f"[Pipeline] plan verify issues: {_plan_result.issues[:3]}")
+                for _retry in range(2):
+                    _refined = _pv.refine(task_input, _wi_paths, _plan_result.issues, project_brief)
+                    if _refined and _refined != _wi_paths:
+                        _wi_paths = _refined
+                        _plan_result = _pv.verify(task_input, _wi_paths, project_brief)
+                        if _plan_result.passed:
+                            break
+            print(
+                f"[Pipeline] plan verify: {'PASS' if _plan_result.passed else 'WARN'} "
+                f"score={_plan_result.score:.2f}"
+            )
+        except Exception as _pv_err:
+            print(f"[Pipeline] plan verify skipped: {_pv_err}")
 
         # -- 구조 검증 (run_structural_gate 연결) --
         try:

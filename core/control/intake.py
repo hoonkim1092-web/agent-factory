@@ -37,6 +37,7 @@ class NormalizedRequest:
     state: str                      # 현재 상태 머신 단계
     run_id: str                     # 이번 run의 고유 ID
     workspace: str
+    memory_context: dict = field(default_factory=dict)  # Memory Plane 리콜 결과
 
     def to_dict(self) -> dict:
         return {
@@ -51,6 +52,7 @@ class NormalizedRequest:
             "state": self.state,
             "run_id": self.run_id,
             "workspace": self.workspace,
+            "memory_context": self.memory_context,
         }
 
 
@@ -101,6 +103,9 @@ class ControlPlaneIntake:
         # ── 연속성 스냅샷 ──
         continuity_snapshot = self._build_continuity_snapshot(workspace)
 
+        # ── Memory Plane 리콜 — 유사 과거 에피소드/교훈 조회 ──
+        memory_context = self._recall_from_memory(task_input)
+
         # ── 영향 분석 (maintenance/bugfix/refactor인 경우에만) ──
         needs_impact = work_kind in ("maintenance", "bugfix", "refactor", "feature_update")
         change_impact = self._profile_change_impact(task_input, workspace, board) \
@@ -140,6 +145,7 @@ class ControlPlaneIntake:
             state=state,
             run_id=run_id,
             workspace=workspace,
+            memory_context=memory_context,
         )
 
     # ── 서브 시스템 호출 (실패 시 빈 값 반환) ──
@@ -252,6 +258,43 @@ class ControlPlaneIntake:
             )
         except Exception as exc:
             print(f"[ControlPlaneIntake] ledger open_run failed: {exc}")
+
+    def _recall_from_memory(self, task_input: str) -> dict:
+        """Memory Plane에서 유사 에피소드/교훈을 조회한다 (graceful degradation)."""
+        try:
+            from core.memory_system.facade import UnifiedMemoryFacade
+            facade = UnifiedMemoryFacade.get_instance()
+            if not facade._initialised:
+                return {}
+            import time
+            from core.agent_runner import _run_async_safe
+            t0 = time.time()
+            records = _run_async_safe(facade.search_semantic(task_input, limit=5))
+            elapsed_ms = (time.time() - t0) * 1000
+            if not records:
+                return {"recall_count": 0, "recall_time_ms": round(elapsed_ms, 1)}
+            episodes, lessons = [], []
+            for r in records:
+                if r.memory_type and r.memory_type.value == "episodic":
+                    episodes.append({
+                        "task": r.metadata.get("task_input", "")[:200],
+                        "outcome": r.metadata.get("outcome", ""),
+                        "patterns": r.metadata.get("failure_patterns", []),
+                        "lesson": r.content[:300],
+                    })
+                else:
+                    lessons.append({
+                        "content": r.content[:300],
+                        "confidence": r.metadata.get("confidence", 0.5),
+                    })
+            return {
+                "recalled_episodes": episodes,
+                "recalled_lessons": lessons,
+                "recall_count": len(records),
+                "recall_time_ms": round(elapsed_ms, 1),
+            }
+        except Exception:
+            return {}
 
     def _infer_risk_level(self, intent: str, work_kind: str) -> str:
         """

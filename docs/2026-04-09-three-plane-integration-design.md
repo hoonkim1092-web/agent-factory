@@ -1,7 +1,7 @@
 # 3계층 통합 설계 — Evals-FSA 연결 + 메모리 회상 타이밍 + Plane 경계 정리
 
 > 날짜: 2026-04-09
-> 상태: Draft
+> 상태: Reviewed (교차검증 완료 — `docs/code_review/26_0409_three_plane_cross_review.md` 참조)
 > 브랜치: `agent-factory_harness_Claude_Setup_and_Pipeline_v1`
 > 선행 문서: `docs/super_harness_3_layer_architecture.md`
 
@@ -128,7 +128,8 @@ class SkillQualityGate:
     PASS_RATE_THRESHOLD = 0.8       # 80% 이상이어야 통과
     
     def __init__(self, registry: SkillRegistry | None = None):
-        self.registry = registry or SkillRegistry.instance()
+        from core.skill_registry import get_global_registry
+        self.registry = registry or get_global_registry()
         self.harness = SkillEvalHarness()
     
     def validate(
@@ -149,9 +150,11 @@ class SkillQualityGate:
         Returns:
             GateResult — passed, recommended_stage, pass_rate 등
         """
-        # 1. 평가 실행
+        # 1. 평가 실행 (skill_path는 디렉토리 — harness는 파일 경로를 기대)
+        import os
+        skill_py = os.path.join(skill_path, "skill.py")
         report = self.harness.evaluate(
-            skill_path,
+            skill_py,
             baseline_skill_path=baseline_skill_path,
         )
         
@@ -207,6 +210,9 @@ gate_result = gate.validate(skill_dir, auto_register=True)
 
 if gate_result.passed:
     self._hot_reload_registry(skill_dir)
+    # EvolutionBus 브로드캐스트 유지 (캐시 무효화 + 이벤트 전파)
+    from core.skill_evolution_bus import SkillEvolutionBus
+    SkillEvolutionBus.on_skill_evolved(skill_dir)
     _safe_print(f"[FSA] Skill evolved & validated: {skill_dir} "
                 f"(pass_rate={gate_result.pass_rate:.0%})")
 else:
@@ -224,15 +230,17 @@ else:
 # ── 성공/실패 에피소드 저장 ──
 try:
     facade = UnifiedMemoryFacade.get_instance()
-    if facade:
+    if facade._initialised:
         from core.memory_system.models import EpisodeRecord
         episode = EpisodeRecord(
             task_input=task_input,
             outcome="success" if result.get("ok") else "failure",
-            failure_patterns=result.get("failure_patterns", []),
-            skill_evolved=evolved_skill_name or "",
-            gate_result=gate_result.pass_rate if gate_result else 0.0,
-            cycle_count=cycle,
+            metadata={
+                "failure_patterns": result.get("failure_patterns", []),
+                "skill_evolved": evolved_skill_name or "",
+                "gate_result": gate_result.pass_rate if gate_result else 0.0,
+                "cycle_count": cycle,
+            },
         )
         _run_async_safe(facade.record_episode(episode))
 except Exception:
@@ -245,7 +253,7 @@ except Exception:
 |------|------|------|
 | `core/skill_quality_gate.py` | **신규** | ~80줄 |
 | `core/fsa_loop.py` | 수정 — `_try_evolve_failed_skill()`에 gate 삽입 + 에피소드 기록 | ~30줄 |
-| `core/skill_eval_harness.py` | 수정 — `SkillEvalReport`에 `report_path` 필드 추가 | ~5줄 |
+| `core/skill_eval_harness.py` | ~~수정~~ — `report_path` 필드 ✅ 이미 구현됨 | 0줄 |
 | `af.spec` | 수정 — `core.skill_quality_gate` hiddenimport | ~1줄 |
 
 ---
@@ -301,6 +309,13 @@ ProjectPlanningDirector.plan()
 class NormalizedRequest:
     # ... 기존 필드 ...
     memory_context: dict = field(default_factory=dict)
+    
+    # ⚠️ to_dict()도 반드시 업데이트 (수동 dict 구성 방식이므로):
+    # def to_dict(self):
+    #     d = { ... 기존 필드 ... }
+    #     d["memory_context"] = self.memory_context
+    #     return d
+    
     # 구조:
     # {
     #   "recalled_episodes": [
@@ -342,7 +357,7 @@ def _recall_from_memory(self, task_input: str) -> dict:
     try:
         from core.memory_system.facade import UnifiedMemoryFacade
         facade = UnifiedMemoryFacade.get_instance()
-        if not facade:
+        if not facade._initialised:
             return {}
         
         import time
@@ -432,7 +447,7 @@ def prepare(self, task_input, workspace, ...):
     try:
         from core.memory_system.facade import UnifiedMemoryFacade
         facade = UnifiedMemoryFacade.get_instance()
-        if not facade:
+        if not facade._initialised:
             from core.agent_runner import _run_async_safe
             facade = UnifiedMemoryFacade(project_id=project_id or "agent_factory")
             # 최소 어댑터만 등록 (빠른 초기화)
@@ -446,6 +461,21 @@ def prepare(self, task_input, workspace, ...):
         pass  # 메모리 없어도 파이프라인은 동작
     
     # ... 기존 prepare() 로직 ...
+    
+    # ── memory_context를 plan() 호출에 전달 ──
+    # prepare() 내부에서 직접 recall 수행 후 plan()에 전달
+    memory_context = {}
+    try:
+        from core.control.intake import ControlPlaneIntake
+        memory_context = ControlPlaneIntake._recall_from_memory(
+            ControlPlaneIntake, task_input
+        )
+    except Exception:
+        pass
+    
+    plan_result = self.planner.plan(
+        task_input, project_brief, memory_context=memory_context
+    )
 ```
 
 ### 4.7 변경 파일 목록
@@ -597,9 +627,9 @@ ProjectPipeline.execute()                         ← Control + Quality
 | **3** | `core/control/intake.py` — `_recall_from_memory()` | 없음 | ~40줄 | Memory |
 | **4** | `core/bootstrap_roles.py` — `plan(memory_context)` | 3 | ~20줄 | Quality |
 | **5** | `core/project_pipeline.py` — facade 조기 초기화 + memory_context 전달 | 3, 4 | ~20줄 | Quality→Memory |
-| **6** | `core/skill_eval_harness.py` — report_path 필드 | 없음 | ~5줄 | Quality |
-| **7** | `af.spec` — hiddenimports | 1 | ~1줄 | — |
-| **8** | `Master_Blueprint.md` — §3, §12 | 전체 | — | — |
+| ~~6~~ | ~~`core/skill_eval_harness.py` — report_path 필드~~ | — | — | ✅ 이미 구현됨 |
+| **6** | `af.spec` — hiddenimports | 1 | ~1줄 | — |
+| **7** | `Master_Blueprint.md` — §3, §12 | 전체 | — | — |
 
 **총 규모**: 신규 1개(~80줄) + 수정 5개(~115줄) = **~195줄**
 
@@ -648,10 +678,10 @@ python -m pytest tests/ -v
 | `core/control/intake.py` | 수정 | ~40줄 | Control + Memory |
 | `core/bootstrap_roles.py` | 수정 | ~20줄 | Quality |
 | `core/project_pipeline.py` | 수정 | ~20줄 | Quality |
-| `core/skill_eval_harness.py` | 수정 | ~5줄 | Quality |
+| `core/skill_eval_harness.py` | ✅ 이미 구현됨 | 0줄 | Quality |
 | `af.spec` | 수정 | ~1줄 | — |
 | `Master_Blueprint.md` | 수정 | — | — |
-| **합계** | 신규 1 + 수정 7 | ~195줄 | |
+| **합계** | 신규 1 + 수정 6 | ~190줄 | |
 
 ---
 

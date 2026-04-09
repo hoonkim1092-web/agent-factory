@@ -395,7 +395,7 @@ class ProjectPlanningDirector:
                 "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
             )
 
-    def plan(self, task_input: str, project_brief: dict) -> dict:
+    def plan(self, task_input: str, project_brief: dict, memory_context: dict | None = None) -> dict:
         prompt = f"""
 You are a project planning director.
 User task: {task_input}
@@ -473,6 +473,26 @@ Evidence Grounding Rules:
 MANDATORY: You MUST always include a "qa_engineer" role. QA is non-negotiable.
 The qa_engineer must own at least one module with verify-phase tasks.
 """.strip()
+
+        # ── Memory Plane 과거 교훈 주입 ──
+        if memory_context and memory_context.get("recall_count", 0) > 0:
+            memory_section = "\n\n## Past Lessons (from Memory Plane)\n\n"
+            for ep in memory_context.get("recalled_episodes", []):
+                outcome = "✅ 성공" if ep["outcome"] == "success" else "❌ 실패"
+                memory_section += f"- [{outcome}] {ep['task']}\n"
+                if ep.get("patterns"):
+                    memory_section += f"  실패 패턴: {', '.join(ep['patterns'])}\n"
+                if ep.get("lesson"):
+                    memory_section += f"  교훈: {ep['lesson']}\n"
+            for ls in memory_context.get("recalled_lessons", []):
+                memory_section += f"- 교훈 (신뢰도 {ls['confidence']:.0%}): {ls['content']}\n"
+            memory_section += (
+                "\n위 과거 경험을 참고하여:\n"
+                "1. 이전에 실패한 접근 방식을 피하라\n"
+                "2. 이전에 성공한 패턴을 재사용하라\n"
+                "3. 새로운 위험을 식별했으면 계획에 반영하라\n"
+            )
+            prompt += memory_section
 
         # CLI 프로바이더가 없으면 LLM 플래닝을 건너뼀고 즈시 폴백로 진입
         if not self._llm_available:
