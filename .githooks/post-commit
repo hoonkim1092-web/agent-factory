@@ -1,3 +1,36 @@
 #!/bin/sh
+# git-lfs
 command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path. If you no longer wish to use Git LFS, remove this hook by deleting the 'post-commit' file in the hooks directory (set by 'core.hookspath'; usually '.git/hooks')."; exit 2; }
 git lfs post-commit "$@"
+
+# ── 문서 자동 업데이트 (Blueprint + code-review) ──
+# 코드 파일 변경이 있을 때만 실행, 항상 exit 0
+CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
+CODE_CHANGED=$(echo "$CHANGED" | grep -E "^(core/|scripts/|skills/|run_factory_cli\.py|model_utils\.py|version\.py|af\.spec)" | head -1)
+
+if [ -n "$CODE_CHANGED" ]; then
+    # rebase/merge/cherry-pick 중이면 문서 업데이트 스킵 (amend 위험 방지)
+    GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
+    if [ -d "$GIT_DIR/rebase-merge" ] || \
+       [ -d "$GIT_DIR/rebase-apply" ] || \
+       [ -f "$GIT_DIR/MERGE_HEAD" ] || \
+       [ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]; then
+        exit 0
+    fi
+
+    COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null)
+
+    # Blueprint §12 자동 업데이트
+    python scripts/blueprint_updater.py --context "$COMMIT_MSG" 2>/dev/null &
+
+    # Code review 자동 업데이트
+    python scripts/code_review_updater.py --context "$COMMIT_MSG" 2>/dev/null &
+
+    wait
+
+    # Blueprint가 변경되었으면 자동 amend
+    if git diff --name-only 2>/dev/null | grep -q "Master_Blueprint.md"; then
+        git add Master_Blueprint.md 2>/dev/null
+        git commit --amend --no-edit 2>/dev/null
+    fi
+fi

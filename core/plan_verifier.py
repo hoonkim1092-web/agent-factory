@@ -73,7 +73,7 @@ class PlanVerifier:
         Returns
         -------
         PlanVerifyResult
-            실패해도 passed=False, score=0.5 기본값으로 항상 반환.
+            예외 발생 시 passed=False, score=0.0으로 반환 (파이프라인은 WARN 처리 후 계속).
         """
         try:
             artifact = self._build_artifact(task_input, work_items, project_brief)
@@ -96,8 +96,8 @@ class PlanVerifier:
             # 검증 자체가 실패해도 파이프라인을 중단하지 않는다
             print(f"[PlanVerifier] verify() 예외 발생 — 검증 스킵: {exc}")
             return PlanVerifyResult(
-                passed=True,   # 실패 시 통과로 간주 (파이프라인 차단 방지)
-                score=0.5,
+                passed=False,  # 검증 실패 시 명시적 실패 — 파이프라인이 WARN 처리
+                score=0.0,
                 issues=[f"verify_error: {exc}"],
                 suggestions=[],
                 refined_items=None,

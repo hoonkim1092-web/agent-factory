@@ -485,3 +485,13 @@ ISELoop.run_mission()
     ├─ af serve → DaemonSupervisor (v3 Phase 6, 미구현)
     └─ af worker → AgentWorker → task.json IPC → result.json
 ```
+
+---
+
+## 2026-04-09 14:17 — `agent-factory_harness_Claude_Setup_and_Pipeline_v1` (05b4acbf)
+
+**Context**: test run
+
+**Changed (13)**: `.claude/settings.local.json, .system_generated/cache/document_index.json, Master_Blueprint.md, core/fsa_loop.py, core/plan_verifier.py, core/project_pipeline.py, data/skill-usage.jsonl, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, resume_brief.md, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+_Review skipped (--no-llm or LLM unavailable)_

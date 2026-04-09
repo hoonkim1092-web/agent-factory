@@ -593,8 +593,7 @@ class ProjectPipeline:
                 _run_async_safe(_facade.initialise())
             # Planning 전 메모리 회상
             from core.control.intake import ControlPlaneIntake
-            _intake_inst = ControlPlaneIntake.__new__(ControlPlaneIntake)
-            memory_context = _intake_inst._recall_from_memory(task_input)
+            memory_context = ControlPlaneIntake()._recall_from_memory(task_input)
             if memory_context.get("recall_count", 0) > 0:
                 print(
                     f"[Pipeline] memory recalled: {memory_context['recall_count']} records "
@@ -758,11 +757,12 @@ class ProjectPipeline:
                 print(f"[Pipeline] plan verify issues: {_plan_result.issues[:3]}")
                 for _retry in range(2):
                     _refined = _pv.refine(task_input, _wi_items, _plan_result.issues, project_brief)
-                    if _refined and _refined != _wi_items:
-                        _wi_items = _refined
-                        _plan_result = _pv.verify(task_input, _wi_items, project_brief)
-                        if _plan_result.passed:
-                            break
+                    if not _refined or _refined == _wi_items:
+                        break  # refine 결과 없거나 동일하면 LLM 재호출 낭비 방지
+                    _wi_items = _refined
+                    _plan_result = _pv.verify(task_input, _wi_items, project_brief)
+                    if _plan_result.passed:
+                        break
             print(
                 f"[Pipeline] plan verify: {'PASS' if _plan_result.passed else 'WARN'} "
                 f"score={_plan_result.score:.2f}"

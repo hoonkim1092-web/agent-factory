@@ -263,7 +263,7 @@ def process_review(
         judge = select_judge(providers)
         print(f"[watcher] {review_type} cross review: critic={p_a}, cross={p_b}, judge={judge}: {rel_path}")
 
-        # 병렬 실행
+        # 병렬 실행 (REVIEW_TIMEOUT 적용 — hang 방지)
         with ThreadPoolExecutor(max_workers=2) as pool:
             future_critic = pool.submit(
                 run_critic, p_a, doc_content, context, workspace,
@@ -276,8 +276,14 @@ def process_review(
                 prompt_name=cross_prompt,
             )
 
-            critic_result = future_critic.result()
-            cross_result = future_cross.result()
+            try:
+                critic_result = future_critic.result(timeout=REVIEW_TIMEOUT)
+            except Exception as _crit_err:
+                critic_result = f"[critic timeout/error: {_crit_err}]"
+            try:
+                cross_result = future_cross.result(timeout=REVIEW_TIMEOUT)
+            except Exception as _cross_err:
+                cross_result = f"[cross timeout/error: {_cross_err}]"
 
         # 취합 판정
         final = run_aggregation(
@@ -398,7 +404,12 @@ def process_queue(workspace: str) -> int:
             continue
 
         try:
-            process_review(workspace, rel_path, trigger_source, review_type=review_type)
+            # 외부 timeout = REVIEW_TIMEOUT + 30초 (내부 timeout보다 여유분)
+            with ThreadPoolExecutor(max_workers=1) as _rv_pool:
+                _rv_future = _rv_pool.submit(
+                    process_review, workspace, rel_path, trigger_source, review_type=review_type,
+                )
+                _rv_future.result(timeout=REVIEW_TIMEOUT + 30)
             os.remove(queue_file)
             processed += 1
 

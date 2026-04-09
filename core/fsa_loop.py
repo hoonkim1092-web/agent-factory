@@ -144,7 +144,8 @@ class FSALoop:
             current_task = f"[EVALUATOR {action.upper()} ADVICE]\n{eval_res.get('new_instruction')}\n\n[Original Task]\n{task_input}"
 
         final_result = {"ok": False, "reason": "최대 재시도 횟수(5회) 초과로 중단되었습니다."}
-        self._record_episode(task_input, final_result, evolved_skill_name, gate_result, cycle)
+        if cycle > 0:
+            self._record_episode(task_input, final_result, evolved_skill_name, gate_result, cycle)
         return final_result
 
     def _try_evolve_failed_skill(
@@ -217,9 +218,8 @@ class FSALoop:
                 # 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 둘 다 호출
                 self._hot_reload_registry(skill_name)
             else:
-                # gate_result가 None(품질 게이트 예외 발생) — 검증 미완료, EvolutionBus 스킵
-                self._hot_reload_registry(skill_name)
-                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — EvolutionBus 스킵: {skill_name}", "⚠️")
+                # gate_result가 None(품질 게이트 예외 발생) — 검증 미완료, 핫리로딩+EvolutionBus 둘 다 스킵
+                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — hot_reload & EvolutionBus 스킵: {skill_name}", "⚠️")
                 return None
 
             # EvolutionBus: 전체 캐시 체인 무효화 + 이벤트 브로드캐스트 (게이트 통과 시만)

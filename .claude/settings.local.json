@@ -42,7 +42,24 @@
       "Bash(claude plugin:*)",
       "Bash(cat D:/hoonProJect/worktrees/agent-factory/.af_review_queue/pending/*.json)",
       "Bash(./end_db agent-factory:*)",
-      "Bash(bash start_db:*)"
+      "Bash(bash start_db:*)",
+      "Bash(start_db.cmd agent-factory:*)",
+      "mcp__codex__codex",
+      "Bash([ -f D:/hoonProJect/worktrees/agent-factory/findings.md ])"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(erase:*)",
+      "Bash(Remove-Item:*)",
+      "Bash(cmd /c del:*)",
+      "Bash(powershell -Command Remove-Item:*)",
+      "Bash(pwsh -Command Remove-Item:*)",
+      "Bash(git clean:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git restore --worktree:*)",
+      "Bash(git restore --staged:*)"
     ]
   },
   "hooks": {
@@ -58,9 +75,15 @@
           },
           {
             "type": "command",
-            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python scripts/code_review_updater.py --no-llm 2>/dev/null ;; esac",
-            "timeout": 15,
-            "statusMessage": "Code review log update..."
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python scripts/code_review_updater.py --context \"edit: $fp\" 2>/dev/null ;; esac",
+            "timeout": 30,
+            "statusMessage": "Code review update..."
+          },
+          {
+            "type": "command",
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python scripts/blueprint_updater.py --context \"edit: $fp\" 2>/dev/null ;; esac",
+            "timeout": 30,
+            "statusMessage": "Blueprint update..."
           },
           {
             "type": "command",
@@ -72,6 +95,116 @@
             "type": "command",
             "command": "for f in .af_review_queue/notifications/*.txt; do [ -f \"$f\" ] && cat \"$f\" && rm -f \"$f\"; done 2>/dev/null || true",
             "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": []
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }

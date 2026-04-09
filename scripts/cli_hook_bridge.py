@@ -1,6 +1,12 @@
 import argparse
 import json
+import os
 import sys
+
+# core/ 모듈 import를 위해 프로젝트 루트를 sys.path에 추가
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from core.providers.session_adapter import handle_hook_event
 

@@ -150,6 +150,32 @@ def _update_last_modified(path: str, date_str: str) -> None:
         pass
 
 
+# ── debounce ────────────────────────────────────────────────────────────────
+
+DEBOUNCE_FILE = os.path.join(".af_review_queue", ".code_review_debounce")
+QUIET_PERIOD_SEC = 15
+
+
+def _should_run_debounce(workspace: str) -> bool:
+    """quiet period 내 중복 호출 방지. False면 스킵."""
+    import time
+    debounce_path = os.path.join(workspace, DEBOUNCE_FILE)
+    if os.path.exists(debounce_path):
+        try:
+            mtime = os.path.getmtime(debounce_path)
+            if time.time() - mtime < QUIET_PERIOD_SEC:
+                return False
+        except Exception:
+            pass
+    try:
+        os.makedirs(os.path.dirname(debounce_path), exist_ok=True)
+        with open(debounce_path, "w") as f:
+            f.write("")
+    except Exception:
+        pass
+    return True
+
+
 # ── main logic ───────────────────────────────────────────────────────────────
 
 def _last_logged_commit(doc_path: str) -> str:
@@ -168,6 +194,10 @@ def _last_logged_commit(doc_path: str) -> str:
 
 def update_code_review_doc(workspace: str, context: str, no_llm: bool) -> bool:
     """Update docs/code-review.md. Returns True if any entry was written."""
+    # debounce: quiet period 내 중복 호출 방지 (PostToolUse hook 빈번 호출 대응)
+    if not no_llm and not _should_run_debounce(workspace):
+        return False
+
     changed = _changed_files(workspace)
     if not changed:
         return False

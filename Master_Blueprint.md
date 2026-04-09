@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-09 | version: 1.2.19 -->
+<!-- last_updated: 2026-04-09 | version: v1.2.18 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -876,6 +876,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-09 | v1.2.19 | fix(cross-review-2): BLOCK 2건 + WARN 3건 수정 — plan_verifier 예외 시 passed=False(silent pass 제거), fsa_loop gate_result=None 시 hot_reload 제거(미검증 스킬 등록 방지), project_pipeline __new__→정상 인스턴스, cycle=0 에피소드 기록 가드, refine 루프 동일 결과 break |
 | 2026-04-09 | v1.2.19 | fix(cross-review): 교차검증 버그 4개 수정 — project_pipeline PlanVerifier 파일내용 전달(경로→content dict), workspace 전달, fsa_loop gate_result=None 시 EvolutionBus 스킵, control/intake MemoryType enum 명시화(GRAPH/WORKING 오염 방지) |
 | 2026-04-09 | v1.2.19 | feat(3-plane): 3-Plane 통합 구현 — skill_quality_gate.py 신규(SkillQualityGate/GateResult), fsa_loop._try_evolve_failed_skill() gate 삽입 + GateResult 반환, _run_quality_gate()/_record_episode() 추가, run_mission() 에피소드 기록(UnifiedMemoryFacade), control/intake.py NormalizedRequest.memory_context 필드 + _recall_from_memory(), bootstrap_roles.plan() memory_context 파라미터 + 과거 교훈 프롬프트 주입, af.spec hiddenimports에 core.skill_quality_gate 추가 |
 | 2026-04-08 | v1.2.18 | fix(config_paths): PyInstaller exe에서 BASE_DIR이 임시 언팩 폴더(_MEI...)로 잡히는 버그 수정 — sys.frozen 감지 후 sys.executable 기준으로 전환, 프로젝트가 올바른 경로(af.exe 옆)에 생성됨 |
