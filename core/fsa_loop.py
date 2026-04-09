@@ -1,12 +1,45 @@
+"""
+core/fsa_loop.py
+================
+Full Self Automation (FSA) Loop Orchestrator — ISE와 동일한 에스컬레이션 파이프라인.
+
+ISE Loop과 동일한 ANALYZE → ESCALATE(Level 1~5) → ACT 구조를 사용하되,
+루프 횟수만 max_cycles(기본 5회)로 제한한다.
+
+에스컬레이션 레벨:
+  Level 1: 단순 재시도 (피드백 주입)
+  Level 2: 전략 피벗 (접근법 변경)
+  Level 3: 설계 재시작 (아키텍처 재구성)
+  Level 4: 스킬 진화 + 설계 재시작
+  Level 5: 태스크 분해 (서브태스크 분할 → 각각 실행)
+
+탈출 조건:
+  - 성공 (ok=True)
+  - max_cycles 초과
+  - 사용자 명시 중단
+  - KeyboardInterrupt
+
+Git 범위 원칙:
+  - commit/rollback은 workspace(프로젝트 디렉토리) 안에서만 동작한다.
+  - factory 코드(core/, skills/ 등)는 에이전트 git 조작 범위 밖이다.
+  - rollback은 tracked 파일 변경만 되돌린다. untracked 파일은 보존된다.
+"""
+from __future__ import annotations
+
 import os
 import json
 import re
 import time
+
 from core.agent_runner import AgentRunner
 from core.git_manager import GitManager
 from core.utils import now_iso, print_agent_msg, safe_json_load
 from core.evaluator import StrategyEvaluator
 from core.config_paths import SKILLS_DIR, PROJECT_SKILLS_DIR
+from core.ise_strategy_ledger import StrategyLedger
+from core.ise_analyzer import ISEAnalyzer, ISEAnalysis
+from core.ise_redesigner import ISERedesigner
+from core.ise_stall_detector import StallDetector
 
 
 def parse_evaluator_response(result: dict) -> dict:
@@ -14,7 +47,6 @@ def parse_evaluator_response(result: dict) -> dict:
     if not result.get("ok"):
         return {"action": "abort", "reasoning": f"Evaluator agent failed: {result.get('reason', '')}", "new_instruction": ""}
 
-    # Try to extract JSON from the agent's output
     output = result.get("output", "") or result.get("reason", "")
     if isinstance(output, dict):
         return {
@@ -23,7 +55,6 @@ def parse_evaluator_response(result: dict) -> dict:
             "new_instruction": str(output.get("new_instruction", "")),
         }
 
-    # Try JSON extraction from text
     data = safe_json_load(output) if isinstance(output, str) else {}
     if data and "action" in data:
         return {
@@ -37,116 +68,426 @@ def parse_evaluator_response(result: dict) -> dict:
 
 class FSALoop:
     """
-    (V24) Full Self Automation (FSA) Loop Orchestrator with Workspace-Scoped Git Safety.
-    Implements EXECUTE -> TRACE -> EVAL -> SUMMARIZE -> DATASETS -> REFLECT cycle.
-
-    Git 범위 원칙:
-    - commit/rollback은 workspace(프로젝트 디렉토리) 안에서만 동작한다.
-    - factory 코드(core/, skills/ 등)는 에이전트 git 조작 범위 밖이다.
-    - rollback은 tracked 파일 변경만 되돌린다. untracked 파일은 보존된다.
+    Full Self Automation Loop — ISE와 동일한 에스컬레이션 파이프라인 (max_cycles 제한).
     """
+
     def __init__(self, runner: AgentRunner, agent_mgr=None, visualizer=None):
         self.runner = runner
         self.agent_mgr = agent_mgr
         self._visualizer = visualizer
-        # Fallback evaluator (used when agent_mgr is unavailable or evaluator agent fails)
-        self.evaluator = StrategyEvaluator(
-            model_name=runner.mr.pick('evaluator') if hasattr(runner.mr, 'pick') else 'gemini-1.5-pro-latest'
-        )
         self.max_cycles = 5
+
+        # ISE-level 분석/재설계/정체감지 엔진
+        model_name = "gemini-1.5-pro-latest"
+        if hasattr(runner, "mr") and hasattr(runner.mr, "pick"):
+            model_name = runner.mr.pick("evaluator") or model_name
+        self.analyzer = ISEAnalyzer(model_name=model_name)
+        self.redesigner = ISERedesigner(model_name=model_name)
+        self.stall_detector = StallDetector()
+
+        # Legacy fallback evaluator (StrategyEvaluator)
+        self.evaluator = StrategyEvaluator(model_name=model_name)
+
         # NOTE: GitManager는 __init__에서 생성하지 않는다.
         # run_mission()에서 workspace를 받아 그 범위로 생성한다.
 
-    def run_mission(self, agent: dict, task_input: str, run_id: str, workspace: str | None = None):
-        print(f"\n🌀 [FSALoop] 풀 셀프 자동화 모드(FSA) 시작: {run_id}")
+    def run_mission(
+        self,
+        agent: dict,
+        task_input: str,
+        run_id: str,
+        workspace: str | None = None,
+    ) -> dict:
+        """
+        FSA 메인 루프 — ISE와 동일한 에스컬레이션 파이프라인.
 
-        # workspace 기반 GitManager 생성 — factory 루트가 아닌 프로젝트 디렉토리
+        Returns:
+            {
+                "ok": bool,
+                "reason": str,
+                "meta_cycles": int,
+                "max_escalation_level": int,
+                "strategy_ledger": dict,
+            }
+        """
+        # ── 워크스페이스 설정 ──
         target_workspace = workspace or os.getcwd()
         if not target_workspace or not os.path.isdir(target_workspace):
             return {"ok": False, "reason": f"유효하지 않은 워크스페이스: {target_workspace}"}
-        self.workspace = target_workspace   # 교차검증 evaluator에서 참조
+        self.workspace = target_workspace
         git = GitManager(target_workspace)
 
         agent_name = agent.get("name", "Agent") if isinstance(agent, dict) else "Agent"
 
+        # ── 전략 원장 초기화 ──
+        ledger = StrategyLedger(run_id=run_id, original_task=task_input)
         current_task = task_input
+        current_agent = agent
+        max_level_reached = 0
         evolved_skill_name = None
         gate_result = None
-        cycle = 0
-        result = {"ok": False, "reason": "초기값"}
 
-        for cycle in range(1, self.max_cycles + 1):
-            if self._visualizer:
-                self._visualizer.update_from_fsa_step(agent_name, "execute", cycle, self.max_cycles)
-            else:
-                print(f"\n🔄 [Cycle {cycle}/{self.max_cycles}] 실행 및 자동 커밋 준비...")
+        print_agent_msg("FSA", f"풀 셀프 자동화 모드(FSA) 시작: {run_id}", "🌀")
+        print_agent_msg("FSA", f"최대 {self.max_cycles} 사이클 | workspace={target_workspace}", "📋")
 
-            # ── Step 1: Pre-Commit for safety (workspace 범위) ──
-            commit_msg = f"AEE Auto-Save: {run_id} Cycle {cycle}"
-            git.commit(commit_msg)
-
-            # ── Step 2: EXECUTE ──
-            result = self.runner.run(
-                agent,
-                current_task,
-                run_id=f"{run_id}_c{cycle}",
-                auto_approve=True,
-                workspace=target_workspace,
-            )
-
-            # Step 2b: TRACE — LangSmithTracingHook auto-collects (Phase 1, no-op if disabled)
-
-            if result.get("ok"):
+        try:
+            for cycle in range(1, self.max_cycles + 1):
                 if self._visualizer:
-                    self._visualizer.mark_completed(agent_name)
+                    self._visualizer.update_from_fsa_step(agent_name, "execute", cycle, self.max_cycles)
                 else:
-                    print(f"✅ [Cycle {cycle}] 성공적으로 완료됨.")
-                self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
-                return result
+                    print(
+                        f"\n🔄 [Cycle {cycle}/{self.max_cycles}] "
+                        f"실행 (최대 에스컬레이션: Level {max_level_reached})"
+                    )
 
-            # ── Step 3: Failure & Rollback (workspace tracked 파일만) ──
-            if self._visualizer:
-                self._visualizer.update_from_fsa_step(agent_name, "eval", cycle, self.max_cycles)
-            else:
-                print(f"⚠️ [Cycle {cycle}] 실패 감지: {result.get('reason')}")
-                print(f"⏪ [FSALoop] workspace tracked 파일 변경을 되돌립니다.")
+                # ── 정체 감지 ──
+                stall_action = self.stall_detector.check(ledger)
+                if stall_action == "human_escalation":
+                    human_result = self._request_human_help(ledger, cycle)
+                    if human_result.get("continue"):
+                        hint = human_result.get("hint", "")
+                        if hint:
+                            current_task = (
+                                f"[사용자 힌트]\n{hint}\n\n"
+                                f"[Original Task]\n{task_input}"
+                            )
+                        ledger.reset_escalation_counters()
+                        continue
+                    else:
+                        ledger.save(target_workspace)
+                        return {
+                            "ok": False,
+                            "reason": human_result.get("reason", "사용자 중단"),
+                            "meta_cycles": cycle,
+                            "max_escalation_level": max_level_reached,
+                            "strategy_ledger": ledger.to_dict(),
+                        }
+                elif stall_action == "creativity_injection":
+                    current_task = self.redesigner.inject_creativity(current_task, ledger)
 
-            try:
-                git.rollback()
-            except Exception as e:
-                print_agent_msg("Critical", f"Rollback 실패: {e}", "🛑")
+                # ── Step 1: Pre-Commit (워크스페이스 스냅샷) ──
+                git.commit(f"AEE Auto-Save: {run_id} Cycle {cycle}")
 
-            # ── Step 4: EVAL — 교차검증 평가 (2개 이상 CLI) 또는 단일 evaluator ──
-            eval_res = self._run_cross_verified_evaluator(agent, current_task, result, run_id, cycle)
+                # ── Step 2: EXECUTE ──
+                result = self.runner.run(
+                    current_agent,
+                    current_task,
+                    run_id=f"{run_id}_c{cycle}",
+                    auto_approve=True,
+                    workspace=target_workspace,
+                )
 
-            action = eval_res.get("action", "abort")
-            if action == "abort":
-                print_agent_msg("Evaluator", f"Catastrophic failure. Aborting sequence. Reason: {eval_res.get('reasoning')}", "🛑")
-                abort_result = {"ok": False, "reason": "Evaluator aborted task."}
-                self._record_episode(task_input, abort_result, evolved_skill_name, gate_result, cycle)
-                return abort_result
+                # ── 성공 체크 ──
+                if result.get("ok"):
+                    if self._visualizer:
+                        self._visualizer.mark_completed(agent_name)
+                    else:
+                        print_agent_msg("FSA", f"Cycle {cycle}에서 성공!", "✅")
+                    ledger.save(target_workspace)
+                    self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
+                    return {
+                        **result,
+                        "meta_cycles": cycle,
+                        "max_escalation_level": max_level_reached,
+                        "strategy_ledger": ledger.to_dict(),
+                    }
 
-            # ── Step 5: SUMMARIZE + DATASETS — handled by evaluator agent's skills ──
-            # (trace_execution, summarize_failure, generate_eval_dataset are in evaluator's skill set)
+                # ── Step 3: Rollback (workspace tracked 파일만) ──
+                if self._visualizer:
+                    self._visualizer.update_from_fsa_step(agent_name, "eval", cycle, self.max_cycles)
+                else:
+                    print(f"⚠️ [Cycle {cycle}] 실패: {str(result.get('reason', ''))[:120]}")
 
-            # ── Step 5b: SKILL EVOLVE — 실패 원인이 특정 스킬이면 자동 진화 시도 ──
-            gate_result = self._try_evolve_failed_skill(
-                error_reason=result.get("reason", ""),
-                eval_reasoning=eval_res.get("reasoning", ""),
-                run_id=run_id,
-                cycle=cycle,
-            )
-            if gate_result is not None:
-                evolved_skill_name = gate_result.skill_path.split(os.sep)[-1] if gate_result.skill_path else None
+                try:
+                    git.rollback()
+                except Exception as e:
+                    print_agent_msg("Critical", f"Rollback 실패: {e}", "🛑")
 
-            # ── Step 6: REFLECT — inject feedback into next cycle's task ──
-            print_agent_msg("Evaluator", f"Decision: {action.upper()} | Reasoning: {eval_res.get('reasoning')}", "💡")
-            current_task = f"[EVALUATOR {action.upper()} ADVICE]\n{eval_res.get('new_instruction')}\n\n[Original Task]\n{task_input}"
+                # ── Step 4: ANALYZE (ISE-style 구조화 분석) ──
+                print_agent_msg("FSA", "실패 분석 중...", "🔍")
+                analysis = self.analyzer.analyze_failure(
+                    task=current_task,
+                    result=result,
+                    ledger=ledger,
+                )
 
-        final_result = {"ok": False, "reason": "최대 재시도 횟수(5회) 초과로 중단되었습니다."}
-        if cycle > 0:
-            self._record_episode(task_input, final_result, evolved_skill_name, gate_result, cycle)
+                # ── Step 5: ESCALATE — 에스컬레이션 레벨 결정 ──
+                level = self._decide_escalation(ledger, analysis)
+                max_level_reached = max(max_level_reached, level)
+
+                # 원장에 시도 기록
+                ledger.record_attempt(
+                    meta_cycle=cycle,
+                    task_input=current_task,
+                    result=result,
+                    analysis=analysis.to_dict(),
+                    escalation_level=level,
+                    strategy_description=analysis.suggested_strategy,
+                )
+
+                print_agent_msg(
+                    "FSA",
+                    f"에스컬레이션 Level {level} | "
+                    f"에러: {analysis.error_category} | "
+                    f"근본적: {analysis.is_fundamental}",
+                    "📊",
+                )
+
+                # ── Step 6: ACT — 레벨별 대응 ──
+                if level == 1:
+                    current_task = self.redesigner.apply_retry_feedback(task_input, analysis)
+
+                elif level == 2:
+                    current_task = self.redesigner.apply_pivot(task_input, analysis, ledger)
+
+                elif level == 3:
+                    print_agent_msg("FSA", "설계 재시작: 아키텍처를 전면 재구성합니다", "🏗️")
+                    current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
+
+                elif level == 4:
+                    print_agent_msg("FSA", "스킬 진화 + 설계 재시작", "🧬")
+                    gate_result = self._try_evolve_failed_skill(
+                        error_reason=result.get("reason", ""),
+                        eval_reasoning=analysis.evaluator_reasoning,
+                        run_id=run_id,
+                        cycle=cycle,
+                    )
+                    if gate_result is not None:
+                        evolved_skill_name = (
+                            gate_result.skill_path.split(os.sep)[-1]
+                            if gate_result.skill_path else None
+                        )
+                    current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
+
+                elif level == 5:
+                    print_agent_msg("FSA", "태스크 분해: 서브태스크로 분할 실행합니다", "🔀")
+                    sub_results = self._decompose_and_execute(
+                        task_input, current_agent, analysis, ledger,
+                        run_id, cycle, target_workspace,
+                    )
+                    if sub_results and all(r.get("ok") for r in sub_results):
+                        print_agent_msg("FSA", "모든 서브태스크 성공!", "✅")
+                        ledger.save(target_workspace)
+                        success_result = {
+                            "ok": True,
+                            "reason": "FSA 태스크 분해 후 전체 성공",
+                            "meta_cycles": cycle,
+                            "max_escalation_level": 5,
+                            "strategy_ledger": ledger.to_dict(),
+                        }
+                        self._record_episode(task_input, success_result, evolved_skill_name, gate_result, cycle)
+                        return success_result
+                    # 분해 실패: 카운터 리셋 후 피벗
+                    print_agent_msg("FSA", "서브태스크 일부 실패, 카운터 리셋 후 재시도", "🔁")
+                    ledger.reset_escalation_counters()
+                    current_task = self.redesigner.apply_pivot(task_input, analysis, ledger)
+
+                # ── Step 7: 원장 영속화 ──
+                ledger.save(target_workspace)
+
+                # ── 지수 백오프 (같은 레벨 반복 시) ──
+                backoff = self.stall_detector.compute_backoff(ledger, level)
+                if backoff > 0:
+                    print_agent_msg("FSA", f"백오프 대기: {backoff:.1f}초", "⏳")
+                    time.sleep(backoff)
+
+        except KeyboardInterrupt:
+            print_agent_msg("FSA", "사용자 인터럽트 — 루프 중단", "⛔")
+            ledger.save(target_workspace)
+            return {
+                "ok": False,
+                "reason": "KeyboardInterrupt",
+                "meta_cycles": cycle if 'cycle' in dir() else 0,
+                "max_escalation_level": max_level_reached,
+                "strategy_ledger": ledger.to_dict(),
+            }
+
+        # ── max_cycles 초과 ──
+        final_result = {
+            "ok": False,
+            "reason": f"최대 재시도 횟수({self.max_cycles}회) 초과로 중단되었습니다.",
+            "meta_cycles": self.max_cycles,
+            "max_escalation_level": max_level_reached,
+            "strategy_ledger": ledger.to_dict(),
+        }
+        ledger.save(target_workspace)
+        self._record_episode(task_input, final_result, evolved_skill_name, gate_result, self.max_cycles)
         return final_result
+
+    # ══════════════════════════════════════════════════════════════
+    #  에스컬레이션 결정 (ISE와 동일)
+    # ══════════════════════════════════════════════════════════════
+
+    def _decide_escalation(self, ledger: StrategyLedger, analysis: ISEAnalysis) -> int:
+        """
+        전략 원장과 분석 결과를 바탕으로 에스컬레이션 레벨을 결정한다.
+
+        Level 1: 첫 실패 또는 일시적 에러
+        Level 2: 같은 에러 반복 2회+ (전략 피벗 필요)
+        Level 3: 피벗 3회+ 실패 or abort 판정 or 근본적 결함
+        Level 4: 설계 재시작 실패 + 스킬 결함 식별
+        Level 5: Level 4 실패 (태스크 분해)
+        """
+        repeat_count = ledger.consecutive_same_error_count()
+        pivot_count = ledger.pivot_count()
+        redesign_count = ledger.redesign_count()
+
+        # 근본적 결함이면 바로 Level 3 이상으로 에스컬레이션
+        if analysis.is_fundamental:
+            if redesign_count == 0:
+                return 3
+            elif ledger.has_skill_failure():
+                return 4
+            else:
+                return 5
+
+        # abort 판정이면 설계 재시작
+        if analysis.evaluator_action == "abort":
+            if redesign_count == 0:
+                return 3
+            elif ledger.has_skill_failure():
+                return 4
+            else:
+                return 5
+
+        # 점진적 에스컬레이션
+        if repeat_count == 0:
+            return 1
+        elif repeat_count <= 2 and pivot_count < 3:
+            return 2
+        elif pivot_count >= 3 and redesign_count == 0:
+            return 3
+        elif redesign_count >= 1 and ledger.has_skill_failure():
+            return 4
+        else:
+            if redesign_count >= 2 or ledger.decompose_count() == 0:
+                return 5
+            return 2
+
+    # ══════════════════════════════════════════════════════════════
+    #  태스크 분해 + 실행 (ISE와 동일)
+    # ══════════════════════════════════════════════════════════════
+
+    def _decompose_and_execute(
+        self,
+        original_task: str,
+        agent: dict,
+        analysis: ISEAnalysis,
+        ledger: StrategyLedger,
+        run_id: str,
+        cycle: int,
+        workspace: str,
+    ) -> list[dict]:
+        """태스크를 분해하고 각 서브태스크를 개별 실행한다."""
+        subtasks = self.redesigner.decompose_task(original_task, analysis, ledger)
+        if not subtasks:
+            return [{"ok": False, "reason": "태스크 분해 실패"}]
+
+        print_agent_msg("FSA", f"{len(subtasks)}개 서브태스크로 분해됨", "📋")
+        results = []
+        completed_indices: set[int] = set()
+
+        # 의존 관계 순서대로 실행
+        for priority_pass in range(1, len(subtasks) + 1):
+            for i, st in enumerate(subtasks):
+                if i in completed_indices:
+                    continue
+                deps = st.get("dependencies", [])
+                if not all(d in completed_indices for d in deps):
+                    continue
+
+                sub_task = st["subtask"]
+                sub_run_id = f"{run_id}_c{cycle}_sub{i}"
+
+                print_agent_msg(
+                    "FSA",
+                    f"서브태스크 {i + 1}/{len(subtasks)}: {sub_task[:80]}...",
+                    "▶️",
+                )
+
+                sub_result = self.runner.run(
+                    agent,
+                    sub_task,
+                    run_id=sub_run_id,
+                    auto_approve=True,
+                    workspace=workspace,
+                )
+                results.append(sub_result)
+
+                if sub_result.get("ok"):
+                    completed_indices.add(i)
+                    print_agent_msg("FSA", f"서브태스크 {i + 1} 완료", "✅")
+                else:
+                    print_agent_msg(
+                        "FSA",
+                        f"서브태스크 {i + 1} 실패: {sub_result.get('reason', '')[:100]}",
+                        "❌",
+                    )
+                    return results
+
+            if len(completed_indices) == len(subtasks):
+                break
+
+        return results
+
+    # ══════════════════════════════════════════════════════════════
+    #  사용자 에스컬레이션 (ISE와 동일)
+    # ══════════════════════════════════════════════════════════════
+
+    def _request_human_help(self, ledger: StrategyLedger, cycle: int) -> dict:
+        """사용자에게 도움을 요청한다. abort가 아닌 일시정지."""
+        print("\n" + "=" * 60)
+        print("  [FSA] 정체 감지 — 사용자 도움 요청")
+        print("=" * 60)
+        print(f"  사이클: {cycle}/{self.max_cycles}")
+        print(f"  총 시도: {len(ledger.entries)}회")
+        print(f"  경과 시간: {ledger.total_elapsed_sec():.0f}초")
+
+        top_errors = ledger.top_error_signatures(3)
+        if top_errors:
+            print(f"\n  반복 에러 패턴:")
+            for sig, count in top_errors:
+                print(f"    - [{count}회] {sig[:80]}")
+
+        failed_descs = ledger.failed_strategy_descriptions(5)
+        if failed_descs:
+            print(f"\n  실패한 접근법:")
+            for desc in failed_descs:
+                print(f"    - {desc}")
+
+        print(f"\n  레벨별 시도 횟수: {ledger.level_counts()}")
+        print()
+        print("  [1] 힌트를 제공하고 계속 (hint)")
+        print("  [2] 파일을 수동 수정 후 계속 (manual)")
+        print("  [3] 완전 중단 (abort)")
+        print()
+
+        try:
+            choice = input("  선택 [1/2/3]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            return {"ok": False, "reason": "FSA 루프: 입력 불가 — 중단", "continue": False}
+
+        if choice in ("1", "hint"):
+            try:
+                hint = input("  힌트 입력: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                return {"ok": False, "reason": "FSA 루프: 입력 불가 — 중단", "continue": False}
+            ledger.record_human_hint(hint)
+            print_agent_msg("FSA", f"사용자 힌트 반영: {hint[:80]}", "💡")
+            return {"ok": False, "reason": "human_hint_provided", "hint": hint, "continue": True}
+        elif choice in ("2", "manual"):
+            try:
+                input("  수정 후 Enter를 누르세요...")
+            except (EOFError, KeyboardInterrupt):
+                pass
+            print_agent_msg("FSA", "수동 수정 반영, 루프 계속", "🔧")
+            return {"ok": False, "reason": "manual_edit", "continue": True}
+        else:
+            return {"ok": False, "reason": "FSA 루프: 사용자 중단", "continue": False}
+
+    # ══════════════════════════════════════════════════════════════
+    #  스킬 진화 (기존 FSA 로직 보존)
+    # ══════════════════════════════════════════════════════════════
 
     def _try_evolve_failed_skill(
         self, error_reason: str, eval_reasoning: str, run_id: str, cycle: int
@@ -180,7 +521,6 @@ class FSALoop:
             if hasattr(self.runner, 'mr') and hasattr(self.runner.mr, 'pick'):
                 coding_engine = self.runner.mr.pick('coding')
 
-            # 진화 전 버전 기록
             old_version = self._read_skill_version(skill_dir)
 
             success = evolve_skill(
@@ -194,10 +534,8 @@ class FSALoop:
                 print_agent_msg("SkillEvolve", f"진화 실패, 기존 코드 유지: {skill_name}", "⚠️")
                 return None
 
-            # 메타데이터도 함께 보강 (키워드/태그/설명 최신화)
             enrich_skill_metadata(skill_dir, coding_engine=coding_engine, force=True)
 
-            # 샌드박스 검증 (action 스킬만)
             skill_py = os.path.join(skill_dir, "skill.py")
             if os.path.exists(skill_py):
                 verified = self._verify_evolved_skill(skill_py, skill_name)
@@ -207,7 +545,6 @@ class FSALoop:
 
             new_version = self._read_skill_version(skill_dir)
 
-            # ── Quality Gate: 진화된 스킬 품질 검사 후 레지스트리 등재 ──
             gate_result = self._run_quality_gate(skill_dir, skill_name)
             if gate_result is not None and not gate_result.passed:
                 for reason in gate_result.failure_reasons:
@@ -215,14 +552,11 @@ class FSALoop:
                 print_agent_msg("SkillEvolve", f"품질 게이트 실패 — hot_reload 스킵: {skill_name}", "🚫")
                 return gate_result
             elif gate_result is not None and gate_result.passed:
-                # 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 둘 다 호출
                 self._hot_reload_registry(skill_name)
             else:
-                # gate_result가 None(품질 게이트 예외 발생) — 검증 미완료, 핫리로딩+EvolutionBus 둘 다 스킵
                 print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — hot_reload & EvolutionBus 스킵: {skill_name}", "⚠️")
                 return None
 
-            # EvolutionBus: 전체 캐시 체인 무효화 + 이벤트 브로드캐스트 (게이트 통과 시만)
             evo_bus = SkillEvolutionBus.get_instance()
             evo_bus.bind_runner(self.runner)
             evo_bus.on_skill_evolved(
@@ -244,7 +578,6 @@ class FSALoop:
         """에러 로그에서 실패한 스킬 디렉토리를 추출합니다."""
         combined = f"{error_reason}\n{eval_reasoning}".lower()
 
-        # 스킬 디렉토리 탐색 대상
         search_dirs = []
         if PROJECT_SKILLS_DIR and os.path.isdir(PROJECT_SKILLS_DIR):
             search_dirs.append(PROJECT_SKILLS_DIR)
@@ -260,8 +593,6 @@ class FSALoop:
                         continue
                     if item.startswith(".") or item in _SKIP:
                         continue
-                    # 단어 경계 매칭으로 오탐 방지 (BUG-6 수정)
-                    # \b는 _를 단어 문자로 취급해 오작동 → lookaround 방식으로 교체
                     skill_name_lower = item.lower().replace("-", "_")
                     pattern = rf"(?<![a-zA-Z0-9_]){re.escape(skill_name_lower)}(?![a-zA-Z0-9_])"
                     if re.search(pattern, combined) or re.search(
@@ -278,7 +609,6 @@ class FSALoop:
         try:
             from core.security_guard import quick_guard, run_isolated
 
-            # AST 보안 검사
             with open(skill_py, "r", encoding="utf-8") as f:
                 code = f.read()
 
@@ -287,7 +617,6 @@ class FSALoop:
                 print_agent_msg("SkillEvolve", f"보안 검사 실패 ({skill_name}): {violations}", "🛑")
                 return False
 
-            # 격리 실행 검증
             ok, result, stderr = run_isolated(skill_py, timeout_sec=15)
             if not ok:
                 reason = result.get("reason", "") or result.get("error", "") or stderr
@@ -336,6 +665,10 @@ class FSALoop:
             print_agent_msg("SkillEvolve", f"품질 게이트 예외 ({skill_name}): {e}", "⚠️")
             return None
 
+    # ══════════════════════════════════════════════════════════════
+    #  에피소드 기록 / 유틸
+    # ══════════════════════════════════════════════════════════════
+
     def _record_episode(
         self,
         task_input: str,
@@ -366,7 +699,7 @@ class FSALoop:
             pass
 
     def _hot_reload_registry(self, skill_name: str):
-        """레지스트리를 강제 리로딩하여 진화된 스킬을 반영합니다 (하위 호환용)."""
+        """레지스트리를 강제 리로딩하여 진화된 스킬을 반영합니다."""
         try:
             from core.skill_registry import get_global_registry
             registry = get_global_registry()
@@ -387,90 +720,3 @@ class FSALoop:
             return str(meta.get("version", "0.1.0"))
         except Exception:
             return "0.1.0"
-
-    def _run_cross_verified_evaluator(
-        self, agent: dict, current_task: str, result: dict, run_id: str, cycle: int
-    ) -> dict:
-        """교차검증 기반 평가: 여러 엔진이 실패를 분석하고 Opus가 최종 판정.
-
-        2개 이상 CLI가 설치된 경우에만 활성화.
-        실패 시 기존 _run_evaluator() 로 폴백한다.
-        """
-        try:
-            from core.cross_verification import CrossVerificationLoop
-
-            # 설치된 CLI가 2개 미만이면 교차검증 의미 없음
-            mr = getattr(self.runner, 'mr', None)
-            pairs = mr.pick_multiple() if (mr is not None and hasattr(mr, 'pick_multiple')) else []
-            if len(pairs) < 2:
-                return self._run_evaluator(agent, current_task, result, run_id, cycle)
-
-            workspace = getattr(self, 'workspace', None) or os.getcwd()
-            loop = CrossVerificationLoop(workspace=workspace, level="dynamic", max_rounds=1)
-
-            eval_task = (
-                f"다음 실행 결과의 실패 원인을 분석하고 수정 방향을 제시하세요.\n\n"
-                f"[원래 태스크]\n{current_task}\n\n"
-                f"[오류 로그]\n{result.get('reason', '')[:2000]}\n\n"
-                f"반드시 JSON으로 답변하세요:\n"
-                f'{{"action": "retry"|"abort", '
-                f'"reasoning": "분석 내용", '
-                f'"new_instruction": "수정된 태스크 지시"}}'
-            )
-            judgment = loop.run(eval_task, "당신은 코드 디버깅 전문가입니다.")
-
-            if judgment.verdict in ("pass", "partial") and judgment.merged_output:
-                parsed = self._parse_eval_result(judgment.merged_output)
-                if parsed.get("action") in ("retry", "abort"):
-                    return parsed
-
-        except Exception as exc:
-            print_agent_msg("FSALoop", f"교차검증 평가 실패, fallback 사용: {exc}", "⚠️")
-
-        return self._run_evaluator(agent, current_task, result, run_id, cycle)
-
-    def _parse_eval_result(self, text: str) -> dict:
-        """평가 결과 텍스트에서 action/reasoning/new_instruction을 추출한다."""
-        import re, json as _json
-        match = re.search(r'\{[\s\S]*"action"[\s\S]*\}', text)
-        if match:
-            try:
-                data = _json.loads(match.group())
-                return {
-                    "action": str(data.get("action", "abort")).strip().lower(),
-                    "reasoning": str(data.get("reasoning", "")),
-                    "new_instruction": str(data.get("new_instruction", "")),
-                }
-            except Exception:
-                pass
-        return {"action": "abort", "reasoning": "판정 파싱 실패", "new_instruction": ""}
-
-    def _run_evaluator(self, agent: dict, current_task: str, result: dict, run_id: str, cycle: int) -> dict:
-        """Try evaluator agent first, fall back to StrategyEvaluator."""
-        if self.agent_mgr is not None:
-            try:
-                evaluator_agent = self.agent_mgr.get_or_create("evaluator")
-                eval_task = (
-                    f"[EVAL REQUEST] run_id={run_id}\n"
-                    f"Error: {result.get('reason')}\n"
-                    f"Original Task: {current_task}"
-                )
-                eval_result = self.runner.run(
-                    evaluator_agent,
-                    eval_task,
-                    run_id=f"{run_id}_eval_c{cycle}",
-                    auto_approve=True,
-                )
-                parsed = parse_evaluator_response(eval_result)
-                if parsed.get("action") != "abort" or "Could not parse" not in parsed.get("reasoning", ""):
-                    return parsed
-                # If parsing failed, fall through to legacy evaluator
-            except Exception as e:
-                print_agent_msg("FSALoop", f"Evaluator 에이전트 호출 실패, fallback 사용: {e}", "⚠️")
-
-        # Fallback: legacy StrategyEvaluator
-        return self.evaluator.evaluate_failure(
-            role=agent.get("role", "General"),
-            instruction=current_task,
-            error_log=result.get("reason", "Unknown error"),
-        )

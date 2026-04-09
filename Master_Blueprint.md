@@ -65,7 +65,7 @@
 | `core/executor.py` | 태스크 실행 래퍼 | — |
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
-| `core/fsa_loop.py:1-395` | FSA PDCA 자가실행 루프 | `FSALoop`, `run_mission()` |
+| `core/fsa_loop.py:1-480` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한) | `FSALoop`, `run_mission()`, `_decide_escalation()` |
 | `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
 | `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | `SkillSelfEvolutionHook` |
@@ -148,7 +148,7 @@
 |------|--------|----------|------|
 | Interactive (기본) | 인자 없음 | `interactive_chat.py` | 사용자 입력 반복 |
 | Approval | `--mode approval` | `project_pipeline.py` | Phase1→승인→Phase2 |
-| FSA | `--mode fsa` | `fsa_loop.py` | 최대 5 사이클 |
+| FSA | `--mode fsa` | `fsa_loop.py` | ISE 에스컬레이션 (Level 1-5), 최대 5 사이클 |
 | ISE | `--mode ise` | `ise_loop.py` | 무한 자가진화 |
 | Worker | `worker` 서브커맨드 | `agent_worker.py` | 단일 태스크 실행 (PyInstaller 전용) |
 
@@ -192,22 +192,30 @@ run_factory_cli.py:main()
   └─ dashboard.append_dashboard_run()
 ```
 
-### Flow B: FSA 자가실행 루프
+### Flow B: FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한)
 
 ```
 fsa_loop.FSALoop.run_mission()
   │
+  ├─ StrategyLedger 초기화
+  │
   └─ For cycle in 1..5:
-      ├─ git.commit()                   [워크스페이스 안전 저장]
+      ├─ StallDetector.check()           [정체 감지]
+      │   ├─ human_escalation → 사용자 힌트/중단
+      │   └─ creativity_injection → 랜덤 전략 변이
+      ├─ git.commit()                    [워크스페이스 안전 저장]
       ├─ runner.run() → result
       │   └─ ok=True → RETURN SUCCESS
-      ├─ git.rollback()                 [실패 시 되돌리기]
-      ├─ _run_cross_verified_evaluator()
-      │   ├─ 2+ CLIs → CrossVerificationLoop
-      │   └─ 1 CLI → StrategyEvaluator
-      ├─ action == "abort" → RETURN FAIL
-      ├─ _try_evolve_failed_skill()     [스킬 진화]
-      └─ 다음 사이클 (feedback 주입)
+      ├─ git.rollback()                  [실패 시 되돌리기]
+      ├─ ISEAnalyzer.analyze_failure()   [구조화 분석]
+      ├─ _decide_escalation()            [에스컬레이션 레벨 결정]
+      ├─ ledger.record_attempt()         [원장 기록]
+      └─ Level별 ACT:
+          ├─ L1: ISERedesigner.apply_retry_feedback()
+          ├─ L2: ISERedesigner.apply_pivot()
+          ├─ L3: ISERedesigner.redesign_task()
+          ├─ L4: _try_evolve_failed_skill() + redesign_task()
+          └─ L5: _decompose_and_execute() (서브태스크 분할)
 ```
 
 ### Flow C: 에이전트 단일 실행
@@ -815,7 +823,10 @@ skills/{skill_id}/
 | `core/dynamic_orchestrator.py` | `project_pipeline.py` | 전체 Phase 2 실행 |
 | `core/agent_worker.py` | `dynamic_orchestrator.py`, `run_factory_cli.py` | `af.spec` hiddenimports |
 | `core/agent_runner.py` | `dynamic_orchestrator.py`, `fsa_loop.py` | 모든 에이전트 실행 |
-| `core/cross_verification.py` | `dynamic_orchestrator.py`, `fsa_loop.py` | 검증 결과 품질 |
+| `core/cross_verification.py` | `dynamic_orchestrator.py` | 검증 결과 품질 |
+| `core/ise_analyzer.py` | `fsa_loop.py`, `ise_loop.py` | 실패 분석 에스컬레이션 |
+| `core/ise_redesigner.py` | `fsa_loop.py`, `ise_loop.py` | 태스크 재설계/분해 |
+| `core/ise_strategy_ledger.py` | `fsa_loop.py`, `ise_loop.py` | 전략 원장 |
 | `core/project_pipeline.py` | `run_factory_cli.py`, `interactive_chat.py` | Phase 1/2 전체 |
 | `core/message_broker.py` | `dynamic_orchestrator.py` | 에이전트 간 통신 |
 | `core/project_mailbox.py` | `agent_runner.py`, `agent_specializer.py` | 에이전트 컨텍스트 |
@@ -876,6 +887,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-09 | v1.2.20 | refactor(fsa_loop): FSA 파이프라인을 ISE와 동일한 에스컬레이션 구조로 교체 — ISEAnalyzer/ISERedesigner/StrategyLedger/StallDetector 도입, _decide_escalation(Level 1-5), _decompose_and_execute(서브태스크 분할), _request_human_help(정체 시 사용자 힌트), 기존 _run_cross_verified_evaluator 제거(ISEAnalyzer로 대체), max_cycles=5 유지 |
 | 2026-04-09 | v1.2.19 | fix(cross-review-2): BLOCK 2건 + WARN 3건 수정 — plan_verifier 예외 시 passed=False(silent pass 제거), fsa_loop gate_result=None 시 hot_reload 제거(미검증 스킬 등록 방지), project_pipeline __new__→정상 인스턴스, cycle=0 에피소드 기록 가드, refine 루프 동일 결과 break |
 | 2026-04-09 | v1.2.19 | fix(cross-review): 교차검증 버그 4개 수정 — project_pipeline PlanVerifier 파일내용 전달(경로→content dict), workspace 전달, fsa_loop gate_result=None 시 EvolutionBus 스킵, control/intake MemoryType enum 명시화(GRAPH/WORKING 오염 방지) |
 | 2026-04-09 | v1.2.19 | feat(3-plane): 3-Plane 통합 구현 — skill_quality_gate.py 신규(SkillQualityGate/GateResult), fsa_loop._try_evolve_failed_skill() gate 삽입 + GateResult 반환, _run_quality_gate()/_record_episode() 추가, run_mission() 에피소드 기록(UnifiedMemoryFacade), control/intake.py NormalizedRequest.memory_context 필드 + _recall_from_memory(), bootstrap_roles.plan() memory_context 파라미터 + 과거 교훈 프롬프트 주입, af.spec hiddenimports에 core.skill_quality_gate 추가 |

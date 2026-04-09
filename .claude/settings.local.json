@@ -45,7 +45,11 @@
       "Bash(bash start_db:*)",
       "Bash(start_db.cmd agent-factory:*)",
       "mcp__codex__codex",
-      "Bash([ -f D:/hoonProJect/worktrees/agent-factory/findings.md ])"
+      "Bash([ -f D:/hoonProJect/worktrees/agent-factory/findings.md ])",
+      "Bash(AGENT_VISUAL_MODE=timeline timeout 120 python3 run_factory_cli.py --fsa --pipeline single --provider claude_cli --task \"hello.py 파일을 만들어줘. print\\('Hello from Agent Factory'\\)만 있으면 됨\")",
+      "Bash(AGENT_VISUAL_MODE=timeline gtimeout 120 python3 run_factory_cli.py --fsa --pipeline single --provider claude_cli --task \"hello.py 파일을 만들어줘. print\\('Hello from Agent Factory'\\)만 있으면 됨\")",
+      "Bash(export AGENT_VISUAL_MODE=timeline)",
+      "Bash(pip3 install:*)"
     ],
     "deny": [
       "Bash(rm:*)",
