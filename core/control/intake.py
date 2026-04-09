@@ -275,14 +275,15 @@ class ControlPlaneIntake:
                 return {"recall_count": 0, "recall_time_ms": round(elapsed_ms, 1)}
             episodes, lessons = [], []
             for r in records:
-                if r.memory_type and r.memory_type.value == "episodic":
+                from core.memory_system.models import MemoryType as _MT
+                if r.memory_type == _MT.EPISODIC:
                     episodes.append({
                         "task": r.metadata.get("task_input", "")[:200],
                         "outcome": r.metadata.get("outcome", ""),
                         "patterns": r.metadata.get("failure_patterns", []),
                         "lesson": r.content[:300],
                     })
-                else:
+                elif r.memory_type in (_MT.SEMANTIC, _MT.PROCEDURAL):
                     lessons.append({
                         "content": r.content[:300],
                         "confidence": r.metadata.get("confidence", 0.5),

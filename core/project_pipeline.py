@@ -744,16 +744,23 @@ class ProjectPipeline:
         # -- Plan-Critique-Verify 사전 루프 --
         try:
             from core.plan_verifier import PlanVerifier
-            _pv = PlanVerifier()
-            _wi_paths = list(work_item_files.values())
-            _plan_result = _pv.verify(task_input, _wi_paths, project_brief)
+            _pv = PlanVerifier(workspace=target_workspace)
+            # 파일 경로 → 파일 내용으로 변환 (LLM이 실제 계획 내용을 볼 수 있도록)
+            _wi_items = []
+            for _wi_path in work_item_files.values():
+                try:
+                    with open(_wi_path, encoding="utf-8") as _wf:
+                        _wi_items.append({"path": _wi_path, "content": _wf.read()})
+                except Exception:
+                    _wi_items.append({"path": _wi_path})
+            _plan_result = _pv.verify(task_input, _wi_items, project_brief)
             if not _plan_result.passed and _plan_result.issues:
                 print(f"[Pipeline] plan verify issues: {_plan_result.issues[:3]}")
                 for _retry in range(2):
-                    _refined = _pv.refine(task_input, _wi_paths, _plan_result.issues, project_brief)
-                    if _refined and _refined != _wi_paths:
-                        _wi_paths = _refined
-                        _plan_result = _pv.verify(task_input, _wi_paths, project_brief)
+                    _refined = _pv.refine(task_input, _wi_items, _plan_result.issues, project_brief)
+                    if _refined and _refined != _wi_items:
+                        _wi_items = _refined
+                        _plan_result = _pv.verify(task_input, _wi_items, project_brief)
                         if _plan_result.passed:
                             break
             print(

@@ -876,6 +876,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-09 | v1.2.19 | fix(cross-review): 교차검증 버그 4개 수정 — project_pipeline PlanVerifier 파일내용 전달(경로→content dict), workspace 전달, fsa_loop gate_result=None 시 EvolutionBus 스킵, control/intake MemoryType enum 명시화(GRAPH/WORKING 오염 방지) |
 | 2026-04-09 | v1.2.19 | feat(3-plane): 3-Plane 통합 구현 — skill_quality_gate.py 신규(SkillQualityGate/GateResult), fsa_loop._try_evolve_failed_skill() gate 삽입 + GateResult 반환, _run_quality_gate()/_record_episode() 추가, run_mission() 에피소드 기록(UnifiedMemoryFacade), control/intake.py NormalizedRequest.memory_context 필드 + _recall_from_memory(), bootstrap_roles.plan() memory_context 파라미터 + 과거 교훈 프롬프트 주입, af.spec hiddenimports에 core.skill_quality_gate 추가 |
 | 2026-04-08 | v1.2.18 | fix(config_paths): PyInstaller exe에서 BASE_DIR이 임시 언팩 폴더(_MEI...)로 잡히는 버그 수정 — sys.frozen 감지 후 sys.executable 기준으로 전환, 프로젝트가 올바른 경로(af.exe 옆)에 생성됨 |
 | 2026-04-07 | v1.0.3 | feat(forge): forge 스킬 품질 파이프라인 — forge_new_skill() 3-helper 분할, evaluate_and_promote() 공통 추출, FORGE_POLICIES, LLM budget 카운터(MAX_LLM_CALLS=15), directory 구조(forge/{name}/{name}.py), sys.path forge guard, propose/apply/test 함수 시그니처, evals.yml 자동 생성(MIN_EVAL_CASES=3), Registry 직접 등록 |

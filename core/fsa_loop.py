@@ -217,10 +217,12 @@ class FSALoop:
                 # 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 둘 다 호출
                 self._hot_reload_registry(skill_name)
             else:
-                # gate_result가 None(예외 발생)이면 기존 방식으로 핫리로딩
+                # gate_result가 None(품질 게이트 예외 발생) — 검증 미완료, EvolutionBus 스킵
                 self._hot_reload_registry(skill_name)
+                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — EvolutionBus 스킵: {skill_name}", "⚠️")
+                return None
 
-            # EvolutionBus: 전체 캐시 체인 무효화 + 이벤트 브로드캐스트
+            # EvolutionBus: 전체 캐시 체인 무효화 + 이벤트 브로드캐스트 (게이트 통과 시만)
             evo_bus = SkillEvolutionBus.get_instance()
             evo_bus.bind_runner(self.runner)
             evo_bus.on_skill_evolved(
