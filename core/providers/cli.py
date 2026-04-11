@@ -5,6 +5,8 @@ import os
 import shlex
 import shutil
 import subprocess
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -12,6 +14,17 @@ from typing import Callable
 from core.destructive_guard import inject_destructive_guard_contract
 from core.implementation_language_policy import inject_implementation_language_contract
 from core.providers.session_adapter import finalize_cli_session, prepare_cli_session
+
+
+def _default_cli_timeout_sec() -> int:
+    """환경변수 AGENT_CLI_TIMEOUT_SEC로 CLI 실행 타임아웃을 조절할 수 있다."""
+    raw = str(os.getenv("AGENT_CLI_TIMEOUT_SEC", "") or "").strip()
+    if raw:
+        try:
+            return max(60, int(raw))
+        except ValueError:
+            pass
+    return 900  # 15분 (복잡한 작업 대응)
 
 
 @dataclass(frozen=True)
@@ -22,8 +35,12 @@ class CliChatRequest:
     task_input: str
     workspace: str
     run_id: str = ""
-    timeout_sec: int = 600
+    timeout_sec: int = 0  # 0이면 _default_cli_timeout_sec() 사용
     auto_approve: bool = False
+
+    @property
+    def effective_timeout_sec(self) -> int:
+        return self.timeout_sec if self.timeout_sec > 0 else _default_cli_timeout_sec()
 
 
 @dataclass(frozen=True)
@@ -209,6 +226,31 @@ def _should_auto_install(request: CliChatRequest, spec: CliProviderSpec) -> bool
     return _env_truthy("AGENT_AUTO_INSTALL_CLI", default=bool(request.auto_approve))
 
 
+_PROGRESS_INTERVAL_SEC = 30  # 진행 표시 간격
+
+
+def _progress_printer(
+    provider_id: str,
+    timeout_sec: int,
+    stop_event: threading.Event,
+    start_time: float = 0.0,
+) -> None:
+    """CLI 실행 중 경과 시간을 주기적으로 출력하는 스레드 함수."""
+    start = start_time or time.monotonic()
+    while not stop_event.wait(_PROGRESS_INTERVAL_SEC):
+        elapsed = int(time.monotonic() - start)
+        remaining = timeout_sec - elapsed
+        if remaining <= 0:
+            break
+        mins, secs = divmod(elapsed, 60)
+        rem_mins, rem_secs = divmod(remaining, 60)
+        print(
+            f"  ⏳ [{provider_id}] 실행 중... "
+            f"{mins}분 {secs}초 경과 (남은 시간: {rem_mins}분 {rem_secs}초)",
+            flush=True,
+        )
+
+
 def _run_command(
     runner: Callable[..., subprocess.CompletedProcess],
     cmd: list[str],
@@ -217,17 +259,36 @@ def _run_command(
     env: dict[str, str],
     timeout_sec: int,
     input_text: str | None = None,
+    provider_id: str = "",
 ) -> subprocess.CompletedProcess:
-    return runner(
-        cmd,
-        cwd=cwd,
-        env=env,
-        input=input_text,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=max(1, int(timeout_sec)),
-    )
+    # 테스트 mock이 아닌 실제 실행일 때만 진행 표시
+    show_progress = (runner is subprocess.run) and timeout_sec > _PROGRESS_INTERVAL_SEC
+    stop_event: threading.Event | None = None
+    cmd_start = time.monotonic()
+
+    if show_progress:
+        stop_event = threading.Event()
+        t = threading.Thread(
+            target=_progress_printer,
+            args=(provider_id or "cli", timeout_sec, stop_event, cmd_start),
+            daemon=True,
+        )
+        t.start()
+
+    try:
+        return runner(
+            cmd,
+            cwd=cwd,
+            env=env,
+            input=input_text,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=max(1, int(timeout_sec)),
+        )
+    finally:
+        if stop_event is not None:
+            stop_event.set()
 
 
 def _attempt_cli_auto_install(
@@ -639,14 +700,22 @@ def execute_cli_chat(
             result["auto_install"] = auto_install
         finalize_cli_session(request, prepared, result)
         return result
+    effective_timeout = int(request.effective_timeout_sec)
+    display_name = _CLI_SPECS.get(request.provider_id, spec).provider_id
+    print(
+        f"  🚀 [{display_name}] CLI 실행 시작 (timeout: {effective_timeout}초)",
+        flush=True,
+    )
+    started = time.monotonic()
     try:
         completed = _run_command(
             runner,
             cmd,
             cwd=str(request.workspace),
             env=env,
-            timeout_sec=int(request.timeout_sec),
+            timeout_sec=effective_timeout,
             input_text=input_text,
+            provider_id=request.provider_id,
         )
     except FileNotFoundError as exc:
         auto_install = {"ok": False, "attempted": False, "reason": "auto_install_disabled"}
@@ -671,8 +740,9 @@ def execute_cli_chat(
                         retry_cmd,
                         cwd=str(request.workspace),
                         env=env,
-                        timeout_sec=int(request.timeout_sec),
+                        timeout_sec=int(request.effective_timeout_sec),
                         input_text=input_text,
+                        provider_id=request.provider_id,
                     )
                     text = _extract_text(completed.stdout)
                     ok = completed.returncode == 0 and bool(text.strip())
@@ -724,6 +794,12 @@ def execute_cli_chat(
         finalize_cli_session(request, prepared, result)
         return result
     except subprocess.TimeoutExpired as exc:
+        elapsed = int(time.monotonic() - started)
+        mins, secs = divmod(elapsed, 60)
+        print(
+            f"  ❌ [{display_name}] 타임아웃 ({mins}분 {secs}초 경과, 제한: {effective_timeout}초)",
+            flush=True,
+        )
         result = {
             "ok": False,
             "provider_id": request.provider_id,
@@ -738,13 +814,17 @@ def execute_cli_chat(
         finalize_cli_session(request, prepared, result)
         return result
 
+    elapsed = int(time.monotonic() - started)
     text = _extract_text(completed.stdout)
     ok = completed.returncode == 0 and bool(text.strip())
+    mins, secs = divmod(elapsed, 60)
     if ok:
         failure_reason = request.provider_id
+        print(f"  ✅ [{display_name}] 완료 ({mins}분 {secs}초)", flush=True)
     else:
         issue = _classify_cli_issue(completed.stdout, completed.stderr)
         failure_reason = f"{request.provider_id}_{issue}" if issue else f"{request.provider_id}_failed"
+        print(f"  ❌ [{display_name}] 실패: {failure_reason} ({mins}분 {secs}초)", flush=True)
     result = {
         "ok": ok,
         "provider_id": request.provider_id,

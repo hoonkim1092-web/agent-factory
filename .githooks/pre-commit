@@ -1,14 +1,13 @@
 #!/bin/sh
-# pre-commit hook: 코드 변경 시 Master_Blueprint.md 업데이트 여부 확인
+# pre-commit hook: Blueprint 스테이징 체크 + 교차검증 결과 확인
 
 BLUEPRINT="Master_Blueprint.md"
 STAGED=$(git diff --cached --name-only)
 
-# core/*.py 또는 model_utils.py 변경이 있는지 확인
+# ── 기존: Blueprint 스테이징 체크 ──
 CODE_CHANGED=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
 
 if [ -n "$CODE_CHANGED" ]; then
-    # Blueprint도 스테이지에 있는지 확인
     BLUEPRINT_STAGED=$(echo "$STAGED" | grep "^$BLUEPRINT$")
     if [ -z "$BLUEPRINT_STAGED" ]; then
         echo ""
@@ -22,6 +21,30 @@ if [ -n "$CODE_CHANGED" ]; then
         echo "     git commit --no-verify"
         echo ""
         exit 1
+    fi
+fi
+
+# ── 신규: 교차검증 결과 확인 ──
+if [ "${AF_PRE_COMMIT_REVIEW:-1}" != "0" ]; then
+    REVIEW_TARGET=$(echo "$STAGED" | grep -E "^(core/.*\.py|model_utils\.py|run_factory_cli\.py)$" | head -1)
+    if [ -n "$REVIEW_TARGET" ]; then
+        # venv python 사용 (시스템 python에 의존성 없을 수 있음)
+        REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+        VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+        if [ -x "$VENV_PYTHON" ]; then
+            REVIEW_PY="$VENV_PYTHON"
+        else
+            REVIEW_PY="python3"
+        fi
+
+        "$REVIEW_PY" "${REPO_ROOT}/scripts/pre_commit_review.py" 2>&1
+        REVIEW_EXIT=$?
+        if [ $REVIEW_EXIT -ne 0 ]; then
+            echo ""
+            echo "   건너뛰려면: git commit --no-verify"
+            echo ""
+            exit 1
+        fi
     fi
 fi
 

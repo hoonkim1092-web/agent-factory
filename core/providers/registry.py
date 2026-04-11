@@ -161,6 +161,40 @@ def _windows_roaming_npm_dir() -> str:
     return ""
 
 
+def _unix_npm_global_dirs() -> list[str]:
+    """macOS/Linux에서 npm 글로벌 설치 경로 후보를 반환한다."""
+    dirs: list[str] = []
+    home = str(os.path.expanduser("~") or "").strip()
+    if home:
+        # npm prefix 설정 시 (~/.npm-global/bin 등)
+        dirs.append(os.path.join(home, ".npm-global", "bin"))
+        # nvm 사용 시
+        nvm_dir = str(os.getenv("NVM_DIR", "") or "").strip()
+        if nvm_dir:
+            # nvm 현재 활성 버전의 bin — NVM_BIN 우선, 없으면 semver 정렬
+            nvm_bin = str(os.getenv("NVM_BIN", "") or "").strip()
+            if nvm_bin and os.path.isdir(nvm_bin):
+                dirs.append(nvm_bin)
+            else:
+                default_bin = os.path.join(nvm_dir, "versions", "node")
+                try:
+                    if os.path.isdir(default_bin):
+                        def _semver_key(name: str) -> tuple:
+                            parts = name.lstrip("v").split(".")
+                            return tuple(int(n) for n in parts if n.isdigit())
+                        for entry in sorted(os.listdir(default_bin), key=_semver_key, reverse=True):
+                            candidate = os.path.join(default_bin, entry, "bin")
+                            if os.path.isdir(candidate):
+                                dirs.append(candidate)
+                                break
+                except (OSError, PermissionError):
+                    pass
+        # fnm, volta 등 일반적인 경로
+        dirs.append(os.path.join(home, ".local", "bin"))
+        dirs.append("/usr/local/bin")
+    return dirs
+
+
 _installed_cli_cache: list[str] | None = None
 _installed_cli_cache_ts: float = 0.0
 _INSTALLED_CLI_CACHE_TTL = 60.0  # 60초 TTL
@@ -192,6 +226,13 @@ def detect_installed_cli_providers() -> list[str]:
                     if os.path.exists(os.path.join(npm_dir, executable + suffix)):
                         installed.append(provider_id)
                         break
+        else:
+            # macOS/Linux: npm 글로벌, nvm, fnm 등 추가 경로 탐색
+            for extra_dir in _unix_npm_global_dirs():
+                candidate = os.path.join(extra_dir, executable)
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    installed.append(provider_id)
+                    break
 
     _installed_cli_cache = installed
     _installed_cli_cache_ts = now

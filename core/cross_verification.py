@@ -208,7 +208,7 @@ class CrossVerificationLoop:
                 )
                 futures[pool.submit(execute_cli_chat, req)] = pid
 
-            for future in as_completed(futures, timeout=600):
+            for future in as_completed(futures, timeout=960):
                 pid = futures[future]
                 try:
                     raw = future.result(timeout=10) or {}
@@ -271,7 +271,7 @@ class CrossVerificationLoop:
                 )
                 futures[pool.submit(execute_cli_chat, req)] = (i, target_idx, reviewer.provider_id)
 
-            for future in as_completed(futures, timeout=600):
+            for future in as_completed(futures, timeout=960):
                 _, target_idx, reviewer_pid = futures[future]
                 try:
                     raw = future.result(timeout=10) or {}

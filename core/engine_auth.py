@@ -120,16 +120,17 @@ def auto_configure_cli_provider() -> str | None:
     if not installed:
         return None
 
-    # 우선순위: gemini_cli → claude_cli → codex_cli
+    # 설치된 모든 프로바이더를 등록 (우선순위 순 정렬)
     _PRIORITY = ["gemini_cli", "claude_cli", "codex_cli"]
-    chosen = next((p for p in _PRIORITY if p in installed), installed[0])
+    sorted_installed = sorted(installed, key=lambda p: _PRIORITY.index(p) if p in _PRIORITY else len(_PRIORITY))
+    primary = sorted_installed[0]
 
-    # 환경변수 대신 런타임 레지스트리에 설정
+    # 환경변수 대신 런타임 레지스트리에 설정 — 전체 등록
     if _registry_configure_providers:
-        _registry_configure_providers([chosen])
-    print(f"[Auto-Config] CLI 프로바이더 자동 감지: {', '.join(installed)} → {chosen} 우선 사용")
+        _registry_configure_providers(sorted_installed)
+    print(f"[Auto-Config] CLI 프로바이더 자동 감지: {', '.join(sorted_installed)} (기본: {primary})")
 
-    return chosen
+    return primary
 
 
 def check_llm_available() -> bool:

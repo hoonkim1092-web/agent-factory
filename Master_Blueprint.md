@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-09 | version: v1.2.18 -->
+<!-- last_updated: 2026-04-10 | version: v1.2.18 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -83,8 +83,8 @@
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
 | `core/project_pipeline.py:1-778` | Phase1(문서)+Phase2(실행) 파이프라인 | `ProjectPipeline` |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 | `update_project_board_task()` |
-| `core/providers/cli.py` | CLI 프로바이더 실행 | `execute_cli_chat()` |
-| `core/providers/registry.py` | 설치된 CLI 목록 | `get_requested_cli_providers()` |
+| `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
+| `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) | `get_requested_cli_providers()`, `_unix_npm_global_dirs()` |
 | `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
 | `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
 | `core/skill_creator.py` | 스킬 생성·진화 | `evolve_skill()` |
@@ -324,7 +324,7 @@ else:                         → "completed"
 ---
 
 ### §3.3 AgentRunner (`core/agent_runner.py`)
-<!-- last_updated: 2026-04-03 (_skill_module_cache 크기 제한 추가) -->
+<!-- last_updated: 2026-04-10 (CLI 멀티 프로바이더 감지 + timeout 증가 + 진행 표시) -->
 
 **클래스:** `AgentRunner`
 
@@ -430,7 +430,7 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 ---
 
 ### §3.7 CrossVerification (`core/cross_verification.py`)
-<!-- last_updated: 2026-04-02 -->
+<!-- last_updated: 2026-04-10 (as_completed timeout 600→960초, CLI 기본 900초와 동기화) -->
 
 **클래스:** `CrossVerificationLoop`
 
@@ -471,13 +471,18 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 **LLM 엔진:** `ControlPlaneLLM` (CLI-first, API-fallback) — GOOGLE_API_KEY 없이도 동작
 
 ### §3.8.1 ControlPlaneLLM (`core/control_plane_llm.py`)
-<!-- last_updated: 2026-04-03 (AF_CONTROL_PLANE_PROVIDERS 환경변수 지원) -->
+<!-- last_updated: 2026-04-10 (CLI timeout 120→300초) -->
 
 Control-plane(Lilith, Evaluator)용 LLM 인터페이스.
 
 **해결 순서:** CLI providers (claude_cli > gemini_cli > codex_cli) → Gemini API → 빈 결과
 **인터페이스:** `generate(prompt) → str`, `generate_json(prompt) → dict`
 **CLI 실패 시:** infra 실패면 다음 CLI로 failover
+
+> **설계 결정: 프로바이더 우선순위 분리**
+> - Control-plane (`ControlPlaneLLM`): Claude 우선 — 정확한 JSON 판정이 핵심
+> - FSA 일반 실행 (`engine_auth`): Gemini 우선 — 리서치/탐색 작업에 최적화
+> - 이 분리는 의도적이며 통합하지 않는다
 
 ### §3.8.2 FailureClassifier (`core/failure_classifier.py`)
 
@@ -685,6 +690,25 @@ approve() → SHA256 스냅샷 저장, execution_open: true
 invalidate() → execution_open: false (재승인 필요)
 ```
 
+### Pre-commit 교차검증 게이트
+<!-- last_updated: 2026-04-10 -->
+
+커밋 시 `core/*.py` 변경이 포함되면 기존 watcher의 리뷰 결과를 자동 확인한다.
+
+**실행 흐름:**
+```
+git commit → .githooks/pre-commit
+  ├─ Blueprint 스테이징 체크 (기존)
+  └─ scripts/pre_commit_review.py (결과 확인 전용, claude 미호출)
+       ├─ docs/reviews/ 에서 파일별 최신 리뷰 수집
+       ├─ severity 집계 (Critical/High/Medium/Low)
+       └─ 판정: PASS(exit 0) / WARN(exit 0) / BLOCK(exit 1)
+```
+
+**판정 기준:** `AF_PRE_COMMIT_REVIEW_BLOCK_ON=high` (기본) → High 1건 이상 차단
+**비차단 원칙:** 인프라 장애(결과 없음, 파싱 실패 등)로 커밋을 차단하지 않음
+**비활성화:** `AF_PRE_COMMIT_REVIEW=0` 또는 `git commit --no-verify`
+
 ---
 
 ## §8 빌드 & 배포
@@ -887,6 +911,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-10 | v1.2.18 | feat(pre-commit): 교차검증 게이트 + 멀티 프로바이더 + CLI 개선 — pre_commit_review.py 신규(결과 수집+판정), .githooks/pre-commit 교차검증 호출 추가, engine_auth 멀티 프로바이더 등록, registry.py macOS/Linux npm fallback, cli.py timeout 900초+진행 표시기, cross_verification timeout 동기화, PostToolUse hook venv python 절대경로 |
 | 2026-04-09 | v1.2.20 | refactor(fsa_loop): FSA 파이프라인을 ISE와 동일한 에스컬레이션 구조로 교체 — ISEAnalyzer/ISERedesigner/StrategyLedger/StallDetector 도입, _decide_escalation(Level 1-5), _decompose_and_execute(서브태스크 분할), _request_human_help(정체 시 사용자 힌트), 기존 _run_cross_verified_evaluator 제거(ISEAnalyzer로 대체), max_cycles=5 유지 |
 | 2026-04-09 | v1.2.19 | fix(cross-review-2): BLOCK 2건 + WARN 3건 수정 — plan_verifier 예외 시 passed=False(silent pass 제거), fsa_loop gate_result=None 시 hot_reload 제거(미검증 스킬 등록 방지), project_pipeline __new__→정상 인스턴스, cycle=0 에피소드 기록 가드, refine 루프 동일 결과 break |
 | 2026-04-09 | v1.2.19 | fix(cross-review): 교차검증 버그 4개 수정 — project_pipeline PlanVerifier 파일내용 전달(경로→content dict), workspace 전달, fsa_loop gate_result=None 시 EvolutionBus 스킵, control/intake MemoryType enum 명시화(GRAPH/WORKING 오염 방지) |

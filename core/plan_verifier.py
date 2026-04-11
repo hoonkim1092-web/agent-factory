@@ -183,7 +183,7 @@ class PlanVerifier:
         """
         ParallelCritiqueEngine을 임포트해 비평을 실행한다.
         타임아웃은 ParallelCritiqueEngine 내부(120s)를 그대로 사용하며,
-        30초 이내 응답이 없으면 스킵된다 (ThreadPoolExecutor future.result(timeout=120) 참조).
+        LLM refine의 timeout_sec=120은 별도 경로이다.
         """
         from core.parallel_critique import ParallelCritiqueEngine
         engine = ParallelCritiqueEngine(
@@ -239,7 +239,7 @@ Current work-items:
             prompt,
             workspace=self.workspace,
             run_id="plan_verifier_refine",
-            timeout_sec=30,
+            timeout_sec=120,
         )
 
         if not result.get("ok"):

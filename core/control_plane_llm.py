@@ -120,7 +120,7 @@ class ControlPlaneLLM:
                     ),
                     task_input=prompt,
                     workspace=os.getcwd(),
-                    timeout_sec=120,
+                    timeout_sec=300,
                 ))
             except Exception as exc:
                 print(f"[ControlPlaneLLM] CLI {provider_id} exception: {exc}")
