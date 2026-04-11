@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Read(//d D:/hoonProJect/worktrees/**)",
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(python -c:*)",
@@ -18,47 +17,41 @@
       "Bash(for:*)",
       "Bash(while:*)",
       "Bash(pip:*)",
+      "Bash(pip3 install:*)",
       "Bash(npm:*)",
       "Bash(af:*)",
-      "Bash(dist/af/af.exe:*)",
-      "Bash(D:/hoonProJect/worktrees/agent-factory/dist/af/af.exe:*)",
-      "Bash(powershell:*)",
-      "Bash(cmd:*)",
-      "Bash(where:*)",
-      "Bash(tasklist:*)",
-      "Bash(taskkill:*)",
-      "Bash(reg query:*)",
       "Bash(cp:*)",
+      "Bash(which:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:aisparkup.com)",
       "WebFetch(domain:bkamp.ai)",
-      "Bash(codex --version)",
-      "Bash(codex --help)",
-      "Bash(codex review:*)",
-      "Bash(codex exec:*)",
-      "Bash(codex mcp-server:*)",
-      "Bash(claude mcp:*)",
-      "Bash(claude plugin:*)",
-      "Bash(cat D:/hoonProJect/worktrees/agent-factory/.af_review_queue/pending/*.json)",
-      "Bash(./end_db agent-factory:*)",
-      "Bash(bash start_db:*)",
-      "Bash(start_db.cmd agent-factory:*)",
-      "mcp__codex__codex",
-      "Bash([ -f D:/hoonProJect/worktrees/agent-factory/findings.md ])",
-      "Bash(AGENT_VISUAL_MODE=timeline timeout 120 python3 run_factory_cli.py --fsa --pipeline single --provider claude_cli --task \"hello.py 파일을 만들어줘. print\\('Hello from Agent Factory'\\)만 있으면 됨\")",
-      "Bash(AGENT_VISUAL_MODE=timeline gtimeout 120 python3 run_factory_cli.py --fsa --pipeline single --provider claude_cli --task \"hello.py 파일을 만들어줘. print\\('Hello from Agent Factory'\\)만 있으면 됨\")",
-      "Bash(export AGENT_VISUAL_MODE=timeline)",
-      "Bash(pip3 install:*)"
+      "Bash(mkdir -p /tmp/af_deploy_smoke)",
+      "Read(//tmp/**)",
+      "Bash(ps -p 15655 -o pid,stat,etime,rss,command)",
+      "Bash(ps -p 15655 -o pid,stat,etime,rss)",
+      "Bash(.venv/bin/python -c \"import notebooklm_tools; print\\('OK', notebooklm_tools.__file__, notebooklm_tools.__version__ if hasattr\\(notebooklm_tools, '__version__'\\) else 'no version'\\)\")",
+      "Bash(.venv/bin/pip show:*)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(.venv/bin/python -c ':*)",
+      "Bash(.venv/bin/nlm --help)",
+      "Bash(.venv/bin/nlm auth:*)",
+      "Bash(.venv/bin/nlm login:*)",
+      "Bash(.venv/bin/nlm notebook:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(awk '{print $1}')",
+      "Bash(awk '{print $NF}')",
+      "Bash(awk '{print $2}')"
     ],
     "deny": [
       "Bash(rm:*)",
       "Bash(del:*)",
       "Bash(erase:*)",
       "Bash(Remove-Item:*)",
-      "Bash(cmd /c del:*)",
-      "Bash(powershell -Command Remove-Item:*)",
-      "Bash(pwsh -Command Remove-Item:*)",
       "Bash(git clean:*)",
       "Bash(git reset --hard:*)",
       "Bash(git checkout --:*)",
@@ -73,27 +66,33 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python -m py_compile \"$fp\" 2>&1 || echo \"[af-hook] syntax error in $fp\" ;; esac",
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python3 -m py_compile \"$fp\" 2>&1 || echo \"[af-hook] syntax error in $fp\" ;; esac",
             "timeout": 10,
             "statusMessage": "Python syntax check..."
           },
           {
             "type": "command",
-            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python scripts/code_review_updater.py --context \"edit: $fp\" 2>/dev/null ;; esac",
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python3 scripts/hook_runner.py code_review_updater --context \"edit: $fp\" 2>/dev/null ;; esac",
             "timeout": 30,
             "statusMessage": "Code review update..."
           },
           {
             "type": "command",
-            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python scripts/blueprint_updater.py --context \"edit: $fp\" 2>/dev/null ;; esac",
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python3 scripts/hook_runner.py blueprint_updater --context \"edit: $fp\" 2>/dev/null ;; esac",
             "timeout": 30,
             "statusMessage": "Blueprint update..."
           },
           {
             "type": "command",
-            "command": "fp=$TOOL_INPUT_file_path; python scripts/design_review_trigger.py \"$fp\" 2>/dev/null || true",
+            "command": "fp=$TOOL_INPUT_file_path; python3 scripts/hook_runner.py design_review_trigger \"$fp\" 2>/dev/null || true",
             "timeout": 5,
             "statusMessage": "Design review check..."
+          },
+          {
+            "type": "command",
+            "command": "fp=$TOOL_INPUT_file_path; case \"$fp\" in *.py) python3 scripts/hook_runner.py enqueue_agent_review \"$fp\" 2>/dev/null ;; esac",
+            "timeout": 3,
+            "statusMessage": "Enqueue agent review..."
           },
           {
             "type": "command",
@@ -105,110 +104,60 @@
     ],
     "SessionStart": [
       {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
+            "timeout": 15
           }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py check_pending_review 2>/dev/null || true",
+            "timeout": 5
           }
         ]
       }
     ],
     "PreCompact": [
       {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
+            "timeout": 15
           }
         ]
       }
     ],
     "Stop": [
       {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
+            "timeout": 15
           }
         ]
       }
     ],
     "SessionEnd": [
       {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
-        "hooks": []
-      },
-      {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/HOON/AppData/Local/Python/pythoncore-3.14-64/python.exe D:/hoonProJect/worktrees/agent-factory/scripts/cli_hook_bridge.py --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id critique_claude_cli --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
+            "timeout": 15
           }
         ]
       }
