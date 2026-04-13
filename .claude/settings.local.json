@@ -45,7 +45,12 @@
       "Bash(.venv/bin/python:*)",
       "Bash(awk '{print $1}')",
       "Bash(awk '{print $NF}')",
-      "Bash(awk '{print $2}')"
+      "Bash(awk '{print $2}')",
+      "Bash(codex --version)",
+      "Bash(codex --help)",
+      "Bash(codex exec:*)",
+      "Bash(codex review:*)",
+      "Bash(codex mcp-server:*)"
     ],
     "deny": [
       "Bash(rm:*)",

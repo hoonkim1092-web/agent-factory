@@ -55,6 +55,11 @@ def main():
 
     # 3. PyInstaller 실행
     print("\n  빌드 시작...")
+    # typer/rich/nlm 서브모듈 안전망은 af.spec Analysis 블록의
+    # collect_submodules() 호출로 일원화되어 있다 (설계문서 §4.6.2).
+    # PyInstaller 6.x는 .spec 파일과 `--collect-submodules` 옵션을 함께 쓰면
+    # "makespec options not valid when a .spec file is given" 에러로 빌드를
+    # 거부하므로 CLI 쪽에서는 옵션을 두지 않는다.
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--clean",

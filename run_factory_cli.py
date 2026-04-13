@@ -120,6 +120,138 @@ def _run_skill_promote(argv: list[str] | None = None):
 
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 2 — STAGE 1/2/3 진입점 통합 (설계문서 §4.5)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _run_setup_subcommand(rest: list[str]) -> None:
+    from core.setup_wizard import run_setup
+    run_setup(interactive=True)
+
+
+def _run_worker_subcommand(rest: list[str]) -> None:
+    """worker 서브커맨드: PyInstaller exe에서 에이전트 워커 실행.
+
+    sys.argv는 try/finally로 백업·복원해 호출자(테스트 하네스 등)의 전역
+    상태를 오염시키지 않는다 — _invoke_nlm_app()와 동일한 패턴.
+    """
+    from core.agent_worker import main as worker_main
+    saved_argv = sys.argv
+    try:
+        sys.argv = ["af-worker"] + list(rest)
+        worker_main()
+    finally:
+        sys.argv = saved_argv
+
+
+def _run_nlm_subcommand(rest: list[str]) -> None:
+    """__nlm 숨은 서브커맨드: af 프로세스 내부에서 nlm Typer app 호출.
+
+    설계문서 §4.5에 따라 명시적으로 sys.exit()을 호출한다 (다른 서브커맨드의
+    return 패턴과 비대칭). 이유: __nlm은 _check_notebooklm_auth()가 subprocess
+    경계로 호출하는 진입점이라 exit code가 호출자 측의 판정 신호로 쓰인다.
+    """
+    exit_code = _invoke_nlm_app(rest)
+    sys.exit(exit_code)
+
+
+def _run_check_nlm_subcommand(rest: list[str]) -> None:
+    """__check-nlm 숨은 서브커맨드: nlm 패키지 import 가능 여부 검사."""
+    try:
+        import nlm  # noqa: F401
+        sys.exit(0)
+    except ImportError:
+        sys.exit(1)
+
+
+# STAGE 1에서 setup gate 이전에 즉시 분기되어야 하는 서브커맨드 dispatch.
+# 단일 진실원천: 새 항목 추가 시 이 dict만 수정하면 STAGE 1 분기에 자동 반영된다
+# (af-critic WARN 5 해소 — 집합/if-체인 이중 진실원천 제거).
+# - 기존 내부 서브커맨드: setup / worker / skill-* / preflight
+# - v3 신규: __nlm / __check-nlm (NotebookLM CLI를 af 프로세스 내부에서 invoke)
+_STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
+    "setup":         _run_setup_subcommand,
+    "worker":        _run_worker_subcommand,
+    "skill-create":  lambda rest: _run_skill_creator(rest),
+    "skill-spec":    lambda rest: _run_skill_spec(rest),
+    "preflight":     lambda rest: _run_preflight(rest),
+    "skill-eval":    lambda rest: _run_skill_eval(rest),
+    "skill-promote": lambda rest: _run_skill_promote(rest),
+    "__nlm":         _run_nlm_subcommand,
+    "__check-nlm":   _run_check_nlm_subcommand,
+}
+
+
+def _is_help_arg(argv: list[str]) -> bool:
+    """argparse `--help`/`-h` 단락 검사 — STAGE 2 setup gate를 건너뛰기 위함."""
+    return any(a in ("--help", "-h") for a in argv)
+
+
+# STAGE 1 서브커맨드별 한 줄 usage. `af <cmd> --help` 시 실제 핸들러를 호출하지
+# 않고 이 사전의 문자열만 출력하고 종료한다 (cross-review BLOCK A 해소).
+# 하위 argparse/Typer가 자체 --help를 처리하는 커맨드(worker, skill-*, __nlm 등)
+# 라도 setup_wizard처럼 부작용이 먼저 시작되는 경우가 있으므로 일괄 가드한다.
+_STAGE1_USAGE = {
+    "setup":         "usage: af setup    # API 키·TAVILY·NotebookLM 대화형 설정 마법사",
+    "worker":        "usage: af worker --task-file PATH    # PyInstaller exe 전용 에이전트 워커",
+    "skill-create":  "usage: af skill-create [ARGS...]    # 스킬 생성 (자세한 옵션은 core/skill_creator.py)",
+    "skill-spec":    "usage: af skill-spec [ARGS...]    # 스킬 스펙 합성 (core/skill_spec_synthesizer.py)",
+    "preflight":     "usage: af preflight [ARGS...]    # 스킬 preflight 검사 (core/skill_preflight.py)",
+    "skill-eval":    "usage: af skill-eval [ARGS...]    # 스킬 평가 하네스 (core/skill_eval_harness.py)",
+    "skill-promote": "usage: af skill-promote [ARGS...]    # 스킬 승격 (core/skill_promotion.py)",
+    "__nlm":         "usage: af __nlm <nlm-args>    # (hidden) af 프로세스 내부 nlm Typer 호출",
+    "__check-nlm":   "usage: af __check-nlm    # (hidden) nlm 패키지 import 가능 여부 검사",
+}
+
+
+def _run_setup_gate() -> None:
+    """일반 파이프라인 실행 직전에 setup 점검을 수행. 실패해도 진행한다."""
+    try:
+        from core.setup_wizard import ensure_external_research_capabilities
+        ensure_external_research_capabilities(mode="auto")
+    except Exception as e:
+        print(f"[Setup] Warning: setup 점검 실패 — {e}", file=sys.stderr)
+
+
+def _invoke_nlm_app(rest: list[str]) -> int:
+    """
+    frozen 환경 전용: nlm Typer app을 af 프로세스 내부에서 직접 호출.
+
+    중요:
+    - standalone_mode=False 로 호출해 SystemExit 전파를 차단한다
+      (그렇지 않으면 Typer가 기본적으로 sys.exit()을 호출해
+       run_factory_cli.main()의 정상 return이 깨진다 — BLOCK-B 해소)
+    - sys.argv를 일시적으로 nlm 관점으로 바꾸고, 끝나면 반드시 복원한다
+      (WARN-1 해소 — 전역 sys.argv 오염 방지)
+    - 호출 시그니처: typer 0.24.1 + nlm 0.1.12에서 `app(args, standalone_mode=False)`
+      가 동작함을 실측 확인. 향후 Typer가 시그니처를 변경하면
+      `from typer.main import get_command; get_command(app).main(args=rest,
+      standalone_mode=False, prog_name="nlm")` 패턴으로 전환 (cross-review (A) 안전망).
+    """
+    try:
+        from nlm.cli.main import app
+    except ImportError as e:
+        print(f"[__nlm] notebooklm-cli 미설치: {e}", file=sys.stderr)
+        return 127
+
+    # 명시적 list 복사로 의도를 분명히 한다 (cross-review (B) 가독성 권고)
+    saved_argv = list(sys.argv)
+    try:
+        sys.argv = ["nlm"] + list(rest)
+        try:
+            result = app(rest, standalone_mode=False)
+            # Typer/Click이 standalone_mode=False일 때 int 또는 None을 반환
+            return int(result) if isinstance(result, int) else 0
+        except SystemExit as e:
+            # 혹시 내부에서 SystemExit이 올라와도 프로세스를 죽이지 않음
+            return int(e.code) if isinstance(e.code, int) else 1
+        except Exception as e:
+            print(f"[__nlm] 실행 오류: {e}", file=sys.stderr)
+            return 2
+    finally:
+        sys.argv = saved_argv
+
+
 def _launch_interactive_mode(
     projects_root: str,
     *,
@@ -155,41 +287,33 @@ def _launch_interactive_mode(
 def main(argv: list[str] | None = None):
     effective_argv = argv if argv is not None else sys.argv[1:]
 
-    # ── 인자 없이 실행 → 대화형 PDCA 모드 ──
+    # ── STAGE 1: 내부/숨은 서브커맨드는 setup gate 전에 즉시 분기 ──
+    # (재귀 방지: __nlm 등이 gate를 거치면 setup_wizard 내부에서 nlm을 다시
+    #  호출하는 경로와 무한 루프가 발생할 수 있음 — 설계문서 §4.5, §7.2, §7.3)
+    if effective_argv:
+        handler = _STAGE1_DISPATCH.get(effective_argv[0])
+        if handler is not None:
+            rest = effective_argv[1:]
+            # 서브커맨드 레벨 --help 가드: `af setup --help`가 wizard를,
+            # `af worker --help`가 agent_worker를 트리거하지 않게 usage만 출력
+            # (cross-review BLOCK A 해소).
+            if _is_help_arg(rest):
+                print(_STAGE1_USAGE[effective_argv[0]])
+                return
+            handler(rest)
+            return
+
+    # ── STAGE 2: 일반 실행은 반드시 setup gate를 거침 ──
+    # 단, --help/-h 는 setup wizard 트리거 없이 즉시 argparse usage만 보여줘야
+    # 하므로 gate를 건너뛴다 (af-critic BLOCK 2 해소).
+    if not _is_help_arg(effective_argv):
+        _run_setup_gate()
+
+    # ── STAGE 3: 기존 로직 ──
+    # 인자 없이 실행 또는 --interactive → 대화형 PDCA 모드
     if not effective_argv or effective_argv == ["--interactive"]:
-        from core.setup_wizard import check_and_hint
-        check_and_hint()
         projects_root = _resolve_projects_root()
         _launch_interactive_mode(projects_root)
-        return
-
-    # ── setup 서브커맨드: API 키 등록 마법사 ──
-    if effective_argv and effective_argv[0] == "setup":
-        from core.setup_wizard import run_setup
-        run_setup(interactive=True)
-        return
-
-    # ── worker 서브커맨드: PyInstaller exe에서 에이전트 워커 실행 ──
-    if effective_argv and effective_argv[0] == "worker":
-        from core.agent_worker import main as worker_main
-        sys.argv = ["af-worker"] + effective_argv[1:]
-        worker_main()
-        return
-
-    if effective_argv and effective_argv[0] == "skill-create":
-        _run_skill_creator(effective_argv[1:])
-        return
-    if effective_argv and effective_argv[0] == "skill-spec":
-        _run_skill_spec(effective_argv[1:])
-        return
-    if effective_argv and effective_argv[0] == "preflight":
-        _run_preflight(effective_argv[1:])
-        return
-    if effective_argv and effective_argv[0] == "skill-eval":
-        _run_skill_eval(effective_argv[1:])
-        return
-    if effective_argv and effective_argv[0] == "skill-promote":
-        _run_skill_promote(effective_argv[1:])
         return
 
     parser = argparse.ArgumentParser(description="Agent Factory CLI")

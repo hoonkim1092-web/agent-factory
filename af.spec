@@ -3,9 +3,22 @@
 import os
 import sys
 
+from PyInstaller.utils.hooks import collect_submodules  # noqa: E402
+
 ROOT = os.path.dirname(os.path.abspath(SPEC))  # noqa: F821 – PyInstaller provides SPEC
 
 block_cipher = None
+
+# 설계문서 §4.6.2: typer/rich/nlm은 lazy import가 많아 상단 hiddenimports만으로는
+# sub-module 누락 가능. PyInstaller 6.x는 .spec과 CLI `--collect-submodules`를
+# 함께 쓸 수 없으므로 spec 안에서 직접 collect_submodules()로 안전망을 건다.
+_auto_hiddenimports = []
+for pkg in ("typer", "rich", "nlm"):
+    try:
+        _auto_hiddenimports.extend(collect_submodules(pkg))
+    except Exception:
+        # 빌드 환경에 해당 패키지가 없으면 명시 hiddenimports만으로 진행
+        pass
 
 a = Analysis(
     ['run_factory_cli.py'],
@@ -155,6 +168,45 @@ a = Analysis(
         'core.memory_system.adapters.trace_log',
         # ── core.providers ──
         'core.providers',
+        # ── NotebookLM CLI (import name: nlm) — 설계문서 §4.6.2 ──
+        'nlm',
+        'nlm.__main__',
+        'nlm.ai_docs',
+        'nlm.cli',
+        'nlm.cli.alias',
+        'nlm.cli.auth',
+        'nlm.cli.chat',
+        'nlm.cli.config',
+        'nlm.cli.main',
+        'nlm.cli.notebook',
+        'nlm.cli.repl',
+        'nlm.cli.research',
+        'nlm.cli.source',
+        'nlm.cli.studio',
+        'nlm.core',
+        'nlm.core.alias',
+        'nlm.core.auth',
+        'nlm.core.auth_refresh',
+        'nlm.core.client',
+        'nlm.core.constants',
+        'nlm.core.exceptions',
+        'nlm.core.models',
+        'nlm.output',
+        'nlm.output.formatters',
+        'nlm.utils',
+        'nlm.utils.browser',
+        'nlm.utils.cdp',
+        'nlm.utils.config',
+        # ── Typer/Rich 체인 (top-level; build_exe.py가 --collect-submodules로 보강) ──
+        'typer',
+        'rich',
+        'shellingham',
+        'websocket',          # websocket-client
+        'annotated_doc',
+        # ── 파일락 (BLOCK-A: .af_setup_state.json 동시 실행 경쟁 방지) ──
+        'filelock',
+        # ── Tavily (외부 검색) ──
+        'tavily',
         # ── third-party ──
         'yaml',
         'anthropic',
@@ -179,7 +231,7 @@ a = Analysis(
         'idna',
         'anyio',
         'sniffio',
-    ],
+    ] + _auto_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

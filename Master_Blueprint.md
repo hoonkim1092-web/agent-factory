@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-10 | version: v1.2.18 -->
+<!-- last_updated: 2026-04-11 | version: v1.2.18 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -30,7 +30,7 @@
 
 | 파일 | 역할 | 주요 클래스/함수 |
 |------|------|----------------|
-| `run_factory_cli.py` | CLI 진입점 | `main()`, `worker` 서브커맨드 |
+| `run_factory_cli.py` | CLI 진입점 (STAGE 1/2/3) | `main()`, `_STAGE1_DISPATCH` (dispatch dict), `_STAGE1_USAGE`, `_is_help_arg()`, `_run_setup_gate()`, `_invoke_nlm_app()`, `__nlm` / `__check-nlm` 숨은 서브커맨드 |
 | `agent_launcher.py` | AgentFactory 부트스트랩 | `AgentFactory` |
 | `model_utils.py:1-845` | 모델 선택·티어 관리 | `_ROLE_ENGINE_MAP`, `_ROLE_CLI_PREFERENCE`, `pick_provider()` |
 | `version.py` | 버전 문자열 | `__version__` |
@@ -160,6 +160,19 @@
 
 ```
 run_factory_cli.py:main()
+  │
+  ├─ STAGE 1: 내부/숨은 서브커맨드 즉시 분기 (setup gate 우회)
+  │   └─ {setup, worker, skill-create, skill-spec, preflight,
+  │       skill-eval, skill-promote, __nlm, __check-nlm}
+  │       ※ __nlm은 _invoke_nlm_app() 경유로 nlm Typer app을
+  │         standalone_mode=False + sys.argv 백업/복원 패턴으로 호출
+  │         → frozen exe 환경에서도 SystemExit/argv 오염 없이 안전
+  │
+  ├─ STAGE 2: _run_setup_gate()
+  │   └─ core.setup_wizard.ensure_external_research_capabilities(mode="auto")
+  │       (TAVILY/NotebookLM 인증·노트북 점검; 실패해도 stderr 경고만 후 진행)
+  │
+  ├─ STAGE 3: 일반 실행 분기 (인자 없음 → 대화형, argparse → 태스크 모드)
   │
   ├─ [Phase 1] ProjectPipeline.prepare()
   │   ├─ bootstrap_roles.ProjectPlanningDirector
@@ -728,27 +741,53 @@ python build_exe.py
 ### PyInstaller 핵심 설정 (`af.spec`)
 
 ```python
+from PyInstaller.utils.hooks import collect_submodules
+
+# lazy-import 패키지 안전망 (설계문서 §4.6.2)
+_auto_hiddenimports = []
+for pkg in ("typer", "rich", "nlm"):
+    try:
+        _auto_hiddenimports.extend(collect_submodules(pkg))
+    except Exception:
+        pass
+
 Analysis(
   entry='run_factory_cli.py',
   datas=[('skills', 'skills'), ('config', 'config'), ('policy.yaml', '.')],
   hiddenimports=[
-    'core.agent_worker',  # worker 서브커맨드용 (중요!)
+    'core.agent_worker',   # worker 서브커맨드용 (중요!)
+    'core.setup_wizard',   # STAGE 2 gate 대상 + __nlm 체인
+    # NotebookLM CLI (import name: nlm) — 27 submodules
+    'nlm', 'nlm.cli.main', 'nlm.cli.auth', 'nlm.cli.notebook', ...
+    # Typer/Rich + 체인
+    'typer', 'rich', 'shellingham', 'websocket', 'annotated_doc',
+    # 파일락·Tavily
+    'filelock', 'tavily',
     ... 100+ 모듈
-  ]
+  ] + _auto_hiddenimports,
 )
 ```
 
+**주의**: PyInstaller 6.x는 `.spec` 파일을 CLI에 넘기면 `--collect-submodules`,
+`--hidden-import` 등 makespec 옵션을 거부한다(`makespec options not valid when
+a .spec file is given`). 따라서 `build_exe.py`는 옵션 없이 `pyinstaller af.spec`만
+호출하고, 서브모듈 안전망은 spec 내부에서 `collect_submodules()`로 건다.
+
 **새 core/*.py 파일 추가 시 af.spec `hiddenimports`에 반드시 추가 필요.**
+**nlm/typer/rich 마이너 버전 업그레이드 시 `collect_submodules` 결과 재검증.**
 
 ### Worker 서브커맨드 (PyInstaller 전용)
 
-`run_factory_cli.py:137-142`:
+`run_factory_cli.py` — STAGE 1 dispatch (`_STAGE1_DISPATCH["worker"]`):
 ```python
-if effective_argv and effective_argv[0] == "worker":
+def _run_worker_subcommand(rest: list[str]) -> None:
     from core.agent_worker import main as worker_main
-    sys.argv = ["af-worker"] + effective_argv[1:]
-    worker_main()
-    return
+    saved_argv = sys.argv
+    try:
+        sys.argv = ["af-worker"] + list(rest)
+        worker_main()
+    finally:
+        sys.argv = saved_argv
 ```
 
 `dynamic_orchestrator.py:515-521`:
@@ -854,7 +893,9 @@ skills/{skill_id}/
 | `core/project_pipeline.py` | `run_factory_cli.py`, `interactive_chat.py` | Phase 1/2 전체 |
 | `core/message_broker.py` | `dynamic_orchestrator.py` | 에이전트 간 통신 |
 | `core/project_mailbox.py` | `agent_runner.py`, `agent_specializer.py` | 에이전트 컨텍스트 |
-| `af.spec` | 빌드 출력 | `agent_worker.py` 미포함 시 worker_exited_code_2 |
+| `core/setup_wizard.py` | `run_factory_cli.py` (STAGE 2 gate), 외부 리서치 능력 | 모든 일반 af 실행 — `af setup`, `__nlm`/`__check-nlm` 진입점 |
+| `run_factory_cli.py` | `core/setup_wizard.py`, `nlm.cli.main` (소프트, frozen 시 hiddenimports 필요) | STAGE 1/2/3 진입점, `__nlm`/`__check-nlm` 숨은 서브커맨드 |
+| `af.spec` | 빌드 출력 | `agent_worker.py` 미포함 시 worker_exited_code_2; `nlm.*`/`typer`/`rich` 미포함 시 `__nlm` ImportError(127) |
 | `policy.yaml` | `bootstrap_roles.py`, `config/schema.py` | 태스크 분해 규칙 |
 
 ### 핵심 import 체인
@@ -911,6 +952,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-11 | v1.2.18 | feat(setup-wizard): Phase 2 — `run_factory_cli.py` STAGE 1/2/3 진입점 통합. `_STAGE1_DISPATCH` dict(단일 진실원천, setup/worker/skill-*/preflight + 신규 `__nlm`/`__check-nlm`), `_STAGE1_USAGE` dict(서브커맨드 레벨 `--help` 가드 — `af setup --help`가 wizard를 트리거하지 않음), `_is_help_arg()`(최상위 `--help` 가드 — setup gate 우회), `_run_setup_gate()` STAGE 2에서 `ensure_external_research_capabilities(mode="auto")` 호출, `_invoke_nlm_app()`이 nlm Typer app을 standalone_mode=False + sys.argv 백업/복원으로 안전하게 호출(BLOCK-B/WARN-1 해소). `af.spec`에 `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` hiddenimports 추가 + `collect_submodules('typer'/'rich'/'nlm')` 안전망(spec 내부; CLI `--collect-submodules`는 PyInstaller 6.x가 `.spec`과 병용 거부). frozen exe에서 setup_wizard 내부 nlm 호출 재귀 차단 |
 | 2026-04-10 | v1.2.18 | feat(pre-commit): 교차검증 게이트 + 멀티 프로바이더 + CLI 개선 — pre_commit_review.py 신규(결과 수집+판정), .githooks/pre-commit 교차검증 호출 추가, engine_auth 멀티 프로바이더 등록, registry.py macOS/Linux npm fallback, cli.py timeout 900초+진행 표시기, cross_verification timeout 동기화, PostToolUse hook venv python 절대경로 |
 | 2026-04-09 | v1.2.20 | refactor(fsa_loop): FSA 파이프라인을 ISE와 동일한 에스컬레이션 구조로 교체 — ISEAnalyzer/ISERedesigner/StrategyLedger/StallDetector 도입, _decide_escalation(Level 1-5), _decompose_and_execute(서브태스크 분할), _request_human_help(정체 시 사용자 힌트), 기존 _run_cross_verified_evaluator 제거(ISEAnalyzer로 대체), max_cycles=5 유지 |
 | 2026-04-09 | v1.2.19 | fix(cross-review-2): BLOCK 2건 + WARN 3건 수정 — plan_verifier 예외 시 passed=False(silent pass 제거), fsa_loop gate_result=None 시 hot_reload 제거(미검증 스킬 등록 방지), project_pipeline __new__→정상 인스턴스, cycle=0 에피소드 기록 가드, refine 루프 동일 결과 break |
