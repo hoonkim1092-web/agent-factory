@@ -55,10 +55,14 @@
       "Bash(/usr/bin/env python3:*)",
       "Bash(bash -n install-af.sh)",
       "Bash(unset VIRTUAL_ENV)",
-      "Bash(/usr/local/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/bin/python3.14 -c \"import sys, yaml; print\\('ok', yaml.__version__, sys.prefix\\)\")"
+      "Bash(/usr/local/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/bin/python3.14 -c \"import sys, yaml; print\\('ok', yaml.__version__, sys.prefix\\)\")",
+      "Bash(rm:*)",
+      "Bash(rmdir:*)"
     ],
     "deny": [
-      "Bash(rm:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf $HOME:*)",
       "Bash(del:*)",
       "Bash(erase:*)",
       "Bash(Remove-Item:*)",
@@ -124,14 +128,6 @@
             "timeout": 15
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".venv/bin/python3 scripts/cli_hook_bridge.py --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\""
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [
@@ -148,14 +144,6 @@
             "timeout": 5
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".venv/bin/python3 scripts/cli_hook_bridge.py --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\""
-          }
-        ]
       }
     ],
     "PreCompact": [
@@ -165,14 +153,6 @@
             "type": "command",
             "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
             "timeout": 15
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".venv/bin/python3 scripts/cli_hook_bridge.py --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\""
           }
         ]
       }
@@ -186,14 +166,6 @@
             "timeout": 15
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".venv/bin/python3 scripts/cli_hook_bridge.py --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\""
-          }
-        ]
       }
     ],
     "SessionEnd": [
@@ -203,14 +175,6 @@
             "type": "command",
             "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"",
             "timeout": 15
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".venv/bin/python3 scripts/cli_hook_bridge.py --provider claude --workspace \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" --run-id claude_cli_run --repo-root \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\""
           }
         ]
       }
