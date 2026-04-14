@@ -838,7 +838,7 @@ python build_exe.py
 # 4. dist/af-{version}.zip 생성
 ```
 
-**출력:** `dist/af/af.exe` (12.5 MB), `dist/af-1.x.x.zip` (44 MB)
+**출력:** `dist/af/af.exe` (12.5 MB), `dist/af-1.x.x.zip` (40 MB — 2026-04-14 Phase B 다이어트 이후; 이전 87MB)
 
 ### PyInstaller 핵심 설정 (`af.spec`)
 
@@ -877,6 +877,30 @@ a .spec file is given`). 따라서 `build_exe.py`는 옵션 없이 `pyinstaller 
 
 **새 core/*.py 파일 추가 시 af.spec `hiddenimports`에 반드시 추가 필요.**
 **nlm/typer/rich 마이너 버전 업그레이드 시 `collect_submodules` 결과 재검증.**
+
+### Phase B 빌드 다이어트 (2026-04-14)
+
+**PYZ 생성 직전 `a.datas` 필터 (af.spec B1)** — googleapiclient discovery_cache 전량 제거:
+
+```python
+_DISCOVERY_PATTERNS = (
+    "googleapiclient/discovery_cache/documents",
+    "googleapiclient\\discovery_cache\\documents",  # Windows 경로
+)
+_DEFENSIVE_KEEP = ("drive.v3.json", "customsearch.v1.json", "gmail.v1.json")
+
+a.datas = [d for d in a.datas if not _is_discovery_doc(d[0]) or _should_keep(d[0])]
+```
+
+- **근거**: 주 경로(google.genai)는 REST/gapic을 직접 호출하며 580개 JSON을 쓰지 않음.
+- **방어 whitelist**: LangChain Google 툴이 실수로 `build()`를 호출할 경우 `ImportError`가 아니라 `UnknownApiNameOrVersion`으로 낮춤.
+- **회귀 감지**: `tests/test_gemini_smoke.py` (pytest.mark.slow) — 신/구 SDK 경로 + import 시점 discovery_cache 미필요 확인.
+
+**hiddenimports 제거 (B2/B3)**:
+- `langchain_community` → orphan(langchain 1.0 Required-by 없음, 우리 코드 import 0건) → numpy/SQLAlchemy 등 ~40MB 간접 의존 배제.
+- `google.generativeai` → `skills/core/cortex.py`를 신 SDK(`google.genai`)로 마이그레이션 완료 후 제거. 구 SDK `agents/*/tools/cortex.py` 26개는 **소스 모드 런타임 호환용으로 보류** (binary에는 무관).
+
+**결과**: zip 87MB → 40MB (-54%), unpacked 200MB+ → 68MB (-66%).
 
 ### Worker 서브커맨드 (PyInstaller 전용)
 
@@ -1057,7 +1081,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
-| 2026-04-14 | v1.2.20 | release(patch): B3 클래스 수정 묶어 1.2.19 → 1.2.20 patch bump. **이유**: 1.2.19 태그(`af-fsa_v1.2.19`@`0d2b7e78`)는 이미 push되어 reflog/CI에 박혀 있는데 이후 두 fix(`e024ed8f` --version 가드, `07e57c5d` gate 위치 구조 변경)가 동일 1.2.19 버전 zip 내부 코드를 변경 → SemVer 위반(버전 표기 ↔ 실제 코드 불일치). `version.py` 1.2.19→1.2.20, `install-af.ps1`/`install-af.sh` 버전 문자열 7+5곳 일괄 교체(`AF_VERSION` env 기본값 포함), PyInstaller 재빌드 → `dist/af-1.2.20.zip`(86.9MB). 신규 빌드 회귀 PASS(`af --version` → "af 1.2.20" 단독, `--invalid-flag` exit 2 + gate 미실행). 새 태그 `af-fsa_v1.2.20`. **부수 정책 변경**: 빌드 zip(91MB)이 git-lfs 미구성 환경에서 GitHub 100MB 한계로 push 실패 → CLAUDE.md "LFS로 커밋" 규칙 폐기 + `dist/*.zip` `.gitignore` 처리 + `gh release create af-fsa_v{version}`로 배포 전환(`.gitignore`/`CLAUDE.md` 동시 갱신). **부수**: B3 1차 검증 시 사용자 NotebookLM에 부작용으로 생성됐던 빈 아카이브 노트북 `638f9ff2-c955-49c1-bf7b-58b5764dce18` 정리(`nlm notebook delete -y`) |
+| 2026-04-14 | (unreleased) | build(phase-b): 빌드 다이어트 — **zip 87MB → 40MB (-54%)**, unpacked 200MB+ → 68MB (-66%). **B0**(`d6d7add7`): `tests/test_gemini_smoke.py` 신규(신/구 SDK 경로 + import-time discovery_cache 미필요 회귀, `@pytest.mark.slow`). **B1**(`08b6f19f`): `af.spec`에 PYZ 직전 `a.datas` 필터 도입 — `googleapiclient/discovery_cache/documents/*.json` 580개 전량 제거, 방어 whitelist(`drive.v3.json`/`customsearch.v1.json`/`gmail.v1.json`)로 LangChain Google 툴 실수 호출 시 `ImportError` 대신 `UnknownApiNameOrVersion` 유지. googleapiclient 94MB 제거. **B2**(`eb0e0969`): `langchain_community` hiddenimport 제거(langchain 1.0 Required-by 없음 + 우리 코드 import 0건 grep 검증 → numpy/SQLAlchemy/langchain-classic 등 ~40MB 간접 의존 배제). **B3**(`17fdda4e`): `skills/core/cortex.py`를 구 SDK(`google.generativeai`) → 신 SDK(`google.genai`, `genai.Client.models.embed_content()` + `EmbedContentConfig(output_dimensionality=768)`)로 마이그레이션, `af.spec`에서 `google.generativeai` hiddenimport 제거. `agents/*/tools/cortex.py` 26개는 소스 모드 런타임 호환을 위해 구 SDK 유지(binary 무관). af-critic(BLOCK 3 무-테스트)·af-cross-review(discovery_cache 전량 제거 동치성) ACCEPT 기반. §8 `af.spec` 설명에 Phase B 섹션 신설 | B3 클래스 수정 묶어 1.2.19 → 1.2.20 patch bump. **이유**: 1.2.19 태그(`af-fsa_v1.2.19`@`0d2b7e78`)는 이미 push되어 reflog/CI에 박혀 있는데 이후 두 fix(`e024ed8f` --version 가드, `07e57c5d` gate 위치 구조 변경)가 동일 1.2.19 버전 zip 내부 코드를 변경 → SemVer 위반(버전 표기 ↔ 실제 코드 불일치). `version.py` 1.2.19→1.2.20, `install-af.ps1`/`install-af.sh` 버전 문자열 7+5곳 일괄 교체(`AF_VERSION` env 기본값 포함), PyInstaller 재빌드 → `dist/af-1.2.20.zip`(86.9MB). 신규 빌드 회귀 PASS(`af --version` → "af 1.2.20" 단독, `--invalid-flag` exit 2 + gate 미실행). 새 태그 `af-fsa_v1.2.20`. **부수 정책 변경**: 빌드 zip(91MB)이 git-lfs 미구성 환경에서 GitHub 100MB 한계로 push 실패 → CLAUDE.md "LFS로 커밋" 규칙 폐기 + `dist/*.zip` `.gitignore` 처리 + `gh release create af-fsa_v{version}`로 배포 전환(`.gitignore`/`CLAUDE.md` 동시 갱신). **부수**: B3 1차 검증 시 사용자 NotebookLM에 부작용으로 생성됐던 빈 아카이브 노트북 `638f9ff2-c955-49c1-bf7b-58b5764dce18` 정리(`nlm notebook delete -y`) |
 | 2026-04-14 | v1.2.19 | fix(run_factory_cli): B3 fix follow-up — af-critic WARN 2 + af-cross-review Q1/Q2/Q3/Q5/Q6 ACCEPT 통합 반영. **구조 변경**: `_run_setup_gate()`를 `parse_args()` **뒤로** 이동(STAGE 4 신설) → `af --version`/`-V`/`--help`/`-h`/`--invalid-flag` 등 argparse가 SystemExit으로 즉시 종료시키는 모든 경로에서 setup_wizard가 돌아갈 수 없게 됨(Q1/Q2 ACCEPT의 `af --invalid-flag` 부작용 클래스까지 구조적으로 차단). 모듈 최상위 `_is_help_only` → `_is_meta_only`로 확장 + `_META_FLAGS` 사용으로 통일 → `af --version`에서 `[Auto-Config]` 배너 stdout 오염 제거(Q3/Q6 ACCEPT 실측 해소). 상수 DRY: `_HELP_FLAGS = ("--help","-h"); _META_FLAGS = _HELP_FLAGS + ("--version","-V")` 합성(Q5). `parse_args(argv)` → `parse_args(effective_argv)` 단일 진실원천(WARN-1). STAGE 2 짧은 경로(empty argv / `--interactive` 단독)는 argparse 미경유라 gate 직접 호출 유지. 단위 테스트 +2(test_setup_gate_skips_invalid_flag, test_setup_gate_skips_help_flag) + capsys 단언 추가(test_setup_gate_skips_version_flag) → 24/24 PASS. PyInstaller 재빌드 + 4종 실측 PASS(`af --version` → `af 1.2.19` 단독 / `-V` 동일 / `--invalid-flag` exit 2 + gate 미실행 / `--help` 배너 없음). 부작용 노트북 추가 생성 0건(이전 B3 첫 검증 시 생성된 `638f9ff2-...` 1개 외 증가 없음 검증 완료) |
 | 2026-04-14 | v1.2.19 | fix(run_factory_cli): B3 실측 버그 — `af --version` 실행 시 setup_wizard가 돌아가 NotebookLM에 아카이브 노트북이 부작용으로 생성되던 문제. 신규 `_META_FLAGS=("--help","-h","--version","-V")` + `_is_meta_arg()` 도입, STAGE 2 gate 조건을 `_is_help_arg` → `_is_meta_arg`로 교체. argparse에 `--version/-V action='version'` 등록(`version=f"af {__version__}"`). STAGE 1 서브커맨드 레벨 `_is_help_arg`는 `--help`/`-h`만 유지(하위 Typer/argparse가 자체 `--version` 처리 — `af __nlm --version`). `build_exe.py` OS 분기 수정: exe 경로 `af.exe`(win)/`af`(macOS·Linux) 분리, 배포 안내도 분기. 단위 테스트 +2(`test_setup_gate_skips_version_flag` SystemExit(0) + gate 미호출 단언, `test_is_meta_arg_matches_help_and_version` 경계 조건). PyInstaller 재빌드 후 B3 PASS(`af 1.2.19` + exit 0 + 노트북 생성 메시지 없음), `-V` 단축 PASS, `--help` 회귀 PASS |
 | 2026-04-14 | v1.2.19 | test(setup-wizard): Phase 5 — §8.1 단위 테스트 20종(`tests/test_setup_wizard_gate.py`) + §8.2 Slow Integration 2종(`tests/test_nlm_regression.py`, `@pytest.mark.slow`) 신규 작성. 22/22 PASS. `pytest.ini`에 `slow` 마커 등록(PytestUnknownMarkWarning 제거). 커버리지: TAVILY 플로우 5종(configured/interactive 저장/skip 재확인 y/skip 루프/noninteractive 경고박스), NotebookLM 플로우 6종(nlm 미설치/Chrome 미설치/auth exit 0·2 파싱/login 성공/noninteractive skip), state I/O 4종(atomic write crash 무손상/v1→v2 migration/corrupted 복구/filelock contention), STAGE 1 gate 3종(setup/__nlm/worker 분기 + gate 미호출 검증), `_invoke_nlm_app` 1종(standalone_mode=False + sys.argv 복원 + SystemExit 차단), `_find_or_create_archive_notebook` UUID 파싱 1종. Slow 2종: `nlm auth status` exit 2 패턴 회귀 + `nlm notebook --help` 서브커맨드 존재 회귀(R5/R11 감지). M1/M3/M5/M7/M9 자동 스모크 PASS 기록 |
