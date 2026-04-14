@@ -23,6 +23,9 @@ env/
 # --- Setup Wizard local state (per-user secrets: TAVILY key, NotebookLM UUIDs) ---
 .af_setup_state.json
 
+# --- Session resume brief (auto-regenerated every turn, volatile) ---
+/resume_brief.md
+
 # --- Runtime/Test Artifacts ---
 projects/default/runs/
 projects/agent_factory/runs/

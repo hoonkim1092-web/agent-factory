@@ -512,3 +512,25 @@ _Review skipped (--no-llm or LLM unavailable)_
 - [Info] Master_Blueprint.md — `last_updated` 날짜만 변경, 코드 변경에 대응하는 실질적 섹션 업데이트 없음
 
 No critical/high/medium issues found.
+
+---
+
+## 2026-04-13 22:15 — `2026-04-11-setup-wizard-tavily-notebooklm` (325949e9)
+
+**Context**: Phase 2 잔여: research_engine/researcher/research_assistant 스킬 nlm 전환 + state 기반 archive UUID + install-af.sh 신규 + install-af.ps1 1.2.19 + Chrome/__check-nlm 검증
+
+**Changed (404)**: `.claude/settings.local.json, .gitignore, .system_generated/cache/document_index.json, Master_Blueprint.md, build/af/Analysis-00.toc, build/af/COLLECT-00.toc, build/af/EXE-00.toc, build/af/PKG-00.toc, build/af/PYZ-00.pyz, build/af/PYZ-00.toc, build/af/af.exe, build/af/af.pkg, build/af/base_library.zip, build/af/warn-af.txt, build/af/xref-af.html ... (+389)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] install-af.sh:79 — `rm -rf \"${INSTALL_ROOT}\"` 직전에 `.af_setup_state.json`(사용자별 TAVILY 키 + archive_notebook_id UUID)을 보존하지 않음. 주석(line 13-14)은 schema v1 자동 마이그레이션을 약속하지만, 파일이 먼저 삭제되면 마이그레이션 대상이 사라져 재설치 시 setup 재입력 강제. `_get_env_path()`는 dev 모드에서 `$HOME/.local/share/af/.env` 옆에 state를 저장하므로 INSTALL_ROOT 하위에 상주.",
+    "- [Low] core/research_engine.py:159 / skills/research_assistant/skill.py:93 — nlm CLI 서브커맨드 순서를 `query notebook <id>` → `notebook query <id>` 로 역전. 두 파일 모두 동일하게 변경되었지만 nlm 0.x의 실제 verb 순서 검증 흔적이 리뷰 범위에 없음; 잘못되면 모든 NotebookLM 조회가 런타임에 조용히 실패 후 `_is_auth_error` 를 우회(비인증 에러 메시지라) 재인증도 발동하지 않음.",
+    "- [Low] skills/research_assistant/skill.py:134 — archive 미설정 시 `_query_notebooklm`이 한국어 안내 문자열을 정상 답변처럼 반환. 상위 `generate_research_report`가 그대로 보고서 본문에 삽입해 산출물 품질 훼손 가능. 빈 문자열 또는 구조화 dict 리턴으로 분리 권장.",
+    "- [Low] install-af.sh:92 — macOS BSD `mktemp -t af-src-XXXXXX.tar.gz` 는 접미사를 보존하지 않아 실제 파일명이 `af-src-XXXXXX.tar.gz` 가 아닌 랜덤 문자열일 수 있음. `tar -xzf` 는 동작하므로 기능적 영향 없음(참고용).",
+    "- [Info] install-af.sh:124 — requirements.txt 부재 시 fallback 5개 패키지만 설치하여 실제 기동 시 import 누락 가능. 릴리스 태그 tarball에는 항상 포함될 것으로 가정되지만, 실패를 fail() 로 바꾸는 편이 안전."
+  ]
+}
+```

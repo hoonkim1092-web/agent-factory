@@ -151,6 +151,23 @@ mv "${STAGING_ROOT}" "${INSTALL_ROOT}" \
          fail "신규 설치 적용 실패 → 기존 설치 복원됨"; \
        }
 
+# ── 사용자 state 파일 복원 (재설치 시 재입력 방지) ─────────────────────
+# core/setup_wizard.py::_get_setup_state_path()가 factory_dir(= INSTALL_ROOT)에
+# `.af_setup_state.json`을 저장하고, `.env`에는 TAVILY_API_KEY 등 API 키가 들어간다.
+# 새 트리로 교체한 직후 BACKUP_ROOT에 남은 사용자 상태 파일을 복사해 오면
+# 재설치 사용자가 `af setup`을 재실행할 필요가 없다.
+if [ -d "${BACKUP_ROOT}" ]; then
+    for state_file in .env .af_setup_state.json; do
+        if [ -f "${BACKUP_ROOT}/${state_file}" ]; then
+            if cp -p "${BACKUP_ROOT}/${state_file}" "${INSTALL_ROOT}/${state_file}" 2>/dev/null; then
+                c_green "✓ 사용자 state 복원: ${state_file}"
+            else
+                c_yellow "! ${state_file} 복원 실패 — 수동 복구: cp \"${BACKUP_ROOT}/${state_file}\" \"${INSTALL_ROOT}/\""
+            fi
+        fi
+    done
+fi
+
 # 교체 성공: 이전 백업 제거 (실패 시에도 경고만)
 if [ -d "${BACKUP_ROOT}" ]; then
     rm -rf "${BACKUP_ROOT}" || c_yellow "! 이전 백업 정리 실패: ${BACKUP_ROOT} (수동 제거 필요)"
