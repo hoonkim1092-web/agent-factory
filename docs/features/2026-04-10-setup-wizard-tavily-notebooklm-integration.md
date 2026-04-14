@@ -1485,10 +1485,12 @@ CI 설정에서 `pytest -m slow --tb=short` 를 일일 주기 또는 PR 병합 �
 6. `version.py` 1.2.18 → 1.2.19
 7. 빌드 §8.3 B1~B8 검증
 
-**Phase 5 — 스모크**
-1. §8.2 M1~M9 수행
-2. §8.2 Slow Integration Test 실행
-3. §8.4 I2 macOS install-af.sh 검증
+**Phase 5 — 스모크** (일부 완료, 2026-04-14)
+1. §8.2 M1~M9 수행 — **자동 가능분 PASS**: M1(비TTY) / M3(재실행 프롬프트 0) / M5(silent) / M7(nlm auth status exit 0 + ✓ Authenticated) / M9(archive 재사용). **수동 필요**: M2(TTY af --fsa) / M4(af setup 강제 재설정) / M6(Chrome 미설치) / M8(첫 create)
+2. [x] §8.1 단위 테스트 20종 — `tests/test_setup_wizard_gate.py` 작성 완료, 20/20 PASS
+3. [x] §8.2 Slow Integration Test 2종 — `tests/test_nlm_regression.py` 작성 완료, 2/2 PASS, `pytest.ini` marker 등록
+4. [x] §8.4 I2 macOS install-af.sh 검증 — 이전 세션 로컬 드라이런 통과(`AF_VERSION=1.2.18 AF_INSTALL_ROOT=/tmp/af_test`, 재설치 state 복원 확인)
+5. §8.3 B1~B8 PyInstaller 빌드 검증 — pending (macOS 빌드 실행 + 실제 exe 기반 검증 필요)
 
 **Phase 6 — 문서 동기화 (코드와 같은 커밋)** ✅ 완료 (2026-04-14)
 1. [x] `Master_Blueprint.md` §3.11 신규 생성 — 데이터 흐름 + 주요 함수 매트릭스 + 스키마 v2 + 순환 방지 + BLOCK-A/B/C + Low-1 해소 매핑
