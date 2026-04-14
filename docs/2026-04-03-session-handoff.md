@@ -169,7 +169,7 @@ R3: [누적패턴]실행 → [누적맹점]리뷰 → [전체이력+반복이슈
 
 | 항목 | 상태 | 다음 단계 |
 |------|------|----------|
-| `notebooklm_tools` 패키지 설치 | 미완료 | `pip install notebooklm-tools` |
+| ~~`notebooklm_tools` 패키지 설치 (원표기 오류 — 이 PyPI 패키지는 존재하지 않음)~~ | ✅ 완료 (2026-04-13, v1.2.19) | 원 지시 ~~`pip install notebooklm-tools`~~ → 실제 PyPI 패키지는 `notebooklm-cli` (import 이름 `nlm`). Phase 0 실측으로 확정 후 `core/research_engine.py` 재작성(`notebooklm_tools.cli.main` → `nlm` 전환), `requirements.txt` + `af.spec` hiddenimports 반영. 상세: `docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md` §1.1~§1.2 (Phase 0 실측 기록 보존) |
 | JudgmentLedger 구현 | 설계 완료 | 코드 작성 |
 | `core/project_pipeline.py` 커밋 | 변경됨, 미커밋 | 커밋+push |
 | `run_factory_cli.py` 커밋 | 변경됨, 미커밋 | 커밋+push |

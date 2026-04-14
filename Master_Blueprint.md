@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-13 | version: v1.2.19 -->
+<!-- last_updated: 2026-04-14 | version: v1.2.19 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -89,6 +89,7 @@
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
 | `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) | `HimariResearchAgent`, `_collect_web_references()`, `_collect_notebook_summary()` |
 | `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
+| `core/setup_wizard.py` | 외부 리서치 도구(TAVILY/NotebookLM) 점검·복구 단일 진입점 | `ensure_external_research_capabilities()`, `_find_or_create_archive_notebook()` |
 | `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
 | `core/skill_creator.py` | 스킬 생성·진화 | `evolve_skill()` |
 | `core/skill_enricher.py` | 스킬 메타데이터 자동 생성 | `enrich_skill_metadata()`, `bulk_enrich_all_skills()` |
@@ -536,6 +537,104 @@ INFRA 패턴: `missing_api_key`, `quota`, `429`, `503`, `cli_timeout`, `worker_t
 | `run_ledger.py` | 실행 원장 |
 | `change_impact.py` | 변경 영향 분석 |
 
+### §3.11 Setup Wizard + External Research (`core/setup_wizard.py`, `core/research_engine.py`)
+
+**목적**: 모든 실행 모드(`af`, `af setup`, `af worker`, `af __nlm` 등)에서 파이프라인 진입 직전 외부 리서치 도구(TAVILY / NotebookLM)의 상태를 점검·복구하고, 사용자별 아카이브 노트북 UUID를 영속 저장해 `research_engine.query_notebooklm()`가 하드코딩 없이 동작하도록 만드는 단일 진입점 계층. 설계 문서: `docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md` (v3.3, Implemented).
+
+#### 데이터 흐름
+
+```
+run_factory_cli.main()
+   │
+   ├── STAGE 1: _STAGE1_DISPATCH (setup / worker / __nlm / __check-nlm / skill-* / preflight)
+   │              → gate 우회, 즉시 분기 (재귀 방지)
+   │
+   ├── STAGE 2: _run_setup_gate()
+   │              → setup_wizard.ensure_external_research_capabilities(mode="auto")
+   │                    ├── _load_setup_state()  (.af_setup_state.json, filelock)
+   │                    ├── _ensure_tavily(state, mode)  — Y/N 재확인 루프
+   │                    ├── _ensure_notebooklm(state, mode)
+   │                    │      ├── _check_chrome_installed()
+   │                    │      ├── _check_notebooklm_auth(profile)  — exit code 0/2 우선 판정
+   │                    │      ├── _run_notebooklm_login()          — subprocess nlm login
+   │                    │      └── _find_or_create_archive_notebook()
+   │                    │             ├── nlm notebook list → _parse_notebook_list_for_title()
+   │                    │             └── nlm notebook create → _parse_notebook_create_output()
+   │                    └── _save_setup_state(state)  — atomic write + filelock
+   │
+   └── STAGE 3: 기존 로직 (project / chat / fsa / ...)
+```
+
+#### 주요 함수 (`core/setup_wizard.py`)
+
+| 함수 | 역할 |
+|------|------|
+| `ensure_external_research_capabilities(mode)` | 외부 공개 API — 모든 파이프라인이 호출하는 단일 진입점 |
+| `_load_setup_state()` / `_save_setup_state(state)` | `.af_setup_state.json` schema v2 atomic I/O + `filelock` 크로스플랫폼 락 |
+| `_check_notebooklm_auth(profile)` | `nlm auth status` exit code 0/2 우선 판정 (Phase 0.5 실측) |
+| `_find_or_create_archive_notebook(profile, title)` | 기존 노트북 title 매칭 → 없으면 `nlm notebook create` → UUID 반환 (BLOCK-C 해결) |
+| `_parse_notebook_create_output(stdout)` | 생성 출력 뒤의 JSON 블록에서 UUID 추출 |
+| `_parse_notebook_list_for_title(stdout, title)` | `nlm notebook list` 순수 JSON 배열에서 title 매칭 UUID 추출 |
+| `_validate_notebook_uuid(nb_id, profile)` | UUID 포맷/접근성 검증 (수동 입력 fallback 보호) |
+| `_ensure_tavily(state, mode)` | TAVILY_API_KEY 입력 UI + Y/N 스킵 재확인 |
+| `_ensure_notebooklm(state, mode)` | Chrome 감지 → 로그인 유도 → 아카이브 노트북 확보 |
+
+#### 주요 함수 (`core/research_engine.py`, 재작성 완료)
+
+| 함수 | 역할 |
+|------|------|
+| `_get_archive_notebook_id()` | `setup_wizard._load_setup_state()` **lazy import** → `notebooklm.archive_notebook_id` 로드 (하드코딩 UUID 제거) |
+| `_nlm_cmd_base()` | frozen exe → `[sys.executable, "__nlm"]` / 소스 → `["nlm"]` (PATH 의존 — venv 활성화 또는 `PATH`에 `nlm` 필요) |
+| `_reauth_notebooklm()` | 401/auth 오류 감지 시 1회 자동 재로그인 시도 |
+| `_nlm_cli(*args, timeout=120)` | subprocess 래퍼 + 인증 만료 감지 시 `_reauth_notebooklm()` 후 1회 자동 재시도 |
+| `query_notebooklm(query, notebook_id=None, mode=None) -> str` | `notebook_id` 미지정 시 `_get_archive_notebook_id()` fallback; archive 미설정 시 `""` graceful skip(`_ARCHIVE_SKIP_LOGGED`로 stderr 1회 경고); `mode=None`이면 `classify_research_depth()` 자동 결정 |
+| `create_notebook(title)` / `inject_source_url/text/sources()` | 사서 API — 노트북 생성·소스 주입 |
+
+#### `.af_setup_state.json` 스키마 v2 (실제 `_default_state()`와 동기화)
+
+```json
+{
+  "schema_version": 2,
+  "tavily": {
+    "decision": "pending | configured | skipped",
+    "last_prompt_at": "ISO8601 | null"
+  },
+  "notebooklm": {
+    "decision": "pending | logged_in | skipped | unknown",
+    "profile": "default",
+    "archive_notebook_id": "UUID | null",
+    "archive_notebook_title": "Agent Factory Archive",
+    "archive_possibly_duplicate": false,
+    "last_login_attempt_at": "ISO8601 | null",
+    "last_login_error": "string | null"
+  }
+}
+```
+
+- `tavily.decision` 허용 값은 `_VALID_TAVILY_DECISIONS = {"pending", "configured", "skipped"}` (`core/setup_wizard.py:195`).
+- `notebooklm.decision`은 `_check_notebooklm_auth()` 반환에 따라 wizard가 갱신 (`logged_in` / `skipped` / `unknown` / `pending`).
+- `archive_possibly_duplicate`는 `_find_or_create_archive_notebook()`이 동일 title 노트북 다중 존재 감지 시 `True`.
+
+#### 순환 방지 규칙 (중요)
+
+- `core/setup_wizard.py`는 **top-level에서 `core.*` 모듈을 import하지 않는다** (stdlib + `filelock`만 허용).
+- `core/research_engine._get_archive_notebook_id()`는 함수 내부에서 `setup_wizard._load_setup_state()`를 lazy import. 역방향은 금지.
+
+#### BLOCK 해소 매핑
+
+| 설계 단계 BLOCK | 해소 메커니즘 | 참조 |
+|-----|------|------|
+| BLOCK-A (Windows `fcntl` 미지원) | `filelock>=3.0` 크로스플랫폼 패키지 | `_save_setup_state()` |
+| BLOCK-B (Typer `standalone_mode` `SystemExit` 전파) | `_invoke_nlm_app()`: `standalone_mode=False` + `sys.argv` try/finally + `SystemExit` try/except | `run_factory_cli.py` |
+| BLOCK-C (하드코딩 `DEFAULT_ARCHIVE_NOTEBOOK_ID` → 신규 사용자 전면 실패) | `_find_or_create_archive_notebook()` + state 저장 + `_get_archive_notebook_id()` 로드 | `setup_wizard.py`, `research_engine.py` |
+| Low-1 (archive 미설정 시 보고서 본문에 에러 문자열 삽입) | `_query_notebooklm()` tuple `(ok, reason)` 반환 → `apply()`가 구조화된 실패 반환 | `skills/research_assistant/skill.py` v3.2 |
+
+#### 배포 의존성 (§8과 연동)
+
+- `requirements.txt`: `notebooklm-cli`, `tavily-python`, `filelock>=3.0` 추가
+- `af.spec` `hiddenimports`: `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` + `collect_submodules('typer'|'rich'|'nlm')`
+- `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
+
 ---
 
 ## §4 자가진화 루프
@@ -958,6 +1057,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-14 | v1.2.19 | docs(blueprint): Phase 6 문서 동기화 — §3.11 Setup Wizard + External Research 신규 작성(데이터 흐름·주요 함수 매트릭스·`.af_setup_state.json` 스키마 v2·순환 방지 규칙·BLOCK-A/B/C + Low-1 해소 매핑·배포 의존성 요약). §0 core 파일 테이블에 `core/setup_wizard.py` 행 추가. `docs/2026-04-03-session-handoff.md:172` `notebooklm-tools` → `notebooklm-cli` + "미완료" → "완료" 정정. Feature 문서 `docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md` 상태 Draft → Implemented, Phase 6 체크리스트 `[x]` 완료 |
 | 2026-04-13 | v1.2.19 | feat(setup-wizard): Phase 2 잔여 — `core/research_engine.py` 전면 재작성(DEFAULT_ARCHIVE_NOTEBOOK_ID 하드코딩 제거, `_get_archive_notebook_id()` state 로드, `_nlm_cmd_base()` frozen-aware prefix, `notebooklm_tools.cli.main` → `nlm` 전환, 모듈 레벨 `_ARCHIVE_SKIP_LOGGED`로 archive 미설정 stderr 1회 제한, `--mode` 인자 제거로 180s×2 더블 spawn 버그 해소). `core/researcher.py` `find_spec("notebooklm_tools")` → `find_spec("nlm")` + frozen 분기, `_tavily_skip_logged`/`_notebook_skip_logged` 인스턴스 플래그로 스킵 1회 로그(stderr). `core/setup_wizard.py` 상단에 `core.*` top-level import 금지 경고 주석(research_engine 순환 방지). `skills/research_assistant/skill.py` nlm 헬퍼를 `core.research_engine`에서 import하도록 공통화(중복 제거, 인증 재시도 자동 승계). v3.2에서 `_query_notebooklm`이 `(ok, content_or_reason)` tuple 반환으로 변경 → `apply()`가 archive 미설정·빈 응답·연결 실패 시 에러 문자열을 보고서 본문에 삽입하지 않고 `{"ok": False, "error": ..., "hint": ...}`로 구조화된 실패를 반환(af-cross-review Low-1). `install-af.sh` 신규(macOS/Linux 소스 설치: curl/wget fallback, python3>=3.10 체크, `${INSTALL_ROOT}.new` staging → `mv` 원자적 교체, 실패 시 `.bak` 복원, Chrome 감지, `__check-nlm` 검증, tarball root `<repo>-<tag>/` 주석 명시, **재설치 시 `${BACKUP_ROOT}`의 `.env`/`.af_setup_state.json`을 새 트리로 자동 복원 → 사용자 재입력 방지**, `AF_VERSION`/`AF_INSTALL_ROOT`/`AF_BIN_DIR` 환경변수 override 지원 — `/tmp`에 드라이런 가능하며 로컬 `AF_VERSION=1.2.18 AF_INSTALL_ROOT=/tmp/af_test bash install-af.sh` + 재설치 2회로 tarball·staging·venv·Chrome·`__check-nlm`·state 복원까지 end-to-end 통과 확인). `install-af.ps1` 1.2.18→1.2.19 bump + Chrome 레지스트리 감지 + `__check-nlm` 검증(실패 시 `$nlmCheck` 출력 보존). `.gitignore`에 `.af_setup_state.json` 추가. af-critic BLOCK-1/3 + WARN-2/4 + af-cross-review Q1/Q2/Q4 반영 |
 | 2026-04-11 | v1.2.18 | feat(setup-wizard): Phase 2 — `run_factory_cli.py` STAGE 1/2/3 진입점 통합. `_STAGE1_DISPATCH` dict(단일 진실원천, setup/worker/skill-*/preflight + 신규 `__nlm`/`__check-nlm`), `_STAGE1_USAGE` dict(서브커맨드 레벨 `--help` 가드 — `af setup --help`가 wizard를 트리거하지 않음), `_is_help_arg()`(최상위 `--help` 가드 — setup gate 우회), `_run_setup_gate()` STAGE 2에서 `ensure_external_research_capabilities(mode="auto")` 호출, `_invoke_nlm_app()`이 nlm Typer app을 standalone_mode=False + sys.argv 백업/복원으로 안전하게 호출(BLOCK-B/WARN-1 해소). `af.spec`에 `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` hiddenimports 추가 + `collect_submodules('typer'/'rich'/'nlm')` 안전망(spec 내부; CLI `--collect-submodules`는 PyInstaller 6.x가 `.spec`과 병용 거부). frozen exe에서 setup_wizard 내부 nlm 호출 재귀 차단 |
 | 2026-04-10 | v1.2.18 | feat(pre-commit): 교차검증 게이트 + 멀티 프로바이더 + CLI 개선 — pre_commit_review.py 신규(결과 수집+판정), .githooks/pre-commit 교차검증 호출 추가, engine_auth 멀티 프로바이더 등록, registry.py macOS/Linux npm fallback, cli.py timeout 900초+진행 표시기, cross_verification timeout 동기화, PostToolUse hook venv python 절대경로 |

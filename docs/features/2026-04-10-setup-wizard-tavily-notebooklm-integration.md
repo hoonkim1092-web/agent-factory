@@ -2,7 +2,7 @@
 
 - **작성일**: 2026-04-10 (v1) / 개정 2026-04-11 (v3 → v3.2)
 - **버전**: v3.2 (Phase 0.5 실측으로 `_check_notebooklm_auth` exit code 정정 + 파서 확정)
-- **상태**: Draft (최종 교차검증 대기)
+- **상태**: Implemented (Phase 6 docs-sync 완료; Phase 5 스모크 / Phase 7 교차검증 / Phase 8 태깅 pending) — 2026-04-14 Master_Blueprint §3.11 신규, §0 core 테이블 `setup_wizard.py` 추가, §12 이력 갱신, `docs/2026-04-03-session-handoff.md:172` 정정
 - **Phase 0 검증 완료**: `notebooklm-cli` 0.1.12, import 이름 `nlm`, Typer 기반, 27 서브모듈, CDP 사용(Playwright 비의존), `nlm notebook {list,create,get,query,delete}` + `nlm auth status` + `nlm login [--manual -f FILE]` 실측
 - **Phase 0.5 실측 완료 (2026-04-11)**: `nlm auth status` **exit code 0(성공)/2(실패)** 구분 확인, `nlm login` 성공 출력 확인, `nlm notebook create` UUID 포맷 확정, **`nlm notebook list` 출력이 순수 JSON 배열** 확인. `DEFAULT_ARCHIVE_NOTEBOOK_ID`가 원 저자 본인 노트북임을 실측 확인.
 - **관련 파일**: `run_factory_cli.py`, `core/setup_wizard.py`, `core/researcher.py`, `core/research_engine.py`, `skills/research_assistant/skill.py`, `build_exe.py`, `af.spec`, `install-af.ps1`, `install-af.sh` (신규), `requirements.txt`, `version.py`, `Master_Blueprint.md`, `docs/2026-04-03-session-handoff.md`
@@ -111,7 +111,7 @@ Usage: nlm login [OPTIONS]
 $ nlm auth status
 ✗ Not authenticated
   Profile not found: default
-(exit code: 0)   ← ⚠ 실패인데도 0 반환. 반드시 stdout 파싱으로 판정.
+(exit code: 2)   ← Phase 0.5 실측(2026-04-11) 정정: 실패 시 **exit code 2** 반환 (nlm/cli/auth.py:59 `raise typer.Exit(2)`). exit code 우선 판정 가능. v2→v3.2 변경 요약 참조.
 ```
 
 ### 1.3 사용자 요구 (2026-04-10~11 확정)
@@ -1490,11 +1490,11 @@ CI 설정에서 `pytest -m slow --tb=short` 를 일일 주기 또는 PR 병합 �
 2. §8.2 Slow Integration Test 실행
 3. §8.4 I2 macOS install-af.sh 검증
 
-**Phase 6 — 문서 동기화 (코드와 같은 커밋)**
-1. `Master_Blueprint.md` §3.11 신규 생성
-2. §0 / §8 / §10 / §12 갱신
-3. `docs/2026-04-03-session-handoff.md:172` 완료 체크
-4. 이 설계 문서 상태: Draft → Implemented
+**Phase 6 — 문서 동기화 (코드와 같은 커밋)** ✅ 완료 (2026-04-14)
+1. [x] `Master_Blueprint.md` §3.11 신규 생성 — 데이터 흐름 + 주요 함수 매트릭스 + 스키마 v2 + 순환 방지 + BLOCK-A/B/C + Low-1 해소 매핑
+2. [x] §0 core 파일 테이블에 `core/setup_wizard.py` 행 추가, §10 Blast Radius는 기존 엔트리 유지 검증, §12 이력 갱신
+3. [x] `docs/2026-04-03-session-handoff.md:172` `notebooklm-tools` → `notebooklm-cli` + "미완료" → "✅ 완료"
+4. [x] 이 설계 문서 상태: Draft → Implemented
 
 **Phase 7 — 교차검증 재실행**
 1. af-critic v3 BLOCK 0건 확인
