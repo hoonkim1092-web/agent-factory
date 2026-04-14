@@ -242,6 +242,36 @@ a = Analysis(
     noarchive=False,
 )
 
+# ── Phase B1 (2026-04-14): googleapiclient/discovery_cache/documents 전량 제거 ──
+# 근거: 우리 주 경로는 신 SDK(google.genai, REST/gapic 직접). 구 SDK는
+# skills/core/cortex.py의 embed_content() 하나뿐이며 discovery_cache를 쓰지 않음.
+# cross-review 확인: 580개 JSON 중 generativelanguage.*.json 자체가 없음 → 전량 제거
+# 동치. 방어적으로 drive/customsearch/gmail만은 남겨둬서 LangChain Google 툴
+# 실수 호출 시 ImportError가 나도록 하지 않고 UnknownApiNameOrVersion 으로 낮춤.
+_DISCOVERY_PATTERNS = (
+    "googleapiclient/discovery_cache/documents",
+    "googleapiclient\\discovery_cache\\documents",  # Windows 경로
+)
+_DEFENSIVE_KEEP = (
+    "drive.v3.json",
+    "customsearch.v1.json",
+    "gmail.v1.json",
+)
+
+
+def _is_discovery_doc(dest: str) -> bool:
+    return any(p in dest for p in _DISCOVERY_PATTERNS)
+
+
+def _should_keep(dest: str) -> bool:
+    return any(dest.endswith(k) for k in _DEFENSIVE_KEEP)
+
+
+_before = len(a.datas)
+a.datas = [d for d in a.datas if not _is_discovery_doc(d[0]) or _should_keep(d[0])]
+_removed = _before - len(a.datas)
+print(f"[af.spec B1] discovery_cache 필터: -{_removed}개 파일 제거 (방어 whitelist: {list(_DEFENSIVE_KEEP)})")
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # noqa: F821
 
 exe = EXE(  # noqa: F821
