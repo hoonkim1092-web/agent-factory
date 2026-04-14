@@ -10,6 +10,13 @@ af setup — API 키 / NotebookLM 등록 마법사 + 외부 리서치 도구 점
                    - NotebookLM Medium 강도 로그인 유도 + 자동 아카이브 노트북 관리
                    - Chrome DevTools Protocol 감지 + 수동 쿠키 폴백
   설계 문서: docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md (v3.3)
+
+주의:
+  **core.* 모듈을 절대 top-level로 import하지 말 것.** research_engine 등 downstream
+  모듈이 `_get_archive_notebook_id()` 내부에서 본 모듈의 `_load_setup_state()`를
+  lazy import로 호출하기 때문에, setup_wizard가 core.* 모듈을 top-level import하면
+  즉시 순환 발생. 필요한 core 유틸은 함수 내부에서만 import 할 것.
+  (af-cross-review Q1: 현재 top-level은 stdlib + filelock만 허용)
 """
 from __future__ import annotations
 

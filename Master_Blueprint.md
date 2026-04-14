@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-11 | version: v1.2.18 -->
+<!-- last_updated: 2026-04-13 | version: v1.2.19 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -35,7 +35,8 @@
 | `model_utils.py:1-845` | 모델 선택·티어 관리 | `_ROLE_ENGINE_MAP`, `_ROLE_CLI_PREFERENCE`, `pick_provider()` |
 | `version.py` | 버전 문자열 | `__version__` |
 | `build_exe.py` | PyInstaller 빌드 | `main()` |
-| `install-af.ps1` | Windows 설치 스크립트 | — |
+| `install-af.ps1` | Windows 설치 스크립트 | Chrome 감지(레지스트리), `__check-nlm` 검증 |
+| `install-af.sh` | macOS/Linux 설치 스크립트 (소스모드, venv 기반) | Chrome 감지, `__check-nlm` 검증, curl/wget fallback |
 | `af.spec` | PyInstaller 스펙 | hiddenimports 목록 |
 | `policy.yaml` | 전역 정책 | engines, skills, task_decomposition |
 
@@ -85,6 +86,8 @@
 | `core/project_task_board.py` | 태스크 보드 상태 관리 | `update_project_board_task()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) | `get_requested_cli_providers()`, `_unix_npm_global_dirs()` |
+| `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
+| `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) | `HimariResearchAgent`, `_collect_web_references()`, `_collect_notebook_summary()` |
 | `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
 | `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
 | `core/skill_creator.py` | 스킬 생성·진화 | `evolve_skill()` |
@@ -802,12 +805,13 @@ else:
 
 ```
 1. version.py → __version__ = "1.x.x" 업데이트
-2. install-af.ps1 → 버전 문자열 3곳 수정 (1.x.x)
-3. python build_exe.py → dist/af-1.x.x.zip 생성
-4. git add dist/af-1.x.x.zip (LFS 자동 추적)
-5. git commit + git push origin 브랜치
-6. git tag af-fsa_v1.x.x + git push origin refs/tags/...
-7. GitHub Release 생성 (PyGithub 또는 gh CLI)
+2. install-af.ps1 → 버전 문자열 수정 (Windows, 모든 1.x.x 치환)
+3. install-af.sh → `AF_VERSION` 및 URL 문자열 수정 (macOS/Linux)
+4. python build_exe.py → dist/af-1.x.x.zip 생성
+5. git add dist/af-1.x.x.zip (LFS 자동 추적)
+6. git commit + git push origin 브랜치
+7. git tag af-fsa_v1.x.x + git push origin refs/tags/...
+8. GitHub Release 생성 (PyGithub 또는 gh CLI)
 ```
 
 **설치 URL 패턴:**
@@ -893,7 +897,9 @@ skills/{skill_id}/
 | `core/project_pipeline.py` | `run_factory_cli.py`, `interactive_chat.py` | Phase 1/2 전체 |
 | `core/message_broker.py` | `dynamic_orchestrator.py` | 에이전트 간 통신 |
 | `core/project_mailbox.py` | `agent_runner.py`, `agent_specializer.py` | 에이전트 컨텍스트 |
-| `core/setup_wizard.py` | `run_factory_cli.py` (STAGE 2 gate), 외부 리서치 능력 | 모든 일반 af 실행 — `af setup`, `__nlm`/`__check-nlm` 진입점 |
+| `core/setup_wizard.py` | `run_factory_cli.py` (STAGE 2 gate), 외부 리서치 능력 | 모든 일반 af 실행 — `af setup`, `__nlm`/`__check-nlm` 진입점, `.af_setup_state.json` 스키마 소스 |
+| `core/research_engine.py` | `core/researcher.py`, `skills/research_assistant/skill.py`, `skills/hound_librarian/skill.py` | `_get_archive_notebook_id()` → `setup_wizard._load_setup_state` 의존. state 미설정 시 NotebookLM 쿼리 graceful skip |
+| `core/researcher.py` | `core/research_engine.py`, `core/web_search`, `core/retrieval_router` | Himari 리서치 결과 품질. TAVILY/nlm 미설치 시 `sys.stderr` 1회 로그 후 스킵 |
 | `run_factory_cli.py` | `core/setup_wizard.py`, `nlm.cli.main` (소프트, frozen 시 hiddenimports 필요) | STAGE 1/2/3 진입점, `__nlm`/`__check-nlm` 숨은 서브커맨드 |
 | `af.spec` | 빌드 출력 | `agent_worker.py` 미포함 시 worker_exited_code_2; `nlm.*`/`typer`/`rich` 미포함 시 `__nlm` ImportError(127) |
 | `policy.yaml` | `bootstrap_roles.py`, `config/schema.py` | 태스크 분해 규칙 |
@@ -952,6 +958,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-13 | v1.2.19 | feat(setup-wizard): Phase 2 잔여 — `core/research_engine.py` 전면 재작성(DEFAULT_ARCHIVE_NOTEBOOK_ID 하드코딩 제거, `_get_archive_notebook_id()` state 로드, `_nlm_cmd_base()` frozen-aware prefix, `notebooklm_tools.cli.main` → `nlm` 전환, 모듈 레벨 `_ARCHIVE_SKIP_LOGGED`로 archive 미설정 stderr 1회 제한, `--mode` 인자 제거로 180s×2 더블 spawn 버그 해소). `core/researcher.py` `find_spec("notebooklm_tools")` → `find_spec("nlm")` + frozen 분기, `_tavily_skip_logged`/`_notebook_skip_logged` 인스턴스 플래그로 스킵 1회 로그(stderr). `core/setup_wizard.py` 상단에 `core.*` top-level import 금지 경고 주석(research_engine 순환 방지). `skills/research_assistant/skill.py` nlm 헬퍼를 `core.research_engine`에서 import하도록 공통화(중복 제거, 인증 재시도 자동 승계). `install-af.sh` 신규(macOS/Linux 소스 설치: curl/wget fallback, python3>=3.10 체크, `${INSTALL_ROOT}.new` staging → `mv` 원자적 교체, 실패 시 `.bak` 복원, Chrome 감지, `__check-nlm` 검증, tarball root `<repo>-<tag>/` 주석 명시). `install-af.ps1` 1.2.18→1.2.19 bump + Chrome 레지스트리 감지 + `__check-nlm` 검증(실패 시 `$nlmCheck` 출력 보존). `.gitignore`에 `.af_setup_state.json` 추가. af-critic BLOCK-1/3 + WARN-2/4 + af-cross-review Q1/Q2/Q4 반영 |
 | 2026-04-11 | v1.2.18 | feat(setup-wizard): Phase 2 — `run_factory_cli.py` STAGE 1/2/3 진입점 통합. `_STAGE1_DISPATCH` dict(단일 진실원천, setup/worker/skill-*/preflight + 신규 `__nlm`/`__check-nlm`), `_STAGE1_USAGE` dict(서브커맨드 레벨 `--help` 가드 — `af setup --help`가 wizard를 트리거하지 않음), `_is_help_arg()`(최상위 `--help` 가드 — setup gate 우회), `_run_setup_gate()` STAGE 2에서 `ensure_external_research_capabilities(mode="auto")` 호출, `_invoke_nlm_app()`이 nlm Typer app을 standalone_mode=False + sys.argv 백업/복원으로 안전하게 호출(BLOCK-B/WARN-1 해소). `af.spec`에 `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` hiddenimports 추가 + `collect_submodules('typer'/'rich'/'nlm')` 안전망(spec 내부; CLI `--collect-submodules`는 PyInstaller 6.x가 `.spec`과 병용 거부). frozen exe에서 setup_wizard 내부 nlm 호출 재귀 차단 |
 | 2026-04-10 | v1.2.18 | feat(pre-commit): 교차검증 게이트 + 멀티 프로바이더 + CLI 개선 — pre_commit_review.py 신규(결과 수집+판정), .githooks/pre-commit 교차검증 호출 추가, engine_auth 멀티 프로바이더 등록, registry.py macOS/Linux npm fallback, cli.py timeout 900초+진행 표시기, cross_verification timeout 동기화, PostToolUse hook venv python 절대경로 |
 | 2026-04-09 | v1.2.20 | refactor(fsa_loop): FSA 파이프라인을 ISE와 동일한 에스컬레이션 구조로 교체 — ISEAnalyzer/ISERedesigner/StrategyLedger/StallDetector 도입, _decide_escalation(Level 1-5), _decompose_and_execute(서브태스크 분할), _request_human_help(정체 시 사용자 힌트), 기존 _run_cross_verified_evaluator 제거(ISEAnalyzer로 대체), max_cycles=5 유지 |

@@ -23,6 +23,9 @@ class HimariResearchAgent:
         self._embedder_checked = False
         self._skill_retrieval_engine = SkillRetrievalEngine()
         self._local_pipelines: dict[str, object] = {}  # root -> IngestionPipeline (인스턴스 재사용)
+        # 외부 리서치 능력 스킵 로그 플래그 (인스턴스당 1회만 출력, 2026-04-13 §4.8)
+        self._tavily_skip_logged = False
+        self._notebook_skip_logged = False
 
     @property
     def embedder(self):
@@ -306,6 +309,13 @@ class HimariResearchAgent:
 
     def _collect_web_references(self, task_input: str, limit: int = 4) -> list[dict]:
         if not os.getenv("TAVILY_API_KEY"):
+            if not self._tavily_skip_logged:
+                print(
+                    "[Himari] TAVILY_API_KEY 미설정 → 웹 리서치 스킵 "
+                    "(`af setup`으로 키를 등록할 수 있음)",
+                    file=sys.stderr,
+                )
+                self._tavily_skip_logged = True
             return []
         try:
             from core.web_search import tavily_search
@@ -333,7 +343,15 @@ class HimariResearchAgent:
     def _collect_notebook_summary(self, task_input: str, local_refs: list[dict], web_refs: list[dict]) -> str:
         try:
             import importlib.util
-            if importlib.util.find_spec("notebooklm_tools") is None:
+            # 2026-04-13 §4.8: notebooklm_tools → nlm (패키지 rename + frozen 환경은 af.__nlm 경유)
+            if not getattr(sys, "frozen", False) and importlib.util.find_spec("nlm") is None:
+                if not self._notebook_skip_logged:
+                    print(
+                        "[Himari] NotebookLM CLI(nlm) 미설치 → 심층 분석 스킵 "
+                        "(`pip install notebooklm-cli` 또는 `af setup` 재실행)",
+                        file=sys.stderr,
+                    )
+                    self._notebook_skip_logged = True
                 return ""
         except Exception:
             return ""

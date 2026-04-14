@@ -1,8 +1,21 @@
-﻿import os
+"""
+skills/research_assistant/skill.py — Himari 기술 리서치 스킬.
+
+v3.1 (2026-04-13): nlm 헬퍼를 core/research_engine.py와 공통화.
+중복 구현에 의한 동작 분기를 제거하고 `--mode` 폴백 경로를 자동 승계한다.
+설계 문서: docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md §4.9
+"""
+import os
 import json
 from datetime import datetime
-import sys
-import subprocess
+
+# NOTE: nlm CLI 헬퍼는 core/research_engine.py로 일원화됨 (af-critic BLOCK-1).
+# skill 샌드박스에서도 core 임포트는 정상 동작(project root가 sys.path에 포함됨).
+from core.research_engine import (
+    _get_archive_notebook_id,
+    _nlm_cli,
+    query_notebooklm,
+)
 
 
 def _extract_answer(raw_text: str) -> str:
@@ -24,62 +37,26 @@ def _extract_answer(raw_text: str) -> str:
     return text
 
 
-def _is_auth_error(stderr_text: str) -> bool:
-    s = (stderr_text or "").lower()
-    flags = [
-        "authentication expired",
-        "rpc error 16",
-        "clientauthenticationerror",
-        "run 'nlm login'",
-    ]
-    return any(f in s for f in flags)
-
-
-def _reauth_notebooklm() -> bool:
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
-    env["PYTHONUTF8"] = "1"
-    try:
-        p = subprocess.run(
-            [sys.executable, "-m", "notebooklm_tools.cli.main", "login"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=180,
-        )
-        return p.returncode == 0
-    except Exception:
-        return False
-
-
 def _query_notebooklm(query: str) -> str:
+    """Query NotebookLM archive notebook via shared research_engine helpers.
+
+    core.research_engine.query_notebooklm()이 제공하는 `--mode` 폴백, 인증
+    재시도, state 기반 archive 로드를 그대로 승계한다. 결과는 JSON wrapping을
+    풀어서 반환(기존 skill 호환).
     """
-    Query NotebookLM, auto re-auth once if token expired.
-    """
+    target_notebook_id = _get_archive_notebook_id()
+    if not target_notebook_id:
+        return (
+            "(NotebookLM archive 노트북이 구성되지 않았습니다. "
+            "`af setup`을 재실행해 아카이브를 설정하세요.)"
+        )
     try:
-        target_notebook_id = "eaa34a54-a898-46a0-835a-cdb6024887f0"
-        cmd = [
-            sys.executable,
-            "-m",
-            "notebooklm_tools.cli.main",
-            "query",
-            "notebook",
-            target_notebook_id,
-            query,
-        ]
-        env = os.environ.copy()
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["PYTHONUTF8"] = "1"
-
-        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", env=env, timeout=120)
-        if p.returncode != 0 and _is_auth_error(p.stderr or ""):
-            if _reauth_notebooklm():
-                p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", env=env, timeout=120)
-
-        if p.returncode != 0:
-            return f"(Error querying NotebookLM: {(p.stderr or '').strip()})"
-        return _extract_answer(p.stdout)
+        # query_notebooklm()은 이미 내부에서 _nlm_cli + 인증 재시도 + mode 폴백을
+        # 수행한다. 빈 결과(스킵/실패)는 빈 문자열로 반환된다.
+        raw = query_notebooklm(query)
+        if not raw:
+            return "(Error querying NotebookLM: empty response — check `af __check-nlm`)"
+        return _extract_answer(raw)
     except Exception as e:
         return f"(Connection Error: {e})"
 
@@ -130,7 +107,7 @@ Author: Himari (Super Research Architect)
             "ok": True,
             "message": f"Research report generated for '{topic}'",
             "report_path": filepath,
-            "content_preview": report_content[:2000]
+            "content_preview": report_content[:2000],
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}

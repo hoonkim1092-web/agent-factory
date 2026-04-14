@@ -20,6 +20,9 @@ env/
 # --- Design Review Queue (local, auto-generated) ---
 .af_review_queue/
 
+# --- Setup Wizard local state (per-user secrets: TAVILY key, NotebookLM UUIDs) ---
+.af_setup_state.json
+
 # --- Runtime/Test Artifacts ---
 projects/default/runs/
 projects/agent_factory/runs/
