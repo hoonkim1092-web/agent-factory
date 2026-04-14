@@ -1490,7 +1490,15 @@ CI 설정에서 `pytest -m slow --tb=short` 를 일일 주기 또는 PR 병합 �
 2. [x] §8.1 단위 테스트 20종 — `tests/test_setup_wizard_gate.py` 작성 완료, 20/20 PASS
 3. [x] §8.2 Slow Integration Test 2종 — `tests/test_nlm_regression.py` 작성 완료, 2/2 PASS, `pytest.ini` marker 등록
 4. [x] §8.4 I2 macOS install-af.sh 검증 — 이전 세션 로컬 드라이런 통과(`AF_VERSION=1.2.18 AF_INSTALL_ROOT=/tmp/af_test`, 재설치 state 복원 확인)
-5. §8.3 B1~B8 PyInstaller 빌드 검증 — pending (macOS 빌드 실행 + 실제 exe 기반 검증 필요)
+5. §8.3 B1~B8 PyInstaller 빌드 검증 — **대부분 완료 (2026-04-14, macOS)**:
+   - [x] **B1** `python build_exe.py` 성공 (`build_exe.py` OS 분기 수정 후)
+   - [x] **B2** bundle 크기 22.3MB exe / 269MB 전체 / **86.9MB zip** (<100MB 위험선)
+   - [x] **B3** `dist/af/af --version` — 초기 FAIL(노트북 부작용 생성) → `_META_FLAGS` 도입 + argparse `--version` 등록으로 수정 → PASS(`af 1.2.19` + exit 0 + gate 미호출)
+   - [x] **B4** `dist/af/af __check-nlm` → exit 0
+   - [x] **B5** `dist/af/af __nlm auth status` → exit 0 + `✓ Authenticated` (Phase 0.5 포맷 frozen 재현)
+   - [x] **B8** `dist/af/af __nlm auth status --profile none` → exit 2 + `Profile not found` + bundle 생존 (BLOCK-B `standalone_mode=False` 실측 확인)
+   - [ ] **B6** `dist/af/af --fsa < input.txt` — 실제 파이프라인 실행 부작용으로 세션 내 미검증 (수동)
+   - [ ] **B7** `dist/af/af setup` — 인터랙티브 (수동)
 
 **Phase 6 — 문서 동기화 (코드와 같은 커밋)** ✅ 완료 (2026-04-14)
 1. [x] `Master_Blueprint.md` §3.11 신규 생성 — 데이터 흐름 + 주요 함수 매트릭스 + 스키마 v2 + 순환 방지 + BLOCK-A/B/C + Low-1 해소 매핑

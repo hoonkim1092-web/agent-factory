@@ -282,6 +282,36 @@ def test_setup_gate_skips_worker_subcommand(no_side_effects):
     assert not rfc._run_setup_gate.called
 
 
+def test_setup_gate_skips_version_flag(no_side_effects):
+    """argv=['--version'] → setup gate 미호출 (B3 실측 버그 재발 방지).
+
+    가드 없이 `af --version`을 실행하면 setup_wizard가 돌아가 NotebookLM
+    아카이브 노트북이 부작용으로 생성된다. _is_meta_arg()가 --version을 잡아
+    gate를 건너뛰고, argparse action='version'이 즉시 출력·종료해야 한다.
+    """
+    rfc, _fake = no_side_effects
+    # argparse action='version'은 SystemExit(0) 발생 — 정상 동작
+    with pytest.raises(SystemExit) as exc:
+        rfc.main(argv=["--version"])
+    assert exc.value.code == 0
+    # 핵심 단언: setup gate는 호출되지 않아야 함
+    assert not rfc._run_setup_gate.called
+
+
+def test_is_meta_arg_matches_help_and_version():
+    """_is_meta_arg: --help/-h/--version/-V 전부 매칭, 그 외는 False."""
+    import run_factory_cli as rfc
+    assert rfc._is_meta_arg(["--help"]) is True
+    assert rfc._is_meta_arg(["-h"]) is True
+    assert rfc._is_meta_arg(["--version"]) is True
+    assert rfc._is_meta_arg(["-V"]) is True
+    assert rfc._is_meta_arg(["--fsa"]) is False
+    assert rfc._is_meta_arg([]) is False
+    # _is_help_arg는 version을 포함하지 않아야 한다 (STAGE 1 서브커맨드 가드 분리)
+    assert rfc._is_help_arg(["--version"]) is False
+    assert rfc._is_help_arg(["--help"]) is True
+
+
 def test_invoke_nlm_app_standalone_mode_false(monkeypatch):
     """_invoke_nlm_app: standalone_mode=False + sys.argv 복원 + SystemExit 차단."""
     import run_factory_cli as rfc

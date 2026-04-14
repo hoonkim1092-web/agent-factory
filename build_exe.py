@@ -72,8 +72,9 @@ def main():
         print(f"\n  빌드 실패 (exit code: {result.returncode})")
         sys.exit(result.returncode)
 
-    # 4. 결과 확인
-    exe_path = os.path.join(DIST_DIR, "af.exe")
+    # 4. 결과 확인 (OS별 exe 확장자: Windows=.exe, macOS/Linux=확장자 없음)
+    exe_name = "af.exe" if sys.platform == "win32" else "af"
+    exe_path = os.path.join(DIST_DIR, exe_name)
     if not os.path.exists(exe_path):
         print(f"\n  빌드 결과를 찾을 수 없습니다: {exe_path}")
         sys.exit(1)
@@ -112,10 +113,16 @@ def main():
     print()
     print("  배포 방법:")
     print(f"    dist/{zip_name} 을 사용자에게 전달")
-    print(f"    압축 해제 후 af/af.exe 실행")
+    if sys.platform == "win32":
+        print(f"    압축 해제 후 af/af.exe 실행")
+    else:
+        print(f"    압축 해제 후 af/af 실행 (install-af.sh 권장)")
     print()
     print("  테스트:")
-    print(f"    dist\\af\\af.exe --help")
+    if sys.platform == "win32":
+        print(f"    dist\\af\\af.exe --help")
+    else:
+        print(f"    dist/af/af --help")
 
 
 if __name__ == "__main__":

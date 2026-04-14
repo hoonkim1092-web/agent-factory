@@ -182,9 +182,26 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
 }
 
 
+_META_FLAGS = ("--help", "-h", "--version", "-V")
+
+
 def _is_help_arg(argv: list[str]) -> bool:
-    """argparse `--help`/`-h` 단락 검사 — STAGE 2 setup gate를 건너뛰기 위함."""
+    """argparse `--help`/`-h` 단락 검사 — STAGE 1 서브커맨드 레벨 usage 가드 전용.
+
+    서브커맨드 `--version` 등은 하위 Typer/argparse가 직접 처리해야 하므로
+    여기서는 `--help`/`-h`만 막는다.
+    """
     return any(a in ("--help", "-h") for a in argv)
+
+
+def _is_meta_arg(argv: list[str]) -> bool:
+    """메타 플래그(`--help`/`-h`/`--version`/`-V`) 감지 — STAGE 2 setup gate 우회.
+
+    최상위 메타 플래그는 argparse 레벨에서 즉시 출력·종료되므로 setup_wizard가
+    돌아가면 안 된다. 돌아가면 `af --version`만으로도 NotebookLM 아카이브 노트북이
+    생성되는 부작용이 발생한다 (B3 실측 — 2026-04-14).
+    """
+    return any(a in _META_FLAGS for a in argv)
 
 
 # STAGE 1 서브커맨드별 한 줄 usage. `af <cmd> --help` 시 실제 핸들러를 호출하지
@@ -304,9 +321,11 @@ def main(argv: list[str] | None = None):
             return
 
     # ── STAGE 2: 일반 실행은 반드시 setup gate를 거침 ──
-    # 단, --help/-h 는 setup wizard 트리거 없이 즉시 argparse usage만 보여줘야
-    # 하므로 gate를 건너뛴다 (af-critic BLOCK 2 해소).
-    if not _is_help_arg(effective_argv):
+    # 단, --help/-h 및 --version/-V 메타 플래그는 setup wizard 트리거 없이 즉시
+    # argparse 레벨에서 출력·종료되어야 하므로 gate를 건너뛴다
+    # (af-critic BLOCK 2 해소 + B3 버그: `af --version`이 NotebookLM 아카이브
+    # 노트북을 부작용으로 생성하던 문제 해소).
+    if not _is_meta_arg(effective_argv):
         _run_setup_gate()
 
     # ── STAGE 3: 기존 로직 ──
@@ -316,7 +335,16 @@ def main(argv: list[str] | None = None):
         _launch_interactive_mode(projects_root)
         return
 
+    try:
+        from version import __version__ as _af_version
+    except Exception:
+        _af_version = "0.0.0"
+
     parser = argparse.ArgumentParser(description="Agent Factory CLI")
+    parser.add_argument(
+        "--version", "-V", action="version",
+        version=f"af {_af_version}",
+    )
     parser.add_argument("--interactive", action="store_true", help="대화형 PDCA 모드 시작")
     parser.add_argument("--project", "-p", type=str, required=False, help="Project id")
     parser.add_argument("--role", "-r", type=str, help="Agent role")
