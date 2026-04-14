@@ -17,6 +17,14 @@ env/
 # 만약 생성된 에이전트 파일들을 깃에 올리기 싫다면 아래 주석을 푸세요
 # agents/
 
+# --- 📦 PyInstaller 빌드 산출물 (GitHub Release로 별도 배포) ---
+# 2026-04-14 정책 변경: dist/af-{version}.zip이 ~91MB로 GitHub
+# 단일 파일 100MB 한계에 근접 + git-lfs 미구성 환경에서 push 실패 발생.
+# CLAUDE.md "LFS로 커밋" 규칙 폐기 → 빌드 zip은 git에서 제외하고
+# `gh release create af-fsa_v{version} dist/af-{version}.zip` 으로 배포.
+dist/*.zip
+build/
+
 # --- Design Review Queue (local, auto-generated) ---
 .af_review_queue/
 

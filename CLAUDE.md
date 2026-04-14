@@ -35,7 +35,7 @@
 
 ### 커밋 규칙
 - 코드 수정 + Blueprint 업데이트는 같은 커밋
-- 빌드 zip은 LFS로 `dist/af-{version}.zip` 커밋
+- 빌드 zip은 **GitHub Release로 배포**: `gh release create af-fsa_v{version} dist/af-{version}.zip --notes ...` (2026-04-14 정책 변경: LFS 미구성 환경에서 ~91MB zip이 GitHub 100MB 한계로 push 실패한 사례 이후. `dist/*.zip`은 `.gitignore` 처리)
 - 태그 형식: `af-fsa_v{version}`
 
 ## Hook 설치 (레포 클론 후 1회)
