@@ -1,6 +1,11 @@
 """
 skills/research_assistant/skill.py — Himari 기술 리서치 스킬.
 
+v3.2 (2026-04-14): `_query_notebooklm`이 (ok, content_or_reason) tuple을 반환.
+archive 미설정 / 빈 응답 / 연결 실패를 상위 apply()가 구분해서 `ok=False`
+보고서 생성 자체를 차단하도록 변경 — 과거엔 한국어 에러 문자열이 보고서 본문에
+정상 답변처럼 삽입돼 품질이 훼손됐다(af-cross-review Low-1).
+
 v3.1 (2026-04-13): nlm 헬퍼를 core/research_engine.py와 공통화.
 중복 구현에 의한 동작 분기를 제거하고 `--mode` 폴백 경로를 자동 승계한다.
 설계 문서: docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md §4.9
@@ -13,7 +18,6 @@ from datetime import datetime
 # skill 샌드박스에서도 core 임포트는 정상 동작(project root가 sys.path에 포함됨).
 from core.research_engine import (
     _get_archive_notebook_id,
-    _nlm_cli,
     query_notebooklm,
 )
 
@@ -37,28 +41,28 @@ def _extract_answer(raw_text: str) -> str:
     return text
 
 
-def _query_notebooklm(query: str) -> str:
+def _query_notebooklm(query: str) -> tuple[bool, str]:
     """Query NotebookLM archive notebook via shared research_engine helpers.
 
-    core.research_engine.query_notebooklm()이 제공하는 `--mode` 폴백, 인증
-    재시도, state 기반 archive 로드를 그대로 승계한다. 결과는 JSON wrapping을
-    풀어서 반환(기존 skill 호환).
+    Returns:
+      (True, content) — 정상 응답(JSON wrapping 해제된 answer 본문)
+      (False, reason) — archive 미설정 / 빈 응답 / 연결 실패.
+                        reason은 상위 apply()가 구조화된 에러 응답을 구성하는 데
+                        사용하는 기계판독용 코드 (archive_not_configured,
+                        empty_response, connection_error:<msg>).
     """
     target_notebook_id = _get_archive_notebook_id()
     if not target_notebook_id:
-        return (
-            "(NotebookLM archive 노트북이 구성되지 않았습니다. "
-            "`af setup`을 재실행해 아카이브를 설정하세요.)"
-        )
+        return (False, "archive_not_configured")
     try:
         # query_notebooklm()은 이미 내부에서 _nlm_cli + 인증 재시도 + mode 폴백을
         # 수행한다. 빈 결과(스킵/실패)는 빈 문자열로 반환된다.
         raw = query_notebooklm(query)
         if not raw:
-            return "(Error querying NotebookLM: empty response — check `af __check-nlm`)"
-        return _extract_answer(raw)
+            return (False, "empty_response")
+        return (True, _extract_answer(raw))
     except Exception as e:
-        return f"(Connection Error: {e})"
+        return (False, f"connection_error: {e}")
 
 
 def propose(ctx):
@@ -79,10 +83,31 @@ def apply(ctx):
         filepath = os.path.join(artifacts_dir, filename)
 
         topic = ctx.get("topic") or "General Research"
-        research_content = _query_notebooklm(
+        ok, result = _query_notebooklm(
             f"Detailed research on: {topic}. focus on key technology analysis, pros/cons, and recommendations."
         )
+        if not ok:
+            # archive 미설정 / 빈 응답 / 연결 실패는 보고서 생성을 차단한다.
+            # 과거 구현은 한국어 에러 문자열을 research_content로 그대로 넘겨
+            # 보고서 본문이 훼손되는 문제가 있었음 (af-cross-review Low-1).
+            hint = {
+                "archive_not_configured": (
+                    "NotebookLM archive 노트북이 구성되지 않았습니다. "
+                    "`af setup`을 재실행해 아카이브를 설정하세요."
+                ),
+                "empty_response": (
+                    "NotebookLM이 빈 응답을 반환했습니다. "
+                    "`af __check-nlm`으로 nlm CLI 상태를 진단하세요."
+                ),
+            }.get(result, None) or f"NotebookLM 쿼리 실패: {result}"
+            return {
+                "ok": False,
+                "error": f"notebooklm_query_failed: {result}",
+                "hint": hint,
+                "topic": topic,
+            }
 
+        research_content = result
         report_content = f"""# Research Report: {topic}
 Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 Author: Himari (Super Research Architect)

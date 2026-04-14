@@ -19,7 +19,7 @@
 # ============================================================================
 set -euo pipefail
 
-AF_VERSION="1.2.19"
+AF_VERSION="${AF_VERSION:-1.2.19}"
 AF_TAG="af-fsa_v${AF_VERSION}"
 # GitHub tag tarball root는 `<repo>-<tag>/` 형식.
 # 본 저장소(af-fsa) + 태그(af-fsa_v1.2.19) → 루트 디렉터리: `af-fsa-af-fsa_v1.2.19/`
