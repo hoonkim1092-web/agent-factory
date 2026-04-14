@@ -1366,7 +1366,9 @@ CI 설정에서 `pytest -m slow --tb=short` 를 일일 주기 또는 PR 병합 �
 - **B5**. `dist/af/af __nlm auth status` → Phase 0 실측과 동일 출력
 - **B6**. `dist/af/af --fsa < input.txt` → 비TTY 플로우 정상
 - **B7**. `dist/af/af setup` → 인터랙티브 마법사 동작
-- **B8**. **(v3 신규)** `dist/af/af __nlm notebook list` (미인증 상태) → "Profile not found" 출력, SystemExit이 bundle 프로세스를 죽이지 않음
+- **B8**. **(v3 신규)** `dist/af/af __nlm <subcmd>` (미인증 상태) → "Profile not found" 출력, SystemExit이 bundle 프로세스를 죽이지 않음
+  - 원 정의 `notebook list --profile none` 실측(2026-04-14): exit 0 + stderr `Error: Profile not found` (Typer가 SystemExit raise 안 함 → BLOCK-B 보호 기전 검증 약함)
+  - 보조 검증 `auth status --profile none` 실측: **exit 2 + `✗ Not authenticated` + bundle 생존** (`raise typer.Exit(2)` → `_invoke_nlm_app`의 `try/except SystemExit` 차단 검증 강함). v3.2 권장 검증 명령으로 대체 가능
 
 ### 8.4 설치 스크립트 검증
 
@@ -1493,7 +1495,7 @@ CI 설정에서 `pytest -m slow --tb=short` 를 일일 주기 또는 PR 병합 �
 5. §8.3 B1~B8 PyInstaller 빌드 검증 — **대부분 완료 (2026-04-14, macOS)**:
    - [x] **B1** `python build_exe.py` 성공 (`build_exe.py` OS 분기 수정 후)
    - [x] **B2** bundle 크기 22.3MB exe / 269MB 전체 / **86.9MB zip** (<100MB 위험선)
-   - [x] **B3** `dist/af/af --version` — 초기 FAIL(노트북 부작용 생성) → `_META_FLAGS` 도입 + argparse `--version` 등록으로 수정 → PASS(`af 1.2.19` + exit 0 + gate 미호출)
+   - [x] **B3** `dist/af/af --version` — 초기 FAIL(노트북 부작용 생성) → `_META_FLAGS` 도입 + argparse `--version` 등록으로 수정 → 1차 PASS, 그러나 af-cross-review Q1/Q2 ACCEPT로 `af --invalid-flag`도 동일 클래스 부작용 가능성 발견 → **gate를 `parse_args()` 뒤로 이동(STAGE 4 신설)** + 모듈 최상위 `_is_meta_only` 확장으로 구조 리팩터 → 2차 PASS(`af --version` `af 1.2.19` 단독 출력, `[Auto-Config]` 배너 제거, `--invalid-flag` exit 2 + gate 미실행, 추가 노트북 부작용 0건 실측 확인)
    - [x] **B4** `dist/af/af __check-nlm` → exit 0
    - [x] **B5** `dist/af/af __nlm auth status` → exit 0 + `✓ Authenticated` (Phase 0.5 포맷 frozen 재현)
    - [x] **B8** `dist/af/af __nlm auth status --profile none` → exit 2 + `Profile not found` + bundle 생존 (BLOCK-B `standalone_mode=False` 실측 확인)

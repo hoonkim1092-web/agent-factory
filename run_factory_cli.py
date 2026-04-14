@@ -52,10 +52,17 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-# 시작 즉시 CLI 프로바이더 자동 탐색 및 런타임 레지스트리 설정
-# --help / -h 는 LLM 탐색 불필요 → 스킵해서 즉시 출력
-_is_help_only = any(a in sys.argv for a in ("--help", "-h"))
-if not _is_help_only:
+# 메타 플래그 상수 — `_is_meta_only`(모듈 최상위 CLI 자동 탐색 가드)와
+# `_is_meta_arg`(STAGE 2 gate 가드; 현재는 gate가 parse_args 뒤로 이동해 gate용
+# 역할은 제거되었지만 테스트·외부 임포트 호환을 위해 유지) 양쪽에서 사용.
+_HELP_FLAGS = ("--help", "-h")
+_META_FLAGS = _HELP_FLAGS + ("--version", "-V")
+
+# 시작 즉시 CLI 프로바이더 자동 탐색 및 런타임 레지스트리 설정.
+# `--help`/`-h`/`--version`/`-V` 메타 플래그는 argparse가 즉시 처리·종료하므로
+# LLM 탐색 불필요 → 스킵해서 즉시 출력 + stdout 오염 ([Auto-Config] 배너) 방지.
+_is_meta_only = any(a in sys.argv for a in _META_FLAGS)
+if not _is_meta_only:
     try:
         from core.engine_auth import auto_configure_cli_provider
         auto_configure_cli_provider()
@@ -182,24 +189,22 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
 }
 
 
-_META_FLAGS = ("--help", "-h", "--version", "-V")
-
-
 def _is_help_arg(argv: list[str]) -> bool:
     """argparse `--help`/`-h` 단락 검사 — STAGE 1 서브커맨드 레벨 usage 가드 전용.
 
     서브커맨드 `--version` 등은 하위 Typer/argparse가 직접 처리해야 하므로
     여기서는 `--help`/`-h`만 막는다.
     """
-    return any(a in ("--help", "-h") for a in argv)
+    return any(a in _HELP_FLAGS for a in argv)
 
 
 def _is_meta_arg(argv: list[str]) -> bool:
-    """메타 플래그(`--help`/`-h`/`--version`/`-V`) 감지 — STAGE 2 setup gate 우회.
+    """메타 플래그(`--help`/`-h`/`--version`/`-V`) 감지 — 외부 호환용.
 
-    최상위 메타 플래그는 argparse 레벨에서 즉시 출력·종료되므로 setup_wizard가
-    돌아가면 안 된다. 돌아가면 `af --version`만으로도 NotebookLM 아카이브 노트북이
-    생성되는 부작용이 발생한다 (B3 실측 — 2026-04-14).
+    원래 STAGE 2 setup gate 우회용이었으나, e024ed8f 교차검증(Q1/Q2)에 따라
+    gate 자체를 `parse_args()` 뒤로 이동해 구조적으로 해소됨(2026-04-14).
+    `af --invalid-flag`처럼 argparse가 거부하는 모든 경로가 자동으로 보호되어
+    이 함수는 테스트/외부 진단용으로만 유지된다.
     """
     return any(a in _META_FLAGS for a in argv)
 
@@ -320,21 +325,21 @@ def main(argv: list[str] | None = None):
             handler(rest)
             return
 
-    # ── STAGE 2: 일반 실행은 반드시 setup gate를 거침 ──
-    # 단, --help/-h 및 --version/-V 메타 플래그는 setup wizard 트리거 없이 즉시
-    # argparse 레벨에서 출력·종료되어야 하므로 gate를 건너뛴다
-    # (af-critic BLOCK 2 해소 + B3 버그: `af --version`이 NotebookLM 아카이브
-    # 노트북을 부작용으로 생성하던 문제 해소).
-    if not _is_meta_arg(effective_argv):
-        _run_setup_gate()
-
-    # ── STAGE 3: 기존 로직 ──
-    # 인자 없이 실행 또는 --interactive → 대화형 PDCA 모드
+    # ── STAGE 2: 인자 없음 / `--interactive` 단독 → 대화형 PDCA 모드 ──
+    # 이 짧은 경로는 argparse를 거치지 않으므로 setup gate를 직접 호출.
+    # (가드 불필요: argparse가 처리할 메타 플래그 케이스가 아니라 명시적 진입점)
     if not effective_argv or effective_argv == ["--interactive"]:
+        _run_setup_gate()
         projects_root = _resolve_projects_root()
         _launch_interactive_mode(projects_root)
         return
 
+    # ── STAGE 3: argparse 우선 (gate는 parse_args 성공 후로 이동) ──
+    # cross-review Q1/Q2 ACCEPT (2026-04-14) 해소:
+    # - `af --version`/`-V` → action='version'이 SystemExit(0)으로 즉시 종료 → gate 미실행
+    # - `af --help`/`-h` → argparse가 SystemExit(0)으로 즉시 종료 → gate 미실행
+    # - `af --invalid-flag` → argparse가 SystemExit(2)로 즉시 종료 → gate 미실행
+    # → "인자 검증 전 사이드이펙트" 클래스 버그 전체가 구조적으로 차단된다.
     try:
         from version import __version__ as _af_version
     except Exception:
@@ -362,7 +367,13 @@ def main(argv: list[str] | None = None):
     parser.add_argument("--no-cli-auto-install", action="store_true", help="Disable missing CLI auto install")
     parser.add_argument("--pipeline", choices=["auto", "single", "project"], default="auto", help="Pipeline mode")
     parser.add_argument("--chat", action="store_true", help="Interactive chat mode (continuous conversation)")
-    args = parser.parse_args(argv)
+    # WARN-1 fix: argv가 아닌 effective_argv를 전달해 단일 진실원천 유지.
+    args = parser.parse_args(effective_argv)
+
+    # ── STAGE 4: parse_args 성공 후 setup gate 실행 ──
+    # 여기까지 오면 인자가 모두 유효함이 검증된 상태. 실제 파이프라인이 돌기 전
+    # 외부 리서치 도구(TAVILY/NotebookLM)를 확보한다.
+    _run_setup_gate()
     execution_mode = "ise" if (args.ise or args.mode == "ise") else ("fsa" if (args.fsa or args.mode == "fsa") else "approval")
 
     # --interactive 또는 --project 미입력 → 대화형 PDCA 모드
