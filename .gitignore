@@ -49,6 +49,10 @@ pytest_out*.txt
 tests/_tmp_probe/
 tmp*/
 .tmp_validation*/
+.tmp_af_fsa
+.tmp_review_importer/
+.tmp_review_sync/
+.tmp_smoke_projects/
 
 # --- 🎯 Developer Context Rules (DO NOT DEPLOY) ---
 .gemini_dev_rules.md
