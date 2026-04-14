@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Agent Factory CLI v1.2.20 — macOS/Linux 설치 스크립트
+# Agent Factory CLI v1.2.21 — macOS/Linux 설치 스크립트
 #
 # 사용법:
-#   curl -fsSL https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.20/install-af.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/install-af.sh | bash
 #
 # 설치 위치:
 #   소스 트리 : $HOME/.local/share/af
@@ -19,10 +19,10 @@
 # ============================================================================
 set -euo pipefail
 
-AF_VERSION="${AF_VERSION:-1.2.20}"
+AF_VERSION="${AF_VERSION:-1.2.21}"
 AF_TAG="af-fsa_v${AF_VERSION}"
 # GitHub tag tarball root는 `<repo>-<tag>/` 형식.
-# 본 저장소(af-fsa) + 태그(af-fsa_v1.2.20) → 루트 디렉터리: `af-fsa-af-fsa_v1.2.20/`
+# 본 저장소(af-fsa) + 태그(af-fsa_v1.2.21) → 루트 디렉터리: `af-fsa-af-fsa_v1.2.21/`
 # 따라서 `tar --strip-components=1`로 해당 한 겹을 벗겨낸다.
 # (v1.2.18 공개 tarball에서 실증 완료 — af-cross-review Q2)
 AF_REPO_ZIP="https://github.com/hoonkim1092-web/af-fsa/archive/refs/tags/${AF_TAG}.tar.gz"
