@@ -2,7 +2,8 @@ import os
 import json
 import urllib.request
 import urllib.error
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from dotenv import load_dotenv
 
 # Ensure .env is loaded BEFORE accessing env vars
@@ -21,10 +22,27 @@ try:
 except:
     PROJECT_ID = "default"
 
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
+_genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
 EMBEDDING_MODEL = "models/gemini-embedding-001"
+
+
+def _embed(text: str, task_type: str) -> list[float]:
+    """신 SDK 기반 embedding. 구 google.generativeai 제거(B3) 대응.
+
+    task_type: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY" (신 SDK는 대문자).
+    """
+    if _genai_client is None:
+        raise ValueError("GOOGLE_API_KEY not set")
+    response = _genai_client.models.embed_content(
+        model=EMBEDDING_MODEL,
+        contents=text,
+        config=genai_types.EmbedContentConfig(
+            task_type=task_type,
+            output_dimensionality=768,
+        ),
+    )
+    return list(response.embeddings[0].values)
 
 class CortexClient:
     def __init__(self):
@@ -37,28 +55,12 @@ class CortexClient:
         }
 
     def embed(self, text):
-        """Generate embedding using Google Gemini."""
-        if not GOOGLE_API_KEY:
-             raise ValueError("GOOGLE_API_KEY not set")
-        result = genai.embed_content(
-            model=EMBEDDING_MODEL,
-            content=text,
-            task_type="retrieval_document",
-            output_dimensionality=768
-        )
-        return result['embedding']
+        """Generate embedding using Google Gemini (신 SDK)."""
+        return _embed(text, task_type="RETRIEVAL_DOCUMENT")
 
     def embed_query(self, text):
-        """Generate embedding for query."""
-        if not GOOGLE_API_KEY:
-             raise ValueError("GOOGLE_API_KEY not set")
-        result = genai.embed_content(
-            model=EMBEDDING_MODEL,
-            content=text,
-            task_type="retrieval_query",
-            output_dimensionality=768
-        )
-        return result['embedding']
+        """Generate embedding for query (신 SDK)."""
+        return _embed(text, task_type="RETRIEVAL_QUERY")
 
     def save_memory(self, content, metadata):
         """Save a new memory (experience) to Supabase."""
