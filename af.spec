@@ -210,7 +210,11 @@ a = Analysis(
         # ── third-party ──
         'yaml',
         'anthropic',
-        'google.generativeai',
+        # 'google.generativeai',  # Phase B3 (2026-04-14) 제거:
+        #   - skills/core/cortex.py를 신 SDK(google.genai)로 마이그레이션 완료
+        #   - 바이너리에서 구 SDK 제거 → googleapiclient 전체(94MB) 이미 B1에서
+        #     filter됐으나 hiddenimport 제거로 구 SDK 부속 모듈도 bundle에서 배제
+        #   - venv uninstall은 의도적으로 보류 (agents/*/tools/cortex.py 런타임 호환)
         'google.genai',
         'openai',
         'langsmith',
