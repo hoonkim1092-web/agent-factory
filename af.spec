@@ -216,7 +216,10 @@ a = Analysis(
         'langsmith',
         'langchain',
         'langchain_core',
-        'langchain_community',
+        # 'langchain_community',  # Phase B2 (2026-04-14) 제거:
+        #   - langchain 1.0 업그레이드 후 Required-by 없음 (orphan)
+        #   - 우리 코드에서 import 0건 (grep 검증)
+        #   - numpy/langchain-classic/SQLAlchemy 등 약 40MB 간접 의존 제거 목적
         'tiktoken',
         'tiktoken_ext',
         'tiktoken_ext.openai_public',
