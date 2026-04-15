@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from typing import Any
 
 from core.file_io import write_text
@@ -11,6 +12,65 @@ from core.utils import now_iso, safe_id
 BOARD_FILENAME = "project_board_state.json"
 TASK_EXECUTION_PLAN_REL_PATH = os.path.join("docs", "task_execution_plan.md")
 _PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "verify": 3}
+
+_MODULE_SUFFIX_RE = re.compile(r"^(.+)_(\d+)$")
+
+
+def _module_sort_key(module_id: str) -> tuple[str, int]:
+    # module_10이 module_2보다 먼저 정렬되지 않도록 숫자 접미사를 분리해 정수 비교.
+    # 접미사가 없는 id(예: "backend_dev")는 원본을 prefix로 유지 — 빈 prefix("", 0)로
+    # 붕괴시키면 모든 정렬 버킷 앞으로 끌려오는 silent sort 오염이 발생한다.
+    # (af-critic 2026-04-15 WARN-1 대응; 기존 lazy quantifier `(.*?)` 는 "backend_dev"를
+    # ("", 0)으로 파싱하는 버그가 있었음.)
+    if not module_id:
+        return ("", 0)
+    match = _MODULE_SUFFIX_RE.match(module_id)
+    if match:
+        return (match.group(1), int(match.group(2)))
+    return (module_id, 0)
+
+
+# max_cycles 배수의 근거(af-critic 2026-04-15 WARN-2):
+# - `next_board_tasks`의 `used_roles` 가드로 cycle-per-task ≈ 1
+# - dispatch → worker → completion 감지 지연 1 cycle
+# - scope → build → verify 의존성 체인에서 선행 태스크 완료 감지를 기다리는 여유 1 cycle
+# - stall/재시도 마진 1 cycle
+# 총합 ≈ 4. 과다 산정되어도 Run Budget(토큰 예산)이 상위 guard로 작동한다.
+MAX_CYCLES_TASK_MULTIPLIER = 4
+MAX_CYCLES_FLOOR = 30
+
+
+def compute_max_cycles(workspace: str, logger=None) -> int:
+    """
+    board의 pending/blocked 태스크 수에 비례해 orchestration max_cycles 상한을 계산한다.
+
+    `dynamic_orchestrator._orchestration_loop` 진입 시 + 10 cycle마다 호출된다.
+    (af-critic 2026-04-15 WARN-3/WARN-4 대응: 기존 closure였던 것을 모듈 함수로 추출해
+    테스트가 규칙을 복제하지 않도록 단일 진실원천을 보장한다.)
+
+    예외 시 `logger`가 주어지면 경고를 남기고 `MAX_CYCLES_FLOOR`로 fallback.
+    """
+    try:
+        board = load_project_board(workspace) or {}
+    except Exception as exc:
+        if logger is not None:
+            logger(f"compute_max_cycles: load_project_board 실패 → {type(exc).__name__}: {exc}")
+        return MAX_CYCLES_FLOOR
+
+    try:
+        tasks = board.get("tasks") or []
+        if not isinstance(tasks, list):
+            return MAX_CYCLES_FLOOR
+        pending = 0
+        for t in tasks:
+            if isinstance(t, dict) and str(t.get("status") or "pending") in {"pending", "blocked"}:
+                pending += 1
+    except Exception as exc:
+        if logger is not None:
+            logger(f"compute_max_cycles: board 파싱 실패 → {type(exc).__name__}: {exc}")
+        return MAX_CYCLES_FLOOR
+
+    return max(MAX_CYCLES_FLOOR, pending * MAX_CYCLES_TASK_MULTIPLIER)
 
 
 def default_planning_steps() -> list[dict[str, Any]]:
@@ -506,12 +566,32 @@ def _dependency_satisfied(dep: str, board: dict[str, Any], completed_ids: set[st
         return True
     if dependency in completed_ids:
         return True
-    for task in (board.get("tasks") or []):
+    tasks = [t for t in (board.get("tasks") or []) if isinstance(t, dict)]
+    for task in tasks:
         if safe_id(task.get("task_id")) == dependency and task.get("status") == "completed":
             return True
+    # module-level 의존성 — module.status는 `_recalculate_board`가 호출돼야 갱신되므로
+    # load_project_board/write_project_board 사이에 stale할 수 있다. 그 race를 피하기 위해
+    # module 내부 task들이 모두 completed인지 직접 검증한다.
+    # (af-cross-review 2026-04-15 Q1 대응)
     for module in (board.get("modules") or []):
-        if safe_id(module.get("id")) == dependency and module.get("status") == "completed":
-            return True
+        if not isinstance(module, dict):
+            continue
+        if safe_id(module.get("id")) != dependency:
+            continue
+        module_task_ids = [safe_id(tid) for tid in module.get("task_ids") or [] if safe_id(tid)]
+        if not module_task_ids:
+            # 빈 모듈은 보수적으로 불만족 취급 (기존 동작과 동일)
+            return module.get("status") == "completed"
+        task_map = {safe_id(t.get("task_id")): t for t in tasks}
+        for tid in module_task_ids:
+            if tid in completed_ids:
+                continue
+            tgt = task_map.get(tid)
+            if tgt and tgt.get("status") == "completed":
+                continue
+            return False
+        return True
     return False
 
 
@@ -522,11 +602,15 @@ def next_board_tasks(board: dict[str, Any], available_roles: list[str], complete
     chosen: list[dict[str, str]] = []
     used_roles: set[str] = set()
     tasks = [task for task in (board.get("tasks") or []) if isinstance(task, dict)]
+    # module waterfall: 같은 module을 scope→build→verify까지 끝낸 뒤 다음 module로.
+    # phase 우선 정렬(구 동작)이었을 때 "모든 모듈의 scope만 먼저 소화하다가 max_cycles에
+    # 걸려 build 단계 진입 실패"하던 회귀를 방지한다. (2026-04-15 `lotto-pattern-predictor`
+    # 실측: 32 태스크 중 scope 4개만 완료.)
     ordered_tasks = sorted(
         tasks,
         key=lambda item: (
+            _module_sort_key(str(item.get("module_id") or "")),
             _PHASE_ORDER.get(str(item.get("phase") or "build"), 99),
-            str(item.get("module_id") or ""),
             str(item.get("task_id") or ""),
         ),
     )

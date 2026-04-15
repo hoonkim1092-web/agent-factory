@@ -18,6 +18,7 @@ from core.project_mailbox import load_mailbox_messages, mailbox_prompt_digest
 from core.project_task_board import (
     board_is_complete,
     board_prompt_digest,
+    compute_max_cycles,
     load_project_board,
     next_board_tasks,
     reset_in_progress_tasks,
@@ -761,9 +762,24 @@ class DynamicOrchestrator:
                 self._visualizer.print_dashboard()
 
         cycle = 0
-        max_cycles = 30
+        # max_cycles: 고정 30은 board 태스크가 많은 프로젝트(예: 7 모듈 × 3 phase = 21+)에서
+        # build/verify 진입 전에 소진되는 회귀가 있었다. board pending 태스크 수에 비례해
+        # 상한을 늘려주되 Run Budget이 별도 가드(토큰 예산)이므로 무한 증가는 아니다.
+        # (2026-04-15 `lotto-pattern-predictor` 실측: 24 태스크 프로젝트가 cycle 30에 exit.)
+        # 배수와 fallback 값·근거 주석은 `core/project_task_board.py::compute_max_cycles` 참조.
+        _max_cycles_logger = lambda msg: print_agent_msg("Lilith", msg, "")
+        max_cycles = compute_max_cycles(target_workspace, logger=_max_cycles_logger)
 
         while cycle < max_cycles:
+            # af-critic 2026-04-15 WARN-3: 진입 시 1회 스냅샷만 사용하면 실행 중 동적으로
+            # 태스크가 추가되는 경로(플래너 확장)에서 max_cycles가 과소 산정된다. 10 cycle마다
+            # 재평가해 **연장만** 반영(단축은 하지 않아 조기 종료 회귀 방지).
+            if cycle > 0 and cycle % 10 == 0:
+                _new_max = compute_max_cycles(target_workspace, logger=_max_cycles_logger)
+                if _new_max > max_cycles:
+                    print_agent_msg("Lilith", f"max_cycles {max_cycles} → {_new_max} (board expanded)", "")
+                    max_cycles = _new_max
+
             # 글로벌 토큰 예산 체크
             try:
                 from core.run_budget import get_run_budget

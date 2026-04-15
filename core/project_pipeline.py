@@ -25,6 +25,7 @@ from core.utils import (
 )
 from core.work_item_generator import generate_work_items, slug_from_brief
 from core.work_item_parser import sync_board_from_work_items
+from core.agent_runner import _safe_print
 
 PROJECT_ROLE_BASELINE_SKILLS = ("file_handler", "core_memory")
 
