@@ -39,6 +39,10 @@ def _hook_path_arg(value: str | Path) -> str:
     return str(path)
 
 
+def _hook_runner_python() -> str:
+    return "python" if os.name == "nt" else "python3"
+
+
 def _merge_pythonpath(repo_root: Path) -> str:
     existing = str(os.getenv("PYTHONPATH", "") or "").strip()
     parts = [str(repo_root)]
@@ -214,11 +218,12 @@ def _build_continuity_context(workspace: str, provider_id: str, run_id: str) -> 
 
 
 def _hook_command(provider_base: str, workspace: str, run_id: str, repo_root: Path) -> str:
-    script_path = repo_root / "scripts" / "cli_hook_bridge.py"
+    runner_path = repo_root / "scripts" / "hook_runner.py"
     return _quote_command(
         [
-            _hook_path_arg(sys.executable),
-            _hook_path_arg(script_path),
+            _hook_runner_python(),
+            _hook_path_arg(runner_path),
+            "cli_hook_bridge",
             "--provider",
             provider_base,
             "--workspace",
@@ -231,7 +236,29 @@ def _hook_command(provider_base: str, workspace: str, run_id: str, repo_root: Pa
     )
 
 
-def _merge_named_hook_group(existing_groups: list[Any], hook_name: str, command: str) -> list[dict[str, Any]]:
+def _is_managed_bridge_hook(hook: Any, provider_base: str) -> bool:
+    if not isinstance(hook, dict):
+        return False
+    name = str(hook.get("name") or "").strip()
+    if name.startswith(f"agent_factory_{provider_base}_"):
+        return True
+
+    command = str(hook.get("command") or "").strip()
+    if not command:
+        return False
+    if f"--provider {provider_base}" not in command:
+        return False
+    if "cli_hook_bridge" not in command:
+        return False
+    return "hook_runner.py" in command or "cli_hook_bridge.py" in command
+
+
+def _merge_named_hook_group(
+    existing_groups: list[Any],
+    hook_name: str,
+    command: str,
+    provider_base: str,
+) -> list[dict[str, Any]]:
     groups: list[dict[str, Any]] = []
     for raw_group in existing_groups or []:
         if not isinstance(raw_group, dict):
@@ -240,12 +267,13 @@ def _merge_named_hook_group(existing_groups: list[Any], hook_name: str, command:
         for hook in raw_group.get("hooks", []) or []:
             if not isinstance(hook, dict):
                 continue
-            if str(hook.get("name") or "") == hook_name:
+            if _is_managed_bridge_hook(hook, provider_base):
                 continue
             hooks.append(dict(hook))
-        new_group = dict(raw_group)
-        new_group["hooks"] = hooks
-        groups.append(new_group)
+        if hooks:
+            new_group = dict(raw_group)
+            new_group["hooks"] = hooks
+            groups.append(new_group)
     groups.append({"hooks": [{"type": "command", "name": hook_name, "command": command}]})
     return groups
 
@@ -263,7 +291,12 @@ def _write_claude_settings(workspace: str, run_id: str) -> Path:
     command = _hook_command("claude", workspace, run_id, repo_root)
     for event_name in ("SessionStart", "UserPromptSubmit", "PreCompact", "Stop", "SessionEnd"):
         hook_name = f"agent_factory_claude_{event_name.lower()}"
-        hooks[event_name] = _merge_named_hook_group(hooks.get(event_name, []), hook_name, command)
+        hooks[event_name] = _merge_named_hook_group(
+            hooks.get(event_name, []),
+            hook_name,
+            command,
+            "claude",
+        )
 
     data["hooks"] = hooks
     data = merge_claude_destructive_guard(data)
@@ -283,7 +316,12 @@ def _write_gemini_defaults(workspace: str, run_id: str, defaults_path: Path, pol
     command = _hook_command("gemini", workspace, run_id, repo_root)
     for event_name in ("SessionStart", "BeforeAgent", "AfterAgent", "PreCompress", "SessionEnd"):
         hook_name = f"agent_factory_gemini_{event_name.lower()}"
-        hooks[event_name] = _merge_named_hook_group(hooks.get(event_name, []), hook_name, command)
+        hooks[event_name] = _merge_named_hook_group(
+            hooks.get(event_name, []),
+            hook_name,
+            command,
+            "gemini",
+        )
 
     data["hooks"] = hooks
     guard_path = write_gemini_destructive_policy(policy_path)
