@@ -17,7 +17,7 @@ AI_ENGINE_API_KEY_ENVS = ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", 
 _DEFAULT_MODELS = {
     "claude_cli": "claude",
     "gemini_cli": "gemini",
-    "codex_cli": "gpt-5",
+    "codex_cli": "o4-mini",
 }
 
 _ENGINE_ENV_BY_ID = {

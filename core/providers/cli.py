@@ -120,21 +120,22 @@ _AUTH_REQUIRED_MARKERS = (
     "not logged in",
     "not authenticated",
     "authentication required",
+    "authentication_error",
+    "invalid authentication credentials",
     "login required",
     "please login",
     "please log in",
     "run `codex login`",
     "run codex login",
     "sign in required",
+    "failed to authenticate",
 )
 
 _HOOK_FAILURE_MARKERS = (
     "can't open file",
-    "hook",
-    "cli_hook_bridge",
-    "hook_bridge",
-    "sessionstart",
-    "userpromptsubmit",
+    "hook_runner.py] failed",
+    "cli_hook_bridge.py] failed",
+    "hook_bridge.py] failed",
 )
 
 
@@ -667,6 +668,19 @@ def _extract_text(stdout: str) -> str:
             parts = [item for item in payload if isinstance(item, str) and item.strip()]
             if parts:
                 return "\n".join(parts)
+
+    # codex exec stderr: agent_message 이벤트에서 최종 응답 추출
+    for line in reversed(lines):
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(obj, dict) and obj.get("type") == "event_msg":
+            inner = obj.get("payload", {})
+            if isinstance(inner, dict) and inner.get("type") == "agent_message":
+                msg = str(inner.get("message", "") or "").strip()
+                if msg:
+                    return msg
     return raw
 
 
@@ -816,7 +830,14 @@ def execute_cli_chat(
 
     elapsed = int(time.monotonic() - started)
     text = _extract_text(completed.stdout)
+    # codex exec는 returncode=1이어도 유효 응답을 생성할 수 있음
+    if request.provider_id == "codex_cli" and not text.strip():
+        text = _extract_text(completed.stderr)
     ok = completed.returncode == 0 and bool(text.strip())
+    if not ok and request.provider_id == "codex_cli" and bool(text.strip()):
+        issue = _classify_cli_issue(completed.stdout, completed.stderr)
+        if issue not in ("auth_required", "permission_denied"):
+            ok = True
     mins, secs = divmod(elapsed, 60)
     if ok:
         failure_reason = request.provider_id

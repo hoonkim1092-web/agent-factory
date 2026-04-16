@@ -8,7 +8,11 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from core.providers.session_adapter import handle_hook_event
+# __init__.py의 heavy import 체인(cli.py → implementation_language_policy 등)을
+# 우회하기 위해 session_adapter를 직접 import
+import importlib
+_mod = importlib.import_module("core.providers.session_adapter")
+handle_hook_event = _mod.handle_hook_event
 
 
 def main(argv: list[str] | None = None) -> int:
