@@ -921,16 +921,23 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
                 review_tasks.append(cv_task)
                 last_review_id = cv_task_id
 
-        # verify 태스크의 depends_on에 마지막 리뷰 태스크 추가
-        verify_task_id = f"{module_id}_verify_3"
+        # verify 태스크의 depends_on에 마지막 리뷰 태스크 추가 (phase+module_id로 검색)
         for task in board["tasks"]:
             if not isinstance(task, dict):
                 continue
-            if safe_id(task.get("task_id")) == safe_id(verify_task_id):
+            if (str(task.get("module_id") or "") == module_id
+                    and str(task.get("phase") or "") == "verify"):
                 deps = task.get("depends_on", [])
                 if last_review_id not in deps:
                     deps.append(last_review_id)
                     task["depends_on"] = deps
+
+        # module.task_ids에 리뷰 태스크 등록 (module 완료 상태 정확성 보장)
+        for module in board.get("modules", []):
+            if isinstance(module, dict) and str(module.get("id") or "") == module_id:
+                module.setdefault("task_ids", []).extend(
+                    [t["task_id"] for t in review_tasks]
+                )
                 break
 
         if review_tasks:

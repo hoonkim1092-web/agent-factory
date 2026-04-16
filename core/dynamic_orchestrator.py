@@ -185,23 +185,28 @@ class DynamicOrchestrator:
         prefix = text.split(":", 1)[0]
         return safe_id(prefix)
 
-    def _inject_review_tasks_if_needed(self, workspace: str, task_id: str, role: str) -> None:
+    async def _inject_review_tasks_if_needed(self, workspace: str, task_id: str, role: str) -> None:
         """build 태스크 완료 시 code_review + cross_validate 태스크를 board에 주입하고 역할을 등록한다."""
         try:
+            # inject_review_tasks 내부에서 locked_file로 board를 읽으므로 여기서는 읽지 않음
+            # completed_task를 task_id/role로 직접 구성하여 이중 read 방지
+            completed_task = {"task_id": task_id, "owner_role": role, "phase": "build"}
+            # board에서 module_id를 가져오기 위해 한 번만 읽음 (inject_review_tasks 내부 lock에서 재확인)
             board = load_project_board(workspace)
-            completed_task = None
             for t in (board.get("tasks") or []):
                 if isinstance(t, dict) and safe_id(t.get("task_id")) == safe_id(task_id):
-                    completed_task = t
+                    completed_task["module_id"] = t.get("module_id", "")
+                    completed_task["phase"] = t.get("phase", "build")
                     break
-            if not completed_task:
+            if not completed_task.get("module_id"):
                 return
             injected = inject_review_tasks(workspace, completed_task)
-            for task in injected:
-                new_role = task.get("owner_role", "")
-                if new_role and new_role not in self._manifest_roles:
-                    self._manifest_roles.append(new_role)
-                    self.state_board["agents_status"][new_role] = "idle"
+            async with self._state_lock:
+                for task in injected:
+                    new_role = task.get("owner_role", "")
+                    if new_role and new_role not in self._manifest_roles:
+                        self._manifest_roles.append(new_role)
+                        self.state_board["agents_status"][new_role] = "idle"
         except Exception as exc:
             print_agent_msg("System", f"리뷰 태스크 주입 실패: {exc}", "")
 
@@ -697,7 +702,7 @@ class DynamicOrchestrator:
                 if self._visualizer and not self.terminal_per_agent:
                     self._visualizer.mark_completed(role)
                 # 코드 리뷰 + 교차검증 태스크 자동 주입
-                self._inject_review_tasks_if_needed(target_workspace, task_id, role)
+                await self._inject_review_tasks_if_needed(target_workspace, task_id, role)
                 self._sync_manifest()
             else:
                 reason = result.get("reason", "Unknown error") if result else "No result"

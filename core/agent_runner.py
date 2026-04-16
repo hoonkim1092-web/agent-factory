@@ -36,7 +36,12 @@ from core.utils import _safe_write_json
 from core.registry import ToolRegistry
 from core.tool_runtime import ToolRuntimeWrapper
 from core.policy_runtime import PolicyRuntime
-from core.documentation_policy import inject_documentation_contract, inject_thinking_contract
+from core.documentation_policy import (
+    inject_code_review_contract,
+    inject_cross_validation_contract,
+    inject_documentation_contract,
+    inject_thinking_contract,
+)
 from core.implementation_language_policy import inject_implementation_language_contract
 from core.destructive_guard import inject_destructive_guard_contract
 from core.project_mailbox import (
@@ -138,9 +143,12 @@ class AgentRunner:
         return []
 
     def _build_runtime_system_prompt(self, agent: dict) -> str:
+        role = str(agent.get("role") or agent.get("name") or "")
         prompt = inject_documentation_contract(self._resolve_system_prompt(agent))
         prompt = inject_implementation_language_contract(prompt)
         prompt = inject_destructive_guard_contract(prompt)
+        prompt = inject_code_review_contract(prompt, role=role)
+        prompt = inject_cross_validation_contract(prompt, role=role)
         return inject_thinking_contract(prompt)
 
     def _build_policy(self, agent: dict, loaded_skill_ids: list[str]) -> dict:
