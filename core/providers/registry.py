@@ -292,3 +292,17 @@ def get_cli_install_command(provider_id: str) -> str:
 def get_cli_auth_command(provider_id: str) -> str:
     return _CLI_AUTH_COMMANDS.get(provider_id, "")
 
+
+def pick_review_provider(author_provider: str) -> str:
+    """작성자와 다른 CLI provider를 반환한다.
+
+    author_provider는 provider ID (예: 'claude_cli')여야 한다.
+    사용 가능한 다른 provider가 없으면 같은 provider를 반환한다
+    (별도 run_id로 독립 세션 보장).
+    """
+    available = detect_available_cli_providers()
+    candidates = [p for p in available if p != author_provider]
+    if candidates:
+        return candidates[0]
+    return author_provider
+

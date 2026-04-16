@@ -11,7 +11,7 @@ from core.utils import now_iso, safe_id
 
 BOARD_FILENAME = "project_board_state.json"
 TASK_EXECUTION_PLAN_REL_PATH = os.path.join("docs", "task_execution_plan.md")
-_PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "verify": 3}
+_PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "code_review": 3, "cross_validate": 4, "verify": 5}
 
 _MODULE_SUFFIX_RE = re.compile(r"^(.+)_(\d+)$")
 
@@ -36,7 +36,7 @@ def _module_sort_key(module_id: str) -> tuple[str, int]:
 # - verify: 평균 8 cycle (검증 + handoff)
 # - 기타(integrate 등): 10 cycle
 # Run Budget(토큰 예산)이 상위 guard로 작동하므로 과다 산정 무해.
-_PHASE_CYCLE_WEIGHTS = {"scope": 8, "build": 25, "verify": 12}
+_PHASE_CYCLE_WEIGHTS = {"scope": 8, "build": 25, "code_review": 6, "cross_validate": 6, "verify": 12}
 _DEFAULT_PHASE_WEIGHT = 10
 MAX_CYCLES_FLOOR = 100
 
@@ -843,3 +843,97 @@ def write_task_execution_plan(workspace: str, project_brief: dict[str, Any], rol
     )
     write_text(target_path, "\n".join(lines).rstrip() + "\n")
     return target_path
+
+
+def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[dict[str, Any]]:
+    """build phase 태스크 완료 시 code_review + cross_validate 태스크를 board에 주입한다.
+
+    단일 locked_file 트랜잭션 안에서 board를 읽고 수정하고 쓴다 (원자성 보장).
+    비코드 산출물(phase != 'build')이면 빈 리스트를 반환한다.
+    """
+    if not isinstance(completed_task, dict):
+        return []
+    if str(completed_task.get("phase") or "") != "build":
+        return []
+
+    module_id = str(completed_task.get("module_id") or "")
+    owner_role = str(completed_task.get("owner_role") or "")
+    build_task_id = str(completed_task.get("task_id") or "")
+    if not module_id or not owner_role or not build_task_id:
+        return []
+
+    board_path = os.path.join(os.path.abspath(workspace), BOARD_FILENAME)
+    review_tasks: list[dict[str, Any]] = []
+
+    with locked_file(board_path):
+        board = load_project_board(workspace)
+        if not board or not board.get("tasks"):
+            return []
+
+        existing_ids = {safe_id(t.get("task_id")) for t in board["tasks"] if isinstance(t, dict)}
+
+        # Code Review 태스크
+        cr_task_id = f"{module_id}_code_review"
+        if safe_id(cr_task_id) not in existing_ids:
+            cr_task = {
+                "task_id": cr_task_id,
+                "title": f"Code Review: {module_id}",
+                "instruction": f"[Code Review] {module_id} build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+                "owner_role": f"{owner_role}_code_reviewer",
+                "module_id": module_id,
+                "phase": "code_review",
+                "depends_on": [build_task_id],
+                "acceptance": [],
+                "artifacts": [],
+                "status": "pending",
+                "notes": [],
+                "updated_at": now_iso(),
+            }
+            board["tasks"].append(cr_task)
+            review_tasks.append(cr_task)
+
+        # Cross Validate 태스크 (CLI 2개 이상일 때만)
+        last_review_id = cr_task_id
+        try:
+            from core.providers.registry import detect_available_cli_providers
+            available_count = len(detect_available_cli_providers())
+        except Exception:
+            available_count = 1
+
+        if available_count >= 2:
+            cv_task_id = f"{module_id}_cross_validate"
+            if safe_id(cv_task_id) not in existing_ids:
+                cv_task = {
+                    "task_id": cv_task_id,
+                    "title": f"Cross Validate: {module_id}",
+                    "instruction": f"[Cross Validate] {module_id} 전체 정합성을 교차검증한다.",
+                    "owner_role": f"{owner_role}_cross_validator",
+                    "module_id": module_id,
+                    "phase": "cross_validate",
+                    "depends_on": [cr_task_id],
+                    "acceptance": [],
+                    "artifacts": [],
+                    "status": "pending",
+                    "notes": [],
+                    "updated_at": now_iso(),
+                }
+                board["tasks"].append(cv_task)
+                review_tasks.append(cv_task)
+                last_review_id = cv_task_id
+
+        # verify 태스크의 depends_on에 마지막 리뷰 태스크 추가
+        verify_task_id = f"{module_id}_verify_3"
+        for task in board["tasks"]:
+            if not isinstance(task, dict):
+                continue
+            if safe_id(task.get("task_id")) == safe_id(verify_task_id):
+                deps = task.get("depends_on", [])
+                if last_review_id not in deps:
+                    deps.append(last_review_id)
+                    task["depends_on"] = deps
+                break
+
+        if review_tasks:
+            write_project_board(workspace, board)
+
+    return review_tasks

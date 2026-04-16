@@ -340,3 +340,54 @@ def inject_documentation_contract(system_prompt: str) -> str:
 
     contract = str(documentation_language_profile()["contract"])
     return f"{base}\n\n{contract}".strip()
+
+
+_CODE_REVIEW_CONTRACT = """\
+[Code Review Contract]
+당신은 Code Reviewer다. 작성된 코드를 리뷰한다.
+
+검토 항목:
+1. 보안 취약점 (OWASP Top 10, 인젝션, 인증)
+2. 버그 및 엣지 케이스 (off-by-one, null 처리, 경계값)
+3. 설계 품질 (단일 책임, 의존성 방향, 인터페이스 일관성)
+4. 에러 처리 (예외 누락, 복구 전략)
+5. 성능 (불필요한 I/O, O(n^2) 루프)
+
+판정: PASS / WARN (경고 + 진행) / BLOCK (수정 필수)
+JSON 형식으로 응답:
+{"verdict": "PASS|WARN|BLOCK", "issues": [...], "summary": "..."}"""
+
+_CROSS_VALIDATION_CONTRACT = """\
+[Cross Validation Contract]
+당신은 Cross Validator다. 모듈 전체의 정합성을 검증한다.
+
+검토 항목:
+1. 모듈 간 인터페이스 일관성 (입출력 타입, 계약)
+2. 설계 문서와 구현의 괴리
+3. 테스트 커버리지 갭 (QA가 놓친 시나리오)
+4. 의존성 그래프 정합성
+5. 문서 업데이트 누락
+
+판정: PASS / WARN / BLOCK
+JSON 형식으로 응답:
+{"verdict": "PASS|WARN|BLOCK", "issues": [...], "summary": "..."}"""
+
+
+def inject_code_review_contract(system_prompt: str, role: str = "") -> str:
+    """_code_reviewer suffix 역할에만 Code Review Contract를 주입한다."""
+    if not str(role).endswith("_code_reviewer"):
+        return system_prompt
+    base = str(system_prompt or "").strip()
+    if "[Code Review Contract]" in base:
+        return base
+    return f"{base}\n\n{_CODE_REVIEW_CONTRACT}".strip()
+
+
+def inject_cross_validation_contract(system_prompt: str, role: str = "") -> str:
+    """_cross_validator suffix 역할에만 Cross Validation Contract를 주입한다."""
+    if not str(role).endswith("_cross_validator"):
+        return system_prompt
+    base = str(system_prompt or "").strip()
+    if "[Cross Validation Contract]" in base:
+        return base
+    return f"{base}\n\n{_CROSS_VALIDATION_CONTRACT}".strip()

@@ -19,6 +19,7 @@ from core.project_task_board import (
     board_is_complete,
     board_prompt_digest,
     compute_max_cycles,
+    inject_review_tasks,
     load_project_board,
     next_board_tasks,
     reset_in_progress_tasks,
@@ -183,6 +184,26 @@ class DynamicOrchestrator:
             return ""
         prefix = text.split(":", 1)[0]
         return safe_id(prefix)
+
+    def _inject_review_tasks_if_needed(self, workspace: str, task_id: str, role: str) -> None:
+        """build 태스크 완료 시 code_review + cross_validate 태스크를 board에 주입하고 역할을 등록한다."""
+        try:
+            board = load_project_board(workspace)
+            completed_task = None
+            for t in (board.get("tasks") or []):
+                if isinstance(t, dict) and safe_id(t.get("task_id")) == safe_id(task_id):
+                    completed_task = t
+                    break
+            if not completed_task:
+                return
+            injected = inject_review_tasks(workspace, completed_task)
+            for task in injected:
+                new_role = task.get("owner_role", "")
+                if new_role and new_role not in self._manifest_roles:
+                    self._manifest_roles.append(new_role)
+                    self.state_board["agents_status"][new_role] = "idle"
+        except Exception as exc:
+            print_agent_msg("System", f"리뷰 태스크 주입 실패: {exc}", "")
 
     def _todo_fully_completed(self, workspace: str) -> bool:
         board = load_project_board(workspace)
@@ -675,6 +696,8 @@ class DynamicOrchestrator:
                 print_agent_msg(role, "Task completed.", "")
                 if self._visualizer and not self.terminal_per_agent:
                     self._visualizer.mark_completed(role)
+                # 코드 리뷰 + 교차검증 태스크 자동 주입
+                self._inject_review_tasks_if_needed(target_workspace, task_id, role)
                 self._sync_manifest()
             else:
                 reason = result.get("reason", "Unknown error") if result else "No result"
@@ -809,8 +832,9 @@ class DynamicOrchestrator:
             if cycles_since_completion >= self._stall_threshold and cycle > self._stall_threshold:
                 print_agent_msg("Lilith", f"No progress for {cycles_since_completion} cycles — stall detected", "")
 
-            # 1. idle 에이전트 확인
-            available_roles = [r for r in roles if self.state_board["agents_status"].get(r) == "idle"]
+            # 1. idle 에이전트 확인 (동적 추가된 역할 포함)
+            all_roles = list(dict.fromkeys(roles + self._manifest_roles))
+            available_roles = [r for r in all_roles if self.state_board["agents_status"].get(r) == "idle"]
             if not available_roles:
                 # 모든 에이전트 working → 이벤트 대기
                 self._task_done_event.clear()
@@ -866,7 +890,7 @@ class DynamicOrchestrator:
                 if _last_fails and _last_fails[-1].get("failure_category") == "infra":
                     print_agent_msg("Lilith", f"[{role}] infra 실패 — 재시도 안 함", "")
                     continue
-                if role and instruction and role in roles and self.state_board["agents_status"].get(role) == "idle":
+                if role and instruction and role in all_roles and self.state_board["agents_status"].get(role) == "idle":
                     run_token = f"run_{int(time.time())}_{role}_{uuid.uuid4().hex[:6]}"
                     self.state_board["agents_status"][role] = "working"
                     assignment: Dict[str, Any] = {

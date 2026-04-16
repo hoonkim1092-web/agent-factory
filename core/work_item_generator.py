@@ -95,7 +95,7 @@ def _slug_from_goal(goal: str) -> str:
 
 def _make_checklist(tasks: list[dict[str, Any]]) -> str:
     lines: list[str] = []
-    phase_order = {"scope": 0, "build": 1, "integrate": 2, "verify": 3}
+    from core.project_task_board import _PHASE_ORDER as phase_order  # 단일 진실원천
     sorted_tasks = sorted(
         tasks,
         key=lambda item: (
