@@ -30,14 +30,15 @@ def _module_sort_key(module_id: str) -> tuple[str, int]:
     return (module_id, 0)
 
 
-# max_cycles 배수의 근거:
-# - build 태스크 1개에 10~20 cycle 소모 (CLI 실행 3~6분 + stall 대기)
-# - scope/verify는 각 2~5 cycle
-# - 에이전트가 idle 대기 중에도 cycle 소비
-# - 실측: 18 태스크 프로젝트가 multiplier=4(72 cycle)에서 모듈 1만 완료하고 종료
-# 총합 ≈ 10. Run Budget(토큰 예산)이 상위 guard로 작동하므로 과다 산정 무해.
-MAX_CYCLES_TASK_MULTIPLIER = 10
-MAX_CYCLES_FLOOR = 50
+# max_cycles: phase별 가중치 기반 동적 계산 (실측 기반)
+# - scope: 평균 5 cycle (scope 문서 작성 + Lilith 배정)
+# - build: 평균 20 cycle (CLI 실행 3~6분 + stall 대기 + Lilith 개입)
+# - verify: 평균 8 cycle (검증 + handoff)
+# - 기타(integrate 등): 10 cycle
+# Run Budget(토큰 예산)이 상위 guard로 작동하므로 과다 산정 무해.
+_PHASE_CYCLE_WEIGHTS = {"scope": 8, "build": 25, "verify": 12}
+_DEFAULT_PHASE_WEIGHT = 10
+MAX_CYCLES_FLOOR = 100
 
 
 def compute_max_cycles(workspace: str, logger=None) -> int:
@@ -61,16 +62,17 @@ def compute_max_cycles(workspace: str, logger=None) -> int:
         tasks = board.get("tasks") or []
         if not isinstance(tasks, list):
             return MAX_CYCLES_FLOOR
-        pending = 0
+        weighted_total = 0
         for t in tasks:
             if isinstance(t, dict) and str(t.get("status") or "pending") in {"pending", "blocked"}:
-                pending += 1
+                phase = str(t.get("phase") or "build")
+                weighted_total += _PHASE_CYCLE_WEIGHTS.get(phase, _DEFAULT_PHASE_WEIGHT)
     except Exception as exc:
         if logger is not None:
             logger(f"compute_max_cycles: board 파싱 실패 → {type(exc).__name__}: {exc}")
         return MAX_CYCLES_FLOOR
 
-    return max(MAX_CYCLES_FLOOR, pending * MAX_CYCLES_TASK_MULTIPLIER)
+    return max(MAX_CYCLES_FLOOR, weighted_total)
 
 
 def default_planning_steps() -> list[dict[str, Any]]:
