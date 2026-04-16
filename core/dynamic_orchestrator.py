@@ -66,7 +66,7 @@ class DynamicOrchestrator:
         self._task_retry_count: Dict[str, int] = {}  # task_id → 실패 횟수
         self._max_task_retries = 3
         self._last_completion_cycle: int = 0
-        self._stall_threshold: int = 15  # 15사이클 동안 완료 없으면 stall (구현 작업은 5분+ 소요)
+        self._stall_threshold: int = int(os.getenv("AGENT_STALL_THRESHOLD", "15"))  # 환경변수로 조절 가능
         self.memory_hub = AstMemoryHub()
         self.evaluator = StrategyEvaluator(model_name=engine_id)
         self._workspace: str | None = None

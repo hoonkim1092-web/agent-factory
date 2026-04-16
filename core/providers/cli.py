@@ -669,7 +669,15 @@ def _extract_text(stdout: str) -> str:
             if parts:
                 return "\n".join(parts)
 
-    # codex exec stderr: agent_message 이벤트에서 최종 응답 추출
+    return raw
+
+
+def _extract_codex_agent_message(stderr: str) -> str:
+    """codex exec stderr에서 agent_message 이벤트의 최종 응답을 추출한다."""
+    raw = str(stderr or "").strip()
+    if not raw:
+        return ""
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
     for line in reversed(lines):
         try:
             obj = json.loads(line)
@@ -681,7 +689,7 @@ def _extract_text(stdout: str) -> str:
                 msg = str(inner.get("message", "") or "").strip()
                 if msg:
                     return msg
-    return raw
+    return ""
 
 
 def execute_cli_chat(
@@ -830,20 +838,19 @@ def execute_cli_chat(
 
     elapsed = int(time.monotonic() - started)
     text = _extract_text(completed.stdout)
-    # codex exec는 returncode=1이어도 유효 응답을 생성할 수 있음
+    # codex exec는 stderr에 agent_message로 응답을 출력하고 returncode=1을 반환할 수 있음
     if request.provider_id == "codex_cli" and not text.strip():
-        text = _extract_text(completed.stderr)
+        text = _extract_codex_agent_message(completed.stderr)
+    issue = _classify_cli_issue(completed.stdout, completed.stderr)
     ok = completed.returncode == 0 and bool(text.strip())
     if not ok and request.provider_id == "codex_cli" and bool(text.strip()):
-        issue = _classify_cli_issue(completed.stdout, completed.stderr)
-        if issue not in ("auth_required", "permission_denied"):
+        if issue not in ("auth_required", "permission_denied", "hook_failure"):
             ok = True
     mins, secs = divmod(elapsed, 60)
     if ok:
         failure_reason = request.provider_id
         print(f"  ✅ [{display_name}] 완료 ({mins}분 {secs}초)", flush=True)
     else:
-        issue = _classify_cli_issue(completed.stdout, completed.stderr)
         failure_reason = f"{request.provider_id}_{issue}" if issue else f"{request.provider_id}_failed"
         print(f"  ❌ [{display_name}] 실패: {failure_reason} ({mins}분 {secs}초)", flush=True)
     result = {

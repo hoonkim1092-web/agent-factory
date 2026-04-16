@@ -33,7 +33,7 @@ def test_cli_provider_registry_defaults_and_filtering():
     assert get_requested_cli_providers("claude_cli, gemini, codex_cli") == ["claude_cli", "codex_cli"]
     assert default_chat_model_for_provider("claude_cli") == "claude"
     assert default_chat_model_for_provider("gemini_cli") == "gemini"
-    assert default_chat_model_for_provider("codex_cli") == "gpt-5"
+    assert default_chat_model_for_provider("codex_cli") == ""
     assert supports_cli_bootstrap("gemini_cli") is True
     assert supports_cli_bootstrap("gemini") is False
     assert engine_api_keys_disabled("gemini_cli") is True

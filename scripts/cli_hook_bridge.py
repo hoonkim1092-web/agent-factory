@@ -9,9 +9,14 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 # __init__.py의 heavy import 체인(cli.py → implementation_language_policy 등)을
-# 우회하기 위해 session_adapter를 직접 import
-import importlib
-_mod = importlib.import_module("core.providers.session_adapter")
+# 완전히 우회하기 위해 spec_from_file_location으로 session_adapter만 직접 로드
+import importlib.util as _ilu
+_sa_path = os.path.join(_PROJECT_ROOT, "core", "providers", "session_adapter.py")
+_spec = _ilu.spec_from_file_location("core.providers.session_adapter", _sa_path,
+                                      submodule_search_locations=[])
+_mod = _ilu.module_from_spec(_spec)
+sys.modules[_spec.name] = _mod
+_spec.loader.exec_module(_mod)
 handle_hook_event = _mod.handle_hook_event
 
 
