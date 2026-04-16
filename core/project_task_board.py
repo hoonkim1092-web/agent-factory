@@ -895,12 +895,18 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
         # Cross Validate 태스크 (CLI 2개 이상일 때만)
         last_review_id = cr_task_id
         try:
-            from core.providers.registry import detect_available_cli_providers
-            available_count = len(detect_available_cli_providers())
+            from core.providers.registry import detect_available_cli_providers, pick_review_provider
+            available = detect_available_cli_providers()
+            available_count = len(available)
         except Exception:
+            available = []
             available_count = 1
 
         if available_count >= 2:
+            # 작성자와 다른 provider를 교차검증에 사용
+            author_provider = str(completed_task.get("provider_id") or (available[0] if available else ""))
+            review_provider = pick_review_provider(author_provider)
+
             cv_task_id = f"{module_id}_cross_validate"
             if safe_id(cv_task_id) not in existing_ids:
                 cv_task = {
@@ -911,6 +917,7 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
                     "module_id": module_id,
                     "phase": "cross_validate",
                     "depends_on": [cr_task_id],
+                    "review_provider": review_provider,
                     "acceptance": [],
                     "artifacts": [],
                     "status": "pending",

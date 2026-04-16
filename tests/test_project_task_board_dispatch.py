@@ -114,17 +114,19 @@ def test_compute_max_cycles_pending_zero_falls_back_to_floor(monkeypatch):
 
 def test_compute_max_cycles_scales_with_pending_count(monkeypatch):
     import core.project_task_board as ptb
+    # phase 미지정 → 기본 "build" → 가중치 25
+    build_weight = ptb._PHASE_CYCLE_WEIGHTS["build"]  # 25
     monkeypatch.setattr(
         ptb, "load_project_board",
         lambda ws: {"tasks": [{"status": "pending"} for _ in range(24)]}
     )
-    assert ptb.compute_max_cycles("/fake") == 24 * ptb.MAX_CYCLES_TASK_MULTIPLIER  # 96
+    assert ptb.compute_max_cycles("/fake") == 24 * build_weight  # 600
     monkeypatch.setattr(
         ptb, "load_project_board",
         lambda ws: {"tasks": [{"status": "pending"} for _ in range(100)]}
     )
-    assert ptb.compute_max_cycles("/fake") == 100 * ptb.MAX_CYCLES_TASK_MULTIPLIER  # 400
-    # 소수 태스크는 floor 유지
+    assert ptb.compute_max_cycles("/fake") == 100 * build_weight  # 2500
+    # 소수 태스크는 floor 유지 (3 * 25 = 75 < 100)
     monkeypatch.setattr(
         ptb, "load_project_board",
         lambda ws: {"tasks": [{"status": "pending"} for _ in range(3)]}
@@ -143,7 +145,7 @@ def test_compute_max_cycles_counts_only_open_tasks(monkeypatch):
             {"status": "blocked"},  # blocked도 pending 취급(재시도 대상)
         ]
     })
-    # pending 2 + blocked 1 = 3 → max(30, 12) = 30
+    # pending 2 + blocked 1 = 3, build 가중치 25 → 75 < MAX_CYCLES_FLOOR(100) → floor
     assert ptb.compute_max_cycles("/fake") == ptb.MAX_CYCLES_FLOOR
 
 
