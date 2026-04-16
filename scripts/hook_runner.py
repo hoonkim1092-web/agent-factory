@@ -97,7 +97,7 @@ def main() -> int:
         result = subprocess.run(
             cmd,
             cwd=workspace,
-            timeout=30,
+            timeout=120,  # LLM 호출하는 스크립트(blueprint_updater 등)는 30초+ 소요
             capture_output=False,  # stdout/stderr를 그대로 전달
             stdin=sys.stdin if not sys.stdin.isatty() else subprocess.DEVNULL,
         )
