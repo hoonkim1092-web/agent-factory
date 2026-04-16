@@ -17,7 +17,7 @@ AI_ENGINE_API_KEY_ENVS = ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", 
 _DEFAULT_MODELS = {
     "claude_cli": "claude",
     "gemini_cli": "gemini",
-    "codex_cli": "o4-mini",
+    "codex_cli": "",  # Codex 자체 기본 모델 사용 (ChatGPT 계정: gpt-5.4)
 }
 
 _ENGINE_ENV_BY_ID = {
