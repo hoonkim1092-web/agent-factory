@@ -1,4 +1,19 @@
 {
   "project_id": "smoke_test",
-  "runs": []
+  "runs": [
+    {
+      "ts": "2026-04-09T23:49:48",
+      "type": "single_run",
+      "project_id": "smoke_test",
+      "role": "General Assistant",
+      "task": "hello.py 파일을 만들어줘. print('Hello from Agent Factory')만 있으면 됨",
+      "skills_loaded": [],
+      "ok": true,
+      "reason": "claude_cli",
+      "latency_ms": 13145,
+      "approval_rejects": 0,
+      "build_enabled": false,
+      "missing_skills_detected": []
+    }
+  ]
 }

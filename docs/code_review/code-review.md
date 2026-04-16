@@ -534,3 +534,23 @@ No critical/high/medium issues found.
   ]
 }
 ```
+
+---
+
+## 2026-04-16 22:18 — `2026-04-14-build-diet` (31c70ea4)
+
+**Context**: edit: core/providers/cli.py
+
+**Changed (11)**: `.claude/settings.local.json, .system_generated/cache/document_index.json, Master_Blueprint.md, core/providers/session_adapter.py, data/skill-usage.jsonl, project_board_state.json, projects/smoke_test/dashboard.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+The diff doesn't contain changes to `core/providers/cli.py` — it only shows `.claude/settings.local.json` modifications. Reviewing what's provided:
+
+- **[Medium]** .claude/settings.local.json:60 — `Bash(rm -rf /tmp/af_test ...)` is allow-listed but `Bash(rm:*)` is also in the deny list (line 126). Deny takes precedence in Claude Code, so the explicit `/tmp` rm allowance is effectively dead — verify intent or remove the redundant allow entry.
+- **[Medium]** .claude/settings.local.json:104-105 — `Bash(kill 20171 20169)` is allow-listed with hardcoded PIDs. This is a one-off debugging artifact that should be removed; it grants no useful future permission.
+- **[Low]** .claude/settings.local.json:178-179 — Hook command changed from `$(git rev-parse ...)` dynamic resolution to hardcoded absolute path `/Users/hoon/workTree/agent-factory`. This breaks if the repo is cloned to a different location or worktree. The `timeout: 15` field was also dropped — hooks without timeout can hang indefinitely.
+- **[Low]** .claude/settings.local.json:87-107 — Large batch of one-off `curl`, `awk`, `du`, `md5` commands polluting the allowlist. Consider using wildcard patterns or cleaning up after exploratory sessions.
+- **[Info]** .claude/settings.local.json — `settings.local.json` is machine-specific and shouldn't be committed. Verify it's in `.gitignore`.
+
+No `core/providers/cli.py` changes were present in the diff to review.
