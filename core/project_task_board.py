@@ -30,14 +30,14 @@ def _module_sort_key(module_id: str) -> tuple[str, int]:
     return (module_id, 0)
 
 
-# max_cycles 배수의 근거(af-critic 2026-04-15 WARN-2):
-# - `next_board_tasks`의 `used_roles` 가드로 cycle-per-task ≈ 1
-# - dispatch → worker → completion 감지 지연 1 cycle
-# - scope → build → verify 의존성 체인에서 선행 태스크 완료 감지를 기다리는 여유 1 cycle
-# - stall/재시도 마진 1 cycle
-# 총합 ≈ 4. 과다 산정되어도 Run Budget(토큰 예산)이 상위 guard로 작동한다.
-MAX_CYCLES_TASK_MULTIPLIER = 4
-MAX_CYCLES_FLOOR = 30
+# max_cycles 배수의 근거:
+# - build 태스크 1개에 10~20 cycle 소모 (CLI 실행 3~6분 + stall 대기)
+# - scope/verify는 각 2~5 cycle
+# - 에이전트가 idle 대기 중에도 cycle 소비
+# - 실측: 18 태스크 프로젝트가 multiplier=4(72 cycle)에서 모듈 1만 완료하고 종료
+# 총합 ≈ 10. Run Budget(토큰 예산)이 상위 guard로 작동하므로 과다 산정 무해.
+MAX_CYCLES_TASK_MULTIPLIER = 10
+MAX_CYCLES_FLOOR = 50
 
 
 def compute_max_cycles(workspace: str, logger=None) -> int:
