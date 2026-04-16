@@ -93,16 +93,18 @@ def main() -> int:
         return 0
 
     cmd = [python, script] + extra_args
+    stdin_arg = sys.stdin if not sys.stdin.isatty() else subprocess.DEVNULL
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=workspace,
-            timeout=120,  # LLM 호출하는 스크립트(blueprint_updater 등)는 30초+ 소요
-            capture_output=False,  # stdout/stderr를 그대로 전달
-            stdin=sys.stdin if not sys.stdin.isatty() else subprocess.DEVNULL,
+            stdin=stdin_arg,
         )
-        return result.returncode
+        proc.wait(timeout=120)  # LLM 호출 스크립트는 30초+ 소요
+        return proc.returncode
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         print(f"[hook_runner] timeout: {script_name}", file=sys.stderr)
         return 0
     except Exception as exc:
