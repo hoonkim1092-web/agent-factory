@@ -160,6 +160,17 @@ class DynamicOrchestrator:
                 text = str(item.get("subtask") or "").strip()
                 if text:
                     keys.add(safe_id(text))
+        # board 파일의 completed 태스크도 반영 (state_board와 board 파일 동기화 보장)
+        if self._workspace:
+            try:
+                board = load_project_board(self._workspace)
+                for task in (board.get("tasks") or []):
+                    if isinstance(task, dict) and task.get("status") == "completed":
+                        tid = safe_id(task.get("task_id"))
+                        if tid:
+                            keys.add(tid)
+            except Exception:
+                pass
         return keys
 
     def _todo_matches_role(self, todo_text: str, role: str) -> bool:
