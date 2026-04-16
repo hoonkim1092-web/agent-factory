@@ -51,6 +51,9 @@ def test_inject_documentation_contract_is_idempotent(monkeypatch):
     assert "docs/change_history.md" in combined
     assert "ko-KR" in combined
     assert "한국어" in combined
+    assert "[Design Review Contract]" in combined
+    assert "docs/plans/" in combined
+    assert "review_request" in combined
     assert inject_documentation_contract(combined) == combined
 
 

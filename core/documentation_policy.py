@@ -142,8 +142,10 @@ def documentation_language_profile() -> dict[str, object]:
                 "설계 수준 변경이 없으면 해당 문서는 건드리지 않는다.\n\n"
                 "[Design Review Contract]\n"
                 "동작 변경 또는 아키텍처 변경이 포함된 작업에서는 구현을 시작하기 전에 "
-                "설계 의도, 영향 범위, 대안을 `docs/change_history.md`에 기록하고 검증을 요청해야 한다.\n"
-                "단순 버그 수정(기존 동작 복원)이나 설정 값 변경은 이 계약의 대상이 아니다."
+                "설계 의도, 영향 범위, 대안을 `docs/plans/YYYY-MM-DD-{변경명}.md` 파일로 작성해야 한다.\n"
+                "설계 문서 작성 후 `send_mailbox_message`로 `review_request` 타입 메시지를 보내 교차검증을 요청한다.\n"
+                "교차검증 완료 전까지 구현을 시작하지 않는다.\n"
+                "면제 조건: 테스트로 검증 가능한 회귀 수정, 또는 설정 값만 변경하는 경우."
             ),
         }
 
@@ -227,9 +229,10 @@ def documentation_language_profile() -> dict[str, object]:
             "If no design-level change happened, leave those files untouched.\n\n"
             "[Design Review Contract]\n"
             "For tasks involving behavioral or architectural changes, you MUST document design intent, "
-            "impact scope, and alternatives in `docs/change_history.md` before starting implementation, "
-            "and request review.\n"
-            "Simple bug fixes (restoring existing behavior) or configuration value changes are exempt from this contract."
+            "impact scope, and alternatives in a `docs/plans/YYYY-MM-DD-{change-name}.md` file before starting implementation.\n"
+            "After writing the design document, send a `review_request` message via `send_mailbox_message` to trigger cross-review.\n"
+            "Do not start implementation until the cross-review is complete.\n"
+            "Exempt: regression fixes verifiable by tests, or configuration-only value changes."
         ),
     }
 
