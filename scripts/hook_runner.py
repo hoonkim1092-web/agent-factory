@@ -199,12 +199,52 @@ def _post_edit_design_review(payload: dict) -> int:
     return 0
 
 
+def _post_edit_test(payload: dict) -> int:
+    """Run related pytest tests immediately after .py edit (fast feedback path).
+
+    Finds tests/test_<module>.py matching the edited file and runs them.
+    Falls back to tests/ --ignore=test_web_project_scope.py if no match found.
+    """
+    fp = _extract_file_path(payload)
+    if not fp or not fp.endswith(".py"):
+        return 0
+    root = _project_root()
+
+    # edited file → candidate test file name
+    basename = os.path.basename(fp)
+    module_name = basename[:-3]  # strip .py
+    test_candidate = os.path.join(root, "tests", f"test_{module_name}.py")
+
+    if os.path.isfile(test_candidate):
+        test_target = test_candidate
+    else:
+        # fallback: full suite (excluding known collection-error test)
+        test_target = os.path.join(root, "tests")
+
+    try:
+        r = subprocess.run(
+            [
+                sys.executable, "-m", "pytest", test_target,
+                "-q", "--tb=line", "--no-header",
+                f"--ignore={os.path.join(root, 'tests', 'test_web_project_scope.py')}",
+            ],
+            capture_output=True, text=True, timeout=60, cwd=root,
+        )
+        if r.returncode != 0:
+            print(f"[af-test] FAIL in {fp}\n{r.stdout[-2000:]}", file=sys.stderr)
+        _log_hook_event("post_edit_test", fp, r.returncode)
+    except Exception as exc:
+        _log_hook_event("post_edit_test", fp, 1, error=str(exc))
+    return 0
+
+
 _BUILTINS: dict[str, object] = {
     "post_edit_py_compile": _post_edit_py_compile,
     "post_edit_enqueue": _post_edit_enqueue,
     "post_edit_code_review": _post_edit_code_review,
     "post_edit_blueprint": _post_edit_blueprint,
     "post_edit_design_review": _post_edit_design_review,
+    "post_edit_test": _post_edit_test,
 }
 
 

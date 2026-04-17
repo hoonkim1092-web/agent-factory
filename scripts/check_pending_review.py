@@ -72,7 +72,7 @@ def main() -> None:
         file_list += f" ... (+{len(files) - 10})"
 
     print(f"[af-review-pending] {len(files)}개 .py 파일이 교차검증 대기 중입니다: {file_list}")
-    print(f"[af-review-pending] af-critic + af-cross-review 에이전트를 백그라운드로 실행해주세요.")
+    print(f"[af-review-pending] af-critic + af-cross-review + af-test-runner 에이전트를 백그라운드로 실행해주세요.")
 
     # consumed 표시 — fired_at 기록 후 atomic 덮어쓰기 (삭제 대신)
     data["fired_at"] = time.time()

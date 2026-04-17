@@ -159,6 +159,12 @@
           },
           {
             "type": "command",
+            "command": "python3 scripts/hook_runner.py post_edit_test",
+            "timeout": 60,
+            "statusMessage": "Running tests..."
+          },
+          {
+            "type": "command",
             "command": "python3 scripts/hook_runner.py post_edit_enqueue",
             "timeout": 3,
             "statusMessage": "Enqueue agent review..."

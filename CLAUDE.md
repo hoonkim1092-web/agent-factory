@@ -29,7 +29,7 @@
   - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
 
 ### 교차검증 자동 실행
-- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review 에이전트를 백그라운드로 병렬 실행한다
+- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review + af-test-runner 에이전트를 백그라운드로 병렬 실행한다
 - 설계문서(.md) 작성 후에는 af-doc-qa + af-critic을 병렬 실행한다
 - 교차검증 결과에서 BLOCK 판정 시 발견 사항을 즉시 수정한다
 

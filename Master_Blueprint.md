@@ -1088,6 +1088,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 post_edit_test 훅 추가 — settings.local.json에 테스트 실행 스텝 신규 삽입, hook_runner.py에 post_edit_test 핸들러 구현, test_hook_runner_builtins.py에 검증 케이스 추가, document_index.json 청크 갱신, code-review.md·Master_Blueprint.md·CLAUDE.md 문서 동기화 |
+| 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 편집 후 자동 테스트 훅 추가 — `post_edit_test` 커맨드 신규 등록, `hook_runner.py` 실행 분기 추가, `check_pending_review.py` 관련 로직 갱신, `document_index.json` 캐시 갱신, Blueprint·코드리뷰 문서 동기화 |
+| 2026-04-17 | v1.2.21 | feat(hook_runner): `.py` 편집 후 즉시 pytest 실행 — `_post_edit_test` 신규 추가, 편집 파일명 기반 `test_<module>.py` 자동 탐지, 매칭 실패 시 `tests/` 전체 fallback, `_BUILTINS` 등록 완료 |
 | 2026-04-17 | v1.2.21 | fix(scripts): hook_runner·enqueue_agent_review 리뷰 파이프라인 개선 — hook_runner.py 실행 흐름 수정, enqueue_agent_review.py 큐잉 로직 변경, document_index.json 청크 캐시 갱신, Master_Blueprint.md 반영, code-review.md 체크리스트 업데이트 |
 | 2026-04-17 | v1.2.21 | fix(review-pipeline): hook_runner·enqueue_agent_review 안정화 — hook_runner.py stdin JSON 파싱 방식 개선, enqueue_agent_review.py cross_validate 주입 로직 수정, code-review.md 리뷰 체크리스트 갱신, Blueprint §12 이력 업데이트, document_index 캐시 재색인 |
 | 2026-04-17 | v1.2.21 | fix(scripts): hook subprocess stdout 누수 차단 + enqueue updated_at 항상 갱신 — hook_runner.py 모든 subprocess.run에 capture_output=True 추가, _post_edit_py_compile 실패 시 r.returncode 정확히 로깅, enqueue_agent_review.py에서 중복 파일 여부 무관하게 updated_at 갱신, code-review.md에 2026-04-17 리뷰 세션 2건 추가 |

@@ -127,6 +127,7 @@ def test_builtins_keys_present():
         "post_edit_code_review",
         "post_edit_blueprint",
         "post_edit_design_review",
+        "post_edit_test",
     }
     assert expected == set(m._BUILTINS.keys())
 
