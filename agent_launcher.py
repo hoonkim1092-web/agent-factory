@@ -614,20 +614,51 @@ class AgentFactory:
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Agent Factory CLI")
+    subparsers = parser.add_subparsers(dest="subcommand")
+
+    sync_todo_parser = subparsers.add_parser("project", help="프로젝트 관리 명령")
+    sync_todo_sub = sync_todo_parser.add_subparsers(dest="project_cmd")
+    sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
+    sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
+    sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+
     parser.add_argument("task", nargs="*", help="Task description")
     parser.add_argument("--mode", choices=["approval", "fsa"], default="approval", help="Execution mode")
     parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
     parser.add_argument("--role", default="General", help="Agent role")
     parser.add_argument("--build", action="store_true", help="Enable skill building")
-    
+
     args = parser.parse_args()
-    
+
+    if args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
+        from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
+        from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map
+        import os
+        project_dir = os.path.abspath(args.project_dir)
+        if args.dry_run:
+            board = load_project_board(project_dir)
+            if not board or not board.get("tasks"):
+                print("[sync] board가 비어있거나 없음 — 변경 없음")
+            else:
+                status_map = _instruction_status_map(board)
+                items = normalize_project_todo_items(board_todo_items(board))
+                print(f"[sync] dry-run: {len(items)} items")
+                for item in items:
+                    mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
+                    print(f"  - [{mark}] {item}")
+        else:
+            ok, msg = sync_todo_from_board(project_dir)
+            prefix = "[sync]" if ok else "[sync] ERROR:"
+            print(f"{prefix} {msg}")
+        import sys
+        sys.exit(0)
+
     task_input = " ".join(args.task).strip()
     execution_mode = "fsa" if (args.fsa or args.mode == "fsa") else "approval"
-    
+
     if not task_input:
         task_input = prompt_mission_template("Agent Factory")
-        
+
     AgentFactory().run(
         task_input=task_input,
         role_spec=args.role,

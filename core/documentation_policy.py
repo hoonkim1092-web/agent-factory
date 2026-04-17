@@ -282,10 +282,45 @@ def normalize_project_todo_items(todo_items: list[str] | None) -> list[str]:
     return list(dict.fromkeys(normalized + documentation_todo_items()))
 
 
-def write_project_todo(workspace: str, todo_items: list[str] | None) -> str:
+def _normalize_instruction(text: str) -> str:
+    return " ".join(str(text or "").split())
+
+
+def _mark_for_status(status: str | None) -> str:
+    if status == "completed":
+        return "x"
+    if status == "in_progress":
+        return "/"
+    if status in ("blocked", "failed"):
+        return "!"
+    return " "
+
+
+def _instruction_status_map(board: dict) -> dict[str, str]:
+    # 동일 instruction을 가진 task가 여럿이면 가장 덜 완료된 상태를 채택 (false-positive 방지).
+    precedence: dict[str, int] = {"completed": 3, "in_progress": 2, "blocked": 1, "failed": 1, "pending": 0}
+    result: dict[str, str] = {}
+    for task in (board.get("tasks") or []):
+        if not isinstance(task, dict):
+            continue
+        instruction = _normalize_instruction(task.get("instruction") or "")
+        if not instruction:
+            continue
+        status = str(task.get("status") or "pending")
+        if instruction in result:
+            if precedence.get(status, 0) < precedence.get(result[instruction], 0):
+                result[instruction] = status
+        else:
+            result[instruction] = status
+    return result
+
+
+def write_project_todo(workspace: str, todo_items: list[str] | None, board: dict | None = None) -> str:
     lines = [f"# {project_todo_title()}", ""]
+    status_map = _instruction_status_map(board) if board else {}
     for item in normalize_project_todo_items(todo_items):
-        lines.append(f"- [ ] {item}")
+        mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
+        lines.append(f"- [{mark}] {item}")
     todo_path = os.path.join(os.path.abspath(workspace), ".todo.md")
     write_text(todo_path, "\n".join(lines).strip() + "\n")
     return todo_path

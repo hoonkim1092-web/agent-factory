@@ -672,7 +672,28 @@ def update_project_board_task(workspace: str, role: str, instruction: str, statu
         if not updated:
             return False
         write_project_board(workspace, board)
+        if os.getenv("AF_TODO_SYNC", "1") != "0":
+            try:
+                from core.documentation_policy import write_project_todo
+                write_project_todo(workspace, board_todo_items(board), board=board)
+            except Exception as exc:
+                print(f"[System] .todo.md 동기화 실패: {exc}")
     return True
+
+
+def sync_todo_from_board(workspace: str) -> tuple[bool, str]:
+    """board 상태로 .todo.md를 재생성한다. CLI sync-todo 서브커맨드에서 호출."""
+    board = load_project_board(workspace)
+    if not board or not board.get("tasks"):
+        return False, "board가 비어있거나 없음"
+    from core.documentation_policy import write_project_todo
+    items = board_todo_items(board)
+    write_project_todo(workspace, items, board=board)
+    summary = board.get("summary") or {}
+    total = int(summary.get("total_tasks") or 0)
+    completed = int(summary.get("completed_tasks") or 0)
+    in_progress = int(summary.get("in_progress_tasks") or 0)
+    return True, f"{completed} [x], {in_progress} [/], {total - completed - in_progress} [ ] / total {total}"
 
 
 def append_project_board_note(workspace: str, note: str, task_id: str = "", role: str = "", instruction: str = "") -> bool:

@@ -448,7 +448,7 @@ class ProjectPipeline:
             todo_items = [str(x).strip() for x in (role_plan.get("todo_items") or []) if str(x).strip()]
         if not todo_items:
             todo_items = [f"{item.get('name')}: {item.get('objective')}" for item in (role_plan.get("roles") or [])]
-        return write_project_todo(workspace, todo_items)
+        return write_project_todo(workspace, todo_items, board=task_board or None)
 
     def _materialize_roles(
         self,

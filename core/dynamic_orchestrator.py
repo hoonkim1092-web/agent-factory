@@ -132,7 +132,7 @@ class DynamicOrchestrator:
                     items.append(line[6:].strip())
                 elif line.startswith("- [/] "):
                     pass
-                elif line.startswith("- ") and not line.startswith("- [x] ") and not line.startswith("- [/] "):
+                elif line.startswith("- ") and not line.startswith("- [x] ") and not line.startswith("- [/] ") and not line.startswith("- [!] "):
                     items.append(line[2:].strip())
         return [item for item in items if item]
 

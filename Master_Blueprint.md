@@ -59,7 +59,7 @@
 | `core/destructive_guard.py` | 위험 명령 차단 | `inject_destructive_guard_contract()` |
 | `core/document_chunker.py` | 문서 청킹 (RAG) | `DocumentChunker`, `DocumentChunk` |
 | `core/document_index.py` | Dense+Sparse 하이브리드 검색 | `DocumentIndex` |
-| `core/documentation_policy.py` | 주석/문서화 정책 주입 | `inject_documentation_contract()` |
+| `core/documentation_policy.py` | 주석/문서화 정책 주입 + `.todo.md` board 동기화 | `inject_documentation_contract()`, `write_project_todo()`, `_instruction_status_map()` |
 | `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
@@ -83,7 +83,7 @@
 | `core/policy_runtime.py` | 정책 런타임 래퍼 | `PolicyRuntime` |
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
 | `core/project_pipeline.py:1-778` | Phase1(문서)+Phase2(실행) 파이프라인 | `ProjectPipeline` |
-| `core/project_task_board.py` | 태스크 보드 상태 관리 | `update_project_board_task()` |
+| `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
 | `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지 | `prepare_cli_session()`, `handle_hook_event()` |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()` |
@@ -1020,6 +1020,8 @@ skills/{skill_id}/
 | `core/ise_strategy_ledger.py` | `fsa_loop.py`, `ise_loop.py` | 전략 원장 |
 | `core/project_pipeline.py` | `run_factory_cli.py`, `interactive_chat.py` | Phase 1/2 전체 |
 | `core/message_broker.py` | `dynamic_orchestrator.py` | 에이전트 간 통신 |
+| `core/project_task_board.py:update_project_board_task` | `core/documentation_policy.py:write_project_todo` (lock 내부 훅), `.todo.md` 파일 | board 상태 전이 시 `.todo.md` 동기화. `AF_TODO_SYNC=0`으로 비활성화 가능 |
+| `core/documentation_policy.py:write_project_todo` | `.todo.md` 파일 | `_instruction_status_map` 기반 board→todo 단방향 재생성 (safe_id 아닌 전체 문자열 정규화 매칭) |
 | `core/project_mailbox.py` | `agent_runner.py`, `agent_specializer.py` | 에이전트 컨텍스트 |
 | `core/setup_wizard.py` | `run_factory_cli.py` (STAGE 2 gate), 외부 리서치 능력 | 모든 일반 af 실행 — `af setup`, `__nlm`/`__check-nlm` 진입점, `.af_setup_state.json` 스키마 소스 |
 | `core/research_engine.py` | `core/researcher.py`, `skills/research_assistant/skill.py`, `skills/hound_librarian/skill.py` | `_get_archive_notebook_id()` → `setup_wizard._load_setup_state` 의존. state 미설정 시 NotebookLM 쿼리 graceful skip |
@@ -1085,6 +1087,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-17 | (unreleased) | feat(todo-sync): **board → `.todo.md` 단방향 동기화** — `core/documentation_policy.py`에 `_normalize_instruction`, `_mark_for_status`, `_instruction_status_map` 헬퍼 신설 + `write_project_todo` 시그니처에 `board` 인자 추가. board의 task.instruction을 공백 정규화 완전 일치로 매칭(safe_id 60자 절단 허위 매칭 회피). `completed`→`[x]`, `in_progress`→`[/]`, `blocked/failed`→`[!]`, `pending`→`[ ]`. 동일 instruction이 여럿이면 가장 덜 완료된 상태 채택(보수적). `core/project_task_board.py:update_project_board_task`의 `locked_file` 컨텍스트 **내부**에 `write_project_todo` 훅 추가(lock 바깥 race 방지). `sync_todo_from_board()` 모듈 함수 신설. `core/dynamic_orchestrator.py:_open_todo_items`에서 `[!]` prefix를 open items에서 제외. `agent_launcher.py`에 `project sync-todo <dir> [--dry-run]` CLI 서브커맨드 추가. 환경 변수 `AF_TODO_SYNC=0`으로 훅 비활성화 가능(kill-switch). 테스트 11종 신규(`tests/test_documentation_policy.py`). `projects/lotto_predictor_v2/.todo.md` 복구 실행(23 `[x]`, 3 `[/]`, 10 `[ ]`). 설계 문서 `docs/2026-04-17-todo-md-board-sync.md` v3 작성(af-critic PASS) |
 | 2026-04-16 | (unreleased) | fix(review-pipeline): `pick_review_provider()` 연결 — `inject_review_tasks()`가 cross_validate 태스크 생성 시 `pick_review_provider(author_provider)`로 작성자와 다른 CLI provider를 `review_provider` 필드에 기록. 테스트 2건 hook 경로 assert를 `cli_hook_bridge.py` → `hook_runner.py` + `cli_hook_bridge`로 수정(session_adapter hook 경유 전환 반영). `project_board_state.json` 루트 정적 파일 삭제(workspace별 동적 보드로 전환 완료) |
 | 2026-04-16 | v1.2.21 | chore(settings): 빌드 다이어트 및 훅 안정화 — settings.local.json 허용/차단 규칙 50건 추가, SessionStart 훅 경로를 절대경로로 변경, UserPromptSubmit 훅 command 동일 패치, rm 와일드카드 deny 추가, skill-eval/registry/dashboard 메타데이터 갱신 |
 | 2026-04-16 | (unreleased) | fix(session-hooks): Claude/Gemini native hook를 절대경로 `sys.executable` 직접 호출에서 `hook_runner.py` 경유 실행으로 전환. `core/providers/session_adapter.py`에 legacy bridge hook 판별 로직을 추가해 unnamed 구형 hook, `python3.14` 절대경로 hook, 빈 hook group을 재생성 시 자동 제거하도록 정리. `tests/test_cli_session_adapter.py`에는 hook 명령이 `hook_runner.py`를 사용하고, 중복된 Claude `SessionStart` hook가 단일 named hook로 정규화되는 회귀 테스트를 추가. 목적은 macOS Homebrew Python 3.14에 `PyYAML`이 없는 환경에서도 Claude startup hook가 import 단계에서 죽지 않게 하는 것 |
