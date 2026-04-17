@@ -88,6 +88,44 @@ def test_first_fire_writes_fired_at(tmp_path, monkeypatch, capsys):
     assert data["fired_at"] > 0
 
 
+def test_first_fire_debounced_by_recent_reedit(tmp_path, monkeypatch, capsys):
+    """회귀: created_at 오래됐어도 updated_at이 최근이면 첫 발화 억제 (debounce 의도 부합).
+
+    이전 버그: elapsed = now - created_at → created_at 기준이라 오래된 마커 +
+    최근 재편집 시 즉시 발화. 수정 후: elapsed = now - updated_at.
+    """
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 90)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    now = time.time()
+    _write_marker(tmp_path, {
+        "files": ["core/x.py"],
+        "created_at": now - 500,   # 오래됨 (이전 버그 재현 조건)
+        "updated_at": now - 5,     # 방금 재편집
+    })
+    m.main()
+    assert "[af-review-pending]" not in capsys.readouterr().out
+
+
+def test_first_fire_uses_updated_at_not_created_at(tmp_path, monkeypatch, capsys):
+    """updated_at 기준으로 발화 조건이 계산되는지 확인 (created_at 기준 버그 회귀 방지)."""
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 30)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    now = time.time()
+    # updated_at이 충분히 오래됐으면 created_at이 더 최근이어도 발화해야 함
+    # (현실에선 발생 안 하지만, 기준 필드 검증용)
+    _write_marker(tmp_path, {
+        "files": ["core/x.py"],
+        "created_at": now - 10,
+        "updated_at": now - 100,  # 이건 실제론 불가능하지만 기준 필드 확인 목적
+    })
+    m.main()
+    assert "[af-review-pending]" in capsys.readouterr().out
+
+
 def test_refires_when_updated_at_newer_than_fired_at(tmp_path, monkeypatch, capsys):
     t_fired = time.time() - 100
     t_updated = time.time() - 50  # newer than fired

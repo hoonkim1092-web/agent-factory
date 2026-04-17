@@ -18,8 +18,9 @@ import sys
 import time
 
 MARKER_PATH = os.path.join(".af_review_queue", "pending_agent_review.json")
-# 첫 발화 전 최소 대기 시간 (초) — 편집이 계속 누적되는 동안 트리거 방지
-MIN_BATCH_INTERVAL_SEC = 300
+# 마지막 편집 이후 조용해야 하는 시간 (초) — 연속 편집 중 조기 발화 방지
+# updated_at 기준으로 계산 → 재편집 시 타이머 리셋
+MIN_BATCH_INTERVAL_SEC = 90
 
 
 def _detect_workspace() -> str:
@@ -61,8 +62,8 @@ def main() -> None:
         if updated_at <= fired_at:
             return
     else:
-        # 첫 발화 — 편집이 누적될 시간을 줌
-        elapsed = time.time() - data.get("created_at", 0)
+        # 첫 발화 — 마지막 편집 이후 조용해야 발화 (연속 편집 중 발화 억제)
+        elapsed = time.time() - updated_at
         if elapsed < MIN_BATCH_INTERVAL_SEC:
             return
 
