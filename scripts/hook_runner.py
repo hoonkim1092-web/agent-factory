@@ -122,7 +122,7 @@ def _post_edit_py_compile(payload: dict) -> int:
         )
         if r.returncode != 0:
             print(f"[af-hook] syntax error in {fp}\n{r.stderr}", file=sys.stderr)
-        _log_hook_event("post_edit_py_compile", fp, 0)
+        _log_hook_event("post_edit_py_compile", fp, r.returncode)
     except Exception as exc:
         _log_hook_event("post_edit_py_compile", fp, 1, error=str(exc))
     return 0
@@ -139,7 +139,7 @@ def _post_edit_enqueue(payload: dict) -> int:
     root = _project_root()
     script = os.path.join(root, "scripts", "enqueue_agent_review.py")
     try:
-        subprocess.run([sys.executable, script, fp], timeout=3, cwd=root)
+        subprocess.run([sys.executable, script, fp], timeout=3, cwd=root, capture_output=True)
         _log_hook_event("post_edit_enqueue", fp, 0)
     except Exception as exc:
         _log_hook_event("post_edit_enqueue", fp, 1, error=str(exc))
@@ -157,7 +157,7 @@ def _post_edit_code_review(payload: dict) -> int:
     try:
         subprocess.run(
             [sys.executable, script, "--context", f"edit: {fp}"],
-            timeout=120, cwd=root,
+            timeout=120, cwd=root, capture_output=True,
         )
         _log_hook_event("post_edit_code_review", fp, 0)
     except Exception as exc:
@@ -176,7 +176,7 @@ def _post_edit_blueprint(payload: dict) -> int:
     try:
         subprocess.run(
             [sys.executable, script, "--context", f"edit: {fp}"],
-            timeout=120, cwd=root,
+            timeout=120, cwd=root, capture_output=True,
         )
         _log_hook_event("post_edit_blueprint", fp, 0)
     except Exception as exc:
@@ -192,7 +192,7 @@ def _post_edit_design_review(payload: dict) -> int:
     if not os.path.isfile(script):
         return 0
     try:
-        subprocess.run([sys.executable, script, fp], timeout=5, cwd=root)
+        subprocess.run([sys.executable, script, fp], timeout=5, cwd=root, capture_output=True)
         _log_hook_event("post_edit_design_review", fp, 0)
     except Exception as exc:
         _log_hook_event("post_edit_design_review", fp, 1, error=str(exc))

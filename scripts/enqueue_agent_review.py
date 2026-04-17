@@ -80,11 +80,10 @@ def main() -> None:
         except Exception:
             data = {"files": [], "created_at": time.time()}
 
-    # 파일 추가 (중복 방지)
+    # 파일 추가 + updated_at 갱신 (재편집 감지를 위해 기존 파일도 포함)
     if rel not in data.get("files", []):
         data.setdefault("files", []).append(rel)
-        # created_at은 첫 파일 추가 시점 유지, 새 파일 추가 시 갱신
-        data["updated_at"] = time.time()
+    data["updated_at"] = time.time()  # 항상 갱신 — fired_at 이후 재발화 조건에 사용
 
     # 저장 (atomic write — tempfile + os.replace)
     try:
