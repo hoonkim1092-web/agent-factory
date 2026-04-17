@@ -135,37 +135,37 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_py_compile",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_py_compile",
             "timeout": 10,
             "statusMessage": "Python syntax check..."
           },
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_code_review",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_code_review",
             "timeout": 120,
             "statusMessage": "Code review update..."
           },
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_blueprint",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_blueprint",
             "timeout": 120,
             "statusMessage": "Blueprint update..."
           },
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_design_review",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_design_review",
             "timeout": 5,
             "statusMessage": "Design review check..."
           },
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_test",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_test",
             "timeout": 60,
             "statusMessage": "Running tests..."
           },
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_edit_enqueue",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_enqueue",
             "timeout": 3,
             "statusMessage": "Enqueue agent review..."
           },
