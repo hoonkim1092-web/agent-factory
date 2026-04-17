@@ -18,8 +18,8 @@ import sys
 import time
 
 MARKER_PATH = os.path.join(".af_review_queue", "pending_agent_review.json")
-# 마커 파일 생성 후 최소 대기 시간 (초) — 매 편집마다 트리거 방지
-MIN_BATCH_INTERVAL_SEC = 60
+# 첫 발화 전 최소 대기 시간 (초) — 편집이 계속 누적되는 동안 트리거 방지
+MIN_BATCH_INTERVAL_SEC = 300
 
 
 def _detect_workspace() -> str:
@@ -50,15 +50,21 @@ def main() -> None:
         return
 
     files = data.get("files", [])
-    created_at = data.get("created_at", 0)
-
     if not files:
         return
 
-    # 최소 배치 간격 확인 — 편집이 계속 진행 중이면 아직 트리거하지 않음
-    elapsed = time.time() - created_at
-    if elapsed < MIN_BATCH_INTERVAL_SEC:
-        return
+    updated_at = data.get("updated_at", data.get("created_at", 0))
+    fired_at = data.get("fired_at", 0)
+
+    if fired_at:
+        # 이미 발화됨 — 마지막 발화 이후 새 편집이 있을 때만 재발화
+        if updated_at <= fired_at:
+            return
+    else:
+        # 첫 발화 — 편집이 누적될 시간을 줌
+        elapsed = time.time() - data.get("created_at", 0)
+        if elapsed < MIN_BATCH_INTERVAL_SEC:
+            return
 
     # 파일 목록 출력 — Claude Code가 이 메시지를 보고 에이전트를 실행한다
     file_list = ", ".join(files[:10])
@@ -68,10 +74,22 @@ def main() -> None:
     print(f"[af-review-pending] {len(files)}개 .py 파일이 교차검증 대기 중입니다: {file_list}")
     print(f"[af-review-pending] af-critic + af-cross-review 에이전트를 백그라운드로 실행해주세요.")
 
-    # 마커 삭제 (한 번만 트리거)
+    # consumed 표시 — fired_at 기록 후 atomic 덮어쓰기 (삭제 대신)
+    data["fired_at"] = time.time()
     try:
-        os.remove(marker)
-    except OSError:
+        import tempfile
+        marker_dir = os.path.dirname(marker)
+        fd, tmp_path = tempfile.mkstemp(prefix=".fired_", dir=marker_dir, text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, marker)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+    except Exception:
         pass
 
 

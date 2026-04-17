@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import time
 
 MARKER_DIR = ".af_review_queue"
@@ -85,11 +86,20 @@ def main() -> None:
         # created_at은 첫 파일 추가 시점 유지, 새 파일 추가 시 갱신
         data["updated_at"] = time.time()
 
-    # 저장
+    # 저장 (atomic write — tempfile + os.replace)
     try:
         os.makedirs(marker_dir, exist_ok=True)
-        with open(marker, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        fd, tmp_path = tempfile.mkstemp(prefix=".pending_", dir=marker_dir, text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, marker)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise
     except Exception:
         pass
 
