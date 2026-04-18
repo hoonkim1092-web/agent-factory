@@ -47,8 +47,8 @@ def _fetch_draw(session, draw_no: int) -> dict | None:
 def _detect_latest(session) -> int | None:
     """이진 탐색으로 최신 회차를 탐지한다."""
     lo, hi = 1100, 1200
-    # hi 상향: 최신 회차를 찾을 때까지
-    while _fetch_draw(session, hi) is not None:
+    # hi 상향: 최신 회차를 찾을 때까지 (상한 9999로 무한 루프 방지)
+    while hi < 9999 and _fetch_draw(session, hi) is not None:
         hi += 50
     while lo < hi:
         mid = (lo + hi + 1) // 2

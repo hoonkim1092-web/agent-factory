@@ -102,7 +102,7 @@ class RecommendationService:
 
         try:
             import json
-            from lotto_predictor.backend.http_client import ThreeTierLotteryClient
+            from lotto_predictor.backend import ThreeTierLotteryClient
             client = ThreeTierLotteryClient()
             seed_draws = client.load_seed_draws()
             if not seed_draws:

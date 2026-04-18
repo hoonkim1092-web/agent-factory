@@ -26,8 +26,10 @@ except ImportError as exc:  # pragma: no cover - 런타임 설치 누락 시 가
 
 from .models import DrawNotFoundError, FetchResult, LottoDraw, TransientFetchError
 
-# 프로젝트 루트 기준 seed 파일 경로
-_SEED_FILE = pathlib.Path(__file__).parent.parent.parent.parent.parent / "seed_draws.json"
+# lotto_predictor_v2 프로젝트 루트 기준 seed 파일 경로
+# __file__: .../lotto_predictor_v2/src/lotto_predictor/backend/http_client.py
+#  .parent x4 → lotto_predictor_v2/
+_SEED_FILE = pathlib.Path(__file__).parent.parent.parent.parent / "seed_draws.json"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -247,13 +249,14 @@ class ThreeTierLotteryClient:
                 return None
             self._cache_db_path = default_path
         try:
+            import contextlib
             import sqlite3
-            conn = sqlite3.connect(str(self._cache_db_path))
-            row = conn.execute(
-                "SELECT drw_no, drw_date, num1, num2, num3, num4, num5, num6, bonus FROM draws WHERE drw_no = ?",
-                (draw_no,),
-            ).fetchone()
-            conn.close()
+            with contextlib.closing(sqlite3.connect(str(self._cache_db_path))) as conn:
+                row = conn.execute(
+                    "SELECT drw_no, drw_date, n1, n2, n3, n4, n5, n6, bonus_no"
+                    " FROM lotto_draw WHERE drw_no = ?",
+                    (draw_no,),
+                ).fetchone()
             if row is None:
                 return None
             payload = {

@@ -58,7 +58,7 @@ class DrawCacheService:
             return None
         latest = result.draws[-1]
         numbers = list(getattr(latest, "numbers", ()) or ())
-        bonus = getattr(latest, "bnus_no", None)
+        bonus = getattr(latest, "bonus_no", None)
         return {
             "round": result.latest_draw_no,
             "numbers": numbers,
