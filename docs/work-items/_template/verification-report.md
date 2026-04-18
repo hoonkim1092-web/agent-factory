@@ -9,6 +9,12 @@
 
 ## 구현 범위 요약
 
+## E2E Test Result
+
+- e2e_command:
+- exit_code:
+- stdout_summary:
+
 ## 자동 테스트 결과
 
 - 실행 명령:
@@ -21,3 +27,7 @@
 ## 남은 리스크
 
 ## 후속 작업
+
+## Verdict
+
+- verdict: PASS

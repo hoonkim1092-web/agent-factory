@@ -387,7 +387,8 @@ def main() -> None:
         sys.exit(0)
 
     # debounce (PostToolUse에서 빈번 호출 방지)
-    if not args.no_llm and not _should_run_debounce(workspace):
+    # no_llm 여부와 무관하게 적용 — 우회 시 편집마다 §12에 항목이 누적됨
+    if not _should_run_debounce(workspace):
         sys.exit(0)
 
     try:

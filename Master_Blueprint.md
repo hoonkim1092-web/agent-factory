@@ -1101,6 +1101,27 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/migrate_workitem_e2e.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/approval_gate.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/migrate_workitem_e2e.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, document_policy.py (+12) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/document_policy.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, document_policy.py (+12) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/approval_gate.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, skill-usage.jsonl (+10) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/hook_runner.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/hook_runner.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/hook_runner.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/blueprint_updater.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/code_review_updater.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+8) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/hook_runner.py — settings.local.json, document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md (+7) |
+| 2026-04-18 | v1.2.21 | chore(settings/hooks): 훅 설정 정리 및 권한 확장 — hook name 필드 5개 제거, curl·awk·venv python 허용 권한 추가, hook_runner.py 수정, 로또 프로젝트(app.py·cli.py) 업데이트, skills registry·eval 리포트 갱신 |
+| 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): 추천 서비스 및 로또 예측기 개선 — recommendation.py 로직 수정, draw_cache.py 캐시 서비스 변경, http_client.py 백엔드 연동 업데이트, CLI 오프라인 모드 지원, settings에 curl·venv python 허용 커맨드 추가 |
+| 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): draw_cache 및 로또 예측 서버 개선 — draw_cache.py 캐시 로직 수정, app.py API 엔드포인트 업데이트, http_client.py 백엔드 통신 개선, cli.py 명령 흐름 조정, settings.local.json curl·venv 권한 추가 |
+| 2026-04-18 | v1.2.21 | feat(lotto): 로또 모바일웹 오프라인 지원 및 시드 갱신 스크립트 개선 — lotto_mobile_web 서버 API 추가, lotto_predictor_v2 CLI·http_client 수정, refresh_lotto_seed.py 업데이트, settings.local.json curl·venv 권한 추가, skills registry 갱신 |
 | 2026-04-18 | v1.2.21 | chore(multi): 개발 환경 권한 확장 및 lotto 프로젝트 개선 — settings.local.json에 curl·ipconfig·venv python 허용 권한 추가, lotto_mobile_web 추천 서비스(recommendation.py) 수정, lotto_mobile_web app.py 엔드포인트 조정, lotto_predictor_v2 CLI 수정, document_index 캐시 갱신 |
 | 2026-04-18 | v1.2.21 | feat(lotto): refresh_lotto_seed.py 신규 추가 및 추천 서비스 개선 — scripts/refresh_lotto_seed.py 신규, recommendation.py 로직 수정, app.py API 엔드포인트 업데이트, cli.py 변경, settings.local.json curl·venv 권한 추가 |
 | 2026-04-18 | v1.2.21 | feat(recommendation): 로또 추천 서비스 개선 및 개발 환경 권한 확장 — recommendation.py 오프라인 모드 로직 수정, app.py API 엔드포인트 조정, .venv/curl/ipconfig bash 권한 추가, document_index 캐시 갱신, cli.py 출력 포맷 개선 |

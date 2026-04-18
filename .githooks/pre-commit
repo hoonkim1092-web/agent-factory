@@ -48,4 +48,28 @@ if [ "${AF_PRE_COMMIT_REVIEW:-1}" != "0" ]; then
     fi
 fi
 
+# ── 신규: verify-handoff 검증 ──
+# verification-report.md staged 시 e2e_command + verdict BLOCK 검사
+if [ "${AF_PRE_COMMIT_VERIFY:-1}" != "0" ]; then
+    HAS_VERIFY=$(echo "$STAGED" | grep -c "verification-report\.md$" || true)
+    if [ "$HAS_VERIFY" -gt 0 ]; then
+        REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+        VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+        if [ -x "$VENV_PYTHON" ]; then
+            VERIFY_PY="$VENV_PYTHON"
+        else
+            VERIFY_PY="python3"
+        fi
+
+        "$VERIFY_PY" "${REPO_ROOT}/scripts/verify_handoff_checker.py" 2>&1
+        VERIFY_EXIT=$?
+        if [ $VERIFY_EXIT -ne 0 ]; then
+            echo ""
+            echo "   건너뛰려면: AF_PRE_COMMIT_VERIFY=0 git commit"
+            echo ""
+            exit 1
+        fi
+    fi
+fi
+
 exit 0

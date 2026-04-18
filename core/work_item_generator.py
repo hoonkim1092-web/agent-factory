@@ -118,6 +118,7 @@ def _make_checklist(tasks: list[dict[str, Any]]) -> str:
         acceptance = _clean_list(task.get("acceptance"))
         artifacts = _clean_list(task.get("artifacts"))
         depends = _clean_list(task.get("depends_on"))
+        e2e_command = _clean(task.get("e2e_command") or "")
 
         lines.append(f"- [ ] {title}")
         if task_id:
@@ -131,6 +132,7 @@ def _make_checklist(tasks: list[dict[str, Any]]) -> str:
             lines.append(f"  - acceptance: {'; '.join(acceptance)}")
         if artifacts:
             lines.append(f"  - artifacts: {', '.join(artifacts)}")
+        lines.append(f"  - e2e_command: {e2e_command or '(needs_backfill)'}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
@@ -528,6 +530,19 @@ def generate_work_items(
     tasks_path = os.path.join(work_dir, "implementation-tasks.md")
     write_text(tasks_path, tasks_content)
     files["implementation-tasks.md"] = tasks_path
+
+    # e2e_command 누락 태스크 경고
+    tasks_list = [t for t in (task_board.get("tasks") or []) if isinstance(t, dict)]
+    missing_e2e = [
+        _clean(t.get("task_id") or t.get("id") or "?")
+        for t in tasks_list
+        if not _clean(t.get("e2e_command") or "")
+    ]
+    if missing_e2e:
+        _LOGGER.warning(
+            "e2e_command 누락 task %d건 (needs_backfill 태그 부여): %s",
+            len(missing_e2e), missing_e2e,
+        )
 
     gate = ApprovalGate(doc_root, slug)
     gate.initialize(work_item_id)

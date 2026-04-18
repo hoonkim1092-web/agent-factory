@@ -195,7 +195,8 @@ def _last_logged_commit(doc_path: str) -> str:
 def update_code_review_doc(workspace: str, context: str, no_llm: bool) -> bool:
     """Update docs/code-review.md. Returns True if any entry was written."""
     # debounce: quiet period 내 중복 호출 방지 (PostToolUse hook 빈번 호출 대응)
-    if not no_llm and not _should_run_debounce(workspace):
+    # no_llm 여부와 무관하게 debounce를 적용한다 — 우회 시 편집마다 항목이 누적됨
+    if not _should_run_debounce(workspace):
         return False
 
     changed = _changed_files(workspace)

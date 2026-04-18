@@ -17,6 +17,14 @@ INPUT_CONTRACT: dict[str, list[str]] = {
 }
 
 
+COMPLETION_CRITERIA: dict[str, object] = {
+    "artifact_files_exist": True,
+    "forbidden_tokens_absent": FORBIDDEN_TOKENS,
+    "e2e_command_exit_code": 0,
+    "verification_report_verdict_not": "BLOCK",
+}
+
+
 def scan_forbidden_tokens(text: str, exempt: bool = False) -> list[str]:
     """텍스트에서 금지 토큰 목록을 반환한다.
 

@@ -161,6 +161,31 @@ class ApprovalGate:
             result[key] = _sha256_file(path) if os.path.exists(path) else ""
         return result
 
+    def apply_verification_verdict(self, verdict: str) -> None:
+        """verification-report.md verdict를 게이트에 반영한다.
+
+        verdict == "BLOCK" → execution_open=false, status="verification_blocked".
+        다른 verdict(PASS, WARN 등)는 무시한다.
+        """
+        if not os.path.exists(self.gate_path):
+            return
+        if (verdict or "").strip().upper() != "BLOCK":
+            return
+        current = self._parse()
+        note = _clean(current.get("review_notes"))
+        note = f"{note}\n[자동 차단] {now_iso()}: verification verdict=BLOCK".strip()
+        gate_statuses = {key: "review_pending" for key in _DOC_FILES}
+        content = self._render(
+            work_item=_clean(current.get("work_item") or self.slug),
+            approver="",
+            status="verification_blocked",
+            snapshots={},
+            gate_statuses=gate_statuses,
+            execution_open=False,
+            review_notes=note,
+        )
+        write_text(self.gate_path, content)
+
     def get_status(self) -> dict[str, Any]:
         """현재 gate 상태를 딕셔너리로 반환."""
         if not os.path.exists(self.gate_path):
@@ -250,7 +275,7 @@ class ApprovalGate:
         )
         gate_lines = "\n".join(
             f"- {key}_status: {gate_statuses.get(key, 'review_pending')}"
-            for key in ("feature_plan", "feature_spec", "implementation_design", "implementation_tasks")
+            for key in _DOC_FILES
         )
         return (
             "# Approval Gate\n"
