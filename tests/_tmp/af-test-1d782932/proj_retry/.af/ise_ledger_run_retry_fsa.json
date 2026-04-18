@@ -1,22 +1,48 @@
 {
   "run_id": "run_retry_fsa",
   "original_task": "Dev: implement feature slice",
-  "total_attempts": 1,
+  "total_attempts": 2,
   "level_counts": {
     "1": 1,
-    "2": 0,
+    "2": 1,
     "3": 0,
     "4": 0,
     "5": 0
   },
   "human_hints": [],
-  "elapsed_sec": 0.4,
+  "elapsed_sec": 1.3,
   "entries": [
     {
       "meta_cycle": 1,
       "timestamp": "2026-04-18T22:35:51",
       "escalation_level": 1,
       "task_input_hash": "44ae348010159a28",
+      "strategy_description": "",
+      "strategy_hash": "e3b0c44298fc1c14",
+      "error_category": "unknown",
+      "error_signature": "missing import",
+      "result_ok": false,
+      "result_reason": "missing import",
+      "analysis": {
+        "error_category": "unknown",
+        "error_signature": "missing import",
+        "root_cause": "",
+        "suggested_strategy": "",
+        "failed_skills": [],
+        "confidence": 0.5,
+        "is_fundamental": false,
+        "evaluator_action": "retry",
+        "evaluator_reasoning": "",
+        "new_instruction": ""
+      },
+      "evolved_skills": [],
+      "duration_ms": 0
+    },
+    {
+      "meta_cycle": 2,
+      "timestamp": "2026-04-18T22:35:52",
+      "escalation_level": 2,
+      "task_input_hash": "e94364abd9084e87",
       "strategy_description": "",
       "strategy_hash": "e3b0c44298fc1c14",
       "error_category": "unknown",
