@@ -64,6 +64,7 @@
 | `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
 | `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
 | `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
+| `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
 | `core/executor.py` | 태스크 실행 래퍼 | — |
@@ -254,6 +255,36 @@ DynamicOrchestrator._execute_agent_task()  [실 배선 — Phase 3]
                   ├─ L3: ISERedesigner.redesign_task()
                   ├─ L4: _try_evolve_failed_skill() + redesign_task()
                   └─ L5: _decompose_and_execute() (서브태스크 분할)
+```
+
+### Flow D: Phase 4 에피소드 Memory 재사용
+
+> **Phase 4 배선 완료 (2026-04-18)**: `AF_MEMORY_REPLAY=1`(기본) 시 유사 에피소드 top-k
+> 힌트가 feature-plan.md에 주입되고, `_pick_owner_role`은 `StrategyLedger` 우선 조회 후
+> 키워드 폴백을 수행한다.
+
+```
+generate_work_items()                     [work_item_generator.py]
+  │
+  ├─ _build_episode_hints_section()
+  │   ├─ AF_MEMORY_REPLAY=0 → skip
+  │   └─ _search_seed_episodes(brief_text, top_k=5)
+  │       ├─ memory/episodes/*.md 스캔 (keyword_similarity)
+  │       └─ hints 추출 → "Episode Hints" 섹션 주입
+  │
+  └─ feature-plan.md 생성 + 에피소드 힌트 append
+
+_pick_owner_role(deliverable, roles, workspace)  [project_task_board.py]
+  │
+  ├─ StrategyLedger.lookup_best_role(deliverable)
+  │   └─ 성공률 > 50% + 샘플 ≥ 3건 → ledger role 반환
+  └─ 키워드 폴백 (기존 keyword_map)
+
+StrategyLedger (memory/episodes/strategy_ledger.json)
+  ├─ record_role_success/failure()        [성공·실패 기록]
+  ├─ record_failure_pattern()             [패턴 기록]
+  ├─ can_auto_save() → bool              [PASS ≥ 80% gate]
+  └─ get_warnings_for(task) → [hints]    [경고 주입]
 ```
 
 ### Flow C: 에이전트 단일 실행
@@ -1112,6 +1143,16 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
+| 2026-04-18 | v1.2.22 | feat(phase4): 에피소드 Memory + 재사용 — strategy_ledger.py 신규, episode_matcher.py top-k 확장, work_item_generator 힌트 주입, _pick_owner_role ledger 우선, memory/episodes/ 시드 3종, af.spec hiddenimports 추가, §0/§4 Flow D 추가 |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/project_task_board.py — settings.local.json, document_index.json, Master_Blueprint.md, episode_matcher.py, project_task_board.py (+27) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py — settings.local.json, document_index.json, Master_Blueprint.md, episode_matcher.py, work_item_generator.py (+26) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py — settings.local.json, document_index.json, Master_Blueprint.md, episode_matcher.py, work_item_generator.py (+26) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, episode_matcher.py, skill-usage.jsonl (+25) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, episode_matcher.py, skill-usage.jsonl (+25) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/strategy_ledger.py — settings.local.json, document_index.json, skill-usage.jsonl, code-review.md, app.py (+23) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |

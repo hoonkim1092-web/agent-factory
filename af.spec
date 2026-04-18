@@ -151,6 +151,7 @@ a = Analysis(
         'core.memory_system.decay',
         'core.memory_system.episode_extractor',
         'core.memory_system.episode_matcher',
+        'core.memory_system.strategy_ledger',
         'core.memory_system.graph_builder',
         'core.memory_system.graph_query',
         'core.memory_system.issue_tracker',

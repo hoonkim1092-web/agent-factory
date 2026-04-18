@@ -482,6 +482,33 @@ def _generate_implementation_tasks(
     )
 
 
+def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) -> str:
+    """유사 과거 에피소드 힌트 섹션을 동기적으로 빌드한다 (Phase 4)."""
+    import asyncio
+    if os.environ.get("AF_MEMORY_REPLAY", "1") == "0":
+        return ""
+    try:
+        from core.memory_system.episode_matcher import _search_seed_episodes
+        goal = _clean(project_brief.get("goal") or "")
+        if not goal:
+            return ""
+        brief_text = f"{goal} {' '.join(_clean_list(project_brief.get('deliverables')))}"
+        hits = _search_seed_episodes(brief_text, top_k=5)
+        if not hits:
+            return ""
+        lines = ["## Episode Hints\n"]
+        lines.append("_과거 유사 프로젝트에서 학습된 주의사항:_\n")
+        for hit in hits:
+            for hint in hit.get("hints", []):
+                lines.append(f"- {hint}")
+        if len(lines) <= 2:
+            return ""
+        return "\n".join(lines) + "\n"
+    except Exception as exc:
+        _LOGGER.debug("episode hints 생성 실패 (무시): %s", exc)
+        return ""
+
+
 def generate_work_items(
     workspace: str,
     slug: str,
@@ -505,9 +532,13 @@ def generate_work_items(
     files: dict[str, str] = {}
     work_item_id = slug
 
+    episode_hints_section = _build_episode_hints_section(project_brief, workspace)
+
     plan_content = _generate_and_refine(
         "plan", _generate_feature_plan, work_item_id, project_brief, role_plan
     )
+    if episode_hints_section:
+        plan_content = plan_content + "\n" + episode_hints_section
     plan_path = os.path.join(work_dir, "feature-plan.md")
     write_text(plan_path, plan_content)
     files["feature-plan.md"] = plan_path

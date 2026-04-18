@@ -145,10 +145,28 @@ def _module_status(tasks: list[dict[str, Any]]) -> str:
     return "pending"
 
 
-def _pick_owner_role(deliverable: str, roles: list[dict[str, Any]]) -> str:
+def _pick_owner_role(
+    deliverable: str,
+    roles: list[dict[str, Any]],
+    workspace: str | None = None,
+) -> str:
     text = safe_id(deliverable)
     if not roles:
         return "general_dev"
+
+    # Phase 4: strategy_ledger 우선 조회
+    try:
+        from core.memory_system.strategy_ledger import get_strategy_ledger
+        ledger = get_strategy_ledger(workspace)
+        ledger_role = ledger.lookup_best_role(deliverable)
+        if ledger_role:
+            valid_ids = {safe_id(r.get("id") or "") for r in roles}
+            if ledger_role in valid_ids:
+                return ledger_role
+    except Exception:
+        pass
+
+    # 키워드 폴백
     keyword_map = (
         ("qa", ("qa", "test", "guard", "verify", "검증", "테스트")),
         ("frontend", ("ui", "screen", "page", "front", "layout", "ux", "웹")),
