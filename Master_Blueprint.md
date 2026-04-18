@@ -1100,6 +1100,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | chore(settings,watchdog): 개발 환경 허용 명령어 및 훅 설정 정리 — curl·venv python 실행 허용 추가, 훅 name 필드 제거, lotto 추천 API 오프라인 모드 개선, CLI 리포트 출력 개선, document_index 캐시 갱신 |
 | 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): 오프라인 추천 모드 및 팩토리 CLI 개선 — recommendation.py 오프라인 지원 추가, app.py API 엔드포인트 수정, run_factory_cli.py 안정성 개선, dynamic_orchestrator.py 업데이트, curl/ipconfig 허용 권한 추가 |
 | 2026-04-18 | v1.2.21 | feat(dynamic_orchestrator): 오케스트레이터 개선 및 lotto 프로젝트 안정화 — dynamic_orchestrator.py 로직 수정, lotto_mobile_web 추천 API(recommendation.py/app.py) 업데이트, lotto_predictor_v2 CLI 개선, curl/ipconfig 권한 허용 추가 |
 | 2026-04-18 | v1.2.21 | feat(nightly): Phase 0 야간 자율 파이프라인 인프라 — `core/watchdog.py`(WatchdogState), `core/nightly_state.py`(NightlyState·state_snapshot.json), `scripts/nightly_tick.py`(tick CLI, flock, SIGTERM), `scripts/nightly_summary.py`, `scripts/install_launchd.sh`(plist 이중 스케줄), `DynamicOrchestrator.restore_from()`, `run_factory_cli.py` nightly-start/stop/status/tick 서브커맨드, `policy.yaml` nightly_autonomy 섹션 추가 |

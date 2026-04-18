@@ -63,12 +63,30 @@ class WatchdogState:
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
+    _VALID_LEVELS: frozenset[str] = frozenset(
+        {"OK", "STALL_1", "STALL_2", "STALL_3", "CHECKPOINT_ONLY"}
+    )
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "WatchdogState":
+        raw_level = data.get("watchdog_level", "OK")
+        safe_level = raw_level if raw_level in cls._VALID_LEVELS else "OK"
+
+        raw_counters = data.get("lineage_counters") or {}
+        safe_counters: dict[str, dict[str, int]] = {}
+        for lid, entry in raw_counters.items():
+            if isinstance(entry, dict):
+                try:
+                    level = max(0, int(entry.get("level", 0)))
+                    attempts = max(0, int(entry.get("attempts", 0)))
+                except (TypeError, ValueError):
+                    level, attempts = 0, 0
+                safe_counters[str(lid)] = {"level": level, "attempts": attempts}
+
         return cls(
             last_progress_tick_id=data.get("last_progress_tick_id"),
-            consecutive_no_progress_ticks=int(data.get("consecutive_no_progress_ticks", 0)),
-            watchdog_level=data.get("watchdog_level", "OK"),
-            lineage_counters=data.get("lineage_counters", {}),
+            consecutive_no_progress_ticks=max(0, int(data.get("consecutive_no_progress_ticks", 0))),
+            watchdog_level=safe_level,
+            lineage_counters=safe_counters,
             checkpoint_only_since=data.get("checkpoint_only_since"),
         )

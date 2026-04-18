@@ -107,6 +107,17 @@ class NightlyState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "NightlyState":
+        raw_retry = data.get("task_retry_count") or {}
+        safe_retry: dict[str, int] = {
+            str(k): max(0, int(v)) for k, v in raw_retry.items()
+            if isinstance(v, (int, float))
+        }
+
+        raw_assignments = data.get("active_assignments") or {}
+        safe_assignments: dict[str, Any] = (
+            raw_assignments if isinstance(raw_assignments, dict) else {}
+        )
+
         return cls(
             schema_version=int(data.get("schema_version", 1)),
             nightly_autonomy_enabled=bool(data.get("nightly_autonomy_enabled", False)),
@@ -114,9 +125,9 @@ class NightlyState:
             active_workspace=data.get("active_workspace"),
             watchdog=WatchdogState.from_dict(data.get("watchdog") or {}),
             budget=BudgetState.from_dict(data.get("budget") or {}),
-            active_assignments=data.get("active_assignments") or {},
-            task_retry_count=data.get("task_retry_count") or {},
-            consecutive_tick_failures=int(data.get("consecutive_tick_failures", 0)),
+            active_assignments=safe_assignments,
+            task_retry_count=safe_retry,
+            consecutive_tick_failures=max(0, int(data.get("consecutive_tick_failures", 0))),
             last_tick_id=data.get("last_tick_id"),
             last_tick_at=data.get("last_tick_at"),
         )
