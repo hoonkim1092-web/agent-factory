@@ -923,8 +923,10 @@ class ProjectPipeline:
             }
 
         # -- 편집 내용 반영 --
+        # target_path 설정 시 문서는 doc_root에 있으므로 workspace가 아닌 doc_root 사용
+        doc_root = prepared._effective_doc_root()
         updated_board = sync_board_from_work_items(
-            workspace=workspace,
+            workspace=doc_root,
             slug=prepared.work_item_slug,
             existing_board=prepared.task_board,
         )
