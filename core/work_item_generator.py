@@ -484,7 +484,6 @@ def _generate_implementation_tasks(
 
 def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) -> str:
     """유사 과거 에피소드 힌트 섹션을 동기적으로 빌드한다 (Phase 4)."""
-    import asyncio
     if os.environ.get("AF_MEMORY_REPLAY", "1") == "0":
         return ""
     try:

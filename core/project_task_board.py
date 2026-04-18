@@ -298,7 +298,12 @@ def _deliverable_to_module_name(deliverable: str) -> str:
     return name or deliverable
 
 
-def _auto_modules(task_input: str, project_brief: dict[str, Any], roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _auto_modules(
+    task_input: str,
+    project_brief: dict[str, Any],
+    roles: list[dict[str, Any]],
+    workspace: str | None = None,
+) -> list[dict[str, Any]]:
     deliverables = _clean_list(project_brief.get("deliverables"))
     goal = _clean_text(project_brief.get("goal") or task_input)
     modules: list[dict[str, Any]] = []
@@ -306,7 +311,7 @@ def _auto_modules(task_input: str, project_brief: dict[str, Any], roles: list[di
     role_module_counts: dict[str, int] = {}
 
     for deliverable in deliverables:
-        owner_role = _pick_owner_role(deliverable, roles)
+        owner_role = _pick_owner_role(deliverable, roles, workspace=workspace)
         owner = next((role for role in roles if role["id"] == owner_role), roles[0] if roles else {"id": owner_role, "name": owner_role, "objective": goal})
         role_module_counts[owner_role] = role_module_counts.get(owner_role, 0) + 1
         module_index += 1
@@ -387,13 +392,18 @@ def _normalize_tasks(module: dict[str, Any], owner_role: str, owner_name: str) -
     return tasks
 
 
-def enrich_role_plan(task_input: str, project_brief: dict[str, Any], role_plan: dict[str, Any]) -> dict[str, Any]:
+def enrich_role_plan(
+    task_input: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    workspace: str | None = None,
+) -> dict[str, Any]:
     plan = dict(role_plan or {})
     goal = _clean_text(project_brief.get("goal") or task_input)
     roles = _normalize_roles(plan, goal)
     planning_steps = _normalize_planning_steps(plan)
     raw_modules = plan.get("modules")
-    modules_input = raw_modules if isinstance(raw_modules, list) and raw_modules else _auto_modules(task_input, project_brief, roles)
+    modules_input = raw_modules if isinstance(raw_modules, list) and raw_modules else _auto_modules(task_input, project_brief, roles, workspace=workspace)
 
     normalized_modules: list[dict[str, Any]] = []
     owned_modules_by_role: dict[str, list[str]] = {role["id"]: [] for role in roles}
@@ -402,7 +412,7 @@ def enrich_role_plan(task_input: str, project_brief: dict[str, Any], role_plan: 
     for index, raw_module in enumerate(modules_input, start=1):
         if not isinstance(raw_module, dict):
             continue
-        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(_clean_text(raw_module.get("name")), roles))
+        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(_clean_text(raw_module.get("name")), roles, workspace=workspace))
         owner = next((role for role in roles if role["id"] == owner_role), None)
         if owner is None and roles:
             owner = roles[0]

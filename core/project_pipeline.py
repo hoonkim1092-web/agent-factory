@@ -697,7 +697,7 @@ class ProjectPipeline:
             except TypeError:
                 # memory_context 미지원 planner (테스트 목업 등) 폴백
                 raw = self.planner.plan(task_input, project_brief)
-            return enrich_role_plan(task_input, project_brief, raw)
+            return enrich_role_plan(task_input, project_brief, raw, workspace=target_workspace)
 
         role_plan = _guard.run(
             stage="role_planning",

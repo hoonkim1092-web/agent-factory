@@ -14,6 +14,7 @@ import dataclasses
 import json
 import os
 import tempfile
+import threading
 from typing import Any
 
 _MAX_ENTRIES = 1000  # R15: 메모리 폭발 방지 상한
@@ -71,12 +72,14 @@ class StrategyLedger:
 
     def __init__(self, ledger_path: str) -> None:
         self._path = ledger_path
+        self._lock = threading.Lock()
         self._role_assignments: dict[str, RoleAssignmentRecord] = {}
         self._failure_patterns: dict[str, FailurePatternRecord] = {}
+        # window_days는 미래 rolling-window 구현 예약 필드.
+        # can_auto_save()는 현재 누적 합산 기준으로 판단 (날짜 필터 미구현).
         self._auto_save_stats: dict[str, Any] = {
             "total": 0,
             "pass": 0,
-            "window_days": 14,
         }
         self._load()
 
@@ -125,67 +128,72 @@ class StrategyLedger:
 
     def record_episode_outcome(self, outcome: str) -> None:
         """verify e2e 결과 기록. outcome: 'pass' | 'fail'."""
-        self._auto_save_stats["total"] = self._auto_save_stats.get("total", 0) + 1
-        if outcome == "pass":
-            self._auto_save_stats["pass"] = self._auto_save_stats.get("pass", 0) + 1
-        self._save()
+        with self._lock:
+            self._auto_save_stats["total"] = self._auto_save_stats.get("total", 0) + 1
+            if outcome == "pass":
+                self._auto_save_stats["pass"] = self._auto_save_stats.get("pass", 0) + 1
+            self._save()
 
     def can_auto_save(self) -> bool:
         """
-        조건 A: 14일 rolling window PASS ≥ 80%.
-        조건 B (bootstrap): N≥20, M/N≥0.8.
-        둘 다 미충족 → False (보류).
+        누적 합산 기준 PASS ≥ 80% gate.
+        조건: N≥20 and M/N≥0.8.
+        N<20 또는 미충족 → False (보류).
+        (rolling window는 미구현 — 현재 누적 카운터 기반)
         """
-        total = self._auto_save_stats.get("total", 0)
-        passes = self._auto_save_stats.get("pass", 0)
+        with self._lock:
+            total = self._auto_save_stats.get("total", 0)
+            passes = self._auto_save_stats.get("pass", 0)
         if total == 0:
             return False
         rate = passes / total
-        if total >= 20 and rate >= 0.8:
-            return True
-        return False
+        return total >= 20 and rate >= 0.8
 
     # ── Role assignment ledger ───────────────────────────────────────────
 
     def record_role_success(
         self, deliverable_pattern: str, owner_role: str, project_id: str
     ) -> None:
-        key = deliverable_pattern.lower()
-        if key in self._role_assignments:
-            self._role_assignments[key].pass_count += 1
-        else:
-            self._role_assignments[key] = RoleAssignmentRecord(
-                deliverable_pattern=key,
-                owner_role=owner_role,
-                project_id=project_id,
-            )
-        self._evict_if_needed()
-        self._save()
+        with self._lock:
+            key = deliverable_pattern.lower()
+            if key in self._role_assignments:
+                self._role_assignments[key].pass_count += 1
+            else:
+                self._role_assignments[key] = RoleAssignmentRecord(
+                    deliverable_pattern=key,
+                    owner_role=owner_role,
+                    project_id=project_id,
+                )
+            self._evict_if_needed()
+            self._save()
 
     def record_role_failure(
         self, deliverable_pattern: str, owner_role: str, project_id: str
     ) -> None:
-        key = deliverable_pattern.lower()
-        if key in self._role_assignments:
-            self._role_assignments[key].fail_count += 1
-        else:
-            self._role_assignments[key] = RoleAssignmentRecord(
-                deliverable_pattern=key,
-                owner_role=owner_role,
-                project_id=project_id,
-                pass_count=0,
-                fail_count=1,
-            )
-        self._save()
+        with self._lock:
+            key = deliverable_pattern.lower()
+            if key in self._role_assignments:
+                self._role_assignments[key].fail_count += 1
+            else:
+                self._role_assignments[key] = RoleAssignmentRecord(
+                    deliverable_pattern=key,
+                    owner_role=owner_role,
+                    project_id=project_id,
+                    pass_count=0,
+                    fail_count=1,
+                )
+            self._evict_if_needed()
+            self._save()
 
     def lookup_best_role(self, deliverable: str) -> str | None:
         """과거 성공률이 가장 높은 역할을 반환. 충분한 샘플이 없으면 None."""
-        lowered = deliverable.lower()
-        candidates: list[RoleAssignmentRecord] = []
-        for pattern, rec in self._role_assignments.items():
-            if pattern in lowered or any(tok in lowered for tok in pattern.split()):
-                if rec.pass_count + rec.fail_count >= 3:
-                    candidates.append(rec)
+        with self._lock:
+            lowered = deliverable.lower()
+            candidates: list[RoleAssignmentRecord] = []
+            for pattern, rec in self._role_assignments.items():
+                if pattern in lowered or any(tok in lowered for tok in pattern.split()):
+                    if rec.pass_count + rec.fail_count >= 3:
+                        candidates.append(rec)
         if not candidates:
             return None
         best = max(candidates, key=lambda r: (r.score, r.pass_count))
@@ -196,25 +204,27 @@ class StrategyLedger:
     def record_failure_pattern(
         self, error_type: str, deliverable_keyword: str, warning_hint: str
     ) -> None:
-        key = f"{error_type}::{deliverable_keyword.lower()}"
-        if key in self._failure_patterns:
-            self._failure_patterns[key].occurrence_count += 1
-        else:
-            self._failure_patterns[key] = FailurePatternRecord(
-                pattern_key=key,
-                warning_hint=warning_hint,
-            )
-        self._save()
+        with self._lock:
+            key = f"{error_type}::{deliverable_keyword.lower()}"
+            if key in self._failure_patterns:
+                self._failure_patterns[key].occurrence_count += 1
+            else:
+                self._failure_patterns[key] = FailurePatternRecord(
+                    pattern_key=key,
+                    warning_hint=warning_hint,
+                )
+            self._save()
 
     def get_warnings_for(self, task_description: str) -> list[str]:
         """task 설명과 매칭되는 경고 힌트 목록을 반환."""
-        lowered = task_description.lower()
-        warnings: list[str] = []
-        for rec in self._failure_patterns.values():
-            parts = rec.pattern_key.split("::")
-            keyword = parts[1] if len(parts) > 1 else ""
-            if keyword and keyword in lowered:
-                warnings.append(rec.warning_hint)
+        with self._lock:
+            lowered = task_description.lower()
+            warnings: list[str] = []
+            for rec in self._failure_patterns.values():
+                parts = rec.pattern_key.split("::")
+                keyword = parts[1] if len(parts) > 1 else ""
+                if keyword and keyword in lowered:
+                    warnings.append(rec.warning_hint)
         return warnings
 
     # ── Internal ─────────────────────────────────────────────────────────
