@@ -105,7 +105,8 @@
 | `core/skill_promotion.py` | 스킬 라이프사이클 전환 | `SkillPromotionManager` |
 | `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | `SkillRegistry` (싱글톤) |
 | `core/swarm_council.py` | 다중 역할 계획·승인 | `SwarmCouncil` |
-| `core/work_item_generator.py` | 마크다운 work-item 생성 | `generate_work_items()` |
+| `core/document_policy.py` | 금지 토큰 스캔·입력 계약·Jaccard | `scan_forbidden_tokens()`, `jaccard_similarity()` |
+| `core/work_item_generator.py` | 마크다운 work-item 생성 + 금지 토큰 보강 | `generate_work_items()`, `_generate_and_refine()` |
 | `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
 | `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
 
@@ -1100,9 +1101,17 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | chore(multi): 개발 환경 권한 확장 및 lotto 프로젝트 개선 — settings.local.json에 curl·ipconfig·venv python 허용 권한 추가, lotto_mobile_web 추천 서비스(recommendation.py) 수정, lotto_mobile_web app.py 엔드포인트 조정, lotto_predictor_v2 CLI 수정, document_index 캐시 갱신 |
+| 2026-04-18 | v1.2.21 | feat(lotto): refresh_lotto_seed.py 신규 추가 및 추천 서비스 개선 — scripts/refresh_lotto_seed.py 신규, recommendation.py 로직 수정, app.py API 엔드포인트 업데이트, cli.py 변경, settings.local.json curl·venv 권한 추가 |
+| 2026-04-18 | v1.2.21 | feat(recommendation): 로또 추천 서비스 개선 및 개발 환경 권한 확장 — recommendation.py 오프라인 모드 로직 수정, app.py API 엔드포인트 조정, .venv/curl/ipconfig bash 권한 추가, document_index 캐시 갱신, cli.py 출력 포맷 개선 |
+| 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): 추천 서비스 오프라인 모드 및 API 권한 확장 — recommendation.py 오프라인 추천 로직 수정, app.py API 엔드포인트 연동, settings.local.json에 curl·ipconfig·venv python 권한 추가, document_index.json 캐시 갱신 |
+| 2026-04-18 | v1.2.21 | chore(lotto+settings): 권한 허용 및 lotto 서버/CLI 개선 — settings.local.json curl·python3 실행 권한 추가, lotto_mobile_web recommendation.py 수정, lotto_mobile_web app.py 수정, lotto_predictor_v2 cli.py 수정, document_index 캐시 갱신 |
+| 2026-04-18 | v1.2.21 | chore(lotto-web): 로컬 권한 확장 및 추천 서비스 개선 — settings.local.json에 curl·ipconfig·python3 실행 권한 추가, lotto_mobile_web recommendation.py 수정, lotto_predictor_v2 cli.py 업데이트, document_index.json 캐시 갱신 |
+| 2026-04-18 | v1.2.21 | chore(work_item_generator): 권한 설정 확장 및 문서 인덱스 갱신 — settings.local.json에 curl/ipconfig/.venv python3 허용 규칙 추가, document_index 청크 해시 갱신, lotto-mobile-web 추천 서비스 수정, work_item_generator.py 업데이트 |
 | 2026-04-18 | v1.2.21 | chore(settings,watchdog): 개발 환경 허용 명령어 및 훅 설정 정리 — curl·venv python 실행 허용 추가, 훅 name 필드 제거, lotto 추천 API 오프라인 모드 개선, CLI 리포트 출력 개선, document_index 캐시 갱신 |
 | 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): 오프라인 추천 모드 및 팩토리 CLI 개선 — recommendation.py 오프라인 지원 추가, app.py API 엔드포인트 수정, run_factory_cli.py 안정성 개선, dynamic_orchestrator.py 업데이트, curl/ipconfig 허용 권한 추가 |
 | 2026-04-18 | v1.2.21 | feat(dynamic_orchestrator): 오케스트레이터 개선 및 lotto 프로젝트 안정화 — dynamic_orchestrator.py 로직 수정, lotto_mobile_web 추천 API(recommendation.py/app.py) 업데이트, lotto_predictor_v2 CLI 개선, curl/ipconfig 권한 허용 추가 |
+| 2026-04-18 | v1.2.21 | feat(nightly-phase1): Phase 1 외부 의존 3-티어 + 금지 토큰 스캐너 — `core/document_policy.py`(금지 토큰 리스트·스캔·Jaccard), `core/work_item_generator.py`(`_generate_and_refine` LLM 보강 루프 max 2회), `projects/lotto_predictor_v2/seed_draws.json`(100회차 seed), `lotto_predictor_v2/backend/http_client.py`(`ThreeTierLotteryClient` live→cache→seed), `lotto_mobile_web/recommendation.py`(Tier3 `_load_seed()`), `docs/patterns/2026-04-18-external-api-3tier.md`(표준), `scripts/refresh_lotto_seed.py`(월 1회 갱신), `scripts/measure_goal_overlap.py`(GH Jaccard 측정) |
 | 2026-04-18 | v1.2.21 | feat(nightly): Phase 0 야간 자율 파이프라인 인프라 — `core/watchdog.py`(WatchdogState), `core/nightly_state.py`(NightlyState·state_snapshot.json), `scripts/nightly_tick.py`(tick CLI, flock, SIGTERM), `scripts/nightly_summary.py`, `scripts/install_launchd.sh`(plist 이중 스케줄), `DynamicOrchestrator.restore_from()`, `run_factory_cli.py` nightly-start/stop/status/tick 서브커맨드, `policy.yaml` nightly_autonomy 섹션 추가 |
 | 2026-04-18 | v1.2.21 | docs(blueprint): Phase -1 드리프트 동기화 — §2 Flow A `max_cycles=50`→동적, §3.2 `_stall_threshold=5`→`15` + `max_cycles`→`compute_max_cycles()`, §2 Flow B ISE 배선 누락 현황 명시(FSALoop dead), §7 ApprovalGate `execution_open` + `status=="approved"` AND 조건 명시, §11 `stopped_max_cycles` 에러 코드 동적 공식 반영 |
 | 2026-04-17 | v1.2.21 | {"changelog":"test(pending-review): check_pending_review 테스트 보강 — tests/test_pending_review.py 갱신, scripts/check_pending_review.py 수정, Master_Blueprint.md·code-review.md 동기화, skill-eval-report.json·document_index.json 재생성"} |

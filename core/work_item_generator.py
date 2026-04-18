@@ -3,14 +3,19 @@ Generate work-item markdown documents from planning artifacts.
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
 from typing import Any
 
 from core.approval_gate import ApprovalGate
+from core.document_policy import parse_frontmatter_exempt, scan_forbidden_tokens
 from core.file_io import write_text
 from core.utils import now_iso
+
+_LOGGER = logging.getLogger(__name__)
+_PLACEHOLDER_REFINE_MAX = 2
 
 TEMPLATE_DIR_REL = os.path.join("docs", "work-items", "_template")
 WORK_ITEMS_DIR_REL = os.path.join("docs", "work-items")
@@ -498,17 +503,23 @@ def generate_work_items(
     files: dict[str, str] = {}
     work_item_id = slug
 
-    plan_content = _generate_feature_plan(work_item_id, project_brief, role_plan)
+    plan_content = _generate_and_refine(
+        "plan", _generate_feature_plan, work_item_id, project_brief, role_plan
+    )
     plan_path = os.path.join(work_dir, "feature-plan.md")
     write_text(plan_path, plan_content)
     files["feature-plan.md"] = plan_path
 
-    spec_content = _generate_feature_spec(work_item_id, project_brief, role_plan, task_board)
+    spec_content = _generate_and_refine(
+        "spec", _generate_feature_spec, work_item_id, project_brief, role_plan, task_board
+    )
     spec_path = os.path.join(work_dir, "feature-spec.md")
     write_text(spec_path, spec_content)
     files["feature-spec.md"] = spec_path
 
-    design_content = _generate_implementation_design(work_item_id, project_brief, role_plan)
+    design_content = _generate_and_refine(
+        "design", _generate_implementation_design, work_item_id, project_brief, role_plan
+    )
     design_path = os.path.join(work_dir, "implementation-design.md")
     write_text(design_path, design_content)
     files["implementation-design.md"] = design_path
@@ -523,6 +534,52 @@ def generate_work_items(
     files["approval-gate.md"] = gate.gate_path
 
     return files
+
+
+def _generate_and_refine(
+    doc_type: str,
+    generator_fn,
+    work_item_id: str,
+    project_brief: dict[str, Any],
+    *extra_args,
+) -> str:
+    """문서 생성 후 금지 토큰 스캔, 발견 시 LLM 보강 루프(최대 2회)를 수행한다."""
+    import os as _os
+    placeholder_refine = _os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
+
+    content = generator_fn(work_item_id, project_brief, *extra_args)
+    if not placeholder_refine:
+        return content
+
+    exempt = parse_frontmatter_exempt(content)
+    for attempt in range(_PLACEHOLDER_REFINE_MAX):
+        found = scan_forbidden_tokens(content, exempt=exempt)
+        if not found:
+            break
+        _LOGGER.info(
+            "금지 토큰 발견 [%s] attempt=%d tokens=%s — LLM 보강 시도",
+            doc_type, attempt, found,
+        )
+        feedback = (
+            f"다음 금지 토큰을 제거하고 실제 내용으로 채워라: {found}. "
+            f"project_brief의 {doc_type} 관련 필드를 참조해 구체적 내용을 생성하라. "
+            "이미 채워진 섹션은 변경하지 마라."
+        )
+        refined = _refine_document(content, feedback, project_brief)
+        if refined != content:
+            content = refined
+        else:
+            break
+
+    remaining = scan_forbidden_tokens(content, exempt=exempt)
+    if remaining:
+        _LOGGER.warning(
+            "금지 토큰 %d회 보강 후에도 잔존 [%s]: %s — needs_human_review 태그 추가",
+            _PLACEHOLDER_REFINE_MAX, doc_type, remaining,
+        )
+        content += "\n\n<!-- af:status=needs_human_review -->\n"
+
+    return content
 
 
 def _refine_document(

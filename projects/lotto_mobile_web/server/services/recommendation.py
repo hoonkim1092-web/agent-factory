@@ -67,7 +67,12 @@ class RecommendationService:
                 status = "degraded-success"
 
         if cache_result is None or not cache_result.has_data:
-            raise DataUnavailableError("회차 데이터가 없어 추천을 생성할 수 없습니다.")
+            cache_result = self._load_seed()
+            if cache_result is None or not cache_result.has_data:
+                raise DataUnavailableError("회차 데이터가 없어 추천을 생성할 수 없습니다.")
+            source = "seed"
+            status = "degraded-success"
+            logger.info("Tier3 seed 데이터로 폴백: source=seed")
 
         ordered_draws = list(cache_result.draws)
         stats = analyze_patterns(list(reversed(ordered_draws)))
@@ -83,19 +88,50 @@ class RecommendationService:
             "combos": [_combo_to_dict(combo) for combo in combinations],
         }
 
+    def _load_seed(self):
+        """seed_draws.json에서 회차를 로드한다 (Tier 3)."""
+        import pathlib
+        from .draw_cache import CacheLoadResult
+
+        seed_file = pathlib.Path(__file__).parent.parent.parent.parent / "projects" / "lotto_predictor_v2" / "seed_draws.json"
+        # lotto_mobile_web 배포 시에는 상대 경로로도 탐색
+        if not seed_file.exists():
+            seed_file = pathlib.Path(__file__).parent.parent.parent.parent.parent / "lotto_predictor_v2" / "seed_draws.json"
+        if not seed_file.exists():
+            return CacheLoadResult(draws=[], latest_draw_no=None, latest_draw_date=None)
+
+        try:
+            import json
+            from lotto_predictor.backend.http_client import ThreeTierLotteryClient
+            client = ThreeTierLotteryClient()
+            seed_draws = client.load_seed_draws()
+            if not seed_draws:
+                return CacheLoadResult(draws=[], latest_draw_no=None, latest_draw_date=None)
+
+            from .draw_cache import CacheLoadResult as CLR
+            last = seed_draws[-1]
+            return CLR(
+                draws=seed_draws,
+                latest_draw_no=last.drw_no,
+                latest_draw_date=str(last.drw_date),
+            )
+        except Exception as exc:
+            logger.warning("seed 로드 실패: %s", exc)
+            from .draw_cache import CacheLoadResult
+            return CacheLoadResult(draws=[], latest_draw_no=None, latest_draw_date=None)
+
     def _load_online(self, *, draws: int):
         """온라인 수집기로 최신 회차를 확보하고 캐시로 로드한다."""
         from lotto.cache.store import LottoCacheStore
         from lotto.collector import CollectorAdapter
-        from lotto_predictor.backend import (
-            LottoHttpClient,
-            LottoStorage,
-            sqlite_storage_factory,
-        )
+        from pathlib import Path as _Path
+
+        from lotto_predictor.backend import DhLotteryClient, LottoStorage
         from lotto_predictor.collector import CollectorConfig, LottoCollector
 
-        client = LottoHttpClient()
-        storage: LottoStorage = sqlite_storage_factory()
+        _db_path = _Path.home() / ".lotto_cache" / "draws.db"
+        client = DhLotteryClient()
+        storage: LottoStorage = LottoStorage(db_path=_db_path)
         predictor_collector = LottoCollector(
             client=client, storage=storage, config=CollectorConfig()
         )
