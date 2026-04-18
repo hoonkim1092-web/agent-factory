@@ -97,9 +97,15 @@ class FSALoop:
         task_input: str,
         run_id: str,
         workspace: str | None = None,
+        lineage_id: str | None = None,
+        initial_failure_result: dict | None = None,
     ) -> dict:
         """
         FSA 메인 루프 — ISE와 동일한 에스컬레이션 파이프라인.
+
+        lineage_id: 야간 파이프라인 lineage 추적용 ID.
+        initial_failure_result: 이미 실행된 실패 결과. 제공 시 cycle 1에서 실행을 건너뛰고
+            분석부터 시작한다 (dynamic_orchestrator가 최초 실행 후 위임할 때 사용).
 
         Returns:
             {
@@ -108,6 +114,7 @@ class FSALoop:
                 "meta_cycles": int,
                 "max_escalation_level": int,
                 "strategy_ledger": dict,
+                "lineage_id": str | None,
             }
         """
         # ── 워크스페이스 설정 ──
@@ -118,6 +125,14 @@ class FSALoop:
         git = GitManager(target_workspace)
 
         agent_name = agent.get("name", "Agent") if isinstance(agent, dict) else "Agent"
+        _lineage_id = lineage_id or run_id
+
+        # ── lineage 원장 로드 ──
+        try:
+            from core.lineage_ledger import get_lineage_ledger
+            _ledger_obj = get_lineage_ledger(target_workspace)
+        except Exception:
+            _ledger_obj = None
 
         # ── 전략 원장 초기화 ──
         ledger = StrategyLedger(run_id=run_id, original_task=task_input)
@@ -129,6 +144,8 @@ class FSALoop:
 
         print_agent_msg("FSA", f"풀 셀프 자동화 모드(FSA) 시작: {run_id}", "🌀")
         print_agent_msg("FSA", f"최대 {self.max_cycles} 사이클 | workspace={target_workspace}", "📋")
+        if _lineage_id:
+            print_agent_msg("FSA", f"lineage_id={_lineage_id}", "🔗")
 
         try:
             for cycle in range(1, self.max_cycles + 1):
@@ -166,16 +183,23 @@ class FSALoop:
                     current_task = self.redesigner.inject_creativity(current_task, ledger)
 
                 # ── Step 1: Pre-Commit (워크스페이스 스냅샷) ──
-                git.commit(f"AEE Auto-Save: {run_id} Cycle {cycle}")
+                # cycle 1에서 initial_failure_result가 있으면 실행 생략 (이미 실행됨)
+                _use_initial_failure = cycle == 1 and initial_failure_result is not None
+                if not _use_initial_failure:
+                    git.commit(f"AEE Auto-Save: {run_id} Cycle {cycle}")
 
                 # ── Step 2: EXECUTE ──
-                result = self.runner.run(
-                    current_agent,
-                    current_task,
-                    run_id=f"{run_id}_c{cycle}",
-                    auto_approve=True,
-                    workspace=target_workspace,
-                )
+                if _use_initial_failure:
+                    result = initial_failure_result
+                    print_agent_msg("FSA", "초기 실패 결과 인수인계, 실행 건너뜀", "⏩")
+                else:
+                    result = self.runner.run(
+                        current_agent,
+                        current_task,
+                        run_id=f"{run_id}_c{cycle}",
+                        auto_approve=True,
+                        workspace=target_workspace,
+                    )
 
                 # ── 성공 체크 ──
                 if result.get("ok"):
@@ -185,11 +209,17 @@ class FSALoop:
                         print_agent_msg("FSA", f"Cycle {cycle}에서 성공!", "✅")
                     ledger.save(target_workspace)
                     self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
+                    if _ledger_obj:
+                        try:
+                            _ledger_obj.on_task_success(_lineage_id, max_level_reached)
+                        except Exception:
+                            pass
                     return {
                         **result,
                         "meta_cycles": cycle,
                         "max_escalation_level": max_level_reached,
                         "strategy_ledger": ledger.to_dict(),
+                        "lineage_id": _lineage_id,
                     }
 
                 # ── Step 3: Rollback (workspace tracked 파일만) ──
@@ -198,6 +228,8 @@ class FSALoop:
                 else:
                     print(f"⚠️ [Cycle {cycle}] 실패: {str(result.get('reason', ''))[:120]}")
 
+                # cycle 1 + initial_failure_result인 경우도 rollback을 수행한다.
+                # pre-commit이 없어 HEAD가 없는 순수 신규 워크스페이스에서는 no-op.
                 try:
                     git.rollback()
                 except Exception as e:
@@ -224,6 +256,17 @@ class FSALoop:
                     escalation_level=level,
                     strategy_description=analysis.suggested_strategy,
                 )
+
+                # lineage 원장 업데이트
+                if _ledger_obj:
+                    try:
+                        _ledger_obj.on_task_failure(
+                            _lineage_id,
+                            new_level=level,
+                            reason=str(result.get("reason", ""))[:200],
+                        )
+                    except Exception:
+                        pass
 
                 print_agent_msg(
                     "FSA",
@@ -309,6 +352,7 @@ class FSALoop:
             "meta_cycles": self.max_cycles,
             "max_escalation_level": max_level_reached,
             "strategy_ledger": ledger.to_dict(),
+            "lineage_id": _lineage_id,
         }
         ledger.save(target_workspace)
         self._record_episode(task_input, final_result, evolved_skill_name, gate_result, self.max_cycles)

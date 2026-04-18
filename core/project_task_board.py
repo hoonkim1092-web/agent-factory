@@ -453,8 +453,9 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
         for raw_task in (module.get("tasks") or []):
             if not isinstance(raw_task, dict):
                 continue
+            _task_id = _clean_text(raw_task.get("id"))
             task = {
-                "task_id": _clean_text(raw_task.get("id")),
+                "task_id": _task_id,
                 "title": _clean_text(raw_task.get("title") or raw_task.get("instruction")),
                 "instruction": _clean_text(raw_task.get("instruction") or raw_task.get("title")),
                 "owner_role": safe_id(raw_task.get("owner_role") or module.get("owner_role")),
@@ -464,6 +465,7 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
                 "acceptance": _clean_list(raw_task.get("acceptance")),
                 "artifacts": _clean_list(raw_task.get("artifacts")),
                 "status": _clean_text(raw_task.get("status") or "pending") or "pending",
+                "lineage_id": _clean_text(raw_task.get("lineage_id")) or _task_id,
                 "notes": [],
                 "updated_at": now_iso(),
             }

@@ -60,6 +60,7 @@ a = Analysis(
         'core.file_io',
         'core.file_lock',
         'core.fsa_loop',
+        'core.lineage_ledger',
         'core.git_manager',
         'core.hashline_editor',
         'core.ingestion_pipeline',

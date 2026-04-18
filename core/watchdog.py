@@ -23,7 +23,7 @@ class WatchdogState:
     consecutive_no_progress_ticks: int = 0
     # OK | STALL_1 | STALL_2 | STALL_3 | CHECKPOINT_ONLY
     watchdog_level: str = "OK"
-    lineage_counters: dict[str, dict[str, int]] = dataclasses.field(default_factory=dict)
+    lineage_counters: dict[str, dict] = dataclasses.field(default_factory=dict)
     checkpoint_only_since: Optional[str] = None
 
     STALL_1_THRESHOLD = 1
@@ -57,6 +57,26 @@ class WatchdogState:
         entry["attempts"] += 1
         return entry["attempts"]
 
+    def update_lineage_level(self, lineage_id: str, level: int, outcome: str) -> None:
+        """lineage 레벨과 결과를 갱신한다 (WatchdogState 내 빠른 조회용)."""
+        entry = self.lineage_counters.setdefault(lineage_id, {"level": 0, "attempts": 0})
+        entry["level"] = level
+        entry["last_outcome"] = outcome
+
+    def is_lineage_maxed(self, lineage_id: str, max_attempts: int = 20) -> bool:
+        """lineage 상한 도달 여부 반환. lineage_ledger와 이중 체크용."""
+        entry = self.lineage_counters.get(lineage_id)
+        if entry is None:
+            return False
+        return entry.get("attempts", 0) >= max_attempts or entry.get("level", 0) > 5
+
+    def degrade_lineage(self, lineage_id: str) -> None:
+        """lineage 상한 도달 시 degrade 플래그 설정. attempts를 max+1로 고정."""
+        entry = self.lineage_counters.setdefault(lineage_id, {"level": 0, "attempts": 0})
+        entry["degraded"] = True
+        if entry.get("attempts", 0) < 20:
+            entry["attempts"] = 20
+
     def is_checkpoint_only(self) -> bool:
         return self.watchdog_level == "CHECKPOINT_ONLY"
 
@@ -73,7 +93,7 @@ class WatchdogState:
         safe_level = raw_level if raw_level in cls._VALID_LEVELS else "OK"
 
         raw_counters = data.get("lineage_counters") or {}
-        safe_counters: dict[str, dict[str, int]] = {}
+        safe_counters: dict[str, dict] = {}
         for lid, entry in raw_counters.items():
             if isinstance(entry, dict):
                 try:
@@ -81,7 +101,11 @@ class WatchdogState:
                     attempts = max(0, int(entry.get("attempts", 0)))
                 except (TypeError, ValueError):
                     level, attempts = 0, 0
-                safe_counters[str(lid)] = {"level": level, "attempts": attempts}
+                # extra fields(last_outcome, degraded 등)도 보존한다
+                rebuilt: dict = dict(entry)
+                rebuilt["level"] = level
+                rebuilt["attempts"] = attempts
+                safe_counters[str(lid)] = rebuilt
 
         return cls(
             last_progress_tick_id=data.get("last_progress_tick_id"),

@@ -747,30 +747,107 @@ class DynamicOrchestrator:
                         note=f"infra_failure: {reason}", task_id=task_id,
                     )
                 else:
-                    # implementation 실패: 기존 evaluator 경로
-                    eval_res = await asyncio.to_thread(
-                        self._cross_verified_evaluate,
-                        role=role,
-                        instruction=subtask,
-                        error_log=reason,
-                        workspace=target_workspace,
-                    )
-                    evaluator_action = str(eval_res.get("action") or "abort").strip().lower()
-                    evaluator_advice = str(eval_res.get("new_instruction") or "").strip()
-                    failed_entry = {
-                        "role": role,
-                        "subtask": subtask,
-                        "reason": reason,
-                        "evaluator_action": evaluator_action,
-                        "evaluator_advice": evaluator_advice,
-                    }
-                    if task_id:
-                        failed_entry["task_id"] = task_id
-                    async with self._state_lock:
-                        self.state_board["failed_subtasks"].append(failed_entry)
-                    retry_note = reason if not evaluator_advice else f"{reason} | advice: {evaluator_advice}"
-                    next_status = "blocked" if evaluator_action == "retry" else "failed"
-                    update_project_board_task(target_workspace, role, subtask, next_status, note=retry_note, task_id=task_id)
+                    # implementation 실패: AF_ISE_ENABLED이면 FSALoop 위임, 아니면 기존 evaluator 경로
+                    _ise_enabled = os.environ.get("AF_ISE_ENABLED", "1").lower() not in ("0", "false", "no")
+                    _fsa_succeeded = False
+
+                    if _ise_enabled:
+                        from core.fsa_loop import FSALoop
+                        from core.lineage_ledger import get_lineage_ledger
+
+                        _lineage_id = (task_meta or {}).get("lineage_id") or task_id or f"{role}:{subtask[:40]}"
+                        _ll = get_lineage_ledger(target_workspace)
+
+                        if _ll.is_maxed(_lineage_id):
+                            print_agent_msg(role, f"lineage 상한 도달 → degrade: {_lineage_id}", "⚠️")
+                            update_project_board_task(
+                                target_workspace, role, subtask, "failed",
+                                note=f"lineage_maxed:{_lineage_id}", task_id=task_id,
+                            )
+                            async with self._state_lock:
+                                self.state_board["failed_subtasks"].append({
+                                    "role": role, "subtask": subtask,
+                                    "reason": reason, "lineage_id": _lineage_id,
+                                    "evaluator_action": "degrade",
+                                })
+                        else:
+                            print_agent_msg(role, f"FSALoop 위임: lineage={_lineage_id}", "🌀")
+                            fsa = FSALoop(
+                                runner=self.runner,
+                                agent_mgr=self.agent_mgr,
+                                visualizer=self._visualizer,
+                            )
+                            fsa_result = await asyncio.to_thread(
+                                fsa.run_mission,
+                                agent=agent_data,
+                                task_input=subtask,
+                                run_id=f"{run_id}_fsa",
+                                workspace=target_workspace,
+                                lineage_id=_lineage_id,
+                                initial_failure_result=result,
+                            )
+                            if fsa_result.get("ok"):
+                                _fsa_succeeded = True
+                                self._last_completion_cycle = getattr(self, '_current_cycle', 0)
+                                # FSA 성공 시 retry 카운터 리셋 — 같은 task_id 재등장 시 조기 gate-out 방지
+                                self._task_retry_count.pop(_retry_key, None)
+                                completed_entry = {"role": role, "subtask": subtask, "result": "FSA-Success"}
+                                if task_id:
+                                    completed_entry["task_id"] = task_id
+                                async with self._state_lock:
+                                    self.state_board["completed_subtasks"].append(completed_entry)
+                                update_project_board_task(
+                                    target_workspace, role, subtask, "completed",
+                                    note=f"fsa_cycles={fsa_result.get('meta_cycles', '?')}", task_id=task_id,
+                                )
+                                await self.memory_hub.update_ast_state(
+                                    filepath=f"Project_Scope_{role}",
+                                    author_role=role,
+                                    changes_summary=f"FSA recovered subtask: {subtask[:50]}",
+                                )
+                                print_agent_msg(role, "FSA 복구 성공", "✅")
+                                await self._inject_review_tasks_if_needed(target_workspace, task_id, role)
+                            else:
+                                fsa_reason = fsa_result.get("reason", reason)
+                                _maxed = _ll.is_maxed(_lineage_id)
+                                degrade_note = "lineage_maxed" if _maxed else "fsa_failed"
+                                async with self._state_lock:
+                                    self.state_board["failed_subtasks"].append({
+                                        "role": role, "subtask": subtask,
+                                        "reason": fsa_reason, "lineage_id": _lineage_id,
+                                        "evaluator_action": "degrade" if _maxed else "failed",
+                                    })
+                                update_project_board_task(
+                                    target_workspace, role, subtask, "failed",
+                                    note=f"{degrade_note}:{fsa_reason[:80]}", task_id=task_id,
+                                )
+                    else:
+                        # AF_ISE_ENABLED=0: 기존 evaluator 경로
+                        eval_res = await asyncio.to_thread(
+                            self._cross_verified_evaluate,
+                            role=role,
+                            instruction=subtask,
+                            error_log=reason,
+                            workspace=target_workspace,
+                        )
+                        evaluator_action = str(eval_res.get("action") or "abort").strip().lower()
+                        evaluator_advice = str(eval_res.get("new_instruction") or "").strip()
+                        failed_entry = {
+                            "role": role,
+                            "subtask": subtask,
+                            "reason": reason,
+                            "evaluator_action": evaluator_action,
+                            "evaluator_advice": evaluator_advice,
+                        }
+                        if task_id:
+                            failed_entry["task_id"] = task_id
+                        async with self._state_lock:
+                            self.state_board["failed_subtasks"].append(failed_entry)
+                        retry_note = reason if not evaluator_advice else f"{reason} | advice: {evaluator_advice}"
+                        next_status = "blocked" if evaluator_action == "retry" else "failed"
+                        update_project_board_task(
+                            target_workspace, role, subtask, next_status, note=retry_note, task_id=task_id,
+                        )
                 self._sync_manifest()
         except Exception as exc:
             crashed_entry = {"role": role, "subtask": subtask, "reason": str(exc)}

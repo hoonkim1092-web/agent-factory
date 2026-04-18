@@ -62,7 +62,8 @@
 | `core/documentation_policy.py` | 주석/문서화 정책 주입 + `.todo.md` board 동기화 | `inject_documentation_contract()`, `write_project_todo()`, `_instruction_status_map()` |
 | `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator`, `restore_from()` (tick 재기동 복원) |
 | `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
-| `core/watchdog.py` | tick 기반 stall 감지 (cycle 카운터 없음) | `WatchdogState`, `tick_progress()`, `tick_no_progress()` |
+| `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
+| `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
 | `core/executor.py` | 태스크 실행 래퍼 | — |
@@ -215,34 +216,44 @@ run_factory_cli.py:main()
 
 ### Flow B: FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한)
 
-> **⚠ 배선 현황 (2026-04-18 기준)**: `fsa_loop.FSALoop` 클래스는 현재 **dead** 상태.
-> `fsa_loop.py`가 `ise_analyzer` / `ise_redesigner` / `ise_stall_detector`를 내부에 흡수했으나,
-> `DynamicOrchestrator`는 `fsa_loop`를 호출하지 않는다 (배선 누락).
-> Phase 3에서 FSALoop 복귀 또는 삭제 중 하나를 결정한다.
-> 아래 다이어그램은 **설계 의도** 기준이며 현재 실행 경로가 아님.
+> **Phase 3 배선 완료 (2026-04-18)**: `AF_ISE_ENABLED=1`(기본) 시 implementation 실패 경로에서
+> `DynamicOrchestrator._execute_agent_task`가 `FSALoop.run_mission`에 위임한다.
+> `ISELoop`은 `FSALoop` 얇은 래퍼로 축소됨 (API 호환 유지).
+> `lineage_id`는 task.lineage_id 필드에서 읽어 `lineage_ledger.json`에 누적 기록된다.
+> `AF_ISE_ENABLED=0` 시 기존 evaluator 경로(retry/blocked)로 fallback.
 
 ```
-fsa_loop.FSALoop.run_mission()  [현재 미연결 — 설계 의도]
+DynamicOrchestrator._execute_agent_task()  [실 배선 — Phase 3]
   │
-  ├─ StrategyLedger 초기화
+  ├─ runner.run() → result
+  │   └─ ok=True → RETURN SUCCESS
   │
-  └─ For cycle in 1..5:
-      ├─ StallDetector.check()           [정체 감지]
-      │   ├─ human_escalation → 사용자 힌트/중단
-      │   └─ creativity_injection → 랜덤 전략 변이
-      ├─ git.commit()                    [워크스페이스 안전 저장]
-      ├─ runner.run() → result
-      │   └─ ok=True → RETURN SUCCESS
-      ├─ git.rollback()                  [실패 시 되돌리기]
-      ├─ ISEAnalyzer.analyze_failure()   [구조화 분석]
-      ├─ _decide_escalation()            [에스컬레이션 레벨 결정]
-      ├─ ledger.record_attempt()         [원장 기록]
-      └─ Level별 ACT:
-          ├─ L1: ISERedesigner.apply_retry_feedback()
-          ├─ L2: ISERedesigner.apply_pivot()
-          ├─ L3: ISERedesigner.redesign_task()
-          ├─ L4: _try_evolve_failed_skill() + redesign_task()
-          └─ L5: _decompose_and_execute() (서브태스크 분할)
+  ├─ failure_classifier.classify_failure() → INFRA | IMPL
+  │   └─ INFRA → board "failed", no retry
+  │
+  └─ IMPL + AF_ISE_ENABLED=1 (기본):
+      ├─ lineage_ledger.is_maxed(lineage_id)?
+      │   └─ yes → board "failed" (lineage_maxed), degrade
+      └─ FSALoop.run_mission(initial_failure_result=result, lineage_id=...)
+          │
+          ├─ StrategyLedger + LineageLedger 초기화
+          │
+          └─ For cycle in 1..5:
+              ├─ cycle==1: initial_failure 사용 (실행 건너뜀)
+              ├─ StallDetector.check()           [정체 감지]
+              ├─ git.commit() / git.rollback()   [워크스페이스 스냅샷]
+              ├─ runner.run() → result
+              │   └─ ok=True → lineage_ledger.on_success() → RETURN
+              ├─ ISEAnalyzer.analyze_failure()   [구조화 분석]
+              ├─ _decide_escalation()            [에스컬레이션 레벨 결정]
+              ├─ ledger.record_attempt()         [전략 원장 기록]
+              ├─ lineage_ledger.on_task_failure(lineage_id, level)  [lineage 누적]
+              └─ Level별 ACT:
+                  ├─ L1: ISERedesigner.apply_retry_feedback()
+                  ├─ L2: ISERedesigner.apply_pivot()
+                  ├─ L3: ISERedesigner.redesign_task()
+                  ├─ L4: _try_evolve_failed_skill() + redesign_task()
+                  └─ L5: _decompose_and_execute() (서브태스크 분할)
 ```
 
 ### Flow C: 에이전트 단일 실행
@@ -1101,6 +1112,24 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/dynamic_orchestrator.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, dynamic_orchestrator.py (+31) |
+| 2026-04-18 | v1.2.21 | feat(phase3): ISE 배선 + lineage 기반 Level 누적 — lineage_ledger.py 신규, watchdog.py is_lineage_maxed/degrade_lineage 추가, fsa_loop.py lineage_id+initial_failure_result 파라미터, dynamic_orchestrator IMPL 실패→FSALoop 위임(AF_ISE_ENABLED 제어), ise_loop.py FSALoop 얇은 래퍼로 축소, task.lineage_id 필드 추가, §4 Flow B 실 배선 반영 |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_dynamic_orchestrator_workspace_scope.py — settings.local.json, document_index.json, Master_Blueprint.md, dynamic_orchestrator.py, fsa_loop.py (+30) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_dynamic_orchestrator_workspace_scope.py — settings.local.json, document_index.json, Master_Blueprint.md, dynamic_orchestrator.py, fsa_loop.py (+27) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/ise_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, dynamic_orchestrator.py, fsa_loop.py (+17) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/dynamic_orchestrator.py — settings.local.json, document_index.json, Master_Blueprint.md, dynamic_orchestrator.py, fsa_loop.py (+10) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, fsa_loop.py, project_task_board.py (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, fsa_loop.py, project_task_board.py (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, fsa_loop.py, project_task_board.py (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/fsa_loop.py — settings.local.json, document_index.json, Master_Blueprint.md, fsa_loop.py, project_task_board.py (+9) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — settings.local.json, document_index.json, Master_Blueprint.md, project_task_board.py, watchdog.py (+8) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/project_task_board.py — settings.local.json, document_index.json, Master_Blueprint.md, project_task_board.py, skill-usage.jsonl (+7) |
+| 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — settings.local.json, document_index.json, skill-usage.jsonl, code-review.md, app.py (+5) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/scripts/migrate_workitem_e2e.py — settings.local.json, pre-commit, document_index.json, Master_Blueprint.md, approval_gate.py (+14) |

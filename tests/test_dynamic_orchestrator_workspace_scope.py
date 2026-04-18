@@ -37,7 +37,7 @@ class _DummyRunner:
     def __init__(self, _mr):
         self.last_workspace = None
 
-    def run(self, _agent_data, _subtask, _run_id, _auto_approve, workspace, task_id=""):
+    def run(self, _agent_data, _subtask, run_id=None, auto_approve=False, workspace=None, task_id=""):
         self.last_workspace = workspace
         return {"ok": True}
 
@@ -46,7 +46,7 @@ class _FailingRunner:
     def __init__(self, _mr):
         self.last_workspace = None
 
-    def run(self, _agent_data, _subtask, _run_id, _auto_approve, workspace, task_id=""):
+    def run(self, _agent_data, _subtask, run_id=None, auto_approve=False, workspace=None, task_id=""):
         self.last_workspace = workspace
         return {"ok": False, "reason": "missing import"}
 
@@ -267,6 +267,8 @@ def test_retry_failure_reopens_board_task_for_reschedule(monkeypatch, tmp_path):
     monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
     monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
     monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+    # Phase 3: ISE 비활성화해 기존 evaluator 경로를 검증
+    monkeypatch.setenv("AF_ISE_ENABLED", "0")
 
     workspace = tmp_path / "proj_retry"
     workspace.mkdir(parents=True, exist_ok=True)
