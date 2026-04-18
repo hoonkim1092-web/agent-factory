@@ -141,16 +141,17 @@ class EpisodeMatcher:
         """새 brief와 유사한 과거 성공 에피소드 top-k를 반환한다.
 
         반환 형식: [{"episode_id", "task_input", "outcome", "similarity", "hints"}, ...]
-        memory/episodes/ 디렉토리의 .md 파일도 검색한다.
+        시드(.md) 결과와 메모리 결과를 스케일 혼합 없이 분리해 채운다:
+          - 시드 최대 top_k // 2 슬롯, 나머지를 메모리로 채운다.
         """
-        results: list[tuple[float, dict[str, Any]]] = []
+        seed_slots = max(1, top_k // 2)
 
-        # ── 파일 기반 시드 에피소드 검색 ──────────────────────────────
-        seed_hits = _search_seed_episodes(brief_text, top_k=top_k)
-        for hit in seed_hits:
-            results.append((hit["similarity"], hit))
+        # ── 파일 기반 시드 에피소드 검색 (coverage 기반 유사도) ────────
+        seed_hits = _search_seed_episodes(brief_text, top_k=seed_slots)
+        seed_ids = {h["episode_id"] for h in seed_hits}
 
-        # ── 메모리 시스템 성공 에피소드 검색 ─────────────────────────
+        # ── 메모리 시스템 성공 에피소드 검색 (Jaccard 기반 유사도) ──────
+        memory_hits: list[tuple[float, dict[str, Any]]] = []
         try:
             records = await self._facade.search_semantic(
                 brief_text,
@@ -163,11 +164,13 @@ class EpisodeMatcher:
                     continue
                 if project_id and ep.project_id and ep.project_id != project_id:
                     continue
+                if ep.episode_id in seed_ids:
+                    continue
                 sim = keyword_similarity(brief_text, ep.task_input)
                 if sim < _KEYWORD_THRESHOLD:
                     continue
                 hints = ep.metadata.get("hints") or []
-                results.append((sim, {
+                memory_hits.append((sim, {
                     "episode_id": ep.episode_id,
                     "task_input": ep.task_input,
                     "outcome": ep.outcome,
@@ -177,8 +180,10 @@ class EpisodeMatcher:
         except Exception as exc:
             logger.warning("EpisodeMatcher.query_similar: facade 검색 실패 — %s", exc)
 
-        results.sort(key=lambda x: x[0], reverse=True)
-        return [item for _, item in results[:top_k]]
+        memory_hits.sort(key=lambda x: x[0], reverse=True)
+        memory_results = [item for _, item in memory_hits[: top_k - len(seed_hits)]]
+
+        return seed_hits + memory_results
 
     @staticmethod
     def _record_to_episode(record: MemoryRecord) -> EpisodeRecord | None:

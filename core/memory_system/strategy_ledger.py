@@ -213,6 +213,7 @@ class StrategyLedger:
                     pattern_key=key,
                     warning_hint=warning_hint,
                 )
+            self._evict_failure_patterns_if_needed()
             self._save()
 
     def get_warnings_for(self, task_description: str) -> list[str]:
@@ -231,7 +232,6 @@ class StrategyLedger:
 
     def _evict_if_needed(self) -> None:
         if len(self._role_assignments) > _MAX_ENTRIES:
-            # LRU 근사: pass_count+fail_count 최소인 항목 제거
             sorted_keys = sorted(
                 self._role_assignments,
                 key=lambda k: self._role_assignments[k].pass_count
@@ -239,6 +239,15 @@ class StrategyLedger:
             )
             for k in sorted_keys[: len(self._role_assignments) - _MAX_ENTRIES]:
                 del self._role_assignments[k]
+
+    def _evict_failure_patterns_if_needed(self) -> None:
+        if len(self._failure_patterns) > _MAX_ENTRIES:
+            sorted_keys = sorted(
+                self._failure_patterns,
+                key=lambda k: self._failure_patterns[k].occurrence_count,
+            )
+            for k in sorted_keys[: len(self._failure_patterns) - _MAX_ENTRIES]:
+                del self._failure_patterns[k]
 
 
 _LEDGER_CACHE: dict[str, StrategyLedger] = {}
