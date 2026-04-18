@@ -1,16 +1,16 @@
 {
   "run_id": "run_retry_fsa",
   "original_task": "Dev: implement feature slice",
-  "total_attempts": 3,
+  "total_attempts": 4,
   "level_counts": {
-    "1": 1,
-    "2": 2,
+    "1": 0,
+    "2": 0,
     "3": 0,
     "4": 0,
     "5": 0
   },
   "human_hints": [],
-  "elapsed_sec": 2.4,
+  "elapsed_sec": 5.6,
   "entries": [
     {
       "meta_cycle": 1,
@@ -69,6 +69,32 @@
       "timestamp": "2026-04-18T22:35:53",
       "escalation_level": 2,
       "task_input_hash": "f11d9580dd63e702",
+      "strategy_description": "",
+      "strategy_hash": "e3b0c44298fc1c14",
+      "error_category": "unknown",
+      "error_signature": "missing import",
+      "result_ok": false,
+      "result_reason": "missing import",
+      "analysis": {
+        "error_category": "unknown",
+        "error_signature": "missing import",
+        "root_cause": "",
+        "suggested_strategy": "",
+        "failed_skills": [],
+        "confidence": 0.5,
+        "is_fundamental": false,
+        "evaluator_action": "retry",
+        "evaluator_reasoning": "",
+        "new_instruction": ""
+      },
+      "evolved_skills": [],
+      "duration_ms": 0
+    },
+    {
+      "meta_cycle": 4,
+      "timestamp": "2026-04-18T22:35:56",
+      "escalation_level": 5,
+      "task_input_hash": "ed260b0c84687f53",
       "strategy_description": "",
       "strategy_hash": "e3b0c44298fc1c14",
       "error_category": "unknown",
