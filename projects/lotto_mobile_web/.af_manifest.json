@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-17T17:08:41.613787+00:00",
+  "workspace": "/Users/hoon/workTree/agent-factory/projects/lotto_mobile_web",
+  "project_desc": "모바일 웹 브라우저에서 동작하는 로또 6/45 번호 추천 서비스(백엔드 API + 반응형 프론트엔드)를 구축한다.",
+  "roles": [
+    "frontend_dev",
+    "backend_dev",
+    "qa_engineer",
+    "qa_engineer_code_reviewer",
+    "qa_engineer_cross_validator",
+    "frontend_dev_code_reviewer",
+    "frontend_dev_cross_validator",
+    "backend_dev_code_reviewer",
+    "backend_dev_cross_validator"
+  ],
+  "state_board": {
+    "completed_subtasks": [
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: API 단위 테스트 스위트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_scope_1"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 모바일 반응형 추천 웹 UI 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_2_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: API 단위 테스트 스위트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_build_2"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 로또 추천 REST API 서버 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_scope_1"
+      },
+      {
+        "role": "qa_engineer_code_reviewer",
+        "subtask": "[Code Review] qa_engineer_module_6 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_code_review"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 프론트엔드 렌더링 smoke 테스트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 프론트엔드 렌더링 smoke 테스트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_build_2"
+      },
+      {
+        "role": "qa_engineer_cross_validator",
+        "subtask": "[Cross Validate] qa_engineer_module_6 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 모바일 반응형 추천 웹 UI을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_2_build_2"
+      },
+      {
+        "role": "qa_engineer_code_reviewer",
+        "subtask": "[Code Review] qa_engineer_module_7 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_code_review"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 로또 추천 REST API 서버을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_build_2"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: API 단위 테스트 스위트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_verify_3"
+      },
+      {
+        "role": "qa_engineer_cross_validator",
+        "subtask": "[Cross Validate] qa_engineer_module_7 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_cross_validate"
+      },
+      {
+        "role": "frontend_dev_code_reviewer",
+        "subtask": "[Code Review] frontend_dev_module_2 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_2_code_review"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 프론트엔드 렌더링 smoke 테스트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_verify_3"
+      },
+      {
+        "role": "backend_dev_code_reviewer",
+        "subtask": "[Code Review] backend_dev_module_1 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_code_review"
+      },
+      {
+        "role": "frontend_dev_cross_validator",
+        "subtask": "[Cross Validate] frontend_dev_module_2 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_2_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 조합 카드 시각화 컴포넌트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_scope_1"
+      },
+      {
+        "role": "backend_dev_cross_validator",
+        "subtask": "[Cross Validate] backend_dev_module_1 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 모바일 반응형 추천 웹 UI 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_2_verify_3"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: frontend_dev_module_3(조합 카드 시각화 컴포넌트) scope 문서 교차검증을 수행한다. 메일박스 msg_18dd7f6c037d를 먼저 ack 처리한 뒤, docs/modules/frontend_dev_module_3_scope.md, docs/architecture.md, docs/change_history.md, docs/modules/frontend_dev_module_2_scope.md, docs/modules/qa_engineer_module_7_scope.md 를 교차 검토하라. 검증 항목: (1) 컴포넌트 인터페이스(props/이벤트)가 module_2 UI 계약 및 백엔드 응답 스키마와 일치하는지, (2) QA smoke 테스트(module_7) 셀렉터·접근성 기준과 호환되는지, (3) 반응형·접근성·성능 기준이 구현 가능한 수준으로 구체화되었는지, (4) 오픈 이슈·가정이 change_history.md에 반영되었는지. 결과를 docs/modules/frontend_dev_module_3_scope_review.md에 ACCEPT/BLOCK 판정과 근거(파일·라인)로 정리하고, 발견 시 수정 지시를 frontend_dev 앞으로 메일박스에 회신한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_scope_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 조합 카드 시각화 컴포넌트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_build_2"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 로또 추천 REST API 서버 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다. projects/lotto_mobile_web/ 하위 백엔드 산출물(FastAPI/Flask 라우트, 추천 엔진, 테스트)을 최종 점검하고, py_compile → pytest → 모듈 import 3단계 검증 결과를 캡처한 뒤 docs/modules/backend_dev_module_1_handoff.md에 다음 내용을 포함하여 handoff 메모를 작성한다: (1) 완성된 엔드포인트 목록과 계약, (2) 실행·배포 방법, (3) 알려진 제한/미해결 이슈, (4) 프론트엔드 연동 시 유의사항, (5) 후속 작업자(프론트엔드·QA)에게 넘길 체크리스트. 작성 후 frontend_dev_cross_validator와 qa_engineer 앞으로 review_request 메일박스 메시지를 남겨라.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_verify_3"
+      },
+      {
+        "role": "frontend_dev_code_reviewer",
+        "subtask": "[Code Review] frontend_dev_module_3 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_code_review"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 파라미터 슬라이더 컨트롤 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_4_scope_1"
+      },
+      {
+        "role": "frontend_dev_cross_validator",
+        "subtask": "[Cross Validate] frontend_dev_module_3 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 파라미터 슬라이더 컨트롤을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_4_build_2"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 조합 카드 시각화 컴포넌트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_3_verify_3"
+      },
+      {
+        "role": "frontend_dev_code_reviewer",
+        "subtask": "[Code Review] frontend_dev_module_4 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_4_code_review"
+      },
+      {
+        "role": "frontend_dev_cross_validator",
+        "subtask": "[Cross Validate] frontend_dev_module_4 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_4_cross_validate"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 오프라인 캐시 폴백 모듈 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_5_scope_1"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 파라미터 슬라이더 컨트롤 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_4_verify_3"
+      },
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 오프라인 캐시 폴백 모듈을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_5_build_2"
+      }
+    ],
+    "failed_subtasks": [
+      {
+        "role": "qa_engineer_cross_validator",
+        "subtask": "[Cross Validate] qa_engineer_module_6 전체 정합성을 교차검증한다.",
+        "reason": "Unknown error",
+        "evaluator_action": "retry",
+        "evaluator_advice": "[Cross Validate] qa_engineer_module_6 전체 정합성을 교차검증한다.\n\n[출력 규약 — 최우선]\n응답은 반드시 JSON 객체 하나로만 반환하라. 허용 키는 정확히 action, reasoning, new_instruction 세 개뿐이다. action은 retry 또는 abort만 사용하라. 마크다운, 코드펜스, 추가 텍스트, 다른 키(verdict, issues, summary, ok)는 절대 출력하지 마라.\n\n[검증 대상 아티팩트]\n- 구현 산출물: projects/lotto_mobile_web/ 하위 전체 소스·테스트 파일 (ls -R로 실제 파일 목록을 먼저 확인할 것)\n- 선행 QA 메모: qa_engineer / qa_engineer_code_reviewer 의 최근 handoff 노트 (runs/ 디렉토리 내 result.json 검색)\n- Master_Blueprint.md 해당 §섹션 최신 상태\n\n[검증 항목]\n1) 요구사항-구현-테스트 3자 정합성 (누락·불일치 식별)\n2) 외부 계약(API 스키마, 라우트, 응답 포맷) 일관성\n3) 선행 리뷰 ACCEPT 지적사항 반영 여부\n4) 테스트 커버리지 및 실제 실행 결과(py_compile → pytest → import)\n\n[판정 매핑]\n- 3자 정합 + 테스트 통과 → action: abort (추가 작업 불필요)\n- 경미한 문서/주석 불일치만 존재 → action: retry + new_instruction에 수정 지시\n- 계약 불일치·테스트 실패·보안 이슈 → action: retry + new_instruction에 차단 사유와 수정 지시\n\n[reasoning 작성 규칙]\nreasoning 문자열 안에 검증 결과 요약, 발견된 문제의 파일 경로·라인 번호·근거를 압축하여 포함하라.\n\n[실패 시 요구사항]\n오류 발생 시 stdout/stderr 전문, 실행 커맨드, 작업 디렉토리, exit code를 반드시 reasoning에 포함해 보고한다. 'Unknown error' 단독 보고는 금지한다.",
+        "task_id": "qa_engineer_module_6_cross_validate"
+      }
+    ],
+    "interrupted_subtasks": [],
+    "agents_status": {
+      "frontend_dev": "idle",
+      "backend_dev": "idle",
+      "qa_engineer": "idle",
+      "qa_engineer_code_reviewer": "idle",
+      "qa_engineer_cross_validator": "idle",
+      "frontend_dev_code_reviewer": "idle",
+      "frontend_dev_cross_validator": "idle",
+      "backend_dev_code_reviewer": "idle",
+      "backend_dev_cross_validator": "idle"
+    },
+    "current_status": "partial"
+  },
+  "active_assignments": {}
+}

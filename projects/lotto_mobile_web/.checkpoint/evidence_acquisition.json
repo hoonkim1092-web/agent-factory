@@ -1,0 +1,103 @@
+{
+  "stage": "evidence_acquisition",
+  "saved_at": "2026-04-18T01:20:22",
+  "data_hash": "3bf1d4e2cda0f37e9023f7abf8654876",
+  "data": {
+    "workspace_notes": [],
+    "local_references": [
+      {
+        "path": "docs/architecture.md",
+        "heading": "## 메타데이터",
+        "excerpt": "## 메타데이터 - 마지막 업데이트: 2026-04-18T01:19:38 - 상태: active - 문서 언어: 한국어 (OS: `ko-KR`)",
+        "score": 1.0
+      },
+      {
+        "path": "docs/architecture.md",
+        "heading": "## 문서 규칙",
+        "excerpt": "## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+        "score": 0.9735
+      },
+      {
+        "path": "docs/change_history.md",
+        "heading": "# 변경 이력",
+        "excerpt": "# 변경 이력 설계, 아키텍처, 워크플로, 구현 전략이 바뀔 때마다 항목을 하나씩 추가한다.",
+        "score": 0.7735
+      },
+      {
+        "path": "docs/change_history.md",
+        "heading": "### 2026-04-18T01:19:38",
+        "excerpt": "### 2026-04-18T01:19:38 - 요약: 문서 계약 초기화. - 이유: 아키텍처와 워크플로 변경 이력을 안정적으로 보존하기 위해. - 영향 파일: `docs/architecture.md`, `docs/change_history.md` - 후속 작업: 이 파일을 append-only로 유지하고, 생성하거나 수정하는 모든 문서를 운영체제 언어 코드 `ko-KR`에 맞는 한국어로 작성한다.",
+        "score": 0.5446
+      },
+      {
+        "path": "docs/2026-04-17-review-trigger-unified-architecture.md",
+        "heading": "### 8.1 단위 테스트",
+        "excerpt": "### 8.1 단위 테스트 - `tests/test_review_targets.py` 신규: `is_review_target` / `review_roles_for` 경계 케이스 - `tests/test_hook_runner.py` 신규 또는 확장: stdin JSON 파싱, 파일 경로 추출, 비정상 JSON 방어",
+        "score": 1.0
+      },
+      {
+        "path": "docs/code_review/code-review.md",
+        "heading": "## 2026-04-17 23:21 — `2026-04-14-build-diet` (9a494d41)",
+        "excerpt": "## 2026-04-17 23:21 — `2026-04-14-build-diet` (9a494d41) **Context**: edit: /Users/hoon/workTree/agent-factory/projects/lotto_predictor_v2/src/lotto/cli.py **Changed (5)**: `.claude/settings.local.json, .system_generated/cache/document_index.json, Master_Bl...",
+        "score": 0.95
+      }
+    ],
+    "web_references": [],
+    "llm_prior_references": [
+      {
+        "title": "[LLM prior] Concept: Mobile-first responsive design with viewport meta tag and touch-friendly tap tar",
+        "excerpt": "Mobile-first responsive design with viewport meta tag and touch-friendly tap targets (minimum 44x44 CSS pixels per WCAG/Apple HIG)",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Stateless REST JSON API with query parameter validation for numeric ranges (n: 1",
+        "excerpt": "Stateless REST JSON API with query parameter validation for numeric ranges (n: 1-10, draws: 100-500)",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Separation of analysis engine (pattern scoring) from presentation layer via HTTP",
+        "excerpt": "Separation of analysis engine (pattern scoring) from presentation layer via HTTP boundary to enable reuse across CLI and web clients",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Offline fallback pattern using localStorage or IndexedDB to cache last successfu",
+        "excerpt": "Offline fallback pattern using localStorage or IndexedDB to cache last successful recommendation payload for network failure resilience",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      }
+    ],
+    "notebook_summary": "Conversation ID: fd8bf2ba-4a2a-471a-8981-90ed49151e30 Use --conversation-id for follow-up questions",
+    "evidence_summary": [
+      "Local reference: docs/architecture.md -> ## 메타데이터 - 마지막 업데이트: 2026-04-18T01:19:38 - 상태: active - 문서 언어: 한국어 (OS: `ko-KR`)",
+      "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+      "Local reference: docs/change_history.md -> # 변경 이력 설계, 아키텍처, 워크플로, 구현 전략이 바뀔 때마다 항목을 하나씩 추가한다.",
+      "LLM prior knowledge (unverified): Mobile-first responsive design with viewport meta tag and touch-friendly tap targets (minimum 44x44 CSS pixels per WCAG/Apple HIG)",
+      "LLM prior knowledge (unverified): Stateless REST JSON API with query parameter validation for numeric ranges (n: 1-10, draws: 100-500)",
+      "NotebookLM synthesis: Conversation ID: fd8bf2ba-4a2a-471a-8981-90ed49151e30 Use --conversation-id for follow-up questions"
+    ],
+    "sufficiency_gate_passed": false,
+    "_verification": {
+      "score": 0.882,
+      "status": "pass",
+      "gaps": [
+        "sufficiency_gate_not_passed"
+      ],
+      "attempt": 0
+    }
+  }
+}

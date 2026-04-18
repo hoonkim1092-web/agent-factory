@@ -1,0 +1,150 @@
+/* base.css — reset, typography, spacing/color tokens
+ * 문서 언어: ko-KR / 모듈: frontend_dev_module_2
+ * - WCAG 2.1 AA 기준 터치 타깃 ≥ 44×44 px
+ * - 다크 모드는 prefers-color-scheme 훅만 마련 (light 고정)
+ */
+
+:root {
+  /* Color tokens (light) */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-primary: #2563eb;
+  --color-primary-contrast: #ffffff;
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
+  --color-success: #16a34a;
+
+  /* Typography scale (clamp → 360 px 대응) */
+  --font-family-base:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
+  --font-size-xs: clamp(0.72rem, 0.66rem + 0.3vw, 0.8rem);
+  --font-size-sm: clamp(0.82rem, 0.76rem + 0.3vw, 0.9rem);
+  --font-size-md: clamp(0.95rem, 0.9rem + 0.35vw, 1.05rem);
+  --font-size-lg: clamp(1.1rem, 1rem + 0.6vw, 1.3rem);
+  --font-size-xl: clamp(1.35rem, 1.15rem + 1vw, 1.6rem);
+  --line-height-base: 1.5;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  /* Radius / shadow */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+
+  /* Touch target */
+  --touch-target-min: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 다크 훅만 제공 — 실제 적용은 module_2 범위 밖.
+     * 하위 모듈에서 html[data-theme="dark"]로 옵트인 할 수 있다. */
+    --color-bg-dark: #0f172a;
+    --color-surface-dark: #111827;
+    --color-surface-alt-dark: #1f2937;
+    --color-text-dark: #e2e8f0;
+  }
+}
+
+/* Modern CSS reset (Eric Meyer + Kevin Powell 절충) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+/* 모든 인터랙티브 요소는 터치 타깃 최소치를 확보한다. */
+button,
+[role="button"],
+input,
+select {
+  min-height: var(--touch-target-min);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 보조 기술 전용 텍스트 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

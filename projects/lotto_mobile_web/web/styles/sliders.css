@@ -1,0 +1,166 @@
+/* sliders.css — 파라미터 슬라이더 전용 스타일
+ * 문서 언어: ko-KR / 모듈: frontend_dev_module_4
+ * - base.css 토큰 재사용(--color-*, --space-*, --radius-*, --touch-target-min)
+ * - 모바일 터치 타깃 ≥ 44×44 CSS px 보장(썸 반경 + hit area 확장)
+ * - 벤더 프리픽스(-webkit-/-moz-)를 대칭으로 정의해 iOS Safari/Android Chrome/Firefox 일치
+ * - prefers-reduced-motion 대응: 트랜지션 제거
+ */
+
+:root {
+  /* 슬라이더 팔레트(라이트) */
+  --slider-track-bg: var(--color-surface-alt);
+  --slider-track-fill: var(--color-primary);
+  --slider-thumb-bg: var(--color-primary);
+  --slider-thumb-fg: var(--color-primary-contrast);
+  --slider-thumb-size: 28px;
+  --slider-track-height: 8px;
+  --slider-hit-area: var(--touch-target-min);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 다크 훅 — 상위 모듈이 html[data-theme="dark"]로 옵트인 */
+    --slider-track-bg-dark: #1f2937;
+    --slider-track-fill-dark: #3b82f6;
+    --slider-thumb-bg-dark: #60a5fa;
+    --slider-thumb-fg-dark: #0f172a;
+  }
+}
+
+/* 폼 컨테이너 */
+.param-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* 각 슬라이더 그룹 */
+.param-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.param-panel__label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.param-panel__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--slider-hit-area);
+}
+
+.param-panel__value {
+  min-width: 56px;
+  text-align: right;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* 슬라이더 본체 — 크로스 브라우저 공통 리셋 */
+.param-panel__slider {
+  flex: 1 1 auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: var(--slider-hit-area);
+  min-height: var(--slider-hit-area);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-primary);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.param-panel__slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* 포커스 링(키보드) — base.css :focus-visible 토큰 재사용 */
+.param-panel__slider:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
+/* WebKit 트랙 (iOS Safari / Android Chrome / 데스크톱 Chromium) */
+.param-panel__slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: var(--slider-track-height);
+  background: var(--slider-track-bg);
+  border-radius: 999px;
+  border: 0;
+}
+
+.param-panel__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  margin-top: calc((var(--slider-track-height) - var(--slider-thumb-size)) / 2);
+  border-radius: 999px;
+  background: var(--slider-thumb-bg);
+  border: 2px solid var(--color-primary-contrast);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.param-panel__slider:active::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+
+/* Firefox 트랙 */
+.param-panel__slider::-moz-range-track {
+  width: 100%;
+  height: var(--slider-track-height);
+  background: var(--slider-track-bg);
+  border-radius: 999px;
+  border: 0;
+}
+
+.param-panel__slider::-moz-range-progress {
+  height: var(--slider-track-height);
+  background: var(--slider-track-fill);
+  border-radius: 999px;
+}
+
+.param-panel__slider::-moz-range-thumb {
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  border-radius: 999px;
+  background: var(--slider-thumb-bg);
+  border: 2px solid var(--color-primary-contrast);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.param-panel__slider:active::-moz-range-thumb {
+  transform: scale(1.08);
+}
+
+/* 환경 모션 감소 대응 — 트랜지션/애니메이션 제거 */
+@media (prefers-reduced-motion: reduce) {
+  .param-panel__slider::-webkit-slider-thumb,
+  .param-panel__slider::-moz-range-thumb {
+    transition: none;
+  }
+
+  .param-panel__slider:active::-webkit-slider-thumb,
+  .param-panel__slider:active::-moz-range-thumb {
+    transform: none;
+  }
+}

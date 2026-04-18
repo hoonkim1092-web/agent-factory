@@ -1,0 +1,41 @@
+{
+  "role_id": "backend_dev",
+  "run_id": "project_run_1776442779_backend_dev",
+  "skills": [
+    {
+      "skill_id": "fastapi_backend_development",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "rest_api_design",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "pytest_api_testing",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 3,
+    "installed": 3,
+    "by_mode": {
+      "direct_install": 3
+    }
+  },
+  "generated_at": "2026-04-18T01:25:30"
+}
