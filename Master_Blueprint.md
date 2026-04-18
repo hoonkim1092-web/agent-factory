@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-17 | version: v1.2.21 -->
+<!-- last_updated: 2026-04-18 | version: v1.2.21 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -197,7 +197,7 @@ run_factory_cli.py:main()
   │   └─ DynamicOrchestrator.run()
   │       ├─ print_startup_routing_notice()  [model_utils]
   │       ├─ MessageBroker TCP 서버 시작
-  │       └─ Lilith LLM 사이클 루프 (max_cycles=50):
+  │       └─ Lilith LLM 사이클 루프 (max_cycles=compute_max_cycles(), 동적):
   │           ├─ _lilith_decide_next() → 다음 태스크 선택
   │           ├─ AgentSpecializer.specialize(agent, task)
   │           ├─ _run_agent_in_terminal() 또는 _run_agent_inline()
@@ -212,8 +212,14 @@ run_factory_cli.py:main()
 
 ### Flow B: FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한)
 
+> **⚠ 배선 현황 (2026-04-18 기준)**: `fsa_loop.FSALoop` 클래스는 현재 **dead** 상태.
+> `fsa_loop.py`가 `ise_analyzer` / `ise_redesigner` / `ise_stall_detector`를 내부에 흡수했으나,
+> `DynamicOrchestrator`는 `fsa_loop`를 호출하지 않는다 (배선 누락).
+> Phase 3에서 FSALoop 복귀 또는 삭제 중 하나를 결정한다.
+> 아래 다이어그램은 **설계 의도** 기준이며 현재 실행 경로가 아님.
+
 ```
-fsa_loop.FSALoop.run_mission()
+fsa_loop.FSALoop.run_mission()  [현재 미연결 — 설계 의도]
   │
   ├─ StrategyLedger 초기화
   │
@@ -293,8 +299,8 @@ self.active_assignments       # 진행 중인 태스크 {role: {subtask, result_
 self._task_retry_count        # 태스크별 재시도 횟수 {retry_key: count}
 self._max_task_retries        # = 3 (초과 시 skip)
 self._last_completion_cycle   # 마지막 태스크 완료 사이클 (stall 감지용)
-self._stall_threshold         # = 5 (N사이클 무완료 → stall)
-max_cycles                    # = 30
+self._stall_threshold         # = 15 (env AGENT_STALL_THRESHOLD로 조절 가능)
+max_cycles                    # = compute_max_cycles() — max(30, pending*3), 10사이클마다 재산정
 ```
 
 **핵심 메서드:**
@@ -334,7 +340,7 @@ else:
 
 **완료 상태 결정:**
 ```python
-if cycle >= max_cycles:       → "stopped_max_cycles"
+if cycle >= max_cycles:       → "stopped_max_cycles"  # max_cycles는 compute_max_cycles() 동적 값
 elif failed_subtasks:         → "partial"
 else:                         → "completed"
 ```
@@ -794,12 +800,15 @@ Layer 5: 인간 승인 게이트
 
 ### ApprovalGate 상태 전환
 
+`is_execution_open()` 판단 조건: `execution_open == true` **AND** `status == "approved"` (둘 다 충족해야 통과).
+`approved`는 `status` 필드 값이며 `execution_open` 별칭이 아님.
+
 ```
-initialize() → execution_open: false
+initialize() → execution_open: false, status: "pending"
      ↓
 [사용자 검토]
      ↓
-approve() → SHA256 스냅샷 저장, execution_open: true
+approve() → SHA256 스냅샷 저장, execution_open: true, status: "approved"
      ↓
 [문서 수정 감지]
      ↓
@@ -1064,7 +1073,7 @@ model_utils.py (독립 모듈)
 | **Self-hosting 제한** | af.exe는 자기 소스(`core/*.py`)를 수정 불가 | 소스 모드(`python run_factory_cli.py`)로 실행 |
 | **GOOGLE_API_KEY 없음** | ~~Lilith LLM 실패 → cycle 낭비~~ **해결됨**: ControlPlaneLLM이 CLI-first로 동작 | — |
 | **TCP Broker 미연결** | agent_worker.py가 TCP 브로커에 실제 연결 안 함 | 파일 기반 Mailbox는 정상 동작 |
-| **max_cycles 소진** | ~~Lilith LLM 오류 누적 시 50 사이클 낭비~~ **완화됨**: infra 실패 즉시 종료, ControlPlaneLLM CLI fallback | — |
+| **max_cycles 소진** | ~~Lilith LLM 오류 누적 시 사이클 낭비~~ **완화됨**: `compute_max_cycles()` 동적 산정(max(30, pending*3)), infra 실패 즉시 종료, ControlPlaneLLM CLI fallback | — |
 | **cross_verification level** | DynamicOrchestrator에서 항상 dynamic(1라운드) 고정 | enterprise 모드 옵션 추가 가능 |
 | **LFS zip 빌드 반복** | 매 버전마다 44MB zip LFS 푸시 필요 | 릴리스 asset URL 사용 시 PowerShell 리다이렉트 실패 |
 
@@ -1073,7 +1082,7 @@ model_utils.py (독립 모듈)
 | 에러 | 원인 | 수정 위치 |
 |------|------|----------|
 | `worker_exited_code_2` | frozen exe에서 `python agent_worker.py` 실행 시도 | `dynamic_orchestrator.py:515` frozen 분기 |
-| `stopped_max_cycles` | 50 사이클 내 완료 못함 | Lilith LLM 실패율, 태스크 재시도 횟수 확인 |
+| `stopped_max_cycles` | `compute_max_cycles()` 사이클 내 완료 못함 (기본 max(30, pending*3)) | Lilith LLM 실패율, 태스크 재시도 횟수 확인 |
 | `worker_timeout` | 에이전트 3600초 초과 | `dynamic_orchestrator.py:526` max_wait 조정 |
 | `empty_llm_response` | LLM 호출 실패 (API 키 없음 등) | 환경 변수 및 CLI 설치 확인 |
 | 다운로드 연결 끊김 | GitHub release asset 리다이렉트 실패 | raw LFS URL 사용 (`install-af.ps1:98`) |
@@ -1088,6 +1097,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | docs(blueprint): Phase -1 드리프트 동기화 — §2 Flow A `max_cycles=50`→동적, §3.2 `_stall_threshold=5`→`15` + `max_cycles`→`compute_max_cycles()`, §2 Flow B ISE 배선 누락 현황 명시(FSALoop dead), §7 ApprovalGate `execution_open` + `status=="approved"` AND 조건 명시, §11 `stopped_max_cycles` 에러 코드 동적 공식 반영 |
+| 2026-04-17 | v1.2.21 | {"changelog":"test(pending-review): check_pending_review 테스트 보강 — tests/test_pending_review.py 갱신, scripts/check_pending_review.py 수정, Master_Blueprint.md·code-review.md 동기화, skill-eval-report.json·document_index.json 재생성"} |
+| 2026-04-17 | v1.2.21 | {"type":"text","text":"docs(review-pipeline): 교차검증 파이프라인 문서·스크립트 정비 — Master_Blueprint.md 업데이트, code-review.md 갱신, scripts/check_pending_review.py 수정, skill-eval-report.json 갱신, document_index.json 캐시 재생성"} |
+| 2026-04-17 | v1.2.21 | {"changelog": "chore(review): 교차검증 파이프라인 산출물 갱신 — scripts/check_pending_review.py 편집, docs/code_review/code-review.md 갱신, document_index.json 캐시 확장, skill-eval-report.json 리포트 업데이트"} |
 | 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 post_edit_test 훅 추가 — settings.local.json에 테스트 실행 스텝 신규 삽입, hook_runner.py에 post_edit_test 핸들러 구현, test_hook_runner_builtins.py에 검증 케이스 추가, document_index.json 청크 갱신, code-review.md·Master_Blueprint.md·CLAUDE.md 문서 동기화 |
 | 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 편집 후 자동 테스트 훅 추가 — `post_edit_test` 커맨드 신규 등록, `hook_runner.py` 실행 분기 추가, `check_pending_review.py` 관련 로직 갱신, `document_index.json` 캐시 갱신, Blueprint·코드리뷰 문서 동기화 |
 | 2026-04-17 | v1.2.21 | feat(hook_runner): `.py` 편집 후 즉시 pytest 실행 — `_post_edit_test` 신규 추가, 편집 파일명 기반 `test_<module>.py` 자동 탐지, 매칭 실패 시 `tests/` 전체 fallback, `_BUILTINS` 등록 완료 |
