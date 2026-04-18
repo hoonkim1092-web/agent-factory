@@ -94,3 +94,11 @@ task_decomposition:
     - "Include at least one verify task overall."
     - "Keep objectives and summaries concrete."
     - "MANDATORY: Always include a qa_engineer role. QA is non-negotiable."
+
+nightly_autonomy:
+  enabled: false                    # af nightly-start/stop으로 제어
+  tick_interval_sec: 900            # launchd StartInterval
+  soft_deadline_sec: 600            # tick 내 soft 타임아웃 (10분)
+  hard_deadline_sec: 840            # tick 내 hard 타임아웃 (14분)
+  max_tokens_per_night: 0           # 0=unlimited. af nightly-start --budget으로 설정
+  alert_after_consec_fail: 5        # 연속 tick 실패 N회 시 .af/alert.flag 생성

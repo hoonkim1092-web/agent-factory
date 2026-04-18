@@ -60,7 +60,9 @@
 | `core/document_chunker.py` | 문서 청킹 (RAG) | `DocumentChunker`, `DocumentChunk` |
 | `core/document_index.py` | Dense+Sparse 하이브리드 검색 | `DocumentIndex` |
 | `core/documentation_policy.py` | 주석/문서화 정책 주입 + `.todo.md` board 동기화 | `inject_documentation_contract()`, `write_project_todo()`, `_instruction_status_map()` |
-| `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator` |
+| `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator`, `restore_from()` (tick 재기동 복원) |
+| `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
+| `core/watchdog.py` | tick 기반 stall 감지 (cycle 카운터 없음) | `WatchdogState`, `tick_progress()`, `tick_no_progress()` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
 | `core/executor.py` | 태스크 실행 래퍼 | — |
@@ -310,6 +312,7 @@ max_cycles                    # = compute_max_cycles() — max(30, pending*3), 1
 | `_orchestration_loop()` | 메인 실행 루프 (event-driven sparse governor) |
 | `_dispatch_from_board()` | Rule-based 태스크 디스패치 (LLM 토큰 0) |
 | `_needs_llm_intervention()` | LLM 개입 필요 여부 판단 (blocker/stall/pivot) |
+| `restore_from(snapshot, mr)` | state_snapshot.json에서 tick 재기동 시 상태 복원 (classmethod) |
 | `_lilith_intervene()` | LLM 기반 태스크 결정 (필요시에만 호출) |
 | `_lilith_decide_next()` | Lilith LLM 프롬프트 + 응답 파싱 |
 | `_run_agent_in_terminal()` | 터미널 워커 실행 |
@@ -1097,6 +1100,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-18 | v1.2.21 | feat(lotto-mobile-web): 오프라인 추천 모드 및 팩토리 CLI 개선 — recommendation.py 오프라인 지원 추가, app.py API 엔드포인트 수정, run_factory_cli.py 안정성 개선, dynamic_orchestrator.py 업데이트, curl/ipconfig 허용 권한 추가 |
+| 2026-04-18 | v1.2.21 | feat(dynamic_orchestrator): 오케스트레이터 개선 및 lotto 프로젝트 안정화 — dynamic_orchestrator.py 로직 수정, lotto_mobile_web 추천 API(recommendation.py/app.py) 업데이트, lotto_predictor_v2 CLI 개선, curl/ipconfig 권한 허용 추가 |
+| 2026-04-18 | v1.2.21 | feat(nightly): Phase 0 야간 자율 파이프라인 인프라 — `core/watchdog.py`(WatchdogState), `core/nightly_state.py`(NightlyState·state_snapshot.json), `scripts/nightly_tick.py`(tick CLI, flock, SIGTERM), `scripts/nightly_summary.py`, `scripts/install_launchd.sh`(plist 이중 스케줄), `DynamicOrchestrator.restore_from()`, `run_factory_cli.py` nightly-start/stop/status/tick 서브커맨드, `policy.yaml` nightly_autonomy 섹션 추가 |
 | 2026-04-18 | v1.2.21 | docs(blueprint): Phase -1 드리프트 동기화 — §2 Flow A `max_cycles=50`→동적, §3.2 `_stall_threshold=5`→`15` + `max_cycles`→`compute_max_cycles()`, §2 Flow B ISE 배선 누락 현황 명시(FSALoop dead), §7 ApprovalGate `execution_open` + `status=="approved"` AND 조건 명시, §11 `stopped_max_cycles` 에러 코드 동적 공식 반영 |
 | 2026-04-17 | v1.2.21 | {"changelog":"test(pending-review): check_pending_review 테스트 보강 — tests/test_pending_review.py 갱신, scripts/check_pending_review.py 수정, Master_Blueprint.md·code-review.md 동기화, skill-eval-report.json·document_index.json 재생성"} |
 | 2026-04-17 | v1.2.21 | {"type":"text","text":"docs(review-pipeline): 교차검증 파이프라인 문서·스크립트 정비 — Master_Blueprint.md 업데이트, code-review.md 갱신, scripts/check_pending_review.py 수정, skill-eval-report.json 갱신, document_index.json 캐시 재생성"} |

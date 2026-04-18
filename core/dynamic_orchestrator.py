@@ -75,6 +75,19 @@ class DynamicOrchestrator:
         self._manifest_roles: List[str] = []
         self._manifest_project_desc = ""
 
+    @classmethod
+    def restore_from(cls, snapshot: dict, mr=None) -> "DynamicOrchestrator":
+        """state_snapshot.json에서 orchestrator 상태를 복원한다.
+
+        nightly tick 재기동 시 호출. short-lived 상태(async handles 등)는 복원 안 함.
+        """
+        inst = cls(mr=mr)
+        if snapshot.get("active_assignments"):
+            inst.active_assignments = dict(snapshot["active_assignments"])
+        if snapshot.get("task_retry_count"):
+            inst._task_retry_count = dict(snapshot["task_retry_count"])
+        return inst
+
     def _runtime_file(self, filename: str, workspace: str | None = None) -> Path:
         target_workspace = workspace or self._workspace
         if target_workspace:

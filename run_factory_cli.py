@@ -171,21 +171,132 @@ def _run_check_nlm_subcommand(rest: list[str]) -> None:
         sys.exit(1)
 
 
+def _run_nightly_start(rest: list[str]) -> None:
+    """nightly-start: 야간 자율 모드 활성화 + launchd plist 설치."""
+    import argparse
+    import subprocess
+    from core.nightly_state import load_state, save_state
+
+    parser = argparse.ArgumentParser(prog="af nightly-start")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    parser.add_argument("--budget", type=int, default=0, help="야간 최대 토큰 (0=unlimited)")
+    parser.add_argument("--project", "-p", type=str, default=None, help="활성 프로젝트 ID")
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    state.nightly_autonomy_enabled = True
+    if args.project:
+        state.active_project = args.project
+        import os
+        from core.utils import safe_id
+        projects_root = os.environ.get("AGENT_PROJECTS_DIR", os.path.join(FACTORY_DIR, "projects"))
+        state.active_workspace = os.path.join(projects_root, safe_id(args.project))
+    if args.budget > 0:
+        state.budget.max_tokens = args.budget
+    save_state(state, ws)
+
+    # launchd 설치
+    install_sh = os.path.join(FACTORY_DIR, "scripts", "install_launchd.sh")
+    if os.path.exists(install_sh):
+        try:
+            subprocess.run(["bash", install_sh], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"[nightly-start] launchd 설치 실패 (수동 설치 필요): {e}", file=sys.stderr)
+    else:
+        print(f"[nightly-start] install_launchd.sh 없음. launchd 수동 설정 필요.", file=sys.stderr)
+
+    print(f"[nightly-start] 자율 모드 활성화됨. 프로젝트={state.active_project or '(미지정)'}")
+    print(f"  야간 Mac이 절전 모드에 들어가지 않도록 전원 연결 및 절전 설정을 확인하세요.")
+
+
+def _run_nightly_stop(rest: list[str]) -> None:
+    """nightly-stop: 야간 자율 모드 비활성화 + launchd plist 언로드."""
+    import subprocess
+    from core.nightly_state import load_state, save_state
+
+    import argparse
+    parser = argparse.ArgumentParser(prog="af nightly-stop")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    state.nightly_autonomy_enabled = False
+    save_state(state, ws)
+
+    label = "com.af.nightly.tick"
+    plist = os.path.expanduser(f"~/Library/LaunchAgents/{label}.plist")
+    if os.path.exists(plist):
+        for cmd in [
+            ["launchctl", "bootout", f"gui/{os.getuid()}", plist],
+            ["launchctl", "unload", "-w", plist],
+        ]:
+            try:
+                subprocess.run(cmd, check=True, capture_output=True)
+                break
+            except subprocess.CalledProcessError:
+                continue
+
+    print("[nightly-stop] 자율 모드 비활성화됨.")
+
+
+def _run_nightly_status(rest: list[str]) -> None:
+    """nightly-status: 야간 파이프라인 현재 상태 출력."""
+    from core.nightly_state import load_state, summary_path, alert_flag_path
+    from core.watchdog import WatchdogState
+
+    import argparse
+    parser = argparse.ArgumentParser(prog="af nightly-status")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    b = state.budget
+    w = state.watchdog
+
+    print(f"=== 야간 자율 파이프라인 상태 ===")
+    print(f"  활성: {'예' if state.nightly_autonomy_enabled else '아니오'}")
+    print(f"  프로젝트: {state.active_project or '(없음)'}")
+    print(f"  Watchdog: {w.watchdog_level} (연속 무진전: {w.consecutive_no_progress_ticks})")
+    print(f"  예산: {b.consumed_tokens:,}/{b.max_tokens or 'unlimited'} tokens")
+    print(f"  Tick 횟수: {b.tick_count}")
+    print(f"  마지막 tick: {state.last_tick_id or '(없음)'}")
+    alert = alert_flag_path(ws)
+    if alert.exists():
+        print(f"  ⚠️  ALERT 플래그 존재: {alert.read_text()[:200]}")
+    summary = summary_path(ws)
+    if summary.exists():
+        print(f"  요약 파일: {summary}")
+
+
+def _run_nightly_tick(rest: list[str]) -> None:
+    """nightly-tick: 수동 1회 tick (launchd 호출과 동일)."""
+    from scripts.nightly_tick import main as tick_main
+    sys.exit(tick_main(rest))
+
+
 # STAGE 1에서 setup gate 이전에 즉시 분기되어야 하는 서브커맨드 dispatch.
 # 단일 진실원천: 새 항목 추가 시 이 dict만 수정하면 STAGE 1 분기에 자동 반영된다
 # (af-critic WARN 5 해소 — 집합/if-체인 이중 진실원천 제거).
 # - 기존 내부 서브커맨드: setup / worker / skill-* / preflight
 # - v3 신규: __nlm / __check-nlm (NotebookLM CLI를 af 프로세스 내부에서 invoke)
+# - Phase 0 신규: nightly-start / nightly-stop / nightly-status / nightly-tick
 _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
-    "setup":         _run_setup_subcommand,
-    "worker":        _run_worker_subcommand,
-    "skill-create":  lambda rest: _run_skill_creator(rest),
-    "skill-spec":    lambda rest: _run_skill_spec(rest),
-    "preflight":     lambda rest: _run_preflight(rest),
-    "skill-eval":    lambda rest: _run_skill_eval(rest),
-    "skill-promote": lambda rest: _run_skill_promote(rest),
-    "__nlm":         _run_nlm_subcommand,
-    "__check-nlm":   _run_check_nlm_subcommand,
+    "setup":           _run_setup_subcommand,
+    "worker":          _run_worker_subcommand,
+    "skill-create":    lambda rest: _run_skill_creator(rest),
+    "skill-spec":      lambda rest: _run_skill_spec(rest),
+    "preflight":       lambda rest: _run_preflight(rest),
+    "skill-eval":      lambda rest: _run_skill_eval(rest),
+    "skill-promote":   lambda rest: _run_skill_promote(rest),
+    "__nlm":           _run_nlm_subcommand,
+    "__check-nlm":     _run_check_nlm_subcommand,
+    "nightly-start":   _run_nightly_start,
+    "nightly-stop":    _run_nightly_stop,
+    "nightly-status":  _run_nightly_status,
+    "nightly-tick":    _run_nightly_tick,
 }
 
 
@@ -214,15 +325,19 @@ def _is_meta_arg(argv: list[str]) -> bool:
 # 하위 argparse/Typer가 자체 --help를 처리하는 커맨드(worker, skill-*, __nlm 등)
 # 라도 setup_wizard처럼 부작용이 먼저 시작되는 경우가 있으므로 일괄 가드한다.
 _STAGE1_USAGE = {
-    "setup":         "usage: af setup    # API 키·TAVILY·NotebookLM 대화형 설정 마법사",
-    "worker":        "usage: af worker --task-file PATH    # PyInstaller exe 전용 에이전트 워커",
-    "skill-create":  "usage: af skill-create [ARGS...]    # 스킬 생성 (자세한 옵션은 core/skill_creator.py)",
-    "skill-spec":    "usage: af skill-spec [ARGS...]    # 스킬 스펙 합성 (core/skill_spec_synthesizer.py)",
-    "preflight":     "usage: af preflight [ARGS...]    # 스킬 preflight 검사 (core/skill_preflight.py)",
-    "skill-eval":    "usage: af skill-eval [ARGS...]    # 스킬 평가 하네스 (core/skill_eval_harness.py)",
-    "skill-promote": "usage: af skill-promote [ARGS...]    # 스킬 승격 (core/skill_promotion.py)",
-    "__nlm":         "usage: af __nlm <nlm-args>    # (hidden) af 프로세스 내부 nlm Typer 호출",
-    "__check-nlm":   "usage: af __check-nlm    # (hidden) nlm 패키지 import 가능 여부 검사",
+    "setup":           "usage: af setup    # API 키·TAVILY·NotebookLM 대화형 설정 마법사",
+    "worker":          "usage: af worker --task-file PATH    # PyInstaller exe 전용 에이전트 워커",
+    "skill-create":    "usage: af skill-create [ARGS...]    # 스킬 생성 (자세한 옵션은 core/skill_creator.py)",
+    "skill-spec":      "usage: af skill-spec [ARGS...]    # 스킬 스펙 합성 (core/skill_spec_synthesizer.py)",
+    "preflight":       "usage: af preflight [ARGS...]    # 스킬 preflight 검사 (core/skill_preflight.py)",
+    "skill-eval":      "usage: af skill-eval [ARGS...]    # 스킬 평가 하네스 (core/skill_eval_harness.py)",
+    "skill-promote":   "usage: af skill-promote [ARGS...]    # 스킬 승격 (core/skill_promotion.py)",
+    "__nlm":           "usage: af __nlm <nlm-args>    # (hidden) af 프로세스 내부 nlm Typer 호출",
+    "__check-nlm":     "usage: af __check-nlm    # (hidden) nlm 패키지 import 가능 여부 검사",
+    "nightly-start":   "usage: af nightly-start [--workspace PATH] [--budget TOKENS] [--project ID]    # 야간 자율 모드 활성화",
+    "nightly-stop":    "usage: af nightly-stop [--workspace PATH]    # 야간 자율 모드 비활성화",
+    "nightly-status":  "usage: af nightly-status [--workspace PATH]    # 야간 파이프라인 상태 조회",
+    "nightly-tick":    "usage: af nightly-tick [--workspace PATH]    # 수동 1회 tick 실행",
 }
 
 
