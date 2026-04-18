@@ -3,7 +3,7 @@
     {
       "lineage_id": "task_dev",
       "level": 2,
-      "attempts": 2,
+      "attempts": 3,
       "history": [
         {
           "ts": "2026-04-18T22:35:51",
@@ -16,6 +16,13 @@
           "ts": "2026-04-18T22:35:52",
           "level": 2,
           "attempts": 2,
+          "outcome": "failure",
+          "reason": "missing import"
+        },
+        {
+          "ts": "2026-04-18T22:35:53",
+          "level": 2,
+          "attempts": 3,
           "outcome": "failure",
           "reason": "missing import"
         }
