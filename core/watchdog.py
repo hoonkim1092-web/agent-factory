@@ -6,7 +6,7 @@ tick 기반 아키텍처에서 cycle 카운터 대신 파일 기반 stall 감지
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 
 @dataclasses.dataclass
@@ -83,7 +83,7 @@ class WatchdogState:
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
-    _VALID_LEVELS: frozenset[str] = frozenset(
+    _VALID_LEVELS: ClassVar[frozenset[str]] = frozenset(
         {"OK", "STALL_1", "STALL_2", "STALL_3", "CHECKPOINT_ONLY"}
     )
 
