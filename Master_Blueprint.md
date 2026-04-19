@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-18 | version: v1.2.21 -->
+<!-- last_updated: 2026-04-19 | version: v1.2.21 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1143,6 +1143,34 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-19 | v1.2.21 | feat(e2e): §6.1 tick_simulator 합성 테스트 (GE-1~5) — `tests/e2e/tick_simulator.py` 신규(48-tick 완주·mtime 단조증가·watchdog 에스컬레이션·alert.flag 검증), `tests/e2e/conftest.py` sim_workspace/no_dispatch/fail_dispatch 픽스처, `core/watchdog.py` `_VALID_LEVELS` → `ClassVar[frozenset]` 수정(dataclasses JSON 직렬화 버그 해소), `pytest.ini` e2e 마커 추가, af-critic WARN 3건 + af-cross-review ACCEPT 2건 해소 |
+| 2026-04-19 | v1.2.21 | feat(phase2): approval-gate ← verify-handoff 연결 — `scripts/verify_handoff_checker.py` 5항목 검증(placeholder `{{...}}` 스캔·forbidden token·verdict≠BLOCK·e2e exit_code·severity 비율), `docs/templates/verify-handoff.md.tpl` 신규, `core/approval_gate.py` checker 통합, af-critic BLOCK 2건+WARN 4건 해소 |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/conftest.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+23) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — document_index.json, Master_Blueprint.md, watchdog.py, skill-usage.jsonl, code-review.md (+23) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/watchdog.py — document_index.json, Master_Blueprint.md, watchdog.py, skill-usage.jsonl, code-review.md (+23) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+21) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/conftest.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+21) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/__init__.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+21) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, code-review.md, verify_handoff_checker.py, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py — document_index.json, Master_Blueprint.md, work_item_generator.py, code-review.md, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — document_index.json, Master_Blueprint.md, episode_matcher.py, code-review.md, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — document_index.json, Master_Blueprint.md, episode_matcher.py, project_pipeline.py, code-review.md (+19) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py — document_index.json, Master_Blueprint.md, project_pipeline.py, code-review.md, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py — document_index.json, Master_Blueprint.md, project_pipeline.py, code-review.md, skill-eval-report.json (+18) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — document_index.json, Master_Blueprint.md, episode_matcher.py, project_pipeline.py, project_task_board.py (+2) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/project_task_board.py — document_index.json, Master_Blueprint.md, project_pipeline.py, project_task_board.py, code-review.md (+1) |
+| 2026-04-19 | v1.2.21 | chore(core): edit: /Users/hoon/workTree/agent-factory/core/project_task_board.py — project_pipeline.py, project_task_board.py |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
 | 2026-04-18 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, af.spec, episode_matcher.py (+28) |
