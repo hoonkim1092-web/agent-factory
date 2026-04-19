@@ -28,13 +28,16 @@ _EMPTY_VALUES = {
 }
 
 # document_policy.COMPLETION_CRITERIA 로드 (없으면 기본값 사용)
+_FORBIDDEN_TOKENS_DEFAULT = ["(edit required)", "(auto-generate needed)", "TODO: "]
 try:
     _repo_root = Path(__file__).parent.parent
     sys.path.insert(0, str(_repo_root))
     from core.document_policy import COMPLETION_CRITERIA, FORBIDDEN_TOKENS
 except Exception:
-    COMPLETION_CRITERIA = {}
-    FORBIDDEN_TOKENS = ["(edit required)", "(auto-generate needed)", "TODO: "]
+    COMPLETION_CRITERIA = {"e2e_command_exit_code": 0, "verification_report_verdict_not": "BLOCK"}
+    FORBIDDEN_TOKENS = _FORBIDDEN_TOKENS_DEFAULT
+
+_PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}")
 
 
 def _check_report(report_path: Path) -> int:
@@ -46,14 +49,23 @@ def _check_report(report_path: Path) -> int:
     text = report_path.read_text(encoding="utf-8")
     errors: list[str] = []
 
-    # COMPLETION_CRITERIA 기반 검증
-    # 1. e2e_command_exit_code: e2e_command 필드 존재 여부
-    if COMPLETION_CRITERIA.get("e2e_command_exit_code") is not None:
-        m_cmd = re.search(r"e2e_command:\s*([^\n]*)", text)
-        if not m_cmd or m_cmd.group(1).strip().lower() in _EMPTY_VALUES:
-            errors.append("e2e_command 필드가 비어있습니다")
+    # 1. e2e_command 필드 존재 여부 — COMPLETION_CRITERIA 의존 없이 무조건 검사
+    m_cmd = re.search(r"e2e_command:\s*([^\n]*)", text)
+    cmd_val = m_cmd.group(1).strip() if m_cmd else ""
+    if (
+        not m_cmd
+        or cmd_val.lower() in _EMPTY_VALUES
+        or _PLACEHOLDER_RE.fullmatch(cmd_val)  # {{e2e_command}} 미치환 감지
+    ):
+        errors.append("e2e_command 필드가 비어있습니다")
 
-    # 2. forbidden_tokens_absent
+    # 2. 미치환 플레이스홀더 범용 감지 ({{...}} 패턴)
+    placeholders = _PLACEHOLDER_RE.findall(text)
+    if placeholders:
+        sample = placeholders[0]
+        errors.append(f"미치환 플레이스홀더 발견: {sample!r} (총 {len(placeholders)}개)")
+
+    # 3. forbidden_tokens_absent
     forbidden = COMPLETION_CRITERIA.get("forbidden_tokens_absent") or FORBIDDEN_TOKENS
     for token in forbidden:
         if token in text:
