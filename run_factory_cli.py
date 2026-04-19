@@ -196,18 +196,19 @@ def _run_nightly_start(rest: list[str]) -> None:
         state.budget.max_tokens = args.budget
     save_state(state, ws)
 
-    # launchd 설치
-    install_sh = os.path.join(FACTORY_DIR, "scripts", "install_launchd.sh")
-    if os.path.exists(install_sh):
-        try:
-            subprocess.run(["bash", install_sh], check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"[nightly-start] launchd 설치 실패 (수동 설치 필요): {e}", file=sys.stderr)
+    # 플랫폼별 스케줄러 설치
+    import importlib.util
+    from pathlib import Path as _Path
+    _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
+    if os.path.exists(_sched_path):
+        _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
+        _sched = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+        _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+        _sched.install(_Path(FACTORY_DIR), _Path(ws))
     else:
-        print(f"[nightly-start] install_launchd.sh 없음. launchd 수동 설정 필요.", file=sys.stderr)
+        print("[nightly-start] install_scheduler.py 없음. 수동으로 15분 주기 설정 필요.", file=sys.stderr)
 
     print(f"[nightly-start] 자율 모드 활성화됨. 프로젝트={state.active_project or '(미지정)'}")
-    print(f"  야간 Mac이 절전 모드에 들어가지 않도록 전원 연결 및 절전 설정을 확인하세요.")
 
 
 def _run_nightly_stop(rest: list[str]) -> None:
@@ -225,18 +226,14 @@ def _run_nightly_stop(rest: list[str]) -> None:
     state.nightly_autonomy_enabled = False
     save_state(state, ws)
 
-    label = "com.af.nightly.tick"
-    plist = os.path.expanduser(f"~/Library/LaunchAgents/{label}.plist")
-    if os.path.exists(plist):
-        for cmd in [
-            ["launchctl", "bootout", f"gui/{os.getuid()}", plist],
-            ["launchctl", "unload", "-w", plist],
-        ]:
-            try:
-                subprocess.run(cmd, check=True, capture_output=True)
-                break
-            except subprocess.CalledProcessError:
-                continue
+    import importlib.util
+    from pathlib import Path as _Path
+    _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
+    if os.path.exists(_sched_path):
+        _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
+        _sched = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+        _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+        _sched.uninstall(_Path(FACTORY_DIR))
 
     print("[nightly-stop] 자율 모드 비활성화됨.")
 

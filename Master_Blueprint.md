@@ -1143,6 +1143,11 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/run_factory_cli.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, run_factory_cli.py (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/run_factory_cli.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, run_factory_cli.py (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/run_factory_cli.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, run_factory_cli.py (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/run_factory_cli.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, run_factory_cli.py (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/install_scheduler.py — document_index.json, skill-usage.jsonl, code-review.md, skill-eval-report.json, skill-eval-report.json (+20) |
 | 2026-04-19 | v1.2.21 | feat(e2e): §6.1 tick_simulator 합성 테스트 (GE-1~5) — `tests/e2e/tick_simulator.py` 신규(48-tick 완주·mtime 단조증가·watchdog 에스컬레이션·alert.flag 검증), `tests/e2e/conftest.py` sim_workspace/no_dispatch/fail_dispatch 픽스처, `core/watchdog.py` `_VALID_LEVELS` → `ClassVar[frozenset]` 수정(dataclasses JSON 직렬화 버그 해소), `pytest.ini` e2e 마커 추가, af-critic WARN 3건 + af-cross-review ACCEPT 2건 해소 |
 | 2026-04-19 | v1.2.21 | feat(phase2): approval-gate ← verify-handoff 연결 — `scripts/verify_handoff_checker.py` 5항목 검증(placeholder `{{...}}` 스캔·forbidden token·verdict≠BLOCK·e2e exit_code·severity 비율), `docs/templates/verify-handoff.md.tpl` 신규, `core/approval_gate.py` checker 통합, af-critic BLOCK 2건+WARN 4건 해소 |
 | 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/tests/e2e/tick_simulator.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, skill-eval-report.json (+22) |
