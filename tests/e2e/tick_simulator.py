@@ -27,7 +27,14 @@ def test_48_ticks_no_crash(
     sim_workspace: Path,
     no_dispatch,
 ) -> None:
-    """GE-1 ~ GE-3: 48 tick 동안 크래시 없이 summary mtime이 단조증가한다."""
+    """GE-1 ~ GE-3: 48 tick 동안 크래시 없이 summary mtime이 단조증가한다.
+
+    의존성:
+      - sim_workspace가 nightly_autonomy_enabled=True, max_tokens=0(unlimited)로 초기화되어야
+        tick_once()가 조기 return하지 않는다.
+      - scripts.nightly_summary.write_summary()가 매 tick마다 summary 파일을 쓰는 것을 전제.
+        이 전제가 깨지면 GE-3 assert가 i>=1에서 실패한다(의도된 통합 검증).
+    """
 
     prev_mtime: float = 0.0
 
@@ -59,17 +66,30 @@ def test_watchdog_escalation_after_no_progress(
     sim_workspace: Path,
     no_dispatch,
 ) -> None:
-    """GE-4: no-progress 연속 → watchdog_level CHECKPOINT_ONLY 에스컬레이션."""
+    """GE-4: no-progress 에스컬레이션 경계 조건.
+
+    n=CHECKPOINT_ONLY_THRESHOLD-1 → STALL_3 유지,
+    n=CHECKPOINT_ONLY_THRESHOLD → CHECKPOINT_ONLY 전환을 모두 검증한다.
+    """
     from core.watchdog import WatchdogState
 
     threshold = WatchdogState.CHECKPOINT_ONLY_THRESHOLD  # 16
-    # threshold+1회 tick → CHECKPOINT_ONLY 레벨 도달
-    for _ in range(threshold + 1):
-        tick_once(workspace=sim_workspace)
 
+    # threshold-1회 → STALL_3 단계 유지 (n in [8, 15])
+    for _ in range(threshold - 1):
+        tick_once(workspace=sim_workspace)
+    state = load_state(sim_workspace)
+    assert state.watchdog.watchdog_level == "STALL_3", (
+        f"{threshold - 1}회 no-progress 후 STALL_3 기대, "
+        f"실제={state.watchdog.watchdog_level}"
+    )
+
+    # 1회 더 → CHECKPOINT_ONLY 전환 (n == threshold)
+    tick_once(workspace=sim_workspace)
     state = load_state(sim_workspace)
     assert state.watchdog.watchdog_level == "CHECKPOINT_ONLY", (
-        f"예상 CHECKPOINT_ONLY, 실제={state.watchdog.watchdog_level}"
+        f"{threshold}회 no-progress 후 CHECKPOINT_ONLY 기대, "
+        f"실제={state.watchdog.watchdog_level}"
     )
 
 
