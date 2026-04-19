@@ -412,7 +412,11 @@ def enrich_role_plan(
     for index, raw_module in enumerate(modules_input, start=1):
         if not isinstance(raw_module, dict):
             continue
-        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(_clean_text(raw_module.get("name")), roles, workspace=workspace))
+        deliverable_text = " ".join(filter(None, [
+            _clean_text(raw_module.get("name")),
+            *_clean_list(raw_module.get("deliverables")),
+        ]))
+        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(deliverable_text, roles, workspace=workspace))
         owner = next((role for role in roles if role["id"] == owner_role), None)
         if owner is None and roles:
             owner = roles[0]

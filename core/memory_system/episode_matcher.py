@@ -144,6 +144,7 @@ class EpisodeMatcher:
         시드(.md) 결과와 메모리 결과를 스케일 혼합 없이 분리해 채운다:
           - 시드 최대 top_k // 2 슬롯, 나머지를 메모리로 채운다.
         """
+        top_k = max(1, top_k)
         seed_slots = max(1, top_k // 2)
 
         # ── 파일 기반 시드 에피소드 검색 (coverage 기반 유사도) ────────
