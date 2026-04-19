@@ -88,13 +88,17 @@ def _check_report(report_path: Path) -> int:
 def _propagate_block_to_gate(report_path: Path) -> None:
     """verdict=BLOCK → 같은 work-item 폴더의 ApprovalGate를 차단한다."""
     try:
-        work_item_dir = report_path.parent
-        # docs/work-items/<slug>/approval-gate.md 구조
+        # report_path를 함수 시작에서 절대경로화 — CWD·호출 경로와 무관하게
+        # 이후 모든 경로 계산(존재 검사·workspace 조립)이 동일 기준이 되도록.
+        # (서브디렉토리에서 git commit 실행 / CLI 직접 호출 시에도 안전.)
+        abs_report = report_path.resolve()
+        work_item_dir = abs_report.parent  # docs/work-items/<slug>
         gate_path = work_item_dir / "approval-gate.md"
         if not gate_path.exists():
             return
-        # workspace는 work-items/ 의 2단계 상위
-        workspace = str(work_item_dir.parent.parent)
+        # ApprovalGate가 내부적으로 `workspace/docs/work-items/<slug>`를 조합하므로
+        # workspace는 docs의 한 단계 상위(=레포 루트)여야 한다.
+        workspace = str(work_item_dir.parent.parent.parent)
         slug = work_item_dir.name
         from core.approval_gate import ApprovalGate
         gate = ApprovalGate(workspace, slug)
