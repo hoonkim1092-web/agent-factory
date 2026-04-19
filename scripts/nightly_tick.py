@@ -14,13 +14,17 @@ launchd가 15분마다 이 스크립트를 기동한다.
 """
 from __future__ import annotations
 
-import fcntl
 import os
 import signal
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+# F3: fcntl은 POSIX 전용 — Phase 0은 macOS/Linux 한정
+if sys.platform == "win32":
+    raise ImportError("nightly_tick.py는 POSIX 환경(macOS/Linux) 전용입니다.")
+import fcntl
 
 # 레포 루트를 sys.path에 추가 (launchd가 cwd를 보장하지 않음)
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -147,10 +151,13 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
             "tick_id": tick_id,
             "result_path": None,
         }
+        # F2: assignment를 즉시 디스크에 영속 — crash 후 active_assignments 복원 보장
+        save_state(state, workspace)
 
         try:
-            _run_task(orch, task_info, workspace, state, tick_id)
-            made_progress = True
+            task_ok = _run_task(orch, task_info, workspace, state, tick_id)
+            if task_ok:
+                made_progress = True
         except Exception as exc:
             retry_key = f"{role}:{task_id}"
             state.task_retry_count[retry_key] = state.task_retry_count.get(retry_key, 0) + 1
@@ -161,15 +168,22 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
     return made_progress
 
 
-def _run_task(orch, task_info: dict, workspace: str, state: NightlyState, tick_id: str) -> None:
-    """단일 태스크를 실행한다. 동기 래퍼."""
+def _run_task(orch, task_info: dict, workspace: str, state: NightlyState, tick_id: str) -> bool:
+    """단일 태스크를 실행한다. 동기 래퍼. 성공 시 True 반환.
+
+    F1: _execute_agent_task()는 내부 실패를 삼키므로, 실행 전후
+    orchestrator state_board의 completed_subtasks 증분으로 성공 여부를 판정한다.
+    F3: run_id 구분자를 '_'로 사용 — ':'는 Windows 경로 불법 문자이고
+    orchestrator가 run_id를 runs/{run_id}/ 디렉터리로 사용하기 때문.
+    """
     import asyncio
 
-    # run_id를 `tick_id:role` 복합 키로 구성 — orchestrator의 active_assignments가
-    # run_id를 키로 사용하므로 (core/dynamic_orchestrator.py:682/867) 한 tick에서
-    # 여러 롤을 실행하는 경우 키 충돌로 assignment가 무음 유실되는 것을 방지.
     role = task_info["assigned_role"]
-    run_id = f"{tick_id}:{role}"
+    # F3: '_' 구분자 — orchestrator가 runs/{run_id} 디렉터리로 사용 (dynamic_orchestrator.py:600)
+    run_id = f"{tick_id}_{role}"
+
+    # F1: 실행 전 baseline 캡처
+    completed_before = len(orch.state_board.get("completed_subtasks", []))
 
     async def _run():
         await orch._execute_agent_task(
@@ -185,6 +199,10 @@ def _run_task(orch, task_info: dict, workspace: str, state: NightlyState, tick_i
         loop.run_until_complete(asyncio.wait_for(_run(), timeout=SOFT_DEADLINE_SEC))
     finally:
         loop.close()
+
+    # F1: 완료 항목이 증가했으면 실제 성공 — 내부 실패(failed_subtasks 증가)는 False
+    completed_after = len(orch.state_board.get("completed_subtasks", []))
+    return completed_after > completed_before
 
 
 # ── 메인 tick 루틴 ────────────────────────────────────────
@@ -226,10 +244,11 @@ def tick_once(workspace: str | Path | None = None) -> int:
 
         if made_progress:
             state.watchdog.tick_progress(tick_id)
-            state.consecutive_tick_failures = 0
-            clear_alert(ws)
         else:
             state.watchdog.tick_no_progress()
+        # F4: 예외 없이 완료된 tick은 idle 포함 healthy — failure streak 초기화
+        state.consecutive_tick_failures = 0
+        clear_alert(ws)
 
         save_state(state, ws)
         write_summary(state, ws)
