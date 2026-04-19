@@ -143,7 +143,7 @@ class EpisodeMatcher:
         반환 형식: [{"episode_id", "task_input", "outcome", "similarity", "hints"}, ...]
         시드(.md) 결과와 메모리 결과를 스케일 혼합 없이 분리해 채운다:
           - 시드 최대 top_k // 2 슬롯, 나머지를 메모리로 채운다.
-          - top_k=1 시: seed 1슬롯, memory 0슬롯 (시드 결과가 존재할 경우에만).
+          - top_k=1 시: 시드가 있으면 seed 1슬롯/memory 0슬롯, 없으면 memory 최대 1슬롯.
         """
         if top_k <= 0:
             return []

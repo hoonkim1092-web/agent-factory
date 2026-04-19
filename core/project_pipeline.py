@@ -1,8 +1,11 @@
 import inspect
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 from core.approval_gate import ApprovalGate
 from core.bootstrap_roles import ProjectPlanningDirector, build_bootstrap_agent
@@ -953,6 +956,31 @@ class ProjectPipeline:
         )
         run_board = orchestrator.run_project(task_input, roles, workspace)
         status = str(run_board.get("current_status", "unknown"))
+
+        # ── strategy ledger: 모듈별 역할 배정 성공/실패 기록 ──────────────
+        # pattern_key = 모듈명 단독(소문자). 루프별 try/except로 한 모듈 실패가
+        # 나머지 기록을 중단시키지 않도록 격리.
+        _succeeded = status == "completed"
+        _project_id = os.path.basename(workspace)
+        try:
+            from core.memory_system.strategy_ledger import get_strategy_ledger
+            _ledger = get_strategy_ledger(workspace)
+        except Exception as _exc:
+            logger.warning("strategy ledger 초기화 실패: %s", _exc)
+            _ledger = None
+        if _ledger is not None:
+            for _mod in (prepared.role_plan.get("modules") or []):
+                _pattern = str(_mod.get("name") or "").strip().lower()
+                _owner = str(_mod.get("owner_role") or "")
+                if not _pattern or not _owner:
+                    continue
+                try:
+                    if _succeeded:
+                        _ledger.record_role_success(_pattern, _owner, _project_id)
+                    else:
+                        _ledger.record_role_failure(_pattern, _owner, _project_id)
+                except Exception as _exc:
+                    logger.warning("strategy ledger 기록 실패 [%s]: %s", _pattern, _exc)
 
         append_dashboard_run(
             {
