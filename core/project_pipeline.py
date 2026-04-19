@@ -954,6 +954,26 @@ class ProjectPipeline:
         run_board = orchestrator.run_project(task_input, roles, workspace)
         status = str(run_board.get("current_status", "unknown"))
 
+        # ── strategy ledger: 모듈별 역할 배정 성공/실패 기록 ──────────────
+        try:
+            from core.memory_system.strategy_ledger import get_strategy_ledger
+            _ledger = get_strategy_ledger(workspace)
+            _project_id = os.path.basename(workspace)
+            _succeeded = status == "completed"
+            for _mod in (prepared.role_plan.get("modules") or []):
+                _deliverable_text = " ".join(filter(None, [
+                    str(_mod.get("name") or ""),
+                    *[str(d) for d in (_mod.get("deliverables") or []) if d],
+                ]))
+                _owner = str(_mod.get("owner_role") or "")
+                if _deliverable_text and _owner:
+                    if _succeeded:
+                        _ledger.record_role_success(_deliverable_text, _owner, _project_id)
+                    else:
+                        _ledger.record_role_failure(_deliverable_text, _owner, _project_id)
+        except Exception:
+            pass
+
         append_dashboard_run(
             {
                 "ts": now_iso(),
