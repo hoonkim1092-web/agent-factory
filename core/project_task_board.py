@@ -1,9 +1,12 @@
 ﻿from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from core.file_io import write_text
 from core.file_lock import locked_file
@@ -163,8 +166,8 @@ def _pick_owner_role(
             valid_ids = {safe_id(r.get("id") or "") for r in roles}
             if ledger_role in valid_ids:
                 return ledger_role
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("strategy ledger lookup 실패: %s", exc)
 
     # 키워드 폴백
     keyword_map = (
