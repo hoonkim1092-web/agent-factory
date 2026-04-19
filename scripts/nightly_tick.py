@@ -82,10 +82,12 @@ def _release_flock(fd: int) -> None:
 
 
 # ── tick 액션 ─────────────────────────────────────────────
-def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool:
+def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str, state_root: str | None = None) -> bool:
     """이번 tick에서 할 일을 결정하고 실행한다.
 
     진전이 있었으면 True, 없었으면 False를 반환한다.
+    state_root: load_state/save_state 기준 경로(ws). workspace는 태스크 실행 경로.
+    둘이 다를 수 있으므로(active_workspace) crash 복원 경로 일치를 위해 구분한다.
     """
     from core.project_task_board import (
         load_project_board,
@@ -151,8 +153,16 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
             "tick_id": tick_id,
             "result_path": None,
         }
-        # F2: assignment를 즉시 디스크에 영속 — crash 후 active_assignments 복원 보장
-        save_state(state, workspace)
+        # F2: assignment를 즉시 디스크에 영속 — crash 후 active_assignments 복원 보장.
+        # state_root(ws)를 우선 사용 — load_state(ws)와 같은 경로를 보장.
+        _save_root = state_root or workspace
+        try:
+            save_state(state, _save_root)
+        except Exception as _save_exc:
+            # 저장 실패 시 stale assignment 방지를 위해 즉시 롤백
+            state.active_assignments.pop(role, None)
+            print(f"[nightly_tick] save_state 실패 ({role}), 태스크 스킵: {_save_exc}", file=sys.stderr)
+            continue
 
         try:
             task_ok = _run_task(orch, task_info, workspace, state, tick_id)
@@ -240,7 +250,7 @@ def tick_once(workspace: str | Path | None = None) -> int:
         state.budget.tick_count += 1
 
         active_workspace = state.active_workspace or ws
-        made_progress = _dispatch_actions(state, active_workspace, tick_id)
+        made_progress = _dispatch_actions(state, active_workspace, tick_id, state_root=ws)
 
         if made_progress:
             state.watchdog.tick_progress(tick_id)
