@@ -650,10 +650,135 @@ Phase -1 ──> Phase 0 ──> Phase 1 ──> Phase 2 ──> Phase 3 ──>
 
 ### 6.1 합성 tick 시뮬레이션 (Phase 0)
 
-`tests/e2e/tick_simulator.py` (신규):
-- mock launchd 타이머 → 가속 (1 simulated day = 5 분 real).
-- 모든 agent.run을 artificial fail로 고정.
-- **판정**: tick이 48회(12h/15min) 기동되고 매 tick에 summary mtime 갱신 + 어느 tick도 크래시 없음.
+**목적**: 실제 launchd 배선·야간 rehearsal 이전에 파이프라인이 48회 tick 동안 크래시 없이 돌고 상태가 올바르게 전이되는지 합성 환경에서 검증. 야간에 조용히 터지는 사고를 방지하기 위한 최후의 안전망.
+
+#### 6.1.1 파일 구조
+
+```
+tests/e2e/
+├── __init__.py
+├── conftest.py              # 공통 픽스처 (임시 workspace, env 격리)
+└── tick_simulator.py        # 핵심 시뮬레이터 + pytest 테스트
+```
+
+#### 6.1.2 가속 메커니즘
+
+실제 launchd는 15분 간격으로 별도 프로세스를 spawn하지만, 테스트에서는 `launchd 배제 + 순차 호출`로 가속:
+
+- **루프 구조**: `for i in range(48): tick_once(workspace=tmp_workspace)` — `scripts/nightly_tick.py:tick_once()` 직접 호출.
+- **"시간" 주입**: 실제 대기 없음. `make_tick_id()`가 `datetime.now()`에 의존하므로 `monkeypatch.setattr("core.nightly_state.make_tick_id", lambda: f"tick_{i:02d}")`로 주입.
+- **deadline 단축**: `SOFT_DEADLINE_SEC`/`HARD_DEADLINE_SEC`를 `monkeypatch.setattr("scripts.nightly_tick.HARD_DEADLINE_SEC", 2)` 로 2초로 축소.
+- **기대 실시간**: tick당 ~6초 × 48 = **5분 이내** 1회 시뮬레이션 완주 (설계 상한).
+
+#### 6.1.3 모킹 대상
+
+| 대상 | 모킹 이유 | 방식 |
+|------|-----------|------|
+| `agent.run` / `agent_chat_cli.run()` | LLM API 실호출 방지 + 결정론적 실패 주입 | `monkeypatch.setattr` → `AgentExecutionResult(ok=False, reason="simulated_fail", output="")` |
+| `DynamicOrchestrator._execute_agent_task` | 배선 전체 bypass 옵션 | `AF_SIMULATION_MODE=1` env 변수 체크 |
+| `core.lottery_client.ThreeTierLotteryClient` | 외부 API 실호출 방지 | 3-티어 fixture: live=fail, cache=fail, seed=OK |
+| `~/Library/LaunchAgents/*` 설치 | 테스트가 OS에 영향 주지 않도록 | `install_launchd.sh`는 **절대 호출하지 않음** (루프에서 `tick_once`를 직접 호출) |
+| `ANTHROPIC_API_KEY` | 실 API 호출 원천 차단 | `monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)` |
+
+#### 6.1.4 픽스처 (conftest.py)
+
+```python
+@pytest.fixture
+def sim_workspace(tmp_path, monkeypatch):
+    """임시 workspace + env 격리."""
+    ws = tmp_path / "af_sim"
+    (ws / ".af").mkdir(parents=True)
+    (ws / ".system_generated" / "logs").mkdir(parents=True)
+
+    # env 격리
+    monkeypatch.setenv("AF_SIMULATION_MODE", "1")
+    monkeypatch.setenv("AF_ISE_ENABLED", "1")
+    monkeypatch.setenv("AF_MEMORY_REPLAY", "0")   # 시드 에피소드 간섭 방지
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    # 초기 brief 주입 (최소 task 1건)
+    (ws / ".af" / "nightly_brief.md").write_text(
+        "# brief\n- task: simulated_task_1\n", encoding="utf-8"
+    )
+    return ws
+
+@pytest.fixture
+def fail_agent(monkeypatch):
+    """모든 agent.run 호출을 artificial fail로 고정."""
+    from core.dynamic_orchestrator import DynamicOrchestrator
+
+    async def _fake_execute(self, role, subtask, *args, **kwargs):
+        return {"ok": False, "reason": "simulated_fail", "output": "", "artifacts": []}
+
+    monkeypatch.setattr(
+        DynamicOrchestrator, "_execute_agent_task", _fake_execute
+    )
+```
+
+#### 6.1.5 판정 기준 (5가지)
+
+| # | 조건 | 측정 방식 |
+|---|------|-----------|
+| GE-1 | tick이 정확히 48회 기동 | 루프 카운트 == 48 |
+| GE-2 | 어느 tick도 예외를 상위로 전파하지 않음 | `tick_once()` 반환 exit code ∈ {0, 1} (내부 catch) |
+| GE-3 | 각 tick 후 `.af/nightly_summary.md` mtime 갱신 | `summary_path(ws).stat().st_mtime` 단조증가 |
+| GE-4 | 종료 시점 `state.status != "stopped_broken"` | `load_state(ws).status` 확인 |
+| GE-5 | 연속 실패 5회 초과 시 `.af/alert.flag` 생성 | `alert_flag_path(ws).exists()` == True |
+
+#### 6.1.6 테스트 골격 (Sonnet 구현 참고)
+
+```python
+# tests/e2e/tick_simulator.py
+import pytest
+from pathlib import Path
+from scripts.nightly_tick import tick_once
+from core.nightly_state import load_state, summary_path, alert_flag_path
+
+TICK_COUNT = 48  # 12h / 15min
+
+
+@pytest.mark.e2e
+def test_48_ticks_no_crash(sim_workspace, fail_agent, monkeypatch):
+    """GE-1 ~ GE-5 통합 검증."""
+    monkeypatch.setattr("scripts.nightly_tick.HARD_DEADLINE_SEC", 2)
+    prev_mtime = 0.0
+
+    for i in range(TICK_COUNT):
+        monkeypatch.setattr(
+            "core.nightly_state.make_tick_id",
+            lambda i=i: f"sim_tick_{i:02d}",
+        )
+        exit_code = tick_once(workspace=sim_workspace)
+        assert exit_code in (0, 1), f"tick {i} unexpected exit {exit_code}"  # GE-2
+
+        mtime = summary_path(sim_workspace).stat().st_mtime
+        assert mtime >= prev_mtime, f"tick {i} summary mtime regressed"  # GE-3
+        prev_mtime = mtime
+
+    state = load_state(sim_workspace)
+    assert state.status != "stopped_broken"  # GE-4
+    assert alert_flag_path(sim_workspace).exists()  # GE-5 (48회 연속 실패 → 5회 초과)
+```
+
+#### 6.1.7 실행 방법
+
+```bash
+# 로컬 단일 실행
+pytest tests/e2e/tick_simulator.py -m e2e -v
+
+# CI (느리므로 별도 stage)
+pytest tests/e2e/ -m e2e --timeout=600
+```
+
+- `pytest.ini` 에 `markers = e2e: 느린 e2e (기본 skip)` 추가.
+- 기본 `pytest` 실행 시 skip, `-m e2e` 명시 또는 `AF_RUN_E2E=1` env로만 활성화.
+
+#### 6.1.8 범위 외 (이 시뮬레이터가 검증하지 않는 것)
+
+- 실제 launchd `StartInterval` 타이밍 정확성 → §6.3 `pmset sleepnow` 테스트에서 커버.
+- 실제 LLM 호출 품질·비용 → §6.2 실 야간 rehearsal에서 커버.
+- macOS sleep/wake 복구 → §6.3에서 커버.
+- Golden Project 완주 → §6.4에서 커버.
 
 ### 6.2 실 야간 Rehearsal (Phase 0 완료 후 매주)
 
