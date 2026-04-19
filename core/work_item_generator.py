@@ -478,7 +478,9 @@ def _generate_implementation_tasks(
         "- Commit after each module-level implementation milestone\n\n"
         "## Definition Of Done\n\n"
         "- All task checkboxes are complete\n"
-        "- verification-report.md captures the final outcome\n"
+        "- verification-report.md 작성 완료 (`templates/verify-handoff.md.tpl` 참고)\n"
+        "  - `e2e_command:` 필드에 실행 명령어 기재\n"
+        "  - `- verdict:` 필드에 PASS/WARN/BLOCK 기재\n"
     )
 
 
