@@ -24,6 +24,23 @@ if [ -n "$CODE_CHANGED" ]; then
     fi
 fi
 
+# ── 신규: review-gate fast-path ──
+if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
+    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+    [ -x "$VENV_PYTHON" ] && GATE_PY="$VENV_PYTHON" || GATE_PY="python3"
+    "$GATE_PY" "${REPO_ROOT}/scripts/review_gate.py" --check
+    GATE_EXIT=$?
+    if [ $GATE_EXIT -ne 0 ]; then
+        echo ""
+        echo "⛔ [pre-commit] 교차검증 미완료."
+        echo "   af-test-runner → af-critic → af-cross-review 순서로 Agent 툴 실행 후 재시도."
+        echo "   우회: AF_SKIP_REVIEW_GATE=1 git commit ..."
+        echo ""
+        exit 1
+    fi
+fi
+
 # ── 신규: 교차검증 결과 확인 ──
 if [ "${AF_PRE_COMMIT_REVIEW:-1}" != "0" ]; then
     REVIEW_TARGET=$(echo "$STAGED" | grep -E "^(core/.*\.py|model_utils\.py|run_factory_cli\.py)$" | head -1)

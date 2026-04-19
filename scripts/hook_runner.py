@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -248,6 +249,124 @@ def _post_edit_test(payload: dict) -> int:
     return 0
 
 
+# ── Review-gate builtins ──────────────────────────────────────────────────────
+
+# git commit 정규식: 합성 명령 대응, --help 제외 (§6.2)
+_GIT_COMMIT_RE = re.compile(r"(?:^|[\s;&|])git\s+commit\b(?!\s+--help)")
+
+# 에이전트 → tier 매핑 (§6.2)
+_AGENT_TIER_MAP: dict[str, int] = {
+    "af-test-runner": 1,
+    "af-critic": 2,
+    "af-cross-review": 3,
+}
+
+
+def _pre_bash_review_gate(payload: dict) -> int:
+    """PreToolUse(Bash): git commit 시도 시 review-gate 판정. BLOCK → exit 2."""
+    ti = payload.get("tool_input") or {}
+    command = ti.get("command", "")
+    if not _GIT_COMMIT_RE.search(command):
+        return 0  # git commit 아님 → skip
+
+    root = _project_root()
+    workspace = _detect_workspace()
+    try:
+        sys.path.insert(0, root)
+        from scripts.review_gate import is_gate_blocked  # type: ignore[import]
+        blocked, reason = is_gate_blocked(workspace)
+        if blocked:
+            print(
+                f"\n⛔ [review-gate] 교차검증 미완료: {reason}\n"
+                "   af-test-runner → af-critic → af-cross-review 순서로 Agent 실행 후 재시도.\n"
+                "   우회: AF_SKIP_REVIEW_GATE=1",
+                file=sys.stderr,
+            )
+            _log_hook_event("pre_bash_review_gate", command[:80], 2, error=reason)
+            return 2  # exit 2 → Claude Code Bash 툴 차단
+        _log_hook_event("pre_bash_review_gate", command[:80], 0)
+    except Exception as exc:
+        # fail-open: 훅 버그로 commit 막히면 안 됨 (§10 Q3)
+        print(f"[review-gate] 훅 오류 (PASS): {exc}", file=sys.stderr)
+        _log_hook_event("pre_bash_review_gate", command[:80], 0, error=str(exc))
+    return 0
+
+
+def _post_agent_record(payload: dict) -> int:
+    """PostToolUse(Task/Agent): af-* 에이전트 완료 시 tier 기록."""
+    ti = payload.get("tool_input") or {}
+    subagent_type = ti.get("subagent_type", "")
+    if subagent_type not in _AGENT_TIER_MAP:
+        return 0  # 관심 없는 에이전트
+
+    tier = _AGENT_TIER_MAP[subagent_type]
+
+    # tool_response에서 verdict 파싱 (BLOCK/WARN/FAIL 키워드)
+    tr = payload.get("tool_response") or {}
+    content = ""
+    if isinstance(tr, dict):
+        content = str(tr.get("content") or tr.get("result") or "")
+    elif isinstance(tr, str):
+        content = tr
+    content_upper = content.upper()
+    if "BLOCK" in content_upper:
+        verdict = "block"
+    elif "WARN" in content_upper:
+        verdict = "warn"
+    elif "FAIL" in content_upper:
+        verdict = "fail"
+    else:
+        verdict = "pass"
+
+    root = _project_root()
+    workspace = _detect_workspace()
+    try:
+        sys.path.insert(0, root)
+        from scripts.review_gate import record_review_done, _load_state  # type: ignore[import]
+        state = _load_state(workspace) or {}
+        files_snapshot = list(state.get("files") or [])
+        record_review_done(workspace, subagent_type, tier, verdict, files_snapshot)
+        _log_hook_event("post_agent_record", subagent_type, 0)
+    except Exception as exc:
+        _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
+    return 0
+
+
+def _post_commit_clear(payload: dict) -> int:
+    """PostToolUse(Bash): commit 성공 후 커밋된 파일 정리."""
+    ti = payload.get("tool_input") or {}
+    command = ti.get("command", "")
+    if not _GIT_COMMIT_RE.search(command):
+        return 0  # git commit 아님 → skip
+
+    # tool_response exit_code 확인 — 실패 시 정리 스킵
+    tr = payload.get("tool_response") or {}
+    if isinstance(tr, dict):
+        exit_code = tr.get("exit_code") if "exit_code" in tr else tr.get("returncode")
+        if exit_code is not None:
+            try:
+                if int(exit_code) != 0:
+                    return 0
+            except (ValueError, TypeError):
+                pass
+
+    root = _project_root()
+    workspace = _detect_workspace()
+    try:
+        r = subprocess.run(
+            ["git", "diff", "HEAD~1", "--name-only"],
+            capture_output=True, text=True, timeout=5, cwd=workspace,
+        )
+        committed_files = [f.strip() for f in r.stdout.splitlines() if f.strip()]
+        sys.path.insert(0, root)
+        from scripts.review_gate import clear_committed_files  # type: ignore[import]
+        clear_committed_files(workspace, committed_files)
+        _log_hook_event("post_commit_clear", command[:80], 0)
+    except Exception as exc:
+        _log_hook_event("post_commit_clear", command[:80], 1, error=str(exc))
+    return 0
+
+
 _BUILTINS: dict[str, object] = {
     "post_edit_py_compile": _post_edit_py_compile,
     "post_edit_enqueue": _post_edit_enqueue,
@@ -255,6 +374,10 @@ _BUILTINS: dict[str, object] = {
     "post_edit_blueprint": _post_edit_blueprint,
     "post_edit_design_review": _post_edit_design_review,
     "post_edit_test": _post_edit_test,
+    # Review-gate builtins
+    "pre_bash_review_gate": _pre_bash_review_gate,
+    "post_agent_record": _post_agent_record,
+    "post_commit_clear": _post_commit_clear,
 }
 
 
