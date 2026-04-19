@@ -10,7 +10,6 @@ def sim_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """격리된 임시 workspace + nightly 자율 모드 활성화."""
     ws = tmp_path / "af_sim"
     (ws / ".af").mkdir(parents=True)
-    (ws / ".system_generated" / "logs").mkdir(parents=True)
 
     # 실제 LLM 호출 원천 차단
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)

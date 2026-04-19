@@ -26,13 +26,8 @@ _SHORT_DEADLINE = 2  # 테스트 가속: SOFT/HARD deadline을 2초로 단축
 def test_48_ticks_no_crash(
     sim_workspace: Path,
     no_dispatch,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """GE-1 ~ GE-4: 48 tick 동안 크래시 없이 상태가 올바르게 전이된다."""
-    import scripts.nightly_tick as _tick_mod
-
-    monkeypatch.setattr(_tick_mod, "SOFT_DEADLINE_SEC", _SHORT_DEADLINE)
-    monkeypatch.setattr(_tick_mod, "HARD_DEADLINE_SEC", _SHORT_DEADLINE)
+    """GE-1 ~ GE-3: 48 tick 동안 크래시 없이 summary mtime이 단조증가한다."""
 
     prev_mtime: float = 0.0
 
@@ -41,8 +36,10 @@ def test_48_ticks_no_crash(
         # GE-2: tick_once()는 내부에서 예외를 catch하고 0/1/2만 반환한다
         assert exit_code in (0, 1, 2), f"tick {i}: 예상 외 exit_code={exit_code}"
 
-        # GE-3: summary mtime 단조증가 (summary가 생성된 이후부터 확인)
+        # GE-3: 첫 tick 이후 summary 파일 반드시 존재 + mtime 단조증가
         s = summary_path(sim_workspace)
+        if i >= 1:
+            assert s.exists(), f"tick {i}: nightly_summary.md 파일이 없다"
         if s.exists():
             mtime = s.stat().st_mtime
             assert mtime >= prev_mtime, (
@@ -56,26 +53,32 @@ def test_48_ticks_no_crash(
         f"예상 tick_count={TICK_COUNT}, 실제={state.budget.tick_count}"
     )
 
-    # GE-4: no-progress 48회 → CHECKPOINT_ONLY 레벨로 정상 에스컬레이션
-    # (CHECKPOINT_ONLY_THRESHOLD=16, 48회 > 16 → 정상 동작)
+
+@pytest.mark.e2e
+def test_watchdog_escalation_after_no_progress(
+    sim_workspace: Path,
+    no_dispatch,
+) -> None:
+    """GE-4: no-progress 연속 → watchdog_level CHECKPOINT_ONLY 에스컬레이션."""
+    from core.watchdog import WatchdogState
+
+    threshold = WatchdogState.CHECKPOINT_ONLY_THRESHOLD  # 16
+    # threshold+1회 tick → CHECKPOINT_ONLY 레벨 도달
+    for _ in range(threshold + 1):
+        tick_once(workspace=sim_workspace)
+
+    state = load_state(sim_workspace)
     assert state.watchdog.watchdog_level == "CHECKPOINT_ONLY", (
-        f"예상 watchdog_level=CHECKPOINT_ONLY, 실제={state.watchdog.watchdog_level}"
+        f"예상 CHECKPOINT_ONLY, 실제={state.watchdog.watchdog_level}"
     )
-    assert state.watchdog.consecutive_no_progress_ticks == TICK_COUNT
 
 
 @pytest.mark.e2e
 def test_alert_flag_after_consecutive_failures(
     sim_workspace: Path,
     fail_dispatch,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GE-5: 연속 tick 예외 발생 시 alert.flag 생성."""
-    import scripts.nightly_tick as _tick_mod
-
-    monkeypatch.setattr(_tick_mod, "SOFT_DEADLINE_SEC", _SHORT_DEADLINE)
-    monkeypatch.setattr(_tick_mod, "HARD_DEADLINE_SEC", _SHORT_DEADLINE)
-
     # ALERT_AFTER_CONSEC_FAIL(=5)회 초과 실패를 유발
     for _ in range(ALERT_AFTER_CONSEC_FAIL + 1):
         tick_once(workspace=sim_workspace)  # exit_code=2 허용

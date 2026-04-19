@@ -47,6 +47,7 @@ dynamic_log.txt
 project_board_state.json
 pytest_out*.txt
 tests/_tmp_probe/
+tests/_tmp/
 tmp*/
 .tmp_validation*/
 .tmp_af_fsa
