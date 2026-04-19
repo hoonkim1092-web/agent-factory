@@ -95,12 +95,15 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
         return False
 
     # 유효 롤 목록 추출
+    # board 스키마: top-level `tasks` flat list, 각 task에 `owner_role` (project_task_board.py 구조).
+    # 기존 `board["modules"][*]["tasks"][*]["role"]` 접근은 스키마 mismatch로 항상 빈 결과였음 (B2-1).
     roles_in_board: list[str] = []
-    for mod in board.get("modules", []):
-        for task in mod.get("tasks", []):
-            r = task.get("role", "")
-            if r and r not in roles_in_board:
-                roles_in_board.append(r)
+    for task in board.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        r = task.get("owner_role", "")
+        if r and r not in roles_in_board:
+            roles_in_board.append(r)
 
     if not roles_in_board:
         return False
@@ -129,21 +132,27 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
     for task_info in tasks:
         if deadline_exceeded():
             break
-        role = task_info.get("role", "")
-        subtask_id = task_info.get("subtask_id", "")
+        # next_board_tasks() 반환 dict: `assigned_role`, `subtask_instruction`, `task_id`.
+        # 기존 `role`/`subtask_id`/`subtask` 접근은 전부 KeyError/빈값이었음 (B2-1).
+        role = task_info.get("assigned_role", "")
+        task_id = task_info.get("task_id", "")
+        if not role:
+            continue
 
         state.active_assignments[role] = {
-            "subtask_id": subtask_id,
+            # `subtask_id` 키는 nightly_summary.py:41이 읽으므로 보존. 내부적으로는 board task_id.
+            "subtask_id": task_id,
+            "task_id": task_id,
             "started_at": datetime.now(timezone.utc).isoformat(),
             "tick_id": tick_id,
             "result_path": None,
         }
 
         try:
-            _run_task(orch, task_info, workspace, state)
+            _run_task(orch, task_info, workspace, state, tick_id)
             made_progress = True
         except Exception as exc:
-            retry_key = f"{role}:{subtask_id}"
+            retry_key = f"{role}:{task_id}"
             state.task_retry_count[retry_key] = state.task_retry_count.get(retry_key, 0) + 1
             print(f"[nightly_tick] 태스크 실행 실패 ({retry_key}): {exc}", file=sys.stderr)
         finally:
@@ -152,15 +161,23 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str) -> bool
     return made_progress
 
 
-def _run_task(orch, task_info: dict, workspace: str, state: NightlyState) -> None:
+def _run_task(orch, task_info: dict, workspace: str, state: NightlyState, tick_id: str) -> None:
     """단일 태스크를 실행한다. 동기 래퍼."""
     import asyncio
 
+    # run_id를 `tick_id:role` 복합 키로 구성 — orchestrator의 active_assignments가
+    # run_id를 키로 사용하므로 (core/dynamic_orchestrator.py:682/867) 한 tick에서
+    # 여러 롤을 실행하는 경우 키 충돌로 assignment가 무음 유실되는 것을 방지.
+    role = task_info["assigned_role"]
+    run_id = f"{tick_id}:{role}"
+
     async def _run():
         await orch._execute_agent_task(
-            role=task_info["role"],
-            subtask=task_info["subtask"],
+            role=role,
+            subtask=task_info["subtask_instruction"],
+            run_id=run_id,
             workspace=workspace,
+            task_id=task_info.get("task_id", ""),
         )
 
     loop = asyncio.new_event_loop()

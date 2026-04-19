@@ -658,9 +658,9 @@ sys.exit(2)
 ### B.4 처리 순서 권장
 
 1. **B2-1, B2-2, B2-3** (Critical, High) → **review-gate 구현 전**에 해소. 특히 B2-3은 게이트 의미 자체를 깨뜨림.
-   - **현재 상태 (2026-04-19)**:
-     - [x] B2-3 — 본 커밋에서 수정됨 (`verify_handoff_checker.py`). af-critic의 CWD 독립성 지적 반영하여 `report_path.resolve()` 선행 + `work_item_dir.parent.parent.parent` 방식으로 재수정.
-     - [ ] B2-1 — `scripts/nightly_tick.py` 스키마 mismatch, **미해소**. review-gate 본체 구현 착수 전 fix 필요.
-     - [ ] B2-2 — `core/nightly_state.py` ↔ `core/lineage_ledger.py` 스키마 충돌, **미해소**. review-gate 본체 구현 착수 전 fix 필요.
-2. Review-gate 구현 (이 문서 본체 §9) — B2-1/B2-2 fix 선행 후 착수
-3. Gate 통과한 상태에서 나머지 B1·B2 fix를 tier 순차로 리뷰·commit (dogfooding)
+   - **현재 상태 (2026-04-19)**: 3건 모두 해소 완료 ✅ — review-gate 본체 구현 착수 가능
+     - [x] B2-3 — `verify_handoff_checker.py` `_propagate_block_to_gate` 경로 계산 CWD 독립 복원. commit `b20ba63b`.
+     - [x] B2-1 — `scripts/nightly_tick.py` board 스키마 + dispatch dict 키 정정 + `_execute_agent_task(run_id=...)` 인자 추가.
+     - [x] B2-2 — `core/nightly_state.py` 파생 파일 경로를 `watchdog_lineage_counters.json`으로 분리하여 `LineageLedger` 단일 소유 확정.
+2. Review-gate 구현 (이 문서 본체 §9) — 착수 가능
+3. Gate 통과한 상태에서 나머지 B1·B2 fix(B1-1~5, B2-4~8, B3-1/2)를 tier 순차로 리뷰·commit (dogfooding)

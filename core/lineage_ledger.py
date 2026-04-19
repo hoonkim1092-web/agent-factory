@@ -57,12 +57,39 @@ class LineageLedger:
         try:
             with open(self._path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            for item in (data.get("entries") or []):
-                entry = LineageEntry.from_dict(item)
-                if entry.lineage_id:
-                    self._entries[entry.lineage_id] = entry
         except Exception:
-            pass
+            return
+
+        if not isinstance(data, dict):
+            return
+
+        # Legacy 감지: B2-2 회귀 기간 동안 NightlyState._render_derived_files가
+        # 같은 파일에 `{lineage_id: {level, attempts}}` map-shape을 덮어써
+        # entries 포맷을 파괴. 이 경우 내용을 `.corrupt.<ts>.json`으로 백업하고
+        # 빈 원장으로 재시작하여 FSA 안전장치 복원 (is_maxed 오판정 방지).
+        if "entries" not in data and data and all(
+            isinstance(v, dict) and ("level" in v or "attempts" in v)
+            for v in data.values()
+        ):
+            import time
+            backup = f"{self._path}.corrupt.{int(time.time())}.json"
+            try:
+                os.replace(self._path, backup)
+                print(
+                    f"[lineage_ledger] legacy map-shape 감지 → 백업 후 재시작: {backup}",
+                    flush=True,
+                )
+            except OSError:
+                pass
+            return
+
+        for item in (data.get("entries") or []):
+            try:
+                entry = LineageEntry.from_dict(item)
+            except Exception:
+                continue
+            if entry.lineage_id:
+                self._entries[entry.lineage_id] = entry
 
     def _save(self) -> None:
         dir_path = os.path.dirname(os.path.abspath(self._path))

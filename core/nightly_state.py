@@ -22,7 +22,8 @@ _SNAPSHOT_FILE = "state_snapshot.json"
 _LOCK_FILE = "nightly.lock"
 _ALERT_FLAG = "alert.flag"
 _SUMMARY_FILE = "nightly_summary.md"
-_LINEAGE_FILE = "lineage_ledger.json"
+# NOTE: .af/lineage_ledger.json은 LineageLedger 클래스가 소유한다 (FSA 실제 실행 이력).
+# NightlyState는 해당 경로에 쓰지 않는다 (B2-2 회귀 방지).
 
 
 def af_dir(workspace: str | Path | None = None) -> Path:
@@ -166,11 +167,20 @@ def save_state(state: NightlyState, workspace: str | Path | None = None) -> None
 
 
 def _render_derived_files(state: NightlyState, af_dir_path: Path) -> None:
-    """state_snapshot에서 파생 파일들을 렌더링한다 (사람/외부 도구 관찰용)."""
+    """state_snapshot에서 파생 파일들을 렌더링한다 (사람/외부 도구 관찰용).
+
+    주의: `.af/lineage_ledger.json`은 `core.lineage_ledger.LineageLedger`가 소유한다
+    (FSA loop / dynamic_orchestrator가 태스크 실패·성공 이력을 누적).
+    이전에 여기서 `state.watchdog.lineage_counters`를 같은 파일에 덮어써
+    `{"entries":[...]}` 스키마를 `{lineage: {level, attempts}}` 맵으로 교체하면서
+    tick 종료마다 LineageLedger의 history가 유실되던 회귀가 있었음 (B2-2).
+    watchdog의 in-memory lineage_counters는 state_snapshot.json에 포함되므로
+    별도 파생 파일이 필요하면 충돌 없는 이름(`watchdog_lineage_counters.json`)으로 쓴다.
+    """
     _write_json_file(af_dir_path / "watchdog_state.json", state.watchdog.to_dict())
     _write_json_file(af_dir_path / "budget_state.json", state.budget.to_dict())
     _write_json_file(
-        af_dir_path / "lineage_ledger.json",
+        af_dir_path / "watchdog_lineage_counters.json",
         state.watchdog.lineage_counters,
     )
 

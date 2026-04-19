@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-19 | version: v1.2.21 -->
+<!-- last_updated: 2026-04-20 | version: v1.2.21 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1143,6 +1143,15 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-19 | v1.2.21 | hardening(B2-1/B2-2 교차검증 후속): (1) `.gitignore`에 `.af/` 추가 — `watchdog_lineage_counters.json` 등 런타임 파생 파일 실수 커밋 방지 (af-critic BLOCK #2). (2) `core/lineage_ledger.py:_load` legacy map-shape 감지 추가 — B2-2 회귀 기간 동안 map-shape으로 오염된 `.af/lineage_ledger.json`을 `.corrupt.<ts>.json`으로 백업 후 빈 원장 시작하여 FSA `is_maxed` 안전장치 복원 (af-cross-review REVISE #3). (3) `scripts/nightly_tick.py` `run_id=f"{tick_id}:{role}"` 복합 키 — orchestrator `active_assignments[run_id]` 키 충돌 잠재성 제거 (af-critic WARN #1, 미래 병렬화 대비). (4) `docs/2026-04-18-nightly-autonomous-pipeline.md` §2 I5 / §3.6 / Phase 3 / §12 체크리스트 4지점 갱신 — `.af/lineage_ledger.json`을 파생 파일 목록에서 제외, LineageLedger 단일 소유 명시 (af-doc-qa WARN). |
+| 2026-04-20 | v1.2.21 | chore(.gitignore): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — .gitignore, document_index.json, Master_Blueprint.md, lineage_ledger.py, nightly_state.py (+26) |
+| 2026-04-20 | v1.2.21 | chore(.gitignore): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — .gitignore, document_index.json, Master_Blueprint.md, lineage_ledger.py, nightly_state.py (+26) |
+| 2026-04-19 | v1.2.21 | fix(B2-1): `scripts/nightly_tick.py` board 스키마 mismatch 복원 — `_dispatch_actions`가 `board["modules"][*]["tasks"][*]["role"]`을 읽어 항상 빈 `roles_in_board` → early return으로 tick이 실제 dispatch를 전혀 수행하지 못하던 회귀. (1) top-level `board["tasks"]` flat list를 직접 순회 + `owner_role` 사용, (2) `next_board_tasks()` 반환 dict의 실제 키(`assigned_role`/`subtask_instruction`/`task_id`)로 접근 정정, (3) `_execute_agent_task`에 필수 인자 `run_id=tick_id` 전달 추가. Phase 0 자율 tick 불변식(태스크 dispatch) 복원. |
+| 2026-04-19 | v1.2.21 | fix(B2-2): `core/nightly_state.py` `.af/lineage_ledger.json` 스키마 충돌 해소 — `_render_derived_files`가 매 tick 종료마다 `state.watchdog.lineage_counters`(dict)를 이 파일에 덮어써 `LineageLedger` 클래스의 `{"entries":[...]}` 포맷을 파괴 → FSA loop의 실패/성공 history 유실. 파생 파일 경로를 `watchdog_lineage_counters.json`으로 분리하고, `.af/lineage_ledger.json`은 `LineageLedger` 단일 소유 확정. E2E: LineageLedger 3 history 저장 → save_state 후 intact 검증 PASS. |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/nightly_state.py — document_index.json, Master_Blueprint.md, nightly_state.py, skill-usage.jsonl, code-review.md (+23) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/core/nightly_state.py — document_index.json, Master_Blueprint.md, nightly_state.py, skill-usage.jsonl, code-review.md (+23) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, nightly_tick.py (+22) |
+| 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — document_index.json, skill-usage.jsonl, code-review.md, nightly_tick.py, skill-eval-report.json (+21) |
 | 2026-04-19 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/verify_handoff_checker.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, verify_handoff_checker.py (+22) |
 | 2026-04-19 | v1.2.21 | fix(B2-3): `scripts/verify_handoff_checker.py:88-106` `_propagate_block_to_gate` 경로 계산 복원 — 기존 `workspace = work_item_dir.parent.parent`(=docs)가 ApprovalGate 내부 `os.path.join(workspace, "docs", "work-items", slug)` 재조합과 만나 `docs/docs/work-items/<slug>` 이중 경로 → BLOCK 전파 no-op이던 회귀 해소. `report_path.resolve()` 선행 후 `work_item_dir.parent.parent.parent`(=repo root)로 정정하여 pre-commit/CLI/서브디렉토리/절대경로 전부 일관된 workspace 계산. af-critic BLOCK(CWD 의존성+gate_path 기준 불일치) + af-cross-review ACCEPT + af-test-runner 77/77 PASS + af-doc-qa WARN 해소. |
 | 2026-04-19 | v1.2.21 | design(review-gate): `docs/2026-04-19-review-gate-enforcement.md` §10 Q5 실증 결과 확정 (exit 2 Bash 차단 ✅, `tool_input.command`/`subagent_type` 경로 ✅, matcher≠tool_name + 서브에이전트 Bash 발동 + settings 리로드 발견), §6.2/§6.3 Q5 추가 발견 반영, §9 구현 순서 #1 ✅ 완료 표기, §11 롤백 #1·#2 "세션 재시작 불필요" 명시, §12 DoD Appendix A 체크, Appendix B.4 B2-1/B2-2 잔여 상태 기록. |

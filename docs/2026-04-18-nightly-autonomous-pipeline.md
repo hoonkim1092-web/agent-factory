@@ -78,7 +78,7 @@ tick 아키텍처에 맞춰 불변식을 재정의. 주체가 "연속 프로세�
 - **I2. Failure → Next-Action**: tick 내부 실패·tick 자체 크래시 어느 경우든 다음 tick이 상태 파일을 읽고 이어간다. 영구 실패 태스크는 degrade 태스크 생성 또는 lineage 상한 도달 시 skip.
 - **I3. External Dependency 3-tier**: 외부 의존은 (live → cache → seed) 계층 강제. 3차까지 실패 시 degrade task (품질 하향하고 계속).
 - **I4. Completion = Verified Artifact**: `status=completed` 는 파일 존재 + 금지 토큰 0 + e2e exit 0 + verification verdict ≠ BLOCK 충족 시에만 플래그됨.
-- **I5. Reconstructable State**: `.af/nightly_summary.md`, `.af/board_state.json`, `.af/lineage_ledger.json` 세 파일만으로 지금 어디까지 왔고 무엇이 걸려 있는지 재구성 가능.
+- **I5. Reconstructable State**: `.af/state_snapshot.json`(tick 상태의 단일 진실원천), `.af/nightly_summary.md`(사람 읽기용 요약), `.af/board_state.json`(보드 파생 뷰) 세 파일만으로 지금 어디까지 왔고 무엇이 걸려 있는지 재구성 가능. (2026-04-19 B2-2 fix: `.af/lineage_ledger.json`은 FSALoop 태스크 history용 `LineageLedger` 단일 소유로 분리되어 재구성 소스에서 제외됨.)
 
 ---
 
@@ -154,13 +154,17 @@ tick 종료 시점의 상태는 5개 파일(`board_state`, `watchdog_state`, `bu
 **채택 방안: 단일 `state_snapshot.json` + 파생 렌더링**
 
 ```
-.af/state_snapshot.json         # 모든 상태의 single source of truth (atomic write)
-.af/board_state.json            # snapshot에서 파생 (view, 읽기 전용)
-.af/watchdog_state.json         # snapshot에서 파생
-.af/budget_state.json           # snapshot에서 파생
-.af/lineage_ledger.json         # snapshot에서 파생
-.af/nightly_summary.md          # snapshot에서 렌더링
+.af/state_snapshot.json              # 모든 tick 상태의 single source of truth (atomic write)
+.af/board_state.json                 # snapshot에서 파생 (view, 읽기 전용)
+.af/watchdog_state.json              # snapshot에서 파생
+.af/budget_state.json                # snapshot에서 파생
+.af/watchdog_lineage_counters.json   # snapshot에서 파생 (watchdog의 in-memory 카운터)
+.af/nightly_summary.md               # snapshot에서 렌더링
+.af/lineage_ledger.json              # ★ LineageLedger 독립 소유 (snapshot과 분리)
+                                     #   FSALoop 태스크 실패/성공 history, {"entries":[...]}
 ```
+
+> 2026-04-19 B2-2 fix: `.af/lineage_ledger.json`은 과거 "snapshot 파생" 라인에 있었으나 실제로는 `core.lineage_ledger.LineageLedger`가 FSALoop 경로에서 독자 atomic write로 관리한다. tick의 `watchdog.lineage_counters` 파생은 별도 파일명(`watchdog_lineage_counters.json`)으로 분리되어 스키마 충돌을 제거했다.
 
 **쓰기 프로토콜**:
 1. 메모리에서 state 구성
@@ -498,7 +502,7 @@ task_complete_criteria:
 **스코프 (IN)**:
 - `dynamic_orchestrator._execute_agent_task` 실패 경로가 `FSALoop.run_mission` 위임.
 - `lineage_id` 신규 필드: task 생성 시 부모 task의 lineage 상속.
-- `.af/lineage_ledger.json`: lineage별 Level 누적 `{lineage: {level, attempts, history}}`.
+- `.af/lineage_ledger.json`: lineage별 Level 누적. **실제 저장 스키마**는 `{"entries":[{lineage_id, level, attempts, history}]}` (`core/lineage_ledger.py` `LineageLedger._save` canonical). 여기의 논리적 map view `{lineage: {...}}`는 in-memory `_entries` dict의 개념적 표현.
 - Level 매핑:
   - Level 1 retry (기존)
   - Level 2 pivot (스코프 축소)
@@ -895,7 +899,7 @@ nightly_autonomy:
 
 - [ ] lotto golden project로 실제 12시간 야간 rehearsal 1회 성공 (가속 아님)
 - [ ] 48회 tick 전부 기동, 종료 시점 `status != stopped_broken`
-- [ ] `.af/nightly_summary.md`, `.af/board_state.json`, `.af/lineage_ledger.json` 로 상태 재구성 가능
+- [ ] `.af/state_snapshot.json`, `.af/nightly_summary.md`, `.af/board_state.json`로 tick 상태 재구성 가능 (LineageLedger는 FSALoop history로 별도 소유 — §2 I5 / §3.6 참조)
 - [ ] macOS sleep → wake 시나리오에서도 정상 재개
 - [ ] Claude CLI 세션 타임아웃 시 다음 tick이 이어받음 (로그 증빙)
 - [ ] 새 `.md` 산출물 전부 `(edit required)` 0건

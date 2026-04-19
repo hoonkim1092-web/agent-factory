@@ -28,6 +28,12 @@ build/
 # --- Design Review Queue (local, auto-generated) ---
 .af_review_queue/
 
+# --- Nightly pipeline runtime state (per-workspace, auto-regenerated) ---
+# .af/state_snapshot.json, .af/watchdog_state.json, .af/budget_state.json,
+# .af/watchdog_lineage_counters.json, .af/lineage_ledger.json (FSA loop history),
+# .af/nightly_summary.md, .af/alert.flag, .af/nightly.lock, .af/ise_ledger_*.json
+.af/
+
 # --- Setup Wizard local state (per-user secrets: TAVILY key, NotebookLM UUIDs) ---
 .af_setup_state.json
 
