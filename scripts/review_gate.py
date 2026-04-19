@@ -8,15 +8,28 @@ Review-gate: 3-tier 교차검증 완료 여부를 판정하고 git commit을 차
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import re
 import sys
 import tempfile
 import time
 
 _QUEUE_DIR = ".af_review_queue"
 _PENDING_FILE = "pending_agent_review.json"
+_LOCK_FILE = "pending_agent_review.json.lock"
 _LOG_FILE = "hook_events.log"
+
+# verdict 파싱: 구조화 헤더("Verdict: BLOCK" / "판정: WARN" / "### BLOCK")만 인식
+_VERDICT_RE = re.compile(
+    r"(?:verdict|판정)\s*[:\-]\s*(block|warn|pass|fail)",
+    re.IGNORECASE | re.MULTILINE,
+)
+_VERDICT_HEADER_RE = re.compile(
+    r"^#{1,4}\s+(BLOCK|WARN|PASS|FAIL)\b",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 _TIER_AGENTS: dict[int, str] = {
     1: "af-test-runner",
@@ -30,6 +43,34 @@ _AGENT_TIER: dict[str, int] = {v: k for k, v in _TIER_AGENTS.items()}
 
 def _queue_path(workspace: str) -> str:
     return os.path.join(workspace, _QUEUE_DIR, _PENDING_FILE)
+
+
+def _lock_path(workspace: str) -> str:
+    return os.path.join(workspace, _QUEUE_DIR, _LOCK_FILE)
+
+
+@contextlib.contextmanager
+def _state_lock(workspace: str):
+    """Exclusive file lock for Read-Modify-Write on pending_agent_review.json.
+
+    병렬 에이전트(af-test-runner · af-critic · af-cross-review)가 동시에
+    record_review_done()을 호출해도 서로의 tier 기록을 덮어쓰지 않도록 보장한다.
+    POSIX(fcntl) 전용 — Windows fallback은 no-op (hook_runner와 동일 정책).
+    """
+    lp = _lock_path(workspace)
+    os.makedirs(os.path.dirname(lp), exist_ok=True)
+    try:
+        import fcntl
+        fd = os.open(lp, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+    except ImportError:
+        # Windows: no-op (best-effort)
+        yield
 
 
 def _log_path(workspace: str) -> str:
@@ -122,10 +163,10 @@ def is_gate_blocked(workspace: str) -> tuple[bool, str]:
     if new_files:
         return True, "new-files-added"
 
-    # 7. verdict=block 체크
+    # 7. verdict=block|fail 체크 (FAIL도 BLOCK과 동등하게 차단)
     if not os.environ.get("AF_GATE_ALLOW_VERDICT_BLOCK"):
         for agent, r in reviews.items():
-            if r.get("verdict") == "block":
+            if r.get("verdict") in ("block", "fail"):
                 return True, f"verdict-block:{agent}"
 
     return False, "all-tiers-passed"
@@ -138,18 +179,22 @@ def record_review_done(
     verdict: str,
     files_snapshot: list[str],
 ) -> None:
-    """reviews[agent] 기록. atomic write."""
+    """reviews[agent] 기록. 파일 락 + atomic write.
+
+    병렬 에이전트가 동시에 호출해도 각 tier 기록이 유실되지 않는다.
+    """
     try:
-        state = _load_state(workspace) or {"files": [], "created_at": time.time()}
-        if "reviews" not in state or not isinstance(state.get("reviews"), dict):
-            state["reviews"] = {}
-        state["reviews"][agent] = {
-            "tier": tier,
-            "verdict": verdict.lower(),
-            "files_snapshot": list(files_snapshot),
-            "completed_at": time.time(),
-        }
-        _save_state(workspace, state)
+        with _state_lock(workspace):
+            state = _load_state(workspace) or {"files": [], "created_at": time.time()}
+            if "reviews" not in state or not isinstance(state.get("reviews"), dict):
+                state["reviews"] = {}
+            state["reviews"][agent] = {
+                "tier": tier,
+                "verdict": verdict.lower(),
+                "files_snapshot": list(files_snapshot),
+                "completed_at": time.time(),
+            }
+            _save_state(workspace, state)
         _log_event(workspace, f"[review-recorded] agent={agent} tier={tier} verdict={verdict}")
     except Exception as exc:
         print(f"[review_gate] record_review_done 실패: {exc}", file=sys.stderr)
@@ -159,22 +204,23 @@ def clear_committed_files(workspace: str, committed_files: list[str]) -> None:
     """커밋 성공 후 staged 파일만 선택적으로 files/reviews snapshot에서 제거.
 
     af-critic v1-H4 반영: 통째 삭제하면 동시 편집한 신규 파일 유실.
+    파일 락으로 record_review_done()과의 경쟁 조건 방지.
     """
     try:
-        state = _load_state(workspace)
-        if not state:
-            return
         committed_set = set(committed_files)
-        state["files"] = [f for f in state.get("files") or [] if f not in committed_set]
-        reviews = state.get("reviews") or {}
-        for r in reviews.values():
-            r["files_snapshot"] = [
-                f for f in (r.get("files_snapshot") or []) if f not in committed_set
-            ]
-        # 모든 파일 커밋 완료 → reviews 초기화
-        if not state["files"]:
-            state["reviews"] = {}
-        _save_state(workspace, state)
+        with _state_lock(workspace):
+            state = _load_state(workspace)
+            if not state:
+                return
+            state["files"] = [f for f in state.get("files") or [] if f not in committed_set]
+            reviews = state.get("reviews") or {}
+            for r in reviews.values():
+                r["files_snapshot"] = [
+                    f for f in (r.get("files_snapshot") or []) if f not in committed_set
+                ]
+            if not state["files"]:
+                state["reviews"] = {}
+            _save_state(workspace, state)
         _log_event(
             workspace,
             f"[gate-cleared] committed={len(committed_files)} remaining={len(state['files'])}",

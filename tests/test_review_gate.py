@@ -191,6 +191,19 @@ def test_h_verdict_block_without_env(ws, monkeypatch):
     assert reason.startswith("verdict-block:")
 
 
+def test_h2_verdict_fail_without_env(ws, monkeypatch):
+    """(h2) verdict=fail도 BLOCK과 동등하게 게이트를 막음."""
+    monkeypatch.delenv("AF_GATE_ALLOW_VERDICT_BLOCK", raising=False)
+    files = ["core/baz.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["reviews"] = _full_reviews(files, completed, tier3_verdict="fail")
+    _write_state(ws, state)
+    blocked, reason = is_gate_blocked(ws)
+    assert blocked
+    assert reason.startswith("verdict-block:")
+
+
 def test_i_verdict_block_with_env(ws, monkeypatch):
     """(i) verdict=block + AF_GATE_ALLOW_VERDICT_BLOCK=1 → PASS."""
     monkeypatch.setenv("AF_GATE_ALLOW_VERDICT_BLOCK", "1")

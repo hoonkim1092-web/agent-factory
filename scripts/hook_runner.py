@@ -301,21 +301,24 @@ def _post_agent_record(payload: dict) -> int:
 
     tier = _AGENT_TIER_MAP[subagent_type]
 
-    # tool_response에서 verdict 파싱 (BLOCK/WARN/FAIL 키워드)
+    # tool_response에서 verdict 파싱 — 구조화 패턴만 인식 (본문 키워드 오탐 방지)
     tr = payload.get("tool_response") or {}
     content = ""
     if isinstance(tr, dict):
         content = str(tr.get("content") or tr.get("result") or "")
     elif isinstance(tr, str):
         content = tr
-    content_upper = content.upper()
-    if "BLOCK" in content_upper:
-        verdict = "block"
-    elif "WARN" in content_upper:
-        verdict = "warn"
-    elif "FAIL" in content_upper:
-        verdict = "fail"
-    else:
+
+    sys.path.insert(0, _project_root())
+    try:
+        from scripts.review_gate import _VERDICT_RE, _VERDICT_HEADER_RE  # type: ignore[import]
+        m = _VERDICT_RE.search(content)
+        if m:
+            verdict = m.group(1).lower()
+        else:
+            hm = _VERDICT_HEADER_RE.search(content)
+            verdict = hm.group(1).lower() if hm else "pass"
+    except Exception:
         verdict = "pass"
 
     root = _project_root()
@@ -339,16 +342,18 @@ def _post_commit_clear(payload: dict) -> int:
     if not _GIT_COMMIT_RE.search(command):
         return 0  # git commit 아님 → skip
 
-    # tool_response exit_code 확인 — 실패 시 정리 스킵
+    # exit_code 확인 — 확실히 0임을 확인한 경우에만 정리 (fail-safe: 불확실 → skip)
     tr = payload.get("tool_response") or {}
+    exit_code = None
     if isinstance(tr, dict):
         exit_code = tr.get("exit_code") if "exit_code" in tr else tr.get("returncode")
-        if exit_code is not None:
-            try:
-                if int(exit_code) != 0:
-                    return 0
-            except (ValueError, TypeError):
-                pass
+    if exit_code is None:
+        return 0  # exit_code 미확인 → 커밋 성공 여부 불명 → 정리 생략
+    try:
+        if int(exit_code) != 0:
+            return 0  # 커밋 실패
+    except (ValueError, TypeError):
+        return 0  # 파싱 불가 → 생략
 
     root = _project_root()
     workspace = _detect_workspace()
