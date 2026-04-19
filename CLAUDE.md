@@ -29,9 +29,16 @@
   - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
 
 ### 교차검증 자동 실행
-- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review + af-test-runner 에이전트를 백그라운드로 병렬 실행한다
+- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-test-runner → af-critic → af-cross-review 에이전트를 **순서대로** 실행한다 (tier 1→2→3 순서 필수)
 - 설계문서(.md) 작성 후에는 af-doc-qa + af-critic을 병렬 실행한다
 - 교차검증 결과에서 BLOCK 판정 시 발견 사항을 즉시 수정한다
+
+### Review-Gate 규칙 (2026-04-20 활성화)
+- `.py` 파일 수정 후 `git commit` 전 af-test-runner(tier 1) → af-critic(tier 2) → af-cross-review(tier 3) **3단계 완주 필수**
+- 순서 위반(tier 2만 실행 등) 또는 재편집(리뷰 완료 후 파일 수정) 시 commit이 자동 차단됨
+- **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
+- `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
+- 진단: `python3 scripts/review_gate.py --debug`
 
 ### 커밋 규칙
 - 코드 수정 + Blueprint 업데이트는 같은 커밋

@@ -880,6 +880,57 @@ git commit → .githooks/pre-commit
 **비차단 원칙:** 인프라 장애(결과 없음, 파싱 실패 등)로 커밋을 차단하지 않음
 **비활성화:** `AF_PRE_COMMIT_REVIEW=0` 또는 `git commit --no-verify`
 
+### 3-Tier Review-Gate (§9)
+<!-- last_updated: 2026-04-20 -->
+
+`.py` 파일을 포함한 커밋은 **af-test-runner → af-critic → af-cross-review** 순서로 3단계 교차검증을 완료해야 한다.
+
+**아키텍처:**
+```
+Layer 6: 3-Tier Review Gate
+  PreToolUse(Bash)  → hook_runner.py pre_bash_review_gate
+    └─ git commit 명령 감지 시 review_gate.is_gate_blocked() 호출
+    └─ BLOCK → exit 2 (Bash 툴 자체 차단)
+  PostToolUse(Task) → hook_runner.py post_agent_record
+    └─ af-test-runner/af-critic/af-cross-review 완료 시 tier 기록
+  PostToolUse(Bash) → hook_runner.py post_commit_clear
+    └─ git commit 성공 시 큐에서 커밋 파일 제거
+  .githooks/pre-commit → review_gate.py --check (이중 차단)
+```
+
+**상태 파일:** `.af_review_queue/pending_agent_review.json`
+```json
+{
+  "files": ["core/foo.py"],
+  "created_at": 1234567890,
+  "updated_at": 1234567891,
+  "reviews": {
+    "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": [...], "completed_at": ...},
+    "af-critic":      {"tier": 2, "verdict": "pass", "files_snapshot": [...], "completed_at": ...},
+    "af-cross-review":{"tier": 3, "verdict": "pass", "files_snapshot": [...], "completed_at": ...}
+  }
+}
+```
+
+**BLOCK 조건 (순서대로 평가):**
+
+| 조건 | reason |
+|------|--------|
+| `.py` 파일 없음 | `no-py-files` → PASS |
+| tier 1(af-test-runner) 미완료 | `missing-tier-1` |
+| tier 2(af-critic) 미완료 | `missing-tier-2` |
+| tier 3(af-cross-review) 미완료 | `missing-tier-3` |
+| 리뷰 완료 후 파일 재편집 | `stale-review` |
+| tier-3 snapshot에 없는 `.py` 신규 추가 | `new-files-added` |
+| 어느 tier에서든 verdict=block/fail | `verdict-block:<agent>` |
+
+**우회:**
+- `AF_SKIP_REVIEW_GATE=1 git commit ...` — hook_events.log에 기록됨
+- `AF_GATE_ALLOW_VERDICT_BLOCK=1` — verdict-block 조건만 무시
+- `git commit --no-verify` — .githooks/pre-commit 전체 우회
+
+**디버그:** `python scripts/review_gate.py --debug`
+
 ---
 
 ## §8 빌드 & 배포
@@ -1136,6 +1187,8 @@ model_utils.py (독립 모듈)
 | 파이프라인이 `src/` 구현 태스크에 도달 못 하고 Cycle 30에 exit | `core/project_task_board.py::next_board_tasks`의 정렬 key가 `(phase, module_id, task_id)`로 phase 우선이었음 → 모든 모듈의 scope를 먼저 소화하다가 `max_cycles=30` 소진. 실측(`lotto-pattern-predictor`, 2026-04-15): 24 태스크 중 scope 4개만 완료, build 단계 0건. | 정렬을 `(_module_sort_key(module_id), phase, task_id)` 순으로 변경해 module waterfall로 전환 + `dynamic_orchestrator._orchestration_loop`의 `max_cycles`를 `max(30, pending*3)`로 동적화 — 2026-04-15 fix |
 | `SessionStart:startup hook error` + `ModuleNotFoundError: No module named 'yaml'` | Claude native hook가 절대경로 Homebrew `python3.14`로 `scripts/cli_hook_bridge.py`를 직접 실행했고, 해당 인터프리터에 `PyYAML`이 없어 `core.providers.__init__` import 단계에서 즉시 실패. legacy unnamed hook와 빈 hook group이 `.claude/settings.local.json`에 누적되어 같은 에러가 반복 노출됨. | `core/providers/session_adapter.py`가 hook 명령을 `python3 scripts/hook_runner.py cli_hook_bridge ...` 경유로 생성하도록 변경해 프로젝트 `.venv` Python을 다시 찾게 함 + legacy bridge hook/빈 group 자동 정리 — 2026-04-16 fix |
 | **PostToolUse hook no-op** (증상: `[af-review-pending]` 트리거 0회) | PostToolUse 훅 명령이 `$TOOL_INPUT_file_path` 환경변수를 참조하지만 Claude Code는 hook 데이터를 **stdin JSON**으로만 전달 → `$fp`가 항상 빈 문자열 → `case "$fp" in *.py)` 매칭 실패 → 전체 no-op. 세션 통계 상 PostToolUse 0회 발화. 감지: `.af_review_queue/hook_events.log` 없음 + `.af_review_queue/pending_agent_review.json` 없음 | `.claude/settings.local.json`의 5개 PostToolUse 명령을 `python3 scripts/hook_runner.py post_edit_*` builtin 형식으로 교체. `hook_runner.py`에 `_BUILTINS` 분기 테이블 + `_read_hook_stdin_once()` + `_extract_file_path()` 신설해 stdin JSON을 파싱하여 파일 경로를 추출 — 2026-04-17 fix |
+| **review-gate: 첫 커밋(HEAD~1 없음)** | `post_commit_clear` hook이 `git diff HEAD~1 --name-only`를 실행하는데, 레포 첫 커밋에서는 HEAD~1이 없어 returncode != 0 → `clear_committed_files` 미호출 → 큐 잔류 | `_post_commit_clear`에서 returncode != 0이면 즉시 return 0(fail-open). 큐가 남아도 다음 커밋 성공 시 정리되므로 실질적 영향 없음 |
+| **review-gate: 병렬 tier 기록 경쟁** | af-test-runner·af-critic·af-cross-review 세 에이전트가 동시에 `record_review_done()`을 호출하면 JSON 덮어쓰기로 일부 tier 유실 가능 | `_state_lock()` fcntl exclusive lock (POSIX 전용; Windows는 best-effort no-op) + atomic rename으로 해결. TOCTOU 방지: files_snapshot은 락 내부 최신 state에서 읽음 |
 
 ---
 
