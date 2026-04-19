@@ -147,6 +147,7 @@ class EpisodeMatcher:
         """
         if top_k <= 0:
             return []
+        # top_k//2=0이 되는 것을 방지 — top_k=1일 때도 seed 슬롯 최소 1 보장
         seed_slots = max(1, top_k // 2)
 
         # ── 파일 기반 시드 에피소드 검색 (coverage 기반 유사도) ────────
