@@ -1,8 +1,11 @@
 import inspect
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 from core.approval_gate import ApprovalGate
 from core.bootstrap_roles import ProjectPlanningDirector, build_bootstrap_agent
@@ -955,24 +958,23 @@ class ProjectPipeline:
         status = str(run_board.get("current_status", "unknown"))
 
         # ── strategy ledger: 모듈별 역할 배정 성공/실패 기록 ──────────────
+        # pattern_key는 모듈명만 사용 — 조합 문자열은 lookup_best_role의
+        # 토큰 매칭("pattern in lowered")과 방향이 맞지 않아 항상 miss 발생.
         try:
             from core.memory_system.strategy_ledger import get_strategy_ledger
             _ledger = get_strategy_ledger(workspace)
             _project_id = os.path.basename(workspace)
             _succeeded = status == "completed"
             for _mod in (prepared.role_plan.get("modules") or []):
-                _deliverable_text = " ".join(filter(None, [
-                    str(_mod.get("name") or ""),
-                    *[str(d) for d in (_mod.get("deliverables") or []) if d],
-                ]))
+                _pattern = str(_mod.get("name") or "").strip().lower()
                 _owner = str(_mod.get("owner_role") or "")
-                if _deliverable_text and _owner:
+                if _pattern and _owner:
                     if _succeeded:
-                        _ledger.record_role_success(_deliverable_text, _owner, _project_id)
+                        _ledger.record_role_success(_pattern, _owner, _project_id)
                     else:
-                        _ledger.record_role_failure(_deliverable_text, _owner, _project_id)
-        except Exception:
-            pass
+                        _ledger.record_role_failure(_pattern, _owner, _project_id)
+        except Exception as _exc:
+            logger.warning("strategy ledger 기록 실패: %s", _exc)
 
         append_dashboard_run(
             {
