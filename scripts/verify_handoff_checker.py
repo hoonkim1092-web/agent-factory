@@ -4,8 +4,9 @@
 검증 항목:
   1. verification-report.md 존재
   2. e2e_command 필드가 비어있지 않음
-  3. verdict 필드가 BLOCK이 아님
-  4. verdict == BLOCK 시 ApprovalGate 자동 차단
+  3. 미치환 {{...}} 플레이스홀더 없음
+  4. forbidden_tokens 없음
+  5. verdict 필드가 BLOCK이 아님 → verdict == BLOCK 시 ApprovalGate 자동 차단
 
 non-zero exit → pre-commit 차단 또는 tick approval-gate 차단.
 
@@ -34,7 +35,7 @@ try:
     sys.path.insert(0, str(_repo_root))
     from core.document_policy import COMPLETION_CRITERIA, FORBIDDEN_TOKENS
 except Exception:
-    COMPLETION_CRITERIA = {"e2e_command_exit_code": 0, "verification_report_verdict_not": "BLOCK"}
+    COMPLETION_CRITERIA = {"verification_report_verdict_not": "BLOCK"}
     FORBIDDEN_TOKENS = _FORBIDDEN_TOKENS_DEFAULT
 
 _PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}")
@@ -52,11 +53,7 @@ def _check_report(report_path: Path) -> int:
     # 1. e2e_command 필드 존재 여부 — COMPLETION_CRITERIA 의존 없이 무조건 검사
     m_cmd = re.search(r"e2e_command:\s*([^\n]*)", text)
     cmd_val = m_cmd.group(1).strip() if m_cmd else ""
-    if (
-        not m_cmd
-        or cmd_val.lower() in _EMPTY_VALUES
-        or _PLACEHOLDER_RE.fullmatch(cmd_val)  # {{e2e_command}} 미치환 감지
-    ):
+    if not m_cmd or cmd_val.lower() in _EMPTY_VALUES:
         errors.append("e2e_command 필드가 비어있습니다")
 
     # 2. 미치환 플레이스홀더 범용 감지 ({{...}} 패턴)
@@ -71,7 +68,7 @@ def _check_report(report_path: Path) -> int:
         if token in text:
             errors.append(f"금지 토큰 발견: {token!r}")
 
-    # 3. verification_report_verdict_not
+    # 4. verification_report_verdict_not
     blocked_verdict = COMPLETION_CRITERIA.get("verification_report_verdict_not", "BLOCK")
     m_verdict = re.search(r"^\s*-\s*verdict:\s*([^\n]+)", text, re.MULTILINE | re.IGNORECASE)
     verdict = m_verdict.group(1).strip().upper() if m_verdict else ""
@@ -99,7 +96,6 @@ def _propagate_block_to_gate(report_path: Path) -> None:
         # workspace는 work-items/ 의 2단계 상위
         workspace = str(work_item_dir.parent.parent)
         slug = work_item_dir.name
-        sys.path.insert(0, str(Path(__file__).parent.parent))
         from core.approval_gate import ApprovalGate
         gate = ApprovalGate(workspace, slug)
         gate.apply_verification_verdict("BLOCK")
