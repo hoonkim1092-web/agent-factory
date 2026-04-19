@@ -177,21 +177,25 @@ def record_review_done(
     agent: str,
     tier: int,
     verdict: str,
-    files_snapshot: list[str],
+    files_snapshot: list[str] | None = None,
 ) -> None:
     """reviews[agent] 기록. 파일 락 + atomic write.
 
     병렬 에이전트가 동시에 호출해도 각 tier 기록이 유실되지 않는다.
+    files_snapshot=None 이면 락 내부에서 현재 state["files"]를 snapshot으로 사용.
+    → TOCTOU 방지: 호출자가 락 밖에서 미리 읽은 snapshot이 stale하더라도 안전.
     """
     try:
         with _state_lock(workspace):
             state = _load_state(workspace) or {"files": [], "created_at": time.time()}
             if "reviews" not in state or not isinstance(state.get("reviews"), dict):
                 state["reviews"] = {}
+            # M1: snapshot을 락 내부의 최신 state에서 읽어 TOCTOU 해소
+            snapshot = list(files_snapshot) if files_snapshot is not None else list(state.get("files") or [])
             state["reviews"][agent] = {
                 "tier": tier,
                 "verdict": verdict.lower(),
-                "files_snapshot": list(files_snapshot),
+                "files_snapshot": snapshot,
                 "completed_at": time.time(),
             }
             _save_state(workspace, state)

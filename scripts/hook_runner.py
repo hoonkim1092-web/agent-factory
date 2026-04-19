@@ -309,7 +309,10 @@ def _post_agent_record(payload: dict) -> int:
     elif isinstance(tr, str):
         content = tr
 
-    sys.path.insert(0, _project_root())
+    root = _project_root()
+    workspace = _detect_workspace()
+    sys.path.insert(0, root)  # 단일 삽입 (L1 중복 제거)
+
     try:
         from scripts.review_gate import _VERDICT_RE, _VERDICT_HEADER_RE  # type: ignore[import]
         m = _VERDICT_RE.search(content)
@@ -321,14 +324,10 @@ def _post_agent_record(payload: dict) -> int:
     except Exception:
         verdict = "pass"
 
-    root = _project_root()
-    workspace = _detect_workspace()
     try:
-        sys.path.insert(0, root)
-        from scripts.review_gate import record_review_done, _load_state  # type: ignore[import]
-        state = _load_state(workspace) or {}
-        files_snapshot = list(state.get("files") or [])
-        record_review_done(workspace, subagent_type, tier, verdict, files_snapshot)
+        from scripts.review_gate import record_review_done  # type: ignore[import]
+        # M1: files_snapshot=None → record_review_done이 락 내부에서 직접 읽음 (TOCTOU 해소)
+        record_review_done(workspace, subagent_type, tier, verdict)
         _log_hook_event("post_agent_record", subagent_type, 0)
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
@@ -362,6 +361,9 @@ def _post_commit_clear(payload: dict) -> int:
             ["git", "diff", "HEAD~1", "--name-only"],
             capture_output=True, text=True, timeout=5, cwd=workspace,
         )
+        if r.returncode != 0:
+            # M2: 첫 커밋(HEAD~1 없음) 또는 git 오류 → 정리 생략 (safe no-op)
+            return 0
         committed_files = [f.strip() for f in r.stdout.splitlines() if f.strip()]
         sys.path.insert(0, root)
         from scripts.review_gate import clear_committed_files  # type: ignore[import]
