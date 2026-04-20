@@ -30,7 +30,8 @@
 
 ### 교차검증 자동 실행
 - UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-test-runner → af-critic → af-cross-review 에이전트를 **순서대로** 실행한다 (tier 1→2→3 순서 필수)
-- 설계문서(.md) 작성 후에는 af-doc-qa + af-critic을 병렬 실행한다
+- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-critic + af-cross-review 2개를 병렬 실행**한다 (2026-04-21 확정 — af-doc-qa는 work-item 4-문서 세트 전용이므로 단일 설계문서에 부적합)
+- **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-critic + af-cross-review **3개를 병렬 실행**한다
 - 교차검증 결과에서 BLOCK 판정 시 발견 사항을 즉시 수정한다
 
 ### Review-Gate 규칙 (2026-04-20 활성화)
