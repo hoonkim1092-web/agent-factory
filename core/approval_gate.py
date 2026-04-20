@@ -22,6 +22,13 @@ from core.utils import now_iso
 
 GATE_FILENAME = "approval-gate.md"
 
+# 섹션 헤더 상수 — _render와 _parse가 동일 문자열을 참조해 포맷 드리프트 방지
+_SEC_METADATA = "## Metadata"
+_SEC_SNAPSHOT = "## Approved Snapshot"
+_SEC_GATE_STATUS = "## Gate Status"
+_SEC_REVIEW_NOTES = "## Review Notes"
+_SEC_INVALIDATION = "## Invalidation Rules"
+
 _DOC_FILES = {
     "feature_plan": "feature-plan.md",
     "feature_spec": "feature-spec.md",
@@ -138,8 +145,14 @@ class ApprovalGate:
         if not snapshots:
             return False, ["no snapshot recorded"]
 
-        # 스냅샷 값이 모두 빈 문자열이면 실제로 해시가 기록되지 않은 것
+        # 스냅샷 값이 모두 빈 문자열: 승인 시 문서가 없었던 경우
         if not any(snapshots.values()):
+            # 현재도 work_item_dir에 실제 문서가 없으면 변경 없음 → 유효
+            if not any(
+                os.path.exists(os.path.join(self.work_item_dir, fname))
+                for fname in _DOC_FILES.values()
+            ):
+                return True, []
             return False, ["snapshot hashes are empty — no documents were hashed at approval time"]
 
         changed: list[str] = []
@@ -219,7 +232,12 @@ class ApprovalGate:
 
         # Metadata 섹션 (work_item, approver, status, last_updated)
         # execution_open 은 Gate Status 섹션에서만 파싱한다
-        meta_block = re.search(r"## Metadata\n(.*?)(?=\n##|\Z)", text, re.S)
+        _h_meta = re.escape(_SEC_METADATA)
+        _h_snap = re.escape(_SEC_SNAPSHOT)
+        _h_gate = re.escape(_SEC_GATE_STATUS)
+        _h_notes = re.escape(_SEC_REVIEW_NOTES)
+
+        meta_block = re.search(rf"{_h_meta}\n(.*?)(?=\n##|\Z)", text, re.S)
         if meta_block:
             for line in meta_block.group(1).splitlines():
                 m = re.match(r"-\s+(\w+):\s*(.*)", line.strip())
@@ -228,7 +246,7 @@ class ApprovalGate:
                     result[key] = val
 
         # Approved Snapshot 섹션
-        snap_block = re.search(r"## Approved Snapshot\n(.*?)(?=\n##|\Z)", text, re.S)
+        snap_block = re.search(rf"{_h_snap}\n(.*?)(?=\n##|\Z)", text, re.S)
         if snap_block:
             for line in snap_block.group(1).splitlines():
                 m = re.match(r"-\s+(\w+)_version:\s*(.*)", line.strip())
@@ -237,7 +255,7 @@ class ApprovalGate:
         result["snapshots"] = snapshots
 
         # Gate Status 섹션
-        gate_block = re.search(r"## Gate Status\n(.*?)(?=\n##|\Z)", text, re.S)
+        gate_block = re.search(rf"{_h_gate}\n(.*?)(?=\n##|\Z)", text, re.S)
         if gate_block:
             for line in gate_block.group(1).splitlines():
                 m = re.match(r"-\s+(\w+)_status:\s*(.*)", line.strip())
@@ -249,7 +267,7 @@ class ApprovalGate:
         result["gate_statuses"] = gate_statuses
 
         # Review Notes 섹션
-        notes_block = re.search(r"## Review Notes\n(.*?)(?=\n##|\Z)", text, re.S)
+        notes_block = re.search(rf"{_h_notes}\n(.*?)(?=\n##|\Z)", text, re.S)
         if notes_block:
             result["review_notes"] = notes_block.group(1).strip()
 
@@ -280,27 +298,27 @@ class ApprovalGate:
         return (
             "# Approval Gate\n"
             "\n"
-            "## Metadata\n"
+            f"{_SEC_METADATA}\n"
             "\n"
             f"- work_item: {work_item}\n"
             f"- approver: {approver}\n"
             f"- status: {status}\n"
             f"- last_updated: {now_iso()}\n"
             "\n"
-            "## Approved Snapshot\n"
+            f"{_SEC_SNAPSHOT}\n"
             "\n"
             f"{snap_lines}\n"
             "\n"
-            "## Gate Status\n"
+            f"{_SEC_GATE_STATUS}\n"
             "\n"
             f"{gate_lines}\n"
             f"- execution_open: {'true' if execution_open else 'false'}\n"
             "\n"
-            "## Review Notes\n"
+            f"{_SEC_REVIEW_NOTES}\n"
             "\n"
             f"{review_notes}\n"
             "\n"
-            "## Invalidation Rules\n"
+            f"{_SEC_INVALIDATION}\n"
             "\n"
             "- 승인 후 문서가 바뀌면 기존 승인은 무효다.\n"
             "- 최신 문서 상태와 승인 스냅샷이 다르면 구현할 수 없다.\n"

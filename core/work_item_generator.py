@@ -489,12 +489,18 @@ def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) 
     if os.environ.get("AF_MEMORY_REPLAY", "1") == "0":
         return ""
     try:
-        from core.memory_system.episode_matcher import _search_seed_episodes
+        from core.memory_system.episode_matcher import EpisodeMatcher, _search_seed_episodes
+        import asyncio
         goal = _clean(project_brief.get("goal") or "")
         if not goal:
             return ""
         brief_text = f"{goal} {' '.join(_clean_list(project_brief.get('deliverables')))}"
-        hits = _search_seed_episodes(brief_text, top_k=5)
+        try:
+            matcher = EpisodeMatcher()
+            hits = asyncio.run(matcher.query_similar(brief_text, top_k=5))
+        except Exception:
+            # asyncio.run 실패(이미 실행 중인 루프, 초기화 오류 등) — 시드 전용 폴백
+            hits = _search_seed_episodes(brief_text, top_k=5)
         if not hits:
             return ""
         lines = ["## Episode Hints\n"]

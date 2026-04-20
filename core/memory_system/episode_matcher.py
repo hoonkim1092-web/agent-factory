@@ -46,7 +46,7 @@ _keyword_similarity = keyword_similarity
 class EpisodeMatcher:
     """Find failure→success episode pairs for knowledge extraction."""
 
-    def __init__(self, facade: Any) -> None:
+    def __init__(self, facade: Any = None) -> None:
         self._facade = facade
 
     async def find_pairs(
@@ -156,6 +156,9 @@ class EpisodeMatcher:
 
         # ── 메모리 시스템 성공 에피소드 검색 (Jaccard 기반 유사도) ──────
         memory_hits: list[tuple[float, dict[str, Any]]] = []
+        if self._facade is None:
+            # facade 없이 생성된 경우 — seed-only 모드
+            return seed_hits
         try:
             records = await self._facade.search_semantic(
                 brief_text,
@@ -203,12 +206,22 @@ class EpisodeMatcher:
 
 # ── 파일 기반 시드 에피소드 검색 헬퍼 ──────────────────────────────────────
 
+_SEED_STOP_WORDS: frozenset[str] = frozenset({
+    "a", "an", "the", "and", "or", "of", "to", "in", "is", "are", "be",
+    "이", "가", "을", "를", "의", "에", "에서", "로", "으로", "와", "과",
+    "도", "은", "는", "이다", "있다", "하다", "합니다", "입니다",
+})
+
+
 def _search_seed_episodes(brief_text: str, *, top_k: int = 5) -> list[dict[str, Any]]:
     """memory/episodes/ 디렉토리의 .md 시드 파일을 검색한다."""
     repo_root = _find_repo_root()
     episodes_dir = os.path.join(repo_root, "memory", "episodes")
     if not os.path.isdir(episodes_dir):
         return []
+
+    # stop-word 제거는 루프 밖에서 한 번만 수행
+    brief_tokens = set(brief_text.lower().split()) - _SEED_STOP_WORDS
 
     results: list[tuple[float, dict[str, Any]]] = []
     for fname in os.listdir(episodes_dir):
@@ -221,8 +234,7 @@ def _search_seed_episodes(brief_text: str, *, top_k: int = 5) -> list[dict[str, 
         except OSError:
             continue
 
-        # 시드 파일: brief 토큰 중 파일 전체에 포함된 비율로 유사도 근사
-        brief_tokens = set(brief_text.lower().split())
+        # 시드 파일: brief 토큰 중 파일 전체에 포함된 비율로 유사도 근사 (stop-word 제거 후 토큰)
         content_lower = content.lower()
         matches = sum(1 for tok in brief_tokens if tok in content_lower)
         sim = matches / max(len(brief_tokens), 1)

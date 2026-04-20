@@ -14,6 +14,7 @@ import dataclasses
 import json
 import os
 import tempfile
+import threading
 
 _MAX_ATTEMPTS = 20
 
@@ -48,6 +49,7 @@ class LineageLedger:
 
     def __init__(self, ledger_path: str):
         self._path = ledger_path
+        self._lock = threading.Lock()
         self._entries: dict[str, LineageEntry] = {}
         self._load()
 
@@ -83,13 +85,14 @@ class LineageLedger:
                 pass
             return
 
-        for item in (data.get("entries") or []):
-            try:
-                entry = LineageEntry.from_dict(item)
-            except Exception:
-                continue
-            if entry.lineage_id:
-                self._entries[entry.lineage_id] = entry
+        with self._lock:
+            for item in (data.get("entries") or []):
+                try:
+                    entry = LineageEntry.from_dict(item)
+                except Exception:
+                    continue
+                if entry.lineage_id:
+                    self._entries[entry.lineage_id] = entry
 
     def _save(self) -> None:
         dir_path = os.path.dirname(os.path.abspath(self._path))
@@ -107,64 +110,71 @@ class LineageLedger:
                 pass
             raise
 
-    def get_or_create(self, lineage_id: str) -> LineageEntry:
+    def _get_or_create(self, lineage_id: str) -> LineageEntry:
         if lineage_id not in self._entries:
             self._entries[lineage_id] = LineageEntry(lineage_id=lineage_id)
         return self._entries[lineage_id]
 
     def is_maxed(self, lineage_id: str) -> bool:
-        entry = self._entries.get(lineage_id)
-        if entry is None:
-            return False
-        return entry.attempts >= _MAX_ATTEMPTS or entry.level > 5
+        with self._lock:
+            entry = self._entries.get(lineage_id)
+            if entry is None:
+                return False
+            return entry.attempts >= _MAX_ATTEMPTS or entry.level > 5
 
     def on_task_failure(self, lineage_id: str, new_level: int, reason: str = "") -> LineageEntry:
         """실패 기록 + 레벨 갱신 후 atomic write."""
         from core.utils import now_iso
-        entry = self.get_or_create(lineage_id)
-        entry.attempts += 1
-        entry.level = new_level
-        entry.history.append({
-            "ts": now_iso(),
-            "level": new_level,
-            "attempts": entry.attempts,
-            "outcome": "failure",
-            "reason": reason[:200],
-        })
-        self._save()
+        with self._lock:
+            entry = self._get_or_create(lineage_id)
+            entry.attempts += 1
+            entry.level = new_level
+            entry.history.append({
+                "ts": now_iso(),
+                "level": new_level,
+                "attempts": entry.attempts,
+                "outcome": "failure",
+                "reason": reason[:200],
+            })
+            self._save()
         return entry
 
     def on_task_success(self, lineage_id: str, level: int) -> None:
         """성공 기록 후 atomic write."""
         from core.utils import now_iso
-        entry = self.get_or_create(lineage_id)
-        entry.history.append({
-            "ts": now_iso(),
-            "level": level,
-            "attempts": entry.attempts,
-            "outcome": "success",
-        })
-        self._save()
+        with self._lock:
+            entry = self._get_or_create(lineage_id)
+            entry.history.append({
+                "ts": now_iso(),
+                "level": level,
+                "attempts": entry.attempts,
+                "outcome": "success",
+            })
+            self._save()
 
 
 _LEDGER_CACHE: dict[str, LineageLedger] = {}
+_CACHE_LOCK = threading.Lock()
 
 
 def get_lineage_ledger(workspace: str | None = None) -> LineageLedger:
     """워크스페이스 기준 .af/lineage_ledger.json 경로로 인스턴스를 반환.
 
     workspace별로 캐싱하여 다중 프로젝트 실행 시 원장 교차 오염을 방지한다.
+    _CACHE_LOCK으로 멀티스레드 중복 생성을 방지한다.
     """
     base = os.path.abspath(workspace or ".")
-    if base not in _LEDGER_CACHE:
-        path = os.path.join(base, ".af", "lineage_ledger.json")
-        _LEDGER_CACHE[base] = LineageLedger(ledger_path=path)
-    return _LEDGER_CACHE[base]
+    with _CACHE_LOCK:
+        if base not in _LEDGER_CACHE:
+            path = os.path.join(base, ".af", "lineage_ledger.json")
+            _LEDGER_CACHE[base] = LineageLedger(ledger_path=path)
+        return _LEDGER_CACHE[base]
 
 
 def reset_lineage_ledger(workspace: str | None = None) -> None:
     """지정 워크스페이스(또는 전체) 캐시를 초기화한다."""
-    if workspace is None:
-        _LEDGER_CACHE.clear()
-    else:
-        _LEDGER_CACHE.pop(os.path.abspath(workspace), None)
+    with _CACHE_LOCK:
+        if workspace is None:
+            _LEDGER_CACHE.clear()
+        else:
+            _LEDGER_CACHE.pop(os.path.abspath(workspace), None)

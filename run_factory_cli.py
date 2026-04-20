@@ -202,9 +202,12 @@ def _run_nightly_start(rest: list[str]) -> None:
     _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
     if os.path.exists(_sched_path):
         _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
-        _sched = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-        _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
-        _sched.install(_Path(FACTORY_DIR), _Path(ws))
+        if _spec is None:
+            print("[nightly-start] install_scheduler.py 로드 실패. 수동으로 15분 주기 설정 필요.", file=sys.stderr)
+        else:
+            _sched = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+            _sched.install(_Path(FACTORY_DIR), _Path(ws))
     else:
         print("[nightly-start] install_scheduler.py 없음. 수동으로 15분 주기 설정 필요.", file=sys.stderr)
 
@@ -231,9 +234,10 @@ def _run_nightly_stop(rest: list[str]) -> None:
     _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
     if os.path.exists(_sched_path):
         _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
-        _sched = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-        _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
-        _sched.uninstall(_Path(FACTORY_DIR))
+        if _spec is not None:
+            _sched = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+            _sched.uninstall(_Path(FACTORY_DIR))
 
     print("[nightly-stop] 자율 모드 비활성화됨.")
 
@@ -523,8 +527,10 @@ def main(argv: list[str] | None = None):
         try:
             from core.providers.registry import configure_providers
             configure_providers([args.provider])
-        except Exception:
-            os.environ["AGENT_CHAT_PROVIDER"] = args.provider  # 폴백
+        except Exception as _exc:
+            import logging as _logging
+            _logging.getLogger(__name__).debug("configure_providers 실패: %s", _exc)
+        os.environ["AGENT_CHAT_PROVIDER"] = args.provider  # 항상 설정
     if args.provider_command:
         os.environ[CLI_PROVIDER_COMMAND_ENVS[args.provider]] = args.provider_command.strip()
     if args.no_cli_auto_install:

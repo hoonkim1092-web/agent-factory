@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import logging
@@ -390,6 +390,7 @@ def _normalize_tasks(module: dict[str, Any], owner_role: str, owner_name: str) -
                 "acceptance": _clean_list(raw.get("acceptance")),
                 "artifacts": _clean_list(raw.get("artifacts")),
                 "status": _clean_text(raw.get("status") or "pending") or "pending",
+                "e2e_command": _clean_text(raw.get("e2e_command") or ""),
             }
         )
     return tasks

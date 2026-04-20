@@ -94,7 +94,14 @@ class StrategyLedger:
             for item in (data.get("role_assignments") or []):
                 rec = RoleAssignmentRecord.from_dict(item)
                 if rec.deliverable_pattern:
-                    self._role_assignments[rec.deliverable_pattern] = rec
+                    _key = f"{rec.deliverable_pattern}::{rec.owner_role}"
+                    if _key in self._role_assignments:
+                        # 중복 key: 카운터 합산 (load→save 사이클에서 데이터 손실 방지)
+                        existing = self._role_assignments[_key]
+                        existing.pass_count += rec.pass_count
+                        existing.fail_count += rec.fail_count
+                    else:
+                        self._role_assignments[_key] = rec
             for item in (data.get("failure_patterns") or []):
                 rec2 = FailurePatternRecord.from_dict(item)
                 if rec2.pattern_key:
@@ -155,12 +162,12 @@ class StrategyLedger:
         self, deliverable_pattern: str, owner_role: str, project_id: str
     ) -> None:
         with self._lock:
-            key = deliverable_pattern.lower()
+            key = f"{deliverable_pattern.lower()}::{owner_role}"
             if key in self._role_assignments:
                 self._role_assignments[key].pass_count += 1
             else:
                 self._role_assignments[key] = RoleAssignmentRecord(
-                    deliverable_pattern=key,
+                    deliverable_pattern=deliverable_pattern.lower(),
                     owner_role=owner_role,
                     project_id=project_id,
                 )
@@ -171,12 +178,12 @@ class StrategyLedger:
         self, deliverable_pattern: str, owner_role: str, project_id: str
     ) -> None:
         with self._lock:
-            key = deliverable_pattern.lower()
+            key = f"{deliverable_pattern.lower()}::{owner_role}"
             if key in self._role_assignments:
                 self._role_assignments[key].fail_count += 1
             else:
                 self._role_assignments[key] = RoleAssignmentRecord(
-                    deliverable_pattern=key,
+                    deliverable_pattern=deliverable_pattern.lower(),
                     owner_role=owner_role,
                     project_id=project_id,
                     pass_count=0,
@@ -190,8 +197,9 @@ class StrategyLedger:
         with self._lock:
             lowered = deliverable.lower()
             candidates: list[RoleAssignmentRecord] = []
-            for pattern, rec in self._role_assignments.items():
-                if pattern in lowered or any(tok in lowered for tok in pattern.split()):
+            for _key, rec in self._role_assignments.items():
+                dp = rec.deliverable_pattern  # 실제 패턴으로 매칭 (key는 "dp::role" 형식)
+                if dp in lowered or any(tok in lowered for tok in dp.split()):
                     if rec.pass_count + rec.fail_count >= 3:
                         candidates.append(rec)
         if not candidates:
@@ -251,19 +259,25 @@ class StrategyLedger:
 
 
 _LEDGER_CACHE: dict[str, StrategyLedger] = {}
+_CACHE_LOCK = threading.Lock()
 
 
 def get_strategy_ledger(workspace: str | None = None) -> StrategyLedger:
-    """워크스페이스 기준 memory/strategy_ledger.json 경로로 인스턴스를 반환."""
+    """워크스페이스 기준 memory/strategy_ledger.json 경로로 인스턴스를 반환.
+
+    _CACHE_LOCK으로 멀티스레드 중복 생성을 방지한다.
+    """
     base = os.path.abspath(workspace or ".")
-    if base not in _LEDGER_CACHE:
-        path = os.path.join(base, "memory", "episodes", "strategy_ledger.json")
-        _LEDGER_CACHE[base] = StrategyLedger(ledger_path=path)
-    return _LEDGER_CACHE[base]
+    with _CACHE_LOCK:
+        if base not in _LEDGER_CACHE:
+            path = os.path.join(base, "memory", "episodes", "strategy_ledger.json")
+            _LEDGER_CACHE[base] = StrategyLedger(ledger_path=path)
+        return _LEDGER_CACHE[base]
 
 
 def reset_strategy_ledger(workspace: str | None = None) -> None:
-    if workspace is None:
-        _LEDGER_CACHE.clear()
-    else:
-        _LEDGER_CACHE.pop(os.path.abspath(workspace), None)
+    with _CACHE_LOCK:
+        if workspace is None:
+            _LEDGER_CACHE.clear()
+        else:
+            _LEDGER_CACHE.pop(os.path.abspath(workspace), None)

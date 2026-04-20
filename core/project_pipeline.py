@@ -110,10 +110,18 @@ class ProjectPipeline:
     def _write_json(self, path: str, data: dict):
         import tempfile
         dir_ = os.path.dirname(path) or "."
-        with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, suffix=".tmp", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            tmp = f.name
-        os.replace(tmp, path)
+        os.makedirs(dir_, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+        except Exception:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     def _write_skill_manifest(self, workspace: str, role_id: str, run_id: str, entries: list[dict]) -> None:
         """agents/{role_id}/skill_manifest.json — 스킬 조달 경로 기록 (projection)."""
@@ -150,7 +158,7 @@ class ProjectPipeline:
         return d
 
     def _save_checkpoint(self, workspace: str, stage: str, data: dict) -> None:
-        """단계 완료 시 결과를 .checkpoint/{stage}.json에 저장."""
+        """단계 완료 시 결과를 .checkpoint/{stage}.json에 저장 (atomic write)."""
         import hashlib as _hl
         path = os.path.join(self._checkpoint_dir(workspace), f"{stage}.json")
         payload = {
@@ -162,8 +170,7 @@ class ProjectPipeline:
             "data": data,
         }
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
+            self._write_json(path, payload)
         except Exception as exc:
             print(f"[Checkpoint] save failed for stage={stage}: {exc}")
 
@@ -1044,8 +1051,11 @@ class ProjectPipeline:
             requested_role=requested_role,
             route=route,
         )
-        # 자동 승인 (하위 호환)
-        prepared.gate().approve(approver="auto")
+        # 자동 승인 (하위 호환) — gate 파일 없으면 먼저 초기화
+        _gate = prepared.gate()
+        if not os.path.exists(_gate.gate_path):
+            _gate.initialize(prepared.work_item_slug)
+        _gate.approve(approver="auto")
 
         return self.execute(
             prepared=prepared,
