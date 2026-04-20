@@ -262,12 +262,20 @@ _AGENT_TIER_MAP: dict[str, int] = {
 }
 
 
+_SKIP_GATE_RE = re.compile(r"(?:^|[\s;&|])AF_SKIP_REVIEW_GATE=1\b")
+
+
 def _pre_bash_review_gate(payload: dict) -> int:
     """PreToolUse(Bash): git commit 시도 시 review-gate 판정. BLOCK → exit 2."""
     ti = payload.get("tool_input") or {}
     command = ti.get("command", "")
     if not _GIT_COMMIT_RE.search(command):
         return 0  # git commit 아님 → skip
+
+    # 인라인 환경변수 우회 감지 (AF_SKIP_REVIEW_GATE=1 git commit ...)
+    if _SKIP_GATE_RE.search(command) or os.environ.get("AF_SKIP_REVIEW_GATE") == "1":
+        _log_hook_event("pre_bash_review_gate", command[:80], 0, error="gate-skipped-cmd")
+        return 0
 
     root = _project_root()
     workspace = _detect_workspace()
