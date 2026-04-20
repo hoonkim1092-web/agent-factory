@@ -554,3 +554,13 @@ The diff doesn't contain changes to `core/providers/cli.py` — it only shows `.
 - **[Info]** .claude/settings.local.json — `settings.local.json` is machine-specific and shouldn't be committed. Verify it's in `.gitignore`.
 
 No `core/providers/cli.py` changes were present in the diff to review.
+
+---
+
+## 2026-04-21 00:46 — `2026-04-14-build-diet` (1f3fb884)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/memory_system/strategy_ledger.py
+
+**Changed (20)**: `.claude/settings.local.json, core/memory_system/strategy_ledger.py, tests/_tmp/af-test-1d782932/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-1d782932/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-1d782932/proj_retry/.todo.md, tests/_tmp/af-test-26d98d16/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-26d98d16/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-26d98d16/proj_retry/.todo.md, tests/_tmp/af-test-37c2e253/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-37c2e253/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-37c2e253/proj_retry/.todo.md, tests/_tmp/af-test-62ed486c/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-62ed486c/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-62ed486c/proj_retry/.todo.md, tests/_tmp/af-test-82b151a3/proj_retry/.af/ise_ledger_run_retry_fsa.json ... (+5)`
+
+_Review skipped (--no-llm or LLM unavailable)_
