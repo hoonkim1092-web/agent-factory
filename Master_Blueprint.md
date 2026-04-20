@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-20 | version: v1.2.21 -->
+<!-- last_updated: 2026-04-21 | version: v1.2.22 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -64,7 +64,7 @@
 | `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
 | `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
 | `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
-| `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()` |
+| `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()`, `record_role_batch()` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
 | `core/executor.py` | 태스크 실행 래퍼 | — |
@@ -281,7 +281,8 @@ _pick_owner_role(deliverable, roles, workspace)  [project_task_board.py]
   └─ 키워드 폴백 (기존 keyword_map)
 
 StrategyLedger (memory/episodes/strategy_ledger.json)
-  ├─ record_role_success/failure()        [성공·실패 기록]
+  ├─ record_role_success/failure()        [성공·실패 기록 (단건)]
+  ├─ record_role_batch(entries)           [다수 패턴 1회 _save() 일괄 기록 — B2-4]
   ├─ record_failure_pattern()             [패턴 기록]
   ├─ can_auto_save() → bool              [PASS ≥ 80% gate]
   └─ get_warnings_for(task) → [hints]    [경고 주입]
@@ -311,7 +312,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-04-02 -->
+<!-- last_updated: 2026-04-21 -->
 
 **클래스:** `ProjectPipeline`
 
@@ -324,6 +325,7 @@ AgentRunner.run(agent, task_input, workspace)
 **핵심 내부 흐름:**
 - `terminal_per_agent=True` 설정 → `DynamicOrchestrator` 생성 (`project_pipeline.py:700`)
 - `print_startup_routing_notice()` 호출 후 오케스트레이션 시작
+- `execute()` 완료 후 `StrategyLedger.record_role_batch()` 호출: 모듈명 + deliverables 앞 4단어 패턴을 1회 저장 (B2-4 fix — 이전에는 모듈명만 저장해 `_pick_owner_role` lookup이 항상 miss)
 
 ---
 
@@ -1196,6 +1198,15 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-21 | v1.2.22 | fix(B2-4): strategy_ledger에 deliverables 패턴 등록 경로 추가 — `record_role_batch` 신규, project_pipeline.py 모듈명+deliverables(앞 4단어) 배치 저장, `tests/test_strategy_ledger.py` 12개 테스트 신규 |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
+| 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/strategy_ledger.py — settings.local.json, strategy_ledger.py, ise_ledger_run_retry_fsa.json, lineage_ledger.json, .todo.md (+15) |
 | 2026-04-20 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, lineage_ledger.py (+30) |
 | 2026-04-20 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/lineage_ledger.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, lineage_ledger.py (+30) |
 | 2026-04-20 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/core/memory_system/episode_matcher.py — settings.local.json, document_index.json, Master_Blueprint.md, approval_gate.py, lineage_ledger.py (+30) |

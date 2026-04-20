@@ -192,6 +192,37 @@ class StrategyLedger:
             self._evict_if_needed()
             self._save()
 
+    def record_role_batch(
+        self,
+        entries: list[tuple[str, str, str, bool]],
+    ) -> None:
+        """여러 (pattern, owner_role, project_id, succeeded) 항목을 한 번의 _save()로 기록.
+
+        project_pipeline.py처럼 한 번에 다수 패턴을 기록할 때 I/O 폭주를 방지한다.
+        같은 배치 내 동일 (pattern, owner_role) 쌍은 순서대로 누산된다 — 호출자가
+        중복 제거를 원하면 entries 생성 전 _seen 집합으로 필터링해야 한다.
+        """
+        if not entries:
+            return
+        with self._lock:
+            for pattern, owner_role, project_id, succeeded in entries:
+                key = f"{pattern.lower()}::{owner_role}"
+                if key in self._role_assignments:
+                    if succeeded:
+                        self._role_assignments[key].pass_count += 1
+                    else:
+                        self._role_assignments[key].fail_count += 1
+                else:
+                    self._role_assignments[key] = RoleAssignmentRecord(
+                        deliverable_pattern=pattern.lower(),
+                        owner_role=owner_role,
+                        project_id=project_id,
+                        pass_count=1 if succeeded else 0,
+                        fail_count=0 if succeeded else 1,
+                    )
+            self._evict_if_needed()
+            self._save()
+
     def lookup_best_role(self, deliverable: str) -> str | None:
         """과거 성공률이 가장 높은 역할을 반환. 충분한 샘플이 없으면 None."""
         with self._lock:

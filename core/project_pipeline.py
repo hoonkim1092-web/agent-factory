@@ -965,8 +965,11 @@ class ProjectPipeline:
         status = str(run_board.get("current_status", "unknown"))
 
         # ── strategy ledger: 모듈별 역할 배정 성공/실패 기록 ──────────────
-        # pattern_key = 모듈명 단독(소문자). 루프별 try/except로 한 모듈 실패가
-        # 나머지 기록을 중단시키지 않도록 격리.
+        # pattern_key = 모듈명 + deliverables 모두 등록 (B2-4 fix).
+        # _pick_owner_role은 deliverable 텍스트로 lookup_best_role을 호출하므로
+        # 모듈명만 저장하면 항상 miss가 난다.
+        # 패턴은 30자 상한으로 트런케이션해 자연어 문장의 단어 단위 오매칭을 방지.
+        # record_role_batch로 한 번의 _save()에 일괄 기록 (I/O 폭주 방지).
         _succeeded = status == "completed"
         _project_id = os.path.basename(workspace)
         try:
@@ -976,18 +979,29 @@ class ProjectPipeline:
             logger.warning("strategy ledger 초기화 실패: %s", _exc)
             _ledger = None
         if _ledger is not None:
+            _batch: list[tuple[str, str, str, bool]] = []
+            # _seen은 배치 전체 범위에서 중복을 제거 — 모듈 루프 밖에 위치해야
+            # 서로 다른 모듈이 같은 (pattern, owner_role)을 공유할 때 pass_count가
+            # 이중 계산되는 것을 방지한다.
+            _seen: set[tuple[str, str]] = set()
             for _mod in (prepared.role_plan.get("modules") or []):
-                _pattern = str(_mod.get("name") or "").strip().lower()
                 _owner = str(_mod.get("owner_role") or "")
-                if not _pattern or not _owner:
+                if not _owner:
+                    # owner_role 미배정 모듈은 학습 대상에서 제외
                     continue
+                for _raw in [str(_mod.get("name") or "")] + list(_mod.get("deliverables") or []):
+                    # 앞 4단어만 취해 단어 경계에서 절삭: 긴 자연어 deliverable의 midword
+                    # cut 토큰이 lookup_best_role에서 오매칭하는 것을 방지 (B2-4 fix).
+                    _words = _raw.strip().lower().split()
+                    _dp = " ".join(_words[:4]).strip()
+                    if _dp and (_dp, _owner) not in _seen:
+                        _seen.add((_dp, _owner))
+                        _batch.append((_dp, _owner, _project_id, _succeeded))
+            if _batch:
                 try:
-                    if _succeeded:
-                        _ledger.record_role_success(_pattern, _owner, _project_id)
-                    else:
-                        _ledger.record_role_failure(_pattern, _owner, _project_id)
+                    _ledger.record_role_batch(_batch)
                 except Exception as _exc:
-                    logger.warning("strategy ledger 기록 실패 [%s]: %s", _pattern, _exc)
+                    logger.warning("strategy ledger 배치 기록 실패: %s", _exc)
 
         append_dashboard_run(
             {
