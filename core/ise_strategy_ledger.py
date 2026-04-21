@@ -209,11 +209,22 @@ class StrategyLedger:
             ledger = cls(run_id=data["run_id"], original_task=data.get("original_task", ""))
             ledger._level_counts = {int(k): v for k, v in data.get("level_counts", {}).items()}
             ledger._human_hints = data.get("human_hints", [])
+            _legacy_hashes = 0
             for ed in data.get("entries", []):
-                ledger.entries.append(StrategyEntry(**{
+                entry = StrategyEntry(**{
                     k: v for k, v in ed.items()
                     if k in StrategyEntry.__dataclass_fields__
-                }))
+                })
+                if entry.strategy_hash and len(entry.strategy_hash) == 16:
+                    _legacy_hashes += 1
+                ledger.entries.append(entry)
+            if _legacy_hashes:
+                import warnings
+                warnings.warn(
+                    f"ise_ledger_{run_id}: {_legacy_hashes}건의 legacy 16-char 해시 감지 — "
+                    "신규 32-char 해시와 dedup 불일치 가능. 재실행 시 중복 전략이 시도될 수 있음.",
+                    UserWarning, stacklevel=2,
+                )
             return ledger
         except Exception:
             return None
@@ -222,7 +233,7 @@ class StrategyLedger:
 
     @staticmethod
     def _hash(text: str) -> str:
-        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:32]
 
     @staticmethod
     def _normalize_error(error_log: str) -> str:

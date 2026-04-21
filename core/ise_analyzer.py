@@ -215,6 +215,6 @@ class ISEAnalyzer:
             match = re.search(r'\{[\s\S]*"action"[\s\S]*\}', raw)
             if match:
                 return safe_json_load(match.group())
-        except Exception:
-            pass
+        except Exception as exc:
+            print_agent_msg("ISEAnalyzer", f"전략 제안 LLM 호출 실패: {type(exc).__name__}: {exc}", "⚠️")
         return None

@@ -21,6 +21,7 @@ from core.project_task_board import (
 from core.utils import (
     append_dashboard_run,
     now_iso,
+    print_agent_msg,
     read_yaml,
     safe_id,
     to_portable_path,
@@ -955,6 +956,12 @@ class ProjectPipeline:
         # -- 에이전트 실행 --
         from core.model_router import print_startup_routing_notice
         print_startup_routing_notice()
+
+        # execution_mode=ise: AF_ISE_ENABLED가 명시적으로 꺼져 있어도 강제 활성화
+        # (기본값은 "1"이므로 대부분의 경우 no-op; AF_ISE_ENABLED=0 환경에서만 차이)
+        if execution_mode == "ise" and os.environ.get("AF_ISE_ENABLED", "1") == "0":
+            os.environ["AF_ISE_ENABLED"] = "1"
+            print_agent_msg("Pipeline", "execution_mode=ise → AF_ISE_ENABLED 강제 활성화", "🌀")
 
         task_input = str(prepared.project_brief.get("goal") or "")
         orchestrator = DynamicOrchestrator(

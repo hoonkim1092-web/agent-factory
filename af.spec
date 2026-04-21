@@ -67,6 +67,12 @@ a = Analysis(
         'core.install_candidate_utils',
         'core.intent',
         'core.interactive_chat',
+        # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
+        'core.ise_analyzer',
+        'core.ise_loop',
+        'core.ise_redesigner',
+        'core.ise_stall_detector',
+        'core.ise_strategy_ledger',
         'core.knowledge_skill',
         'core.langchain_adapter',
         'core.llm_engine',

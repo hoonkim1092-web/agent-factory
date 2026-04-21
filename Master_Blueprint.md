@@ -222,6 +222,12 @@ run_factory_cli.py:main()
 > `ISELoop`은 `FSALoop` 얇은 래퍼로 축소됨 (API 호환 유지).
 > `lineage_id`는 task.lineage_id 필드에서 읽어 `lineage_ledger.json`에 누적 기록된다.
 > `AF_ISE_ENABLED=0` 시 기존 evaluator 경로(retry/blocked)로 fallback.
+>
+> **Phase A Step 1 갱신 (2026-04-22)**: ISELoop 독자 차별화는 Phase B 이후 예정.
+> 현재 `ISELoop`은 `FSALoop` 위임 래퍼이며 단일 에이전트 경로(`--mode ise`)에서만 호출된다.
+> 프로젝트 파이프라인 경로(`execution_mode="ise"`)는 `AF_ISE_ENABLED=1` 환경 변수로 FSA 경로를 활성화한다.
+> `_should_decompose()` 신규 구현: L5 에스컬레이션 판정(3회 logic/architecture 실패 → 분해 신호).
+> 분해 로직 본체(subtask 생성)는 Phase B에서 구현 예정.
 
 ```
 DynamicOrchestrator._execute_agent_task()  [실 배선 — Phase 3]
@@ -1198,6 +1204,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-22 | v1.2.22 | feat(phase-a-step1): ISE 배선 복구 B1~B7 + Review-Gate BLOCK 3건 해소 — (B1) project_pipeline.execute() ise 모드 AF_ISE_ENABLED 강제 활성화; (B2) _orchestration_loop에서 _should_decompose() 호출 연결; (B3) ise_strategy_ledger.load() 레거시 해시 경고; (B4) 모든 실패 경로(FSA/evaluator/crash)에 failure_category 필드 추가; (B5) skill_procurer auto_approve ise 포함; (B6) CLI --mode ise routing 수정(L665 elif 추가); (B7) Blueprint §3.2 Phase A Step 1 노트. _needs_llm_intervention crash 카테고리 제외. 테스트: 787P/17F(pre-existing)/3S |
 | 2026-04-21 | v1.2.22 | fix(B2-4): strategy_ledger에 deliverables 패턴 등록 경로 추가 — `record_role_batch` 신규, project_pipeline.py 모듈명+deliverables(앞 4단어) 배치 저장, `tests/test_strategy_ledger.py` 12개 테스트 신규 |
 | 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |
 | 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |

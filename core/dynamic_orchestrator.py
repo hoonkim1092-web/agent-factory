@@ -314,7 +314,7 @@ class DynamicOrchestrator:
         # 4. 전략 피벗 필요 (최근 5건 중 impl 실패 3건 이상)
         recent_failures = len([
             f for f in self.state_board["failed_subtasks"][-5:]
-            if f.get("failure_category") != "infra"
+            if f.get("failure_category") not in ("infra", "crash")
         ])
         if recent_failures >= 3:
             return True
@@ -481,6 +481,31 @@ class DynamicOrchestrator:
             return data
         except (TypeError, ValueError):
             return str(data)
+
+    def _should_decompose(self, retry_key: str) -> bool:
+        """ISE L5 에스컬레이션: 태스크를 서브태스크로 분해해야 하는지 판정.
+
+        조건(모두 충족 시 True):
+          1. 해당 retry_key의 실패 횟수 >= 3
+          2. state_board.failed_subtasks 상에 3건 이상의 실패 기록 존재
+          3. 최근 3건의 failure_category가 decompose 가능 유형
+             (logic / architecture / skill_deficiency)
+
+        transient(재시도)·syntax(코드 수정)·resource(인프라)는 decompose 부적합.
+        """
+        if self._task_retry_count.get(retry_key, 0) < 3:
+            return False
+
+        related = [
+            f for f in self.state_board.get("failed_subtasks", [])
+            if f.get("task_id") == retry_key
+            or f"{f.get('role')}:{str(f.get('subtask', ''))[:60]}" == retry_key
+        ]
+        if len(related) < 3:
+            return False
+
+        decomposable = {"logic", "architecture", "skill_deficiency"}
+        return all(f.get("failure_category") in decomposable for f in related[-3:])
 
     def _cross_verified_evaluate(self, role: str, instruction: str, error_log: str, workspace: str) -> dict:
         """교차검증 기반 실패 평가 + 자가진화. CLI 2개 이상이면 교차검증, 아니면 단일 evaluator."""
@@ -768,7 +793,9 @@ class DynamicOrchestrator:
                                 self.state_board["failed_subtasks"].append({
                                     "role": role, "subtask": subtask,
                                     "reason": reason, "lineage_id": _lineage_id,
+                                    "failure_category": _failure_cat.value,
                                     "evaluator_action": "degrade",
+                                    "task_id": task_id,
                                 })
                         else:
                             print_agent_msg(role, f"FSALoop 위임: lineage={_lineage_id}", "🌀")
@@ -815,7 +842,9 @@ class DynamicOrchestrator:
                                     self.state_board["failed_subtasks"].append({
                                         "role": role, "subtask": subtask,
                                         "reason": fsa_reason, "lineage_id": _lineage_id,
+                                        "failure_category": _failure_cat.value,
                                         "evaluator_action": "degrade" if _maxed else "failed",
+                                        "task_id": task_id,
                                     })
                                 update_project_board_task(
                                     target_workspace, role, subtask, "failed",
@@ -836,6 +865,7 @@ class DynamicOrchestrator:
                             "role": role,
                             "subtask": subtask,
                             "reason": reason,
+                            "failure_category": _failure_cat.value,
                             "evaluator_action": evaluator_action,
                             "evaluator_advice": evaluator_advice,
                         }
@@ -850,7 +880,10 @@ class DynamicOrchestrator:
                         )
                 self._sync_manifest()
         except Exception as exc:
-            crashed_entry = {"role": role, "subtask": subtask, "reason": str(exc)}
+            crashed_entry = {
+                "role": role, "subtask": subtask, "reason": str(exc),
+                "failure_category": "crash",
+            }
             if task_id:
                 crashed_entry["task_id"] = task_id
             async with self._state_lock:
@@ -984,6 +1017,12 @@ class DynamicOrchestrator:
                 ]
                 if _last_fails and _last_fails[-1].get("failure_category") == "infra":
                     print_agent_msg("Lilith", f"[{role}] infra 실패 — 재시도 안 함", "")
+                    continue
+                # ISE L5: 반복 logic/architecture 실패 시 분해 신호
+                if self._should_decompose(retry_key):
+                    print_agent_msg("Lilith", f"[{role}] should_decompose=True — 태스크 분해 필요 (Phase B에서 구현)", "⚡")
+                    update_project_board_task(target_workspace, role, instruction, "failed",
+                                             note="decompose_needed", task_id=plan_task_id)
                     continue
                 if role and instruction and role in all_roles and self.state_board["agents_status"].get(role) == "idle":
                     run_token = f"run_{int(time.time())}_{role}_{uuid.uuid4().hex[:6]}"

@@ -55,6 +55,7 @@ from core.skill_procurer import SkillOrchestrator
 from core.agent_runner import ModelRouter, AgentRunner
 from core.git_manager import GitManager
 from core.fsa_loop import FSALoop
+from core.ise_loop import ISELoop
 from core.dynamic_orchestrator import DynamicOrchestrator
 from core.request_router import RequestRouter
 from core.project_pipeline import ProjectPipeline
@@ -95,6 +96,7 @@ class AgentFactory:
         set_visualizer(self.visualizer)
 
         self.ultra = FSALoop(self.runner, self.agent_mgr, visualizer=self.visualizer)
+        self.ise = ISELoop(fsa_loop=self.ultra, runner=self.runner, agent_mgr=self.agent_mgr, visualizer=self.visualizer)
         self.request_router = RequestRouter()
 
         # [COLLAB] 싱글톤 broker + reservation: 모든 오케스트레이터가 공유
@@ -405,7 +407,7 @@ class AgentFactory:
         if route.get("pipeline") == "project":
             target_workspace = workspace or PROJECT_ROOT
             print(f"\n[Router] project pipeline selected: {route.get('reasoning', '')}")
-            if execution_mode == "fsa":
+            if execution_mode in ("fsa", "ise"):
                 return self.project_pipeline.run(
                     task_input=task_input,
                     workspace=target_workspace,
@@ -464,6 +466,12 @@ class AgentFactory:
             if "workspace" in ultra_params:
                 ultra_kwargs["workspace"] = workspace
             run_metrics = self.ultra.run_mission(agent, task_input, **ultra_kwargs) or {}
+        elif execution_mode == "ise":
+            ise_params = inspect.signature(self.ise.run_mission).parameters
+            ise_kwargs = {"run_id": run_id}
+            if "workspace" in ise_params:
+                ise_kwargs["workspace"] = workspace
+            run_metrics = self.ise.run_mission(agent, task_input, **ise_kwargs) or {}
         else:
             run_metrics = self._invoke_runner(agent, task_input, run_id=run_id, auto_approve=False, workspace=workspace)
 
@@ -623,7 +631,7 @@ if __name__ == "__main__":
     sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
 
     parser.add_argument("task", nargs="*", help="Task description")
-    parser.add_argument("--mode", choices=["approval", "fsa"], default="approval", help="Execution mode")
+    parser.add_argument("--mode", choices=["approval", "fsa", "ise"], default="approval", help="Execution mode")
     parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
     parser.add_argument("--role", default="General", help="Agent role")
     parser.add_argument("--build", action="store_true", help="Enable skill building")
@@ -654,7 +662,12 @@ if __name__ == "__main__":
         sys.exit(0)
 
     task_input = " ".join(args.task).strip()
-    execution_mode = "fsa" if (args.fsa or args.mode == "fsa") else "approval"
+    if args.fsa or args.mode == "fsa":
+        execution_mode = "fsa"
+    elif args.mode == "ise":
+        execution_mode = "ise"
+    else:
+        execution_mode = "approval"
 
     if not task_input:
         task_input = prompt_mission_template("Agent Factory")
