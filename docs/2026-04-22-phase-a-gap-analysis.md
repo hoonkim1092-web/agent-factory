@@ -191,7 +191,11 @@
 - `fsa_loop.py:149` cycle 진입부 + `dynamic_orchestrator.py:896` 에이전트 전환부에 CWM 상태 체크·리셋 훅 추가
 - `policy.yaml`에 `phase_gate_enabled`, `context_window_sizes`, `compaction_thresholds` 추가 + 기본값 로더
 - `plan_verifier.py`를 Phase Gate로 승격 (plan 부재 시 생성 리다이렉트)
-- RunBudget / ContextWindowManager 직접 테스트 3건
+- **`SkillPackBootstrapper.check_installed()` 구현** (Q8 Phase A 결정: (a) 탐지만)
+  - Claude Code / Codex CLI / Gemini CLI 플러그인 경로에 Superpowers/GStack 존재 여부 감지
+  - 미설치 시 경고 로그 + 수동 설치 안내 메시지 출력
+  - 실제 자동 설치(어댑터 3종 구현)는 Phase B로 분리 (근거: `2026-04-22-phase-a-decisions-required.md` §Q8 확정 결정)
+- RunBudget / ContextWindowManager / SkillPackBootstrapper 직접 테스트 4건
 
 ### Step 3 — EVOLUTION 마무리 (0.5일)
 

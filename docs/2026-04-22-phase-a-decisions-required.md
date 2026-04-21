@@ -1,8 +1,8 @@
 # Phase A 진행 전 결정 필요 사항
 
-<!-- version: 1.1.0 | date: 2026-04-22 | author: Claude Haiku 4.5 -->
+<!-- version: 1.2.0 | date: 2026-04-22 | author: Claude Haiku 4.5 -->
 <!-- related: docs/2026-04-22-phase-a-gap-analysis.md -->
-<!-- status: RESOLVED — Q1~Q3 사용자 확정 (2026-04-22) -->
+<!-- status: RESOLVED — Q1~Q3, Q8 사용자 확정 (2026-04-22) -->
 
 ## 0-A. 결정 결과 (2026-04-22 사용자 확정)
 
@@ -11,7 +11,8 @@
 | **Q1. 작업 베이스라인 브랜치** | 현재 브랜치(`2026-04-14-build-diet`)에 커밋 및 push | detached HEAD → 로컬 브랜치 생성 후 push. 회사 미푸쉬 커밋과 충돌 가능(내일 회사에서 `git pull --rebase` 필요) |
 | **Q2. 우선순위 순서** | **Codex 안**: ISE → COMPACT → EVOLUTION → MEMORY | Critical 2건(--mode ise 배선 + af.spec)이 ISE에 집중하므로 실행 차단 요소부터 해소 |
 | **Q3. 문서 처리** | **(c)** 원문 archive 이동 + gap-analysis를 정식 요구사항서로 승격 | `docs/plans/AF_Phase_A_Requirements.md` → `docs/archive/2026-04-17-AF_Phase_A_Requirements.md`, gap-analysis.md 헤더에 "AUTHORITATIVE" 명시 |
-| Q4~Q11 | (미답) 기본값 적용 | 각 Step 시작 시점에 해당 Quality 질문 재확인 |
+| **Q8. GStack/Superpowers 연동** | **Phase A: (a) 탐지만 + Phase B: (d) 자동 부트스트랩** | AF가 멀티 프로바이더 환경에 GStack/Superpowers를 자동 설치·검증. Phase A는 미설치 시 경고 로그만, Phase B에서 어댑터 3종 실제 구현 |
+| Q4~Q7, Q9~Q11 | (미답) 기본값 적용 | 각 Step 시작 시점에 해당 Quality 질문 재확인 |
 
 이하 원본(의사결정 전 상태)은 히스토리 참조용으로 보존한다.
 
@@ -138,11 +139,25 @@
 **질문**: 문서 §0.4는 "워크플로우 강제(TDD/역할 리뷰/보안 감사)는 하위 프로바이더의 GStack/Superpowers에 위임"을 제안한다. 이를 어느 정도 채택할 것인가?
 
 **선택지**:
-- (a) 문서 원안대로: 오케스트레이터 레벨 Phase Gate만 최소 구현, 나머지는 프로바이더 의존
+- (a) 문서 원안대로: 오케스트레이터 레벨 Phase Gate만 최소 구현, 나머지는 프로바이더 의존 (사용자가 각 프로바이더에 스킬팩을 수동 설치한 것으로 가정)
 - (b) AF 자체 워크플로우도 병행 구현 (중복 있으나 독립성 ↑)
 - (c) AF에는 없고 프로바이더에도 없을 때만 AF가 최소 구현 (하이브리드)
+- (d) **AF가 프로바이더 환경에 GStack/Superpowers 자동 부트스트랩** (2026-04-22 추가)
+  - Claude Code / Codex CLI / Gemini CLI 각각의 플러그인 경로를 어댑터로 추상화
+  - AF 최초 실행 시 1회 설치 + 세션 시작 시 검증(멱등 업그레이드)
+  - `SkillPackBootstrapper` + 프로바이더별 어댑터 3종 (~450 LOC 추정)
+  - 오프라인 번들 옵션 병행 (에어갭 환경 대응)
 
-**영향**: Phase Gate 구현 범위 결정. 원안 (a)는 plan_verifier 승격 수준에서 끝나고, (b)는 TDD 강제 스킬까지 AF 자체 구현
+**영향**: Phase Gate 구현 범위 결정.
+- (a): plan_verifier 승격 수준
+- (b): TDD 강제 스킬까지 AF 자체 구현 (중복)
+- (c): 런타임 감지 로직 추가
+- (d): 설치 자동화까지 확장 — 멀티 프로바이더 환경 일관성 보장
+
+**확정 결정 (2026-04-22)**: **Phase A는 (a) 탐지만 + Phase B에서 (d) 자동 부트스트랩**.
+- Phase A (5.5일 계획 유지): `SkillPackBootstrapper.check_installed()` 구현 + 미설치 시 경고 로그 + 수동 설치 안내 (~100 LOC)
+- Phase B 이후: 프로바이더별 어댑터 구현, `install-af.ps1` 통합, 오프라인 번들 옵션 추가
+- 근거: 각 프로바이더의 플러그인 시스템 학습 + 크로스 플랫폼 테스트는 별도 스프린트급 작업이며, Phase A 핵심 작업(ISE 배선 복구, COMPACT/EVOLUTION/MEMORY 보정)과 병행하면 5.5일 내 완료 어려움
 
 **기본값 (미답 시)**: (a). 중복 최소화
 
@@ -205,7 +220,7 @@
 Q1: a/b/c/d
 Q2: 원안/Claude/Codex
 Q3: a/b/c
-[선택] Q4: a/b/c, Q5: 단일/다중, Q6: (a|b|c)+(i|ii), Q7: a/b/c, Q8: a/b/c, Q9: 일 N태스크·M토큰, Q10: a/b/c, Q11: a/b/c
+[선택] Q4: a/b/c, Q5: 단일/다중, Q6: (a|b|c)+(i|ii), Q7: a/b/c, Q8: a/b/c/d, Q9: 일 N태스크·M토큰, Q10: a/b/c, Q11: a/b/c
 ```
 
 ### 전부 기본값으로 진행하려면
