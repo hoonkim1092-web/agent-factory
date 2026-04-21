@@ -1,0 +1,18 @@
+{
+  "key": "user 1015                _safe_printfMemory CortexVectorAdapter skipped _e10161017            try1018                fro",
+  "value": "[user] 1015\t                _safe_print(f\"[Memory] CortexVectorAdapter skipped: {_e}\") 1016\t 1017\t            try: 1018\t                from core.memory_system.adapters.sync_compyne import SyncCompyneAdapter 1019\t                _mem_facade.register_adapter...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T16:45:28.364220+00:00",
+  "updated_at": "2026-04-21T16:45:28.364220+00:00",
+  "details": {
+    "text": "[user] 1015\t                _safe_print(f\"[Memory] CortexVectorAdapter skipped: {_e}\")\n1016\t\n1017\t            try:\n1018\t                from core.memory_system.adapters.sync_compyne import SyncCompyneAdapter\n1019\t                _mem_facade.register_adapter(SyncCompyneAdapter(project_path=str(target_workspace)))\n1020\t            except Exception as _e:\n1021\t                _safe_print(f\"[Memory] SyncCompyneAdapter skipped: {_e}\")\n1022\t\n1023\t            # ── 초기화 ──\n1024\t            try:\n[result-id: r21]",
+    "event_timestamp": "2026-04-08T15:01:25.316Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-acompact-d1bb04670c7ddfc1.jsonl",
+    "session_line": 94,
+    "provider": "claude"
+  }
+}

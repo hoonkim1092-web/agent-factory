@@ -1,0 +1,18 @@
+{
+  "key": "user docs2026-04-08-super-harness-analysis-and-improvementmd",
+  "value": "[user] docs\\2026-04-08-super-harness-analysis-and-improvement.md",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T22:25:04.851129+00:00",
+  "updated_at": "2026-04-21T22:25:04.851129+00:00",
+  "details": {
+    "text": "[user] docs\\2026-04-08-super-harness-analysis-and-improvement.md",
+    "event_timestamp": "2026-04-08T16:33:06.073Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-ae2384a81ebd95ea3.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

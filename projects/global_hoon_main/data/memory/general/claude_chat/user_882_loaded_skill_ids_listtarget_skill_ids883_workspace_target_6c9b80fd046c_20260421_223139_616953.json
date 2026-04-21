@@ -1,0 +1,18 @@
+{
+  "key": "user 882                            loaded_skill_ids listtarget_skill_ids883                            workspace target",
+  "value": "[user] 882\t                            \"loaded_skill_ids\": list(target_skill_ids), 883\t                            \"workspace\": target_workspace, 884\t                        }, 885\t                    ) 886\t                except Exception as exc: 887...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T22:31:39.617033+00:00",
+  "updated_at": "2026-04-21T22:31:39.617033+00:00",
+  "details": {
+    "text": "[user] 882\t                            \"loaded_skill_ids\": list(target_skill_ids),\n883\t                            \"workspace\": target_workspace,\n884\t                        },\n885\t                    )\n886\t                except Exception as exc:\n887\t                    _safe_print(f\"[Feedback] runtime event write failed: {exc}\")\n888\t                    break\n889\t\n890\t        def _flush_trace(result: dict):\n891\t            # ── Memory Shutdown: 에피소드 flush + 어댑터 정리 ──\n892\t            if _mem_mc_hook:\n893\t                try:\n[result-id: r29]",
+    "event_timestamp": "2026-04-08T15:02:38.015Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-acompact-d1bb04670c7ddfc1.jsonl",
+    "session_line": 124,
+    "provider": "claude"
+  }
+}

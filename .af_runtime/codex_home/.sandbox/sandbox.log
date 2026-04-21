@@ -1,0 +1,126 @@
+[2026-04-22 01:56:28.739 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git status --short
+[2026-04-22 01:56:28.749 codex.exe] sandbox setup required: sandbox setup marker missing or incompatible
+[2026-04-22 01:56:28.753 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --name-only -- agent_launche
+[2026-04-22 01:56:28.753 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --stat -- agent_launcher.py 
+[2026-04-22 01:56:28.763 codex.exe] sandbox setup required: sandbox setup marker missing or incompatible
+[2026-04-22 01:56:28.763 codex.exe] sandbox setup required: sandbox setup marker missing or incompatible
+[2026-04-21T16:56:30.967778500+00:00] ensuring sandbox users offline=CodexSandboxOffline online=CodexSandboxOnline
+[2026-04-21T16:56:31.068538700+00:00] setup error: helper_firewall_rule_create_or_add_failed: SetRemoteAddresses failed: Error { code: HRESULT(0x80070057), message: "매개 변수가 틀립니다." }
+[2026-04-22 01:56:31.068 codex-windows-sandbox-setup.exe] setup error: helper_firewall_rule_create_or_add_failed: SetRemoteAddresses failed: Error { code: HRESULT(0x80070057), message: "매개 변수가 틀립니다." }
+[2026-04-22 01:56:35.419 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+Get-Location
+[2026-04-22 01:56:35.450 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-21T16:56:35.476282+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-21T16:56:35.478850400+00:00] applied deny ACE to protect workspace .agents D:\warkSpaces\agent-factory\.agents
+[2026-04-22 01:56:35.478 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 01:56:35.484 codex.exe] helper copy: validating command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 01:56:35.486 codex.exe] helper copy: recopied command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 01:56:35.487 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 01:56:35.487 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-cb9b2c72b2474f2974f6e096ea5301be-in --pipe-out=\\.\pipe\codex-runner-99d64824f32173ef6427b812eb836e8a-out cwd=D:\warkSpaces\agent-factory
+[2026-04-21T16:56:35.498889900+00:00] read-acl-only mode: applying read ACLs
+[2026-04-21T16:56:35.506477600+00:00] read ACL run completed
+[2026-04-22 01:56:35.741 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\nGet-Location"] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 01:56:35.745 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 01:56:35.893 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+Get-Location (exit code 127)
+[2026-04-22 01:56:38.093 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoProfile 
+[2026-04-22 01:56:38.111 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-21T16:56:38.130925900+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-22 01:56:38.131 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 01:56:38.135 codex.exe] helper copy: using in-memory cache for command-runner -> \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 01:56:38.135 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 01:56:38.135 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-bf29bba9fd73573f4999e8e59a79509-in --pipe-out=\\.\pipe\codex-runner-4d19d145fadbdbf67c99fbe5b21b815c-out cwd=D:\warkSpaces\agent-factory
+[2026-04-21T16:56:38.152117100+00:00] read-acl-only mode: applying read ACLs
+[2026-04-21T16:56:38.157447200+00:00] read ACL run completed
+[2026-04-22 01:56:38.190 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\npowershell.exe -NoProfile -Command Get-Location"] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 01:56:38.194 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 01:56:38.323 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoProfile  (exit code 127)
+[2026-04-22 07:42:24.891 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git status --short
+[2026-04-22 07:42:24.904 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --stat
+[2026-04-22 07:42:24.905 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --name-only -- '*.py'
+[2026-04-22 07:42:24.914 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-22 07:42:24.924 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-22 07:42:24.924 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-21T22:42:24.951382100+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-21T22:42:24.951813400+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-21T22:42:24.951912400+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-22 07:42:24.951 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 07:42:24.952 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 07:42:24.952 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 07:42:24.960 codex.exe] helper copy: validating command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.960 codex.exe] helper copy: validating command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe[2026-04-22 07:42:24.960 codex.exe] helper copy: validating command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+
+[2026-04-22 07:42:24.961 codex.exe] helper copy: reused command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] helper copy: reused command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] helper copy: reused command-runner source=C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-command-runner.exe destination=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:24.961 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-82c5b34cbdb6518c9869150182034ef9-in --pipe-out=\\.\pipe\codex-runner-3cf61d1acfa59aecd90101983ada9ba0-out cwd=D:\warkSpaces\agent-factory
+[2026-04-22 07:42:24.961 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-5c48ce670be765f4e460557fcff7ca3-in --pipe-out=\\.\pipe\codex-runner-d26dbead96d2369a20f9f3fbbd7f9aac-out cwd=D:\warkSpaces\agent-factory[2026-04-22 07:42:24.961 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-26c526983c4ad44749864d4cac1a020b-in --pipe-out=\\.\pipe\codex-runner-8d5b7c25e50c256b459e155f62246bc1-out cwd=D:\warkSpaces\agent-factory
+
+[2026-04-21T22:42:24.979635600+00:00] read-acl-only mode: applying read ACLs
+[2026-04-21T22:42:24.979825300+00:00] read ACL helper already running; skipping
+[2026-04-21T22:42:24.979906500+00:00] read ACL helper already running; skipping
+[2026-04-21T22:42:24.987390400+00:00] read ACL run completed
+[2026-04-22 07:42:25.038 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\ngit diff --stat"] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:25.043 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:25.054 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\ngit diff --name-only -- '*.py'"] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:25.059 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:25.080 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\ngit status --short"] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:25.084 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:25.205 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --stat (exit code 127)
+[2026-04-22 07:42:25.212 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git diff --name-only -- '*.py' (exit code 127)
+[2026-04-22 07:42:25.230 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+git status --short (exit code 127)
+[2026-04-22 07:42:34.785 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No
+[2026-04-22 07:42:34.803 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-22 07:42:34.819 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No
+[2026-04-22 07:42:34.820 codex.exe] START: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No
+[2026-04-21T22:42:34.822563700+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-22 07:42:34.822 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 07:42:34.827 codex.exe] helper copy: using in-memory cache for command-runner -> \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.827 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.827 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-7f0dcb9d9dedd346ea13f5e006f1bd38-in --pipe-out=\\.\pipe\codex-runner-b2b11c60670eda66dea3d7773e4d29c5-out cwd=D:\warkSpaces\agent-factory
+[2026-04-22 07:42:34.835 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-22 07:42:34.836 codex.exe] setup refresh: spawning C:\Users\HOME\AppData\Roaming\npm\node_modules\@openai\codex\node_modules\@openai\codex-win32-x64\vendor\x86_64-pc-windows-msvc\codex\codex-windows-sandbox-setup.exe (cwd=D:\warkSpaces\agent-factory, payload_len=3820)
+[2026-04-21T22:42:34.846019600+00:00] read-acl-only mode: applying read ACLs
+[2026-04-21T22:42:34.851779300+00:00] read ACL run completed
+[2026-04-21T22:42:34.858967700+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-22 07:42:34.859 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-21T22:42:34.860685500+00:00] setup refresh: processed 3 write roots (read roots delegated); errors=[]
+[2026-04-22 07:42:34.860 codex-windows-sandbox-setup.exe] setup binary completed
+[2026-04-22 07:42:34.864 codex.exe] helper copy: using in-memory cache for command-runner -> \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.864 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.864 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-4f914f778739c1ecf9398cc02d0f92f-in --pipe-out=\\.\pipe\codex-runner-d4c9010896b5dcfb08bbe5806ed30f3e-out cwd=D:\warkSpaces\agent-factory
+[2026-04-22 07:42:34.865 codex.exe] helper copy: using in-memory cache for command-runner -> \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.865 codex.exe] helper launch resolution: using copied command-runner path \\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe
+[2026-04-22 07:42:34.866 codex.exe] runner launch: exe=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe cmdline=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home\.sandbox-bin\codex-command-runner.exe --pipe-in=\\.\pipe\codex-runner-571e7ba81dd3feb804c3215a87de8994-in --pipe-out=\\.\pipe\codex-runner-b078e7992192165e240eeaba07661f97-out cwd=D:\warkSpaces\agent-factory
+[2026-04-21T22:42:34.881734600+00:00] read-acl-only mode: applying read ACLs
+[2026-04-21T22:42:34.883106100+00:00] read ACL helper already running; skipping
+[2026-04-21T22:42:34.887704500+00:00] read ACL run completed
+[2026-04-22 07:42:34.894 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\npowershell.exe -NoLogo -NoProfile -Command \"git status --short\""] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:34.898 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:34.911 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\npowershell.exe -NoLogo -NoProfile -Command \"git diff --name-only -- '*.py'\""] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:34.916 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:34.932 codex-command-runner.exe] runner start cwd=D:\warkSpaces\agent-factory cmd=["D:\\warkSpaces\\agent-factory\\.af_runtime\\cli_sessions\\codex_cli_codex_cli_run_shell_guard\\pwsh.cmd", "-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\npowershell.exe -NoLogo -NoProfile -Command \"git diff --stat\""] real_codex_home=\\?\D:\warkSpaces\agent-factory\.af_runtime\codex_home
+[2026-04-22 07:42:34.937 codex-command-runner.exe] runner: effective cwd=D:\warkSpaces\agent-factory (requested D:\warkSpaces\agent-factory)
+[2026-04-22 07:42:35.041 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No (exit code 127)
+[2026-04-22 07:42:35.059 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No (exit code 127)
+[2026-04-22 07:42:35.075 codex.exe] FAILURE: D:\warkSpaces\agent-factory\.af_runtime\cli_sessions\codex_cli_codex_cli_run_shell_guard\pwsh.cmd -NoProfile -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+powershell.exe -NoLogo -No (exit code 127)

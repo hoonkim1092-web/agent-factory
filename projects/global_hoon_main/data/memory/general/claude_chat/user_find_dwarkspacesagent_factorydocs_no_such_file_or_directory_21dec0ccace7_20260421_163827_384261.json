@@ -1,0 +1,18 @@
+{
+  "key": "user find DwarkSpacesagent-factorydocs No such file or directory",
+  "value": "[user] find: ‘D:warkSpacesagent-factory/docs’: No such file or directory",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T16:38:27.384327+00:00",
+  "updated_at": "2026-04-21T16:38:27.384327+00:00",
+  "details": {
+    "text": "[user] find: ‘D:warkSpacesagent-factory/docs’: No such file or directory",
+    "event_timestamp": "2026-04-08T16:33:34.847Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-ae2384a81ebd95ea3.jsonl",
+    "session_line": 58,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "user 888                    break889890        _mem_ki_hook  None891        _mem_mc_hook  None892        _mem_facade  No",
+  "value": "[user] 888\t                    break 889\t 890\t        _mem_ki_hook = None 891\t        _mem_mc_hook = None 892\t        _mem_facade = None 893\t 894\t        def _flush_trace(result: dict): 895\t            # ── Memory Shutdown: 에피소드 flush + 어댑터 정리 ── 896...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T17:03:10.845300+00:00",
+  "updated_at": "2026-04-21T17:03:10.845300+00:00",
+  "details": {
+    "text": "[user] 888\t                    break\n889\t\n890\t        _mem_ki_hook = None\n891\t        _mem_mc_hook = None\n892\t        _mem_facade = None\n893\t\n894\t        def _flush_trace(result: dict):\n895\t            # ── Memory Shutdown: 에피소드 flush + 어댑터 정리 ──\n896\t            if _mem_mc_hook:\n897\t                try:\n898\t                    _run_async_safe(_mem_mc_hook.flush(timeout=5.0))\n899\t                except Exception:\n900\t                    pass\n901\t            if _mem_facade:\n902\t                try:\n903\t                    _run_async_safe(_mem_facade.shutdown())\n904\t                except Exception:\n905\t                    pass\n906\t            # 글로벌 토큰 예산 기록\n907\t            try:\n908\t                from core.run_budget import get_run_budget\n909\t                _text = str(result.get(\"text\", \"\") or \"\")\n910\t                if _text:\n911\t                    get_run_budget().record(_text)\n912\t            except Exception:\n913\t                pass\n914\t            data = {\n915\t                \"run_id\": run_id,\n916\t                \"project_id\": project_id,\n917\t                \"agent_name\": str(agent.get(\"name\", \"\")),\n[result-id: r31]",
+    "event_timestamp": "2026-04-08T15:03:01.840Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-acompact-d1bb04670c7ddfc1.jsonl",
+    "session_line": 137,
+    "provider": "claude"
+  }
+}

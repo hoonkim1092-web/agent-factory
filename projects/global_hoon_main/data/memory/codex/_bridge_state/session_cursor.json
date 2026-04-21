@@ -1,9 +1,9 @@
 {
-  "last_file": "D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/04/09/rollout-2026-04-09T11-42-57-019d701f-112d-79d0-bd9d-c5b51e8877f8.jsonl",
-  "last_line": 22,
-  "updated_at": "2026-04-09T02:43:24.100119+00:00",
+  "last_file": "D:/warkSpaces/agent-factory/tests/_tmp/af-test-016efd1b/.af_runtime/codex_home/sessions/2026/04/22/rollout-2026-04-22T07-55-19-019db241-53da-7ab1-bf25-e234e9670641.jsonl",
+  "last_line": 12,
+  "updated_at": "2026-04-21T22:55:52.253293+00:00",
   "user_key": "hoon_main",
-  "sessions_root": "D:\\hoonProJect\\worktrees\\agent-factory\\.af_runtime\\codex_home\\sessions",
+  "sessions_root": "D:\\warkSpaces\\agent-factory\\tests\\_tmp\\af-test-016efd1b\\.af_runtime\\codex_home\\sessions",
   "provider": "codex",
-  "written_last_run": 0
+  "written_last_run": 3
 }

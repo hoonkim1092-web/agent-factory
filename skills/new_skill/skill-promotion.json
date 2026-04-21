@@ -12,7 +12,7 @@
     "shadow_delta": 0.0,
     "shadow_cases": 0,
     "recommended_stage": "candidate",
-    "feedback_total_events": 7,
+    "feedback_total_events": 9,
     "feedback_current_stage": "candidate",
     "runtime_total": 0,
     "runtime_success_rate": 0.0,
@@ -20,6 +20,6 @@
     "runtime_regressed": false,
     "historical_score": 52
   },
-  "promotion_path": "/Users/hoon/workTree/agent-factory/skills/new_skill/skill-promotion.json",
-  "written_at": "2026-04-16T00:08:15"
+  "promotion_path": "D:\\warkSpaces\\agent-factory\\skills\\new_skill\\skill-promotion.json",
+  "written_at": "2026-04-22T07:48:16"
 }

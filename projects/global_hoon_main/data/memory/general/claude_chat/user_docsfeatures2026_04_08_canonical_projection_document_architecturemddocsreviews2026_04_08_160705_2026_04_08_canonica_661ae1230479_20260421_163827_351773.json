@@ -1,0 +1,18 @@
+{
+  "key": "user docsfeatures2026-04-08-canonical-projection-document-architecturemddocsreviews2026-04-08-160705-2026-04-08-canonica",
+  "value": "[user] docs\\features\\2026-04-08-canonical-projection-document-architecture.md docs\\reviews\\2026-04-08-160705-2026-04-08-canonical-projection-document-architecture-review.md docs\\architecture.md docs\\ai_architecture_guide.md docs\\next_gen_architecture_M4.md...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T16:38:27.351907+00:00",
+  "updated_at": "2026-04-21T16:38:27.351907+00:00",
+  "details": {
+    "text": "[user] docs\\features\\2026-04-08-canonical-projection-document-architecture.md\ndocs\\reviews\\2026-04-08-160705-2026-04-08-canonical-projection-document-architecture-review.md\ndocs\\architecture.md\ndocs\\ai_architecture_guide.md\ndocs\\next_gen_architecture_M4.md\ndocs\\super_harness_3_layer_architecture.md\ndocs\\2026-04-01-maintenance-system-architecture-v2.md\ndocs\\20260331_improved_artifact_pipeline_architecture.md\ndocs\\agent_factory_retrieval_integration_architecture.md\n[result-id: r2]",
+    "event_timestamp": "2026-04-08T16:33:12.002Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-ae2384a81ebd95ea3.jsonl",
+    "session_line": 18,
+    "provider": "claude"
+  }
+}

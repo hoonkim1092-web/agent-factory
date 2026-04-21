@@ -1,0 +1,5 @@
+[model_utils] * Model cache expired.
+[model_utils] * Fetching available models from Google API...
+[model_utils] * Failed to list models: No GOOGLE_API_KEY configured. Returning fallback list.
+[model_utils] * [Dynamic Default] tier=flash → models/gemini-2.5-flash
+cli output

@@ -1,0 +1,18 @@
+{
+  "key": "user 88class FallbackRejectedErrorRuntimeError89    pass9091 중복 제거 완료 quick_guard BANNED_ build_child_env run_isolated -",
+  "value": "[user] 88\tclass FallbackRejectedError(RuntimeError): 89\t    pass 90\t 91\t# [중복 제거 완료] quick_guard, BANNED_*, build_child_env, run_isolated -> 92\t# core/security_guard.py에 정의, core/utils.py를 통해 re-export됨. 93\t 94\t# 4) Agent / Requirements 95\t# ===============...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-21T22:31:39.604565+00:00",
+  "updated_at": "2026-04-21T22:31:39.604565+00:00",
+  "details": {
+    "text": "[user] 88\tclass FallbackRejectedError(RuntimeError):\n89\t    pass\n90\t\n91\t# [중복 제거 완료] quick_guard, BANNED_*, build_child_env, run_isolated ->\n92\t# core/security_guard.py에 정의, core/utils.py를 통해 re-export됨.\n93\t\n94\t# 4) Agent / Requirements\n95\t# =============================================================================\n96\tclass AgentRunner:\n97\t    def __init__(self, model_router: ModelRouter | None = None):\n98\t        self.mr = model_router or ModelRouter()\n99\t        self._knowledge_skills = []\n[result-id: r20]",
+    "event_timestamp": "2026-04-08T15:00:40.288Z",
+    "session_file": "C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/fe021434-50a4-492e-ad4e-be201b3e00a1/subagents/agent-acompact-d1bb04670c7ddfc1.jsonl",
+    "session_line": 78,
+    "provider": "claude"
+  }
+}
