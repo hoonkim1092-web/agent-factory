@@ -1,18 +1,41 @@
 # Phase A 진행 전 결정 필요 사항
 
-<!-- version: 1.2.0 | date: 2026-04-22 | author: Claude Haiku 4.5 -->
+<!-- version: 1.3.0 | date: 2026-04-22 | author: Claude Haiku 4.5 + Opus 4.7 -->
 <!-- related: docs/2026-04-22-phase-a-gap-analysis.md -->
-<!-- status: RESOLVED — Q1~Q3, Q8 사용자 확정 (2026-04-22) -->
+<!-- status: FULLY_RESOLVED — Q1~Q11 사용자 확정 (2026-04-22) -->
 
 ## 0-A. 결정 결과 (2026-04-22 사용자 확정)
+
+### Blocking (🔴)
 
 | 질문 | 답변 | 비고 |
 |-----|------|------|
 | **Q1. 작업 베이스라인 브랜치** | 현재 브랜치(`2026-04-14-build-diet`)에 커밋 및 push | detached HEAD → 로컬 브랜치 생성 후 push. 회사 미푸쉬 커밋과 충돌 가능(내일 회사에서 `git pull --rebase` 필요) |
 | **Q2. 우선순위 순서** | **Codex 안**: ISE → COMPACT → EVOLUTION → MEMORY | Critical 2건(--mode ise 배선 + af.spec)이 ISE에 집중하므로 실행 차단 요소부터 해소 |
 | **Q3. 문서 처리** | **(c)** 원문 archive 이동 + gap-analysis를 정식 요구사항서로 승격 | `docs/plans/AF_Phase_A_Requirements.md` → `docs/archive/2026-04-17-AF_Phase_A_Requirements.md`, gap-analysis.md 헤더에 "AUTHORITATIVE" 명시 |
+
+### Quality (🟡)
+
+| 질문 | 답변 | 비고 |
+|-----|------|------|
+| **Q4. 성공 판정 기준** | **(b)** 테스트 PASS + Blueprint 동기화 + exe 빌드 성공 | **추가 요구**: 사용자 요구 OS에 따라 빌드가 가능하도록 설정 유도 및 빌드(크로스 플랫폼 빌드 지원). `build_exe.py`·`install-af.ps1`에 OS 감지 + PyInstaller 타깃 분기 필요 |
+| **Q5. 운영 환경 범위** | **다중 머신** | 맥+데스크톱 교차 사용. Phase A는 last-write-wins로 단순화, Phase B에서 merge 전략 검토. Supabase 동기화가 **필수** 경로 |
+| **Q6. LLM 예산** | **(c) 전부 실제 API + (ii) Opus 4.7** | Mock 최소화. 실제 API 호출로 E2E 검증. 예산 상한을 $5 → **$30~50**로 상향 필요. rate limit 주의, 재현성 낮아 flakiness 대응(retry 로직) 필요 |
+| **Q7. CrossVerificationLoop** | **Phase B로 분리** | 분리하되 Phase B 구현 시 **4단 파이프라인**: QA agent → af-cross-review(1차) → af-cross-review(2차 순환) → **Opus 최고 품질 단독 재검토**. Phase A는 현재 af-critic + af-cross-review 2단계 유지 |
 | **Q8. GStack/Superpowers 연동** | **Phase A: (a) 탐지만 + Phase B: (d) 자동 부트스트랩** | AF가 멀티 프로바이더 환경에 GStack/Superpowers를 자동 설치·검증. Phase A는 미설치 시 경고 로그만, Phase B에서 어댑터 3종 실제 구현 |
-| Q4~Q7, Q9~Q11 | (미답) 기본값 적용 | 각 Step 시작 시점에 해당 Quality 질문 재확인 |
+
+### Context (🟢)
+
+| 질문 | 답변 | 비고 |
+|-----|------|------|
+| **Q9. 일 평균 실행 규모** | **무거움**: 일 30태스크 × 200K 토큰 | 하루 종일 돌림. **영향**: ① `memory_system/decay.py` DEFAULT_TTL_DAYS 30 → 15일 단축 검토, ② Supabase free tier 500MB 초과 예상(1~2개월) → 유료 티어($25/월) 전환 사전 안내, ③ RunBudget 초기 할당량을 200K/태스크로 상향 |
+| **Q10. 회귀 baseline** | **(a) Step 0로 baseline 측정 후 진행** | `pytest -q` 5~10분. 결과를 `docs/2026-04-22-phase-a-baseline.md`에 기록하여 각 Step 후 비교 |
+| **Q11. Working Tree 50개 파일** | **보류 대기 상태** | 스태시·커밋 모두 하지 않음. Phase A 작업 중 해당 파일 수정 금지(diff 오염 방지). 필요 시 Step별로 재검토 |
+
+### 미해결 사항 (Phase A 진행 중 재검토)
+
+- Q4 "OS별 크로스 플랫폼 빌드"의 실제 구현 범위 — 현재 `af.spec`은 Windows 전용. Mac/Linux 대응은 Step 5에서 scope 확정
+- Q11 working tree 파일이 Phase A 작업 중 수정 대상 파일과 겹칠 경우 → 해당 파일만 먼저 stash/commit 선택 결정
 
 이하 원본(의사결정 전 상태)은 히스토리 참조용으로 보존한다.
 

@@ -176,6 +176,20 @@
 
 ## 5. 실행 전략 (재배치)
 
+### Step 0 — Regression Baseline 측정 (0.25일, Q10 (a))
+
+- `pytest -q` 전체 실행 → `docs/2026-04-22-phase-a-baseline.md`에 결과 기록 (pass/fail/skip 카운트 + 실패 테스트 목록)
+- 기존에 깨져 있던 테스트를 "pre-existing failure"로 태깅 → 각 Step 이후 회귀 감지 기준선 확보
+- 이 단계의 실패는 Phase A가 만든 게 아니므로 해결 대상 아님 (단, 기록하여 Phase B로 이월)
+
+### Q6·Q9 반영 — 전역 파라미터 조정
+
+- **Q6 (c) 전부 실제 API**: Mock 비중 최소화. 핵심 E2E는 실제 Anthropic/Gemini 호출로 검증. 예산 상한 $30~50 (Opus 4.7 기준 Phase A 전체). Rate limit + flakiness 대응 위해 `retry_with_exponential_backoff` 적용
+- **Q9 무거움 (일 30×200K)**: 
+  - `memory_system/decay.py` `DEFAULT_TTL_DAYS = 30 → 15`
+  - `run_budget.py` 태스크당 기본 한도 상향 (200K)
+  - Supabase 유료 티어 전환 예상 시점 안내 (Step 5 Blueprint 갱신 시 명시)
+
 ### Step 1 — ISE 배선 복구 (1일)
 
 - `agent_launcher.py:408, 461`에 `execution_mode=="ise"` 분기 추가 → `ise_loop.ISELoop.run_mission()` 호출 경로 연결
@@ -219,7 +233,14 @@
 - `python build_exe.py` → exe에서 `--mode ise` 스모크 테스트
 - 버전 bump (`version.py` + `install-af.ps1` 3곳)
 
-**총 예상 기간: 5.5일** (문서 원안 추정 대비 약 45% 감축)
+**총 예상 기간: 5.75일** (Step 0 baseline 0.25일 추가. Q4 OS별 크로스 플랫폼 빌드 scope에 따라 Step 5가 +0.5~1일 증가 가능)
+
+- Step 0: Baseline 측정 (0.25일)
+- Step 1: ISE 배선 복구 (1일)
+- Step 2: COMPACT 연동 활성화 (1.5일)
+- Step 3: EVOLUTION 마무리 (0.5일)
+- Step 4: MEMORY 품질 향상 (2일)
+- Step 5: Blueprint 동기화 & exe 빌드 (0.5일)
 
 ---
 
