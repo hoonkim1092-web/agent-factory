@@ -18,7 +18,7 @@ to_mode() {
 
 to_project_args() {
     local raw="${1:-all}"
-    local key="${raw,,}"  # lowercase
+    local key; key=$(echo "$raw" | tr '[:upper:]' '[:lower:]')
     if [[ "$key" == "all" ]]; then
         echo "multi:logi-mind-v22,agent-factory,@repo"
     else
