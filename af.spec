@@ -97,6 +97,7 @@ a = Analysis(
         'core.security_scanner',
         'core.semantic_embedder',
         'core.skill_autodiscover',
+        'core.skill_pack_bootstrapper',
         'core.skill_cache',
         'core.skill_context_config',
         'core.skill_creator',

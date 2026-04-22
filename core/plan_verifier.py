@@ -32,6 +32,7 @@ class PlanVerifyResult:
     issues: list[str] = field(default_factory=list)       # confirmed_gaps + suspected_gaps
     suggestions: list[str] = field(default_factory=list)  # revision_instructions
     refined_items: list | None = None          # 재작성된 work-item (refine 성공 시)
+    redirect: str = ""                         # "create_plan" 등 — gate()가 채움
 
 
 # ──────────────────────────────────────────────────────────────
@@ -54,6 +55,29 @@ class PlanVerifier:
         self._providers = providers  # None이면 ParallelCritiqueEngine이 자동 탐지
 
     # ── 공개 메서드 ──
+
+    def gate(
+        self,
+        task_input: str,
+        work_items: list,
+        project_brief: dict | None = None,
+    ) -> PlanVerifyResult:
+        """Phase Gate: work_items가 없으면 계획 생성으로 리다이렉트.
+
+        plan_verifier.py를 Phase Gate로 승격한 진입점.
+        work_items가 비어있는 경우 verify()를 호출하지 않고
+        redirect="create_plan" 신호를 반환해 파이프라인이 계획 생성 단계로
+        돌아가도록 유도한다.
+        """
+        if not work_items:
+            return PlanVerifyResult(
+                passed=False,
+                score=0.0,
+                issues=["no_plan: work_items가 비어있습니다 — 계획 생성이 필요합니다"],
+                suggestions=["task_input을 기반으로 work_items를 먼저 생성하세요"],
+                redirect="create_plan",
+            )
+        return self.verify(task_input, work_items, project_brief)
 
     def verify(
         self,
@@ -262,4 +286,7 @@ Current work-items:
         return list(work_items)
 
 
-__all__ = ["PlanVerifier", "PlanVerifyResult"]
+__all__ = ["PlanVerifier", "PlanVerifyResult", "PhaseGateResult"]
+
+# 하위 호환 별칭
+PhaseGateResult = PlanVerifyResult

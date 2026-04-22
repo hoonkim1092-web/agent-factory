@@ -70,6 +70,7 @@
 | `core/executor.py` | 태스크 실행 래퍼 | — |
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
+| `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | `SkillPackBootstrapper`, `check_installed()`, `missing()`, `installed()` |
 | `core/fsa_loop.py:1-480` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한) | `FSALoop`, `run_mission()`, `_decide_escalation()` |
 | `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
@@ -577,13 +578,26 @@ reason 문자열 기반 실패 분류. `classify_failure(reason) → FailureCate
 INFRA 패턴: `missing_api_key`, `quota`, `429`, `503`, `cli_timeout`, `worker_timeout` 등
 
 ### §3.8.3 RunBudget (`core/run_budget.py`)
-<!-- last_updated: 2026-04-02 -->
+<!-- last_updated: 2026-04-22 -->
 
 글로벌 토큰 예산 추적. 4-char ≈ 1-token 휴리스틱.
 
 **API:** `set_run_budget(max_tokens)`, `get_run_budget()` (모듈 싱글턴)
 **동작:** 80% 경고 출력, 100% `is_exhausted()=True` → orchestrator 자동 중단
 **CLI:** `af run --budget 50000`
+
+**연결 포인트 (Phase A Step 2 fix):**
+- `agent_runner.py:_flush_trace()` — transcript `assistant` 엔트리에서 텍스트 합산 후 `record()` 호출 (기존 `result["text"]` 항상 빈 문자열이었음)
+- `fsa_loop.py:FSALoop.run_mission()` — 각 사이클 시작 시 `is_exhausted()` 체크로 조기 탈출
+- `dynamic_orchestrator.py:_orchestration_loop()` — while 루프 최상단 `is_exhausted()` 체크 (기존 구현)
+
+### §3.8.4 SkillPackBootstrapper (`core/skill_pack_bootstrapper.py`)
+<!-- last_updated: 2026-04-22 -->
+
+외부 CLI 플러그인 감지 전용. 설치는 하지 않고 shutil.which()로 PATH 탐색만 수행.
+
+**지원 플러그인:** claude-code, codex, gemini
+**API:** `check_installed() → dict[str, bool]`, `missing() → list[str]`, `installed() → list[str]`
 
 ---
 
@@ -1401,6 +1415,7 @@ model_utils.py (독립 모듈)
 | 2026-04-17 | v1.2.21 | {"changelog":"test(pending-review): check_pending_review 테스트 보강 — tests/test_pending_review.py 갱신, scripts/check_pending_review.py 수정, Master_Blueprint.md·code-review.md 동기화, skill-eval-report.json·document_index.json 재생성"} |
 | 2026-04-17 | v1.2.21 | {"type":"text","text":"docs(review-pipeline): 교차검증 파이프라인 문서·스크립트 정비 — Master_Blueprint.md 업데이트, code-review.md 갱신, scripts/check_pending_review.py 수정, skill-eval-report.json 갱신, document_index.json 캐시 재생성"} |
 | 2026-04-17 | v1.2.21 | {"changelog": "chore(review): 교차검증 파이프라인 산출물 갱신 — scripts/check_pending_review.py 편집, docs/code_review/code-review.md 갱신, document_index.json 캐시 확장, skill-eval-report.json 리포트 업데이트"} |
+| 2026-04-22 | (unreleased) | feat(compact-step2): Phase A Step 2 COMPACT 연동 활성화 — ① agent_runner.py `_flush_trace()`: `result["text"]` 빈 문자열 버그 → transcript `assistant` 엔트리 합산으로 RunBudget.record() 실제 연결. ② fsa_loop.py: 각 FSA 사이클 시작 시 RunBudget.is_exhausted() 조기 탈출 체크 추가. ③ policy.yaml: phase_gate + context_window 섹션 신설(placeholder, 코드 미연결 명시). ④ plan_verifier.py: PlanVerifyResult.redirect 필드 + PlanVerifier.gate() Phase Gate 메서드 신설(work_items 없으면 redirect="create_plan"). PhaseGateResult 하위 호환 별칭. ⑤ core/skill_pack_bootstrapper.py 신규: shutil.which 기반 claude-code/codex/gemini 감지(설치 없음). ⑥ tests/test_compact_step2.py 신규 18개(autouse RunBudget fixture). af.spec hiddenimport 추가. §0·§3.8.3·§3.8.4·§12 갱신 |
 | 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 post_edit_test 훅 추가 — settings.local.json에 테스트 실행 스텝 신규 삽입, hook_runner.py에 post_edit_test 핸들러 구현, test_hook_runner_builtins.py에 검증 케이스 추가, document_index.json 청크 갱신, code-review.md·Master_Blueprint.md·CLAUDE.md 문서 동기화 |
 | 2026-04-17 | v1.2.21 | feat(hooks): PostToolUse에 편집 후 자동 테스트 훅 추가 — `post_edit_test` 커맨드 신규 등록, `hook_runner.py` 실행 분기 추가, `check_pending_review.py` 관련 로직 갱신, `document_index.json` 캐시 갱신, Blueprint·코드리뷰 문서 동기화 |
 | 2026-04-17 | v1.2.21 | feat(hook_runner): `.py` 편집 후 즉시 pytest 실행 — `_post_edit_test` 신규 추가, 편집 파일명 기반 `test_<module>.py` 자동 탐지, 매칭 실패 시 `tests/` 전체 fallback, `_BUILTINS` 등록 완료 |

@@ -911,10 +911,17 @@ class AgentRunner:
                     _run_async_safe(_mem_facade.shutdown())
                 except Exception:
                     pass
-            # 글로벌 토큰 예산 기록
+            # 글로벌 토큰 예산 기록 — result dict에 "text" 키가 없으므로
+            # transcript의 assistant 엔트리에서 출력 텍스트를 합산한다.
+            # join 방식으로 엔트리 간 공백(n-1개)이 미세하게 오버카운트되지만
+            # 4-char≈1-token 휴리스틱 범위 내 허용 오차다.
             try:
                 from core.run_budget import get_run_budget
-                _text = str(result.get("text", "") or "")
+                _text = " ".join(
+                    str(e.get("payload", {}).get("text", ""))
+                    for e in transcript
+                    if e.get("kind") == "assistant"
+                ).strip()
                 if _text:
                     get_run_budget().record(_text)
             except Exception:

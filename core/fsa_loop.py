@@ -149,6 +149,15 @@ class FSALoop:
 
         try:
             for cycle in range(1, self.max_cycles + 1):
+                # ── 토큰 예산 체크 (dynamic_orchestrator와 동일한 가드) ──
+                try:
+                    from core.run_budget import get_run_budget
+                    if get_run_budget().is_exhausted():
+                        print_agent_msg("FSA", "Run budget exhausted — stopping.", "💰")
+                        break
+                except Exception:
+                    pass
+
                 if self._visualizer:
                     self._visualizer.update_from_fsa_step(agent_name, "execute", cycle, self.max_cycles)
                 else:
