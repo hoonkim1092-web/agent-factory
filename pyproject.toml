@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-factory"
+version = "0.1.0"
+requires-python = ">=3.9"
+
+[project.scripts]
+start_db   = "start_db:main"
+end_db     = "end_db:main"
+start_git  = "start_git:main"
+end_git    = "end_git:main"
+start_sync = "start_sync:main"
+end_sync   = "end_sync:main"
+af         = "af:main"
+lm         = "lm:main"
+agt        = "agt:main"
+cdx        = "cdx:main"
+setup-dev  = "setup_dev:main"
+set-utf8   = "set_utf8:main"
+
+[tool.setuptools]
+py-modules = [
+    "start_db", "end_db",
+    "start_git", "end_git",
+    "start_sync", "end_sync",
+    "af", "lm", "agt", "cdx",
+    "setup_dev", "set_utf8",
+    "repo_shortcuts",
+]

@@ -15,10 +15,16 @@ from pathlib import Path
 os.environ.setdefault("PYTHONUTF8", "1")
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
-script = Path(__file__).resolve().parent / "antigravity_link.py"
-if not script.exists():
-    print(f"[agt] antigravity_link.py not found: {script}")
-    sys.exit(1)
 
-result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
-sys.exit(result.returncode)
+def main() -> None:
+    script = Path(__file__).resolve().parent / "antigravity_link.py"
+    if not script.exists():
+        print(f"[agt] antigravity_link.py not found: {script}")
+        sys.exit(1)
+
+    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
+    sys.exit(result.returncode)
+
+
+if __name__ == "__main__":
+    main()

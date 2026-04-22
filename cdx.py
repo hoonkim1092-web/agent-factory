@@ -44,22 +44,27 @@ def _log(msg: str) -> None:
             f.write(f"[{ts}] {msg}\n")
 
 
-_log(f"start {' '.join(sys.argv[1:])}")
+def main() -> None:
+    _log(f"start {' '.join(sys.argv[1:])}")
 
-result = subprocess.run([codex] + sys.argv[1:])
-exit_code = result.returncode
+    result = subprocess.run([codex] + sys.argv[1:])
+    exit_code = result.returncode
 
-_log(f"exit {exit_code}")
+    _log(f"exit {exit_code}")
 
-bridge = Path(__file__).resolve().parent / "scripts" / "codex_session_bridge.py"
-if bridge.exists():
-    repo_root = str(Path(__file__).resolve().parent)
-    bridge_cmd = [sys.executable, str(bridge), "--repo-root", repo_root]
-    if debug:
-        subprocess.run(bridge_cmd)
-    else:
-        subprocess.run(bridge_cmd, capture_output=True)
-    if debug:
-        print(f"[CDX] bridge exit: done")
+    bridge = Path(__file__).resolve().parent / "scripts" / "codex_session_bridge.py"
+    if bridge.exists():
+        repo_root = str(Path(__file__).resolve().parent)
+        bridge_cmd = [sys.executable, str(bridge), "--repo-root", repo_root]
+        if debug:
+            subprocess.run(bridge_cmd)
+        else:
+            subprocess.run(bridge_cmd, capture_output=True)
+        if debug:
+            print(f"[CDX] bridge exit: done")
 
-sys.exit(exit_code)
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()
