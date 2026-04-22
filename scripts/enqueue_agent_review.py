@@ -25,6 +25,10 @@ MARKER_PATH = os.path.join(MARKER_DIR, "pending_agent_review.json")
 # 교차검증 대상 파일 패턴
 _REVIEW_PREFIXES = ("core/",)
 _REVIEW_EXACT = ("model_utils.py", "run_factory_cli.py")
+# skills/ 1-depth skill.py만 추가 — legacy(forge/, warehouse/, evaluator/) 폭발 회피
+# (2026-04-23 graphify 통합 시 af-critic BLOCK#1 fix)
+import re as _re
+_SKILLS_TOPLEVEL_RE = _re.compile(r"^skills/[^/]+/skill\.py$")
 
 
 def _is_review_target(filepath: str) -> bool:
@@ -33,6 +37,8 @@ def _is_review_target(filepath: str) -> bool:
     for prefix in _REVIEW_PREFIXES:
         if filepath.startswith(prefix):
             return True
+    if _SKILLS_TOPLEVEL_RE.match(filepath):
+        return True
     basename = os.path.basename(filepath)
     return basename in _REVIEW_EXACT
 

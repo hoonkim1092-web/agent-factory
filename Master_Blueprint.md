@@ -488,6 +488,14 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 6. AdaptiveSkillLoader 인스턴스 캐시 클리어
 7. HookEventBus 이벤트 브로드캐스트
 
+**외부 도구 wrapper 스킬 패턴 (2026-04-23, graphify 케이스)**
+- 외부 CLI 도구(예: `graphify`)를 agent-factory에 통합할 때:
+  - `skills/<tool>/skill.py` — `shutil.which("<cli>")` 가드 + `subprocess.run([cli, ...])` 호출. **runtime lazy install 금지**(권한·PATH·네트워크 unguarded)
+  - `skills/<tool>/meta.yaml` — 좁은 capability(`<TOOL>_BUILD`/`<TOOL>_QUERY`)로 다른 skill 점수 오염 회피
+  - `skills/<tool>_guide/SKILL.md` — knowledge skill로 분리 등록(retrieval engine이 자동 발견·컨텍스트 주입). action+knowledge 동일 skill_id 회피
+  - 설치는 `install-af.sh --with-<tool>` / `install-af.ps1 -With<Tool>` 옵션으로만
+  - 외부 도구의 자체 인스톨러(`<tool> install` 등)는 **사용 금지** — CLAUDE.md/hooks 자동 주입으로 agent-factory 규칙과 충돌
+
 ---
 
 ### §3.6 메모리 시스템 (`core/memory_system/`)
@@ -1204,6 +1212,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-23 | v1.2.22 | feat(graphify): Graphify 외부 도구 wrapper skill 통합 — `skills/graphify/`(action, capabilities: GRAPHIFY_BUILD/GRAPHIFY_QUERY/KNOWLEDGE_GRAPH_INDEX) + `skills/graphify_guide/`(knowledge, retrieval engine 자동 발견용) 신규. Graphify 공식 인스톨러(`graphify install`) 미사용 → CLAUDE.md/.githooks 자동 주입 회피. `subprocess.run(["graphify", ...])`로 외부 CLI 호출(uv tool 격리, Python 3.13). `install-af.sh --with-graphify` / `install-af.ps1 -WithGraphify` 옵션으로 명시적 설치(F1+F2). **Review-gate 범위 확장**: `scripts/enqueue_agent_review.py:26` `_REVIEW_PREFIXES`에 `skills/` 추가, `.githooks/pre-commit:46` 정규식에 `skills/.*\.py` 추가 — 기존엔 `skills/` 변경이 게이트 밖이라 정책 1번이 공허하게 PASS되던 사각지대 해소(F5). `skills/registry.yaml`에 두 엔트리 첫 커밋 동시 추가(F4). 좁은 capability 명명으로 `core_memory.MEMORY_SEARCH` 등과 점수 오염 회피(F3). af-cross-review FIX_FIRST 4건 모두 적용, F6은 Q5(b) action+knowledge skill_id 분리로 해소 |
 | 2026-04-22 | v1.2.22 | feat(phase-a-step1): ISE 배선 복구 B1~B7 + Review-Gate BLOCK 3건 해소 — (B1) project_pipeline.execute() ise 모드 AF_ISE_ENABLED 강제 활성화; (B2) _orchestration_loop에서 _should_decompose() 호출 연결; (B3) ise_strategy_ledger.load() 레거시 해시 경고; (B4) 모든 실패 경로(FSA/evaluator/crash)에 failure_category 필드 추가; (B5) skill_procurer auto_approve ise 포함; (B6) CLI --mode ise routing 수정(L665 elif 추가); (B7) Blueprint §3.2 Phase A Step 1 노트. _needs_llm_intervention crash 카테고리 제외. 테스트: 787P/17F(pre-existing)/3S |
 | 2026-04-21 | v1.2.22 | fix(B2-4): strategy_ledger에 deliverables 패턴 등록 경로 추가 — `record_role_batch` 신규, project_pipeline.py 모듈명+deliverables(앞 4단어) 배치 저장, `tests/test_strategy_ledger.py` 12개 테스트 신규 |
 | 2026-04-21 | v1.2.21 | chore(.claude): edit: /Users/hoon/workTree/agent-factory/tests/test_strategy_ledger.py — settings.local.json, Master_Blueprint.md, strategy_ledger.py, project_pipeline.py, code-review.md (+18) |

@@ -7,13 +7,25 @@ irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/inst
 #>
 
 param(
-    [string]$InstallPath = "C:\tools"
+    [string]$InstallPath = "C:\tools",
+    [switch]$WithGraphify
 )
 
 # 관리자 권한 없으면 자동으로 관리자로 재실행
+# (af-critic BLOCK#2 fix + Codex P2/P3 fix 2026-04-23):
+#   - -WithGraphify/-InstallPath 스위치를 UAC 재실행 ArgumentList에 동적 전달
+#   - InstallPath 작은따옴표 escape (예: C:\hoon's_dir 안전 처리)
+#   - try/finally로 임시 스크립트 cleanup 보장
+#   - -NoExit 제거 (자식 스크립트 끝에 Read-Host로 이미 대기)
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 if (-not $isAdmin) {
-    Start-Process powershell -ArgumentList "-NoExit -ExecutionPolicy Bypass -Command `"irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/install-af.ps1 | iex`"" -Verb RunAs
+    $extraArgs = if ($WithGraphify) { " -WithGraphify" } else { "" }
+    if ($InstallPath -ne "C:\tools") {
+        $escapedPath = $InstallPath.Replace("'", "''")
+        $extraArgs += " -InstallPath '$escapedPath'"
+    }
+    $cmdline = "-ExecutionPolicy Bypass -Command `"& { `$tmp = [IO.Path]::GetTempFileName() + '.ps1'; try { irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/install-af.ps1 -OutFile `$tmp; & `$tmp${extraArgs} } finally { Remove-Item `$tmp -ErrorAction SilentlyContinue } }`""
+    Start-Process powershell -ArgumentList $cmdline -Verb RunAs
     exit
 }
 
@@ -187,6 +199,53 @@ try {
     Write-Host "  'af setup'으로 진단 가능" -ForegroundColor Yellow
 }
 
+# Step 9 (옵션): graphify 외부 도구 설치 (-WithGraphify)
+if ($WithGraphify) {
+    Write-Host "`n► graphify 외부 도구 설치 (-WithGraphify)..." -ForegroundColor Yellow
+
+    # uv 자동 설치 (없으면)
+    $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
+    if (-not $uvCmd) {
+        Write-Host "  uv 미설치 → winget으로 설치 시도..." -ForegroundColor Yellow
+        try {
+            winget install --id=astral-sh.uv -e --accept-source-agreements --accept-package-agreements
+            $env:Path = [Environment]::GetEnvironmentVariable("Path","User") + ";" + [Environment]::GetEnvironmentVariable("Path","Machine")
+            $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
+        } catch {
+            Write-Host "! uv 자동 설치 실패: $_" -ForegroundColor Yellow
+            Write-Host "  수동 설치: https://docs.astral.sh/uv/" -ForegroundColor Yellow
+        }
+    }
+
+    if ($uvCmd) {
+        try {
+            & uv tool install 'graphifyy>=0.4.27,<0.5.0' --python 3.13
+            # P1 + af-critic round 3 issue #3 fix:
+            # install-af.sh와 대칭으로 uv tool bin 경로를 현재 세션 PATH에 추가.
+            # uv tool bin이 실패하면 USERPROFILE\.local\bin로 fallback (sh와 동일).
+            # Codex round 4 권장: 멀티라인 출력 시 PATH 오염 방어 (`| Select-Object -First 1`).
+            $uvBinDir = (& uv tool bin 2>$null) | Select-Object -First 1
+            if (-not $uvBinDir) {
+                $uvBinDir = "$env:USERPROFILE\.local\bin"
+                Write-Host "  uv tool bin 실패 → fallback: $uvBinDir" -ForegroundColor Gray
+            }
+            $env:Path = "$uvBinDir;$env:Path"
+            Write-Host "  uv tool bin PATH 추가: $uvBinDir" -ForegroundColor Gray
+            $graphifyCmd = Get-Command graphify -ErrorAction SilentlyContinue
+            if ($graphifyCmd) {
+                $gver = & graphify --version 2>&1 | Select-Object -First 1
+                Write-Host "✓ graphify 설치 완료: $gver" -ForegroundColor Green
+                Write-Host "  PATH 영구 등록 권장: '$uvBinDir' 를 사용자 환경변수 Path에 추가" -ForegroundColor Yellow
+            } else {
+                Write-Host "! graphify CLI 미감지 → PATH 확인 필요 (예상: $uvBinDir)" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "! graphifyy 설치 실패: $_" -ForegroundColor Yellow
+            Write-Host "  수동 실행: uv tool install 'graphifyy>=0.4.27,<0.5.0' --python 3.13" -ForegroundColor Yellow
+        }
+    }
+}
+
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  설치 완료! v1.2.21" -ForegroundColor Green
@@ -197,5 +256,10 @@ Write-Host "  af --help" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  또는 즉시 실행:"
 Write-Host "  & '$exePath' --help" -ForegroundColor Yellow
+if (-not $WithGraphify) {
+    Write-Host ""
+    Write-Host "  graphify 외부 도구도 설치하려면:" -ForegroundColor White
+    Write-Host "  irm <url>/install-af.ps1 | iex; install-af.ps1 -WithGraphify" -ForegroundColor Yellow
+}
 Write-Host ""
 Read-Host "엔터를 눌러 종료"

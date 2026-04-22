@@ -43,7 +43,7 @@ fi
 
 # ── 신규: 교차검증 결과 확인 ──
 if [ "${AF_PRE_COMMIT_REVIEW:-1}" != "0" ]; then
-    REVIEW_TARGET=$(echo "$STAGED" | grep -E "^(core/.*\.py|model_utils\.py|run_factory_cli\.py)$" | head -1)
+    REVIEW_TARGET=$(echo "$STAGED" | grep -E "^(core/.*\.py|skills/[^/]+/skill\.py|model_utils\.py|run_factory_cli\.py)$" | head -1)
     if [ -n "$REVIEW_TARGET" ]; then
         # venv python 사용 (시스템 python에 의존성 없을 수 있음)
         REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)

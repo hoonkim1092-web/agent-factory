@@ -249,8 +249,17 @@ def _mapping_to_metadata(
     )
     display_name = raw_name or _default_display_name(skill_id)
 
+    # `skill_type` 키도 인식 — meta.yaml/SKILL.md frontmatter에서 흔히 쓰이는 별칭.
+    # (Codex P4 fix 2026-04-23): graphify_guide SKILL.md frontmatter `skill_type: knowledge`가
+    # 지금까지 무시돼 default(KNOWLEDGE)에 의해 우연히 맞아떨어진 함정 해소.
     skill_type = _parse_skill_type(
-        _first_non_empty(raw.get("kind"), raw.get("type"), metadata_block.get("type")),
+        _first_non_empty(
+            raw.get("kind"),
+            raw.get("type"),
+            raw.get("skill_type"),
+            metadata_block.get("type"),
+            metadata_block.get("skill_type"),
+        ),
         default_skill_type,
     )
     category = _parse_category(

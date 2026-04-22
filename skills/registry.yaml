@@ -5,11 +5,11 @@ skills:
     - abc
     id: abc
     last_test_ok: true
-    meta_path: D:\warkSpaces\agent-factory\tests\_tmp\af-test-344aa609\skills\abc\meta.yaml
+    meta_path: /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-31736b13/skills/abc/meta.yaml
     name: abc
-    path: D:\warkSpaces\agent-factory\tests\_tmp\af-test-344aa609\skills\abc\skill.py
+    path: /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-31736b13/skills/abc/skill.py
     status: active
-    updated_at: '2026-04-22T07:48:15'
+    updated_at: '2026-04-23T01:26:27'
     version: 0.1.0
   accept_changes:
     capabilities:
@@ -835,6 +835,41 @@ skills:
     type: action
     updated_at: '2026-02-24T15:05:12'
     version: 1.0.0
+  graphify:
+    capabilities:
+    - graphify_build
+    - graphify_query
+    - knowledge_graph_index
+    dependencies: []
+    id: graphify
+    last_test_ok: false
+    meta_path: skills/graphify/meta.yaml
+    name: Graphify Knowledge Graph
+    path: skills/graphify/skill.py
+    purpose: External graphifyy CLI wrapper for knowledge graph build/query.
+    skill_id: graphify
+    skill_name: graphify
+    status: active
+    type: action
+    updated_at: '2026-04-23T00:00:00'
+    version: 0.1.0
+  graphify_guide:
+    capabilities:
+    - graphify_guide
+    dependencies:
+    - graphify
+    id: graphify_guide
+    last_test_ok: true
+    meta_path: skills/graphify_guide/meta.yaml
+    name: Graphify Usage Guide
+    path: skills/graphify_guide/SKILL.md
+    purpose: Knowledge guide for when/how to invoke the graphify action skill.
+    skill_id: graphify_guide
+    skill_name: graphify_guide
+    status: active
+    type: knowledge
+    updated_at: '2026-04-23T00:00:00'
+    version: 0.1.0
   infrastructure_scaler:
     capabilities:
     - infrastructure_scaler
@@ -985,14 +1020,14 @@ skills:
     - new_skill
     dependencies: []
     id: new_skill
-    last_eval_report: D:\warkSpaces\agent-factory\skills\new_skill\skill-eval-report.json
+    last_eval_report: /Users/hoon/workTree/agent-factory/skills/new_skill/skill-eval-report.json
     last_test_ok: false
     lifecycle_stage: candidate
     meta_path: skills/new_skill/meta.yaml
     name: new_skill
     path: skills/new_skill/skill.py
     promotion_reason: external_eval_passed
-    promotion_updated_at: '2026-04-22T07:48:16'
+    promotion_updated_at: '2026-04-23T01:26:29'
     purpose: ''
     skill_id: new_skill
     skill_name: new_skill
