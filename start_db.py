@@ -18,6 +18,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 SYNC_SCRIPT = REPO_ROOT / "scripts" / "project_context_sync.py"
+MEMORY_SYNC_SCRIPT = REPO_ROOT / "scripts" / "sync_claude_memory.py"
 
 TARGET_ALL = "logi-mind-v22,agent-factory,@repo"
 
@@ -74,6 +75,13 @@ def main() -> None:
                    "--mode", "pull", "--scope", "global", "--user-key", global_key])
         if rc != 0:
             sys.exit(rc)
+
+    # Claude Code 메모리 pull (PC간 세션 연속성)
+    if MEMORY_SYNC_SCRIPT.exists():
+        print("[MEMORY SYNC] pulling Claude Code memory from DB")
+        rc = _run([sys.executable, str(MEMORY_SYNC_SCRIPT), "--mode", "pull"])
+        if rc != 0:
+            print(f"[MEMORY SYNC] WARNING: memory sync failed (rc={rc}), continuing")
 
     print("[SYNC START] done.")
 

@@ -2,6 +2,13 @@
 
 ## 필수 규칙
 
+### 세션 연속성 규칙 (2026-04-23 추가)
+- **세션 시작 시**: `NEXT_STEPS.md`를 먼저 읽어 현재 진행 중인 작업과 우선순위를 파악한다
+- **작업 완료 또는 세션 종료 전**: `NEXT_STEPS.md` 상태 업데이트 → `git commit` → `git push` → `python end_db.py agent-factory` (메모리 Supabase 동기화)
+- **다른 PC에서 재개 시**: `git pull` → `python start_db.py agent-factory` (Supabase → 로컬 메모리 pull)
+- Claude Code 메모리(`memory/`)는 PC별 로컬 저장 — `sync_claude_memory.py`가 Supabase `claude_memory` 테이블을 통해 동기화
+- Supabase 미설정 시 `start_db`/`end_db` 실패하지 않고 경고만 출력하고 진행
+
 ### Master_Blueprint.md 참조 의무
 - **코드 수정 전**: `Master_Blueprint.md`의 해당 §섹션을 먼저 읽어 의존성과 영향 범위를 파악한다
 - **코드 수정 후**: 변경된 파일에 해당하는 섹션(§0~§11)과 §12 변경 이력을 **같은 커밋**에서 업데이트한다

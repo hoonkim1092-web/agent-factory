@@ -1227,6 +1227,15 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 환경 전환 후 런타임 세션 상태 갱신 — claude/codex/gemini CLI 워크스페이스 경로 `warkSpaces`→`hoonProJect/worktrees` 마이그레이션, 사용자 홈 `HOME`→`HOON` 적용, codex shell guard·auth·models_cache 파일 갱신, document_index 캐시 재생성 |
+| 2026-04-23 | v1.2.21 | chore(af-runtime): PC 이전 후 워크스페이스 경로 및 CLI 세션 상태 동기화 — workspace `warkSpaces→hoonProJect/worktrees` + 사용자명 `HOME→HOON` 경로 수정, claude/codex/gemini CLI 세션 JSON 갱신, codex_home auth·config·state_5.sqlite 업데이트, benchmark_oh_my_opencode.md 삭제 |
+| 2026-04-23 | v1.2.21 | chore(af-runtime): 새 PC 환경으로 CLI 세션 경로 마이그레이션 — workspace `warkSpaces→hoonProJect/worktrees` 일괄 갱신, claude/codex/gemini 세션 설정 파일 경로 업데이트(HOME→HOON), document_index.json 캐시 갱신, benchmark_oh_my_opencode.md 삭제 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 신규 PC 런타임 경로 마이그레이션 — workspace `D:\warkSpaces` → `D:\hoonProJect\worktrees` 일괄 갱신, 사용자 경로 `HOME` → `HOON` 변경, Codex shell-guard 스크립트 업데이트, document_index 캐시 재생성, benchmark_oh_my_opencode.md 제거 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 환경 이전으로 런타임 경로 일괄 갱신 — workspace 경로 교체(warkSpaces→hoonProJect/worktrees), 사용자 경로 교체(HOME→HOON), claude/codex/gemini CLI 세션 ID 및 transcript 경로 업데이트, codex 인증·모델캐시·설정 동기화 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 세션 연속성 워크스페이스 이전 — workspace 경로 `warkSpaces`→`hoonProJect/worktrees` 전환, CLI 사용자 `HOME`→`HOON` 갱신, claude/codex/gemini 세션 상태 파일 업데이트, skill-usage.jsonl 실행 기록 추가, benchmark_oh_my_opencode.md 제거 |
+| 2026-04-23 | v1.2.21 | chore(runtime): PC 이전 워크스페이스 경로·세션 상태 일괄 갱신 — workspace `D:\warkSpaces→D:\hoonProJect\worktrees` 마이그레이션, 사용자 경로 `HOME→HOON` 변경, claude/codex/gemini CLI 런타임 세션 상태 업데이트, codex 홈 config·auth·모델캐시 갱신, benchmark_oh_my_opencode.md 삭제 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 세션 연속성 경로 마이그레이션 — workspace `warkSpaces→hoonProJect/worktrees` 전환, 사용자 `HOME→HOON` 경로 업데이트, CLI 세션 상태·Codex 런타임 파일 갱신, settings.local.json 워크스페이스 경로 동기화, document_index 캐시 재생성 |
+| 2026-04-23 | v1.2.21 | chore(af-runtime): 워크스페이스 경로 마이그레이션 — claude/codex/gemini CLI 세션 workspace `D:\warkSpaces` → `D:\hoonProJect\worktrees` 일괄 수정, 사용자 경로 `HOME` → `HOON` 반영, settings.local.json·document_index.json·NEXT_STEPS.md 신규 경로 동기화 |
 | 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 마이그레이션 — cli_sessions workspace `warkSpaces→hoonProJect/worktrees` 업데이트, 사용자 홈 경로 `HOME→HOON` 변경, CLAUDE.md 세션 연속성 규칙 추가, NEXT_STEPS.md 상태 갱신, skill-usage.jsonl 신규 항목 추가 |
 | 2026-04-23 | v1.2.21 | chore(af_runtime): 워크스페이스 경로 이전 및 CLI 세션 상태 초기화 — workspace 경로 `warkSpaces→hoonProJect/worktrees` 수정, claude/codex/gemini CLI 세션 파일 업데이트, CLAUDE.md 세션 연속성 규칙 추가, document_index 캐시 갱신, skill-usage.jsonl 사용 로그 업데이트 |
 | 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 및 사용자 계정 마이그레이션 — cli_sessions workspace `D:\warkSpaces` → `D:\hoonProJect\worktrees` 경로 갱신, 사용자 `HOME` → `HOON` 계정 전환, codex_home 인증·설정·모델캐시 신규 PC 동기화, document_index 캐시 재생성, NEXT_STEPS.md 작업 상태 업데이트 |
