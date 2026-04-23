@@ -31,6 +31,12 @@ _REQUIREMENT_SYSTEM_PROMPT = (
     "Return JSON only. Do not inspect files, call tools, or modify the workspace."
 )
 
+_DOCUMENT_SYSTEM_PROMPT = (
+    "You are a technical document generator. "
+    "Return well-structured markdown only. Do not return JSON. "
+    "Do not inspect files, call tools, or modify the workspace."
+)
+
 
 @dataclass(frozen=True)
 class RequirementCandidate:
@@ -164,6 +170,66 @@ def pick_requirement_candidate() -> RequirementCandidate | None:
     return candidates[0] if candidates else None
 
 
+def execute_document_prompt(
+    prompt: str,
+    *,
+    workspace: str | None = None,
+    run_id: str = "",
+    timeout_sec: int = 120,
+) -> dict:
+    """Markdown 문서 생성 전용. execute_requirement_prompt()와 동일한 provider 순회,
+    단 시스템 프롬프트만 다름 — JSON 계약과 분리."""
+    target_workspace = _workspace_path(workspace)
+    errors: list[str] = []
+
+    for candidate in list_requirement_candidates():
+        try:
+            if candidate.transport == "cli":
+                result = execute_cli_chat(
+                    CliChatRequest(
+                        provider_id=candidate.provider_id,
+                        model=candidate.model,
+                        system_prompt=_DOCUMENT_SYSTEM_PROMPT,
+                        task_input=prompt,
+                        workspace=target_workspace,
+                        run_id=run_id,
+                        timeout_sec=timeout_sec,
+                    )
+                )
+                text = str(result.get("text") or result.get("stdout") or "").strip()
+                if not result.get("ok"):
+                    raise RuntimeError(str(result.get("reason") or "cli_document_failed"))
+            else:
+                effective_prompt = f"{_DOCUMENT_SYSTEM_PROMPT}\n\n{str(prompt or '').strip()}".strip()
+                if candidate.provider_id == "anthropic_api":
+                    text = _call_anthropic_api(candidate.model, effective_prompt)
+                elif candidate.provider_id == "openai_api":
+                    text = _call_openai_api(candidate.model, effective_prompt)
+                else:
+                    text = _call_google_api(candidate.model, effective_prompt)
+        except Exception as exc:
+            errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
+            continue
+
+        if text:
+            return {
+                "ok": True,
+                "provider_id": candidate.provider_id,
+                "model": candidate.model,
+                "text": text,
+                "errors": errors,
+            }
+        errors.append(f"{candidate.provider_id}:{candidate.model}:empty_response")
+
+    return {
+        "ok": False,
+        "provider_id": "",
+        "model": "",
+        "text": "",
+        "errors": errors,
+    }
+
+
 def execute_requirement_prompt(
     prompt: str,
     *,
@@ -171,7 +237,6 @@ def execute_requirement_prompt(
     run_id: str = "",
     timeout_sec: int = 120,
 ) -> dict:
-    effective_prompt = _effective_requirement_prompt(prompt)
     target_workspace = _workspace_path(workspace)
     errors: list[str] = []
 
@@ -192,12 +257,14 @@ def execute_requirement_prompt(
                 text = str(result.get("text") or result.get("stdout") or "").strip()
                 if not result.get("ok"):
                     raise RuntimeError(str(result.get("reason") or "cli_requirement_failed"))
-            elif candidate.provider_id == "anthropic_api":
-                text = _call_anthropic_api(candidate.model, effective_prompt)
-            elif candidate.provider_id == "openai_api":
-                text = _call_openai_api(candidate.model, effective_prompt)
             else:
-                text = _call_google_api(candidate.model, effective_prompt)
+                effective_prompt = _effective_requirement_prompt(prompt)
+                if candidate.provider_id == "anthropic_api":
+                    text = _call_anthropic_api(candidate.model, effective_prompt)
+                elif candidate.provider_id == "openai_api":
+                    text = _call_openai_api(candidate.model, effective_prompt)
+                else:
+                    text = _call_google_api(candidate.model, effective_prompt)
         except Exception as exc:
             errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
             continue

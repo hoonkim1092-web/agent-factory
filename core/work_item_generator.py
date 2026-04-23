@@ -3,10 +3,12 @@ Generate work-item markdown documents from planning artifacts.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
 import shutil
+import time
 from typing import Any
 
 from core.approval_gate import ApprovalGate
@@ -137,7 +139,7 @@ def _make_checklist(tasks: list[dict[str, Any]]) -> str:
     return "\n".join(lines).rstrip()
 
 
-def _generate_feature_plan(
+def _fallback_feature_plan(
     work_item: str,
     project_brief: dict[str, Any],
     role_plan: dict[str, Any],
@@ -212,7 +214,7 @@ def _generate_feature_plan(
     )
 
 
-def _generate_feature_spec(
+def _fallback_feature_spec(
     work_item: str,
     project_brief: dict[str, Any],
     role_plan: dict[str, Any],
@@ -316,7 +318,7 @@ def _generate_feature_spec(
     )
 
 
-def _generate_implementation_design(
+def _fallback_impl_design(
     work_item: str,
     project_brief: dict[str, Any],
     role_plan: dict[str, Any],
@@ -434,11 +436,11 @@ def _generate_implementation_design(
     )
 
 
-def _generate_implementation_tasks(
+def _fallback_impl_tasks(
     work_item: str,
+    project_brief: dict[str, Any] | None,
     role_plan: dict[str, Any],
     task_board: dict[str, Any],
-    project_brief: dict[str, Any] | None = None,
 ) -> str:
     tasks = [t for t in (task_board.get("tasks") or []) if isinstance(t, dict)]
     modules = [m for m in (role_plan.get("modules") or []) if isinstance(m, dict)]
@@ -482,6 +484,176 @@ def _generate_implementation_tasks(
         "  - `e2e_command:` 필드에 실행 명령어 기재\n"
         "  - `- verdict:` 필드에 PASS/WARN/BLOCK 기재\n"
     )
+
+
+def _generate_doc_with_llm(prompt: str, fallback_fn) -> tuple[str, bool]:
+    """LLM 문서 생성 시도. 실패/빈 응답 시 fallback_fn()으로 폴백. (content, used_fallback)"""
+    try:
+        from core.requirement_llm import execute_document_prompt
+        result = execute_document_prompt(prompt)
+        if result.get("ok") and result.get("text"):
+            return result["text"], False
+        errors = result.get("errors") or []
+        _LOGGER.warning("LLM 문서 생성 실패 — 폴백 사용. errors=%s", errors)
+    except Exception as exc:
+        _LOGGER.warning("LLM 문서 생성 예외 — 폴백 사용: %s", exc)
+    return fallback_fn(), True
+
+
+def _generate_feature_plan(
+    work_item: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    prev_plan: str = "",
+) -> str:
+    goal = _clean(project_brief.get("goal") or "")
+    deliverables = _clean_list(project_brief.get("deliverables"))
+    constraints = _clean_list(project_brief.get("constraints"))
+
+    prompt = (
+        "Create a feature-plan.md document for this work item.\n\n"
+        f"## Input\n"
+        f"- Brief:\n{json.dumps(project_brief, ensure_ascii=False)}\n"
+        f"- Role Plan:\n{json.dumps(role_plan, ensure_ascii=False)}\n"
+        + (f"- Previous Draft:\n{prev_plan}\n" if prev_plan else "")
+        + "\n## Output Format\nReturn a complete markdown document:\n\n"
+        "# Feature Plan\n\n"
+        "## Metadata\n(work_item, owner, status, last_updated)\n\n"
+        "## Background\n\n## Problem Statement\n\n## Goals\n\n"
+        "## Non-Goals\n\n## Scope\n\n## Stakeholders\n\n"
+        "## Success Metrics\n\n## Risks and Assumptions\n\n"
+        "## Evidence\n\n## References\n\n## Approval Request\n\n"
+        "Rules:\n"
+        "- 한국어로 작성\n"
+        "- \"(edit required)\" 사용 금지\n"
+        f"- work_item: {work_item}\n"
+        f"- Goal: {goal}\n"
+        f"- Deliverables: {', '.join(deliverables)}\n"
+        f"- Constraints: {', '.join(constraints)}"
+    )
+
+    def _fb() -> str:
+        return _fallback_feature_plan(work_item, project_brief, role_plan)
+
+    content, _ = _generate_doc_with_llm(prompt, _fb)
+    return content
+
+
+def _generate_feature_spec(
+    work_item: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    task_board: dict[str, Any],
+    prev_plan: str = "",
+) -> str:
+    goal = _clean(project_brief.get("goal") or "")
+
+    prompt = (
+        "Create a feature-spec.md document for this work item.\n\n"
+        f"## Input\n"
+        f"- Brief:\n{json.dumps(project_brief, ensure_ascii=False)}\n"
+        f"- Role Plan:\n{json.dumps(role_plan, ensure_ascii=False)}\n"
+        f"- Task Board:\n{json.dumps(task_board, ensure_ascii=False)}\n"
+        + (f"- Feature Plan:\n{prev_plan}\n" if prev_plan else "")
+        + "\n## Output Format\nReturn a complete markdown document:\n\n"
+        "# Feature Spec\n\n"
+        "## Metadata\n(work_item, source_plan, status, last_updated)\n\n"
+        "## Feature Overview\n\n## User Scenarios\n\n"
+        "## Functional Requirements\n\n## Non-Functional Requirements\n\n"
+        "## Inputs and Outputs\n\n## Exceptions and Failure Scenarios\n\n"
+        "## Existing Behavior To Preserve\n\n## Acceptance Criteria\n\n"
+        "## Evidence\n\n## References\n\n## Out Of Scope\n\n"
+        "Rules:\n"
+        "- 한국어로 작성\n"
+        "- \"(edit required)\" 사용 금지\n"
+        "- Acceptance Criteria는 검증 가능한 문장으로\n"
+        f"- work_item: {work_item}, goal: {goal}"
+    )
+
+    def _fb() -> str:
+        return _fallback_feature_spec(work_item, project_brief, role_plan, task_board)
+
+    content, _ = _generate_doc_with_llm(prompt, _fb)
+    return content
+
+
+def _generate_implementation_design(
+    work_item: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    prev_spec: str = "",
+) -> str:
+    goal = _clean(project_brief.get("goal") or "")
+
+    prompt = (
+        "Create an implementation-design.md document for this work item.\n\n"
+        f"## Input\n"
+        f"- Brief:\n{json.dumps(project_brief, ensure_ascii=False)}\n"
+        f"- Role Plan:\n{json.dumps(role_plan, ensure_ascii=False)}\n"
+        + (f"- Feature Spec:\n{prev_spec}\n" if prev_spec else "")
+        + "\n## Output Format\nReturn a complete markdown document:\n\n"
+        "# Implementation Design\n\n"
+        "## Metadata\n(work_item, spec_type, source_spec, status, last_updated)\n\n"
+        "## Design Summary\n\n## Planned Modules\n\n## Data Flow\n\n"
+        "## Interface Impact\n\n## State And Data Model\n\n"
+        "## Compatibility Considerations\n\n## Migration Requirement\n\n"
+        "## Risks\n\n## Alternatives Considered\n\n"
+        "## Design Evidence\n\n## References\n\n## Test Strategy\n\n"
+        "Rules:\n"
+        "- 한국어로 작성\n"
+        "- \"(edit required)\" 사용 금지\n"
+        "- 기술 선택 근거 포함\n"
+        f"- work_item: {work_item}, goal: {goal}"
+    )
+
+    def _fb() -> str:
+        return _fallback_impl_design(work_item, project_brief, role_plan)
+
+    content, _ = _generate_doc_with_llm(prompt, _fb)
+    return content
+
+
+def _generate_implementation_tasks(
+    work_item: str,
+    project_brief: dict[str, Any] | None,
+    role_plan: dict[str, Any],
+    task_board: dict[str, Any],
+    prev_design: str = "",
+) -> str:
+    brief = project_brief if isinstance(project_brief, dict) else {}
+
+    prompt = (
+        "You are a technical project manager creating an implementation task breakdown.\n\n"
+        f"## Input\n"
+        f"- Role Plan:\n{json.dumps(role_plan, ensure_ascii=False)}\n"
+        f"- Task Board:\n{json.dumps(task_board, ensure_ascii=False)}\n"
+        + (f"- Implementation Design:\n{prev_design}\n" if prev_design else "")
+        + f"- Brief:\n{json.dumps(brief, ensure_ascii=False)}\n\n"
+        "## Output Format\nReturn a complete markdown document:\n\n"
+        "# Implementation Tasks\n\n"
+        "## Metadata\n(work_item, source_design, status, last_updated)\n\n"
+        "## Preconditions\n\n"
+        "## Task Evidence\n\n"
+        "## Task List\n"
+        "(각 태스크: - [ ] 태스크 제목 / task_id: T-001 / owner_role / phase / depends_on / "
+        "acceptance / artifacts / estimated_complexity / implementation_hint)\n\n"
+        "## Blockers\n\n"
+        "## Rollback Sign-Off\n\n"
+        "## Definition Of Done\n\n"
+        "Rules:\n"
+        "- 한국어로 작성\n"
+        "- \"(edit required)\" 사용 금지\n"
+        "- 모든 태스크에 depends_on 포함 (없으면 빈 리스트)\n"
+        "- acceptance는 검증 가능한 문장\n"
+        "- 태스크 순서: scope → build → integrate → verify\n"
+        "- 태스크 ID는 T-001부터 순차 부여"
+    )
+
+    def _fb() -> str:
+        return _fallback_impl_tasks(work_item, project_brief, role_plan, task_board)
+
+    content, _ = _generate_doc_with_llm(prompt, _fb)
+    return content
 
 
 def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) -> str:
@@ -540,7 +712,10 @@ def generate_work_items(
     work_item_id = slug
 
     episode_hints_section = _build_episode_hints_section(project_brief, workspace)
+    # 5a는 deadline 미적용 — 최소 1개 문서는 LLM으로 생성. 5b~5d는 초과 시 fallback.
+    doc_gen_deadline = time.time() + 300
 
+    # Step 5a: feature-plan (no prev)
     plan_content = _generate_and_refine(
         "plan", _generate_feature_plan, work_item_id, project_brief, role_plan
     )
@@ -550,21 +725,38 @@ def generate_work_items(
     write_text(plan_path, plan_content)
     files["feature-plan.md"] = plan_path
 
-    spec_content = _generate_and_refine(
-        "spec", _generate_feature_spec, work_item_id, project_brief, role_plan, task_board
-    )
+    # Step 5b: feature-spec (prev=plan)
+    if time.time() < doc_gen_deadline:
+        spec_content = _generate_and_refine(
+            "spec", _generate_feature_spec, work_item_id, project_brief,
+            role_plan, task_board, _prev_doc=plan_content,
+        )
+    else:
+        spec_content = _fallback_feature_spec(work_item_id, project_brief, role_plan, task_board)
     spec_path = os.path.join(work_dir, "feature-spec.md")
     write_text(spec_path, spec_content)
     files["feature-spec.md"] = spec_path
 
-    design_content = _generate_and_refine(
-        "design", _generate_implementation_design, work_item_id, project_brief, role_plan
-    )
+    # Step 5c: implementation-design (prev=spec)
+    if time.time() < doc_gen_deadline:
+        design_content = _generate_and_refine(
+            "design", _generate_implementation_design, work_item_id, project_brief,
+            role_plan, _prev_doc=spec_content,
+        )
+    else:
+        design_content = _fallback_impl_design(work_item_id, project_brief, role_plan)
     design_path = os.path.join(work_dir, "implementation-design.md")
     write_text(design_path, design_content)
     files["implementation-design.md"] = design_path
 
-    tasks_content = _generate_implementation_tasks(work_item_id, role_plan, task_board, project_brief=project_brief)
+    # Step 5d: implementation-tasks (prev=design)
+    if time.time() < doc_gen_deadline:
+        tasks_content = _generate_and_refine(
+            "tasks", _generate_implementation_tasks, work_item_id, project_brief,
+            role_plan, task_board, _prev_doc=design_content,
+        )
+    else:
+        tasks_content = _fallback_impl_tasks(work_item_id, project_brief, role_plan, task_board)
     tasks_path = os.path.join(work_dir, "implementation-tasks.md")
     write_text(tasks_path, tasks_content)
     files["implementation-tasks.md"] = tasks_path
@@ -595,12 +787,21 @@ def _generate_and_refine(
     work_item_id: str,
     project_brief: dict[str, Any],
     *extra_args,
+    _prev_doc: str = "",
 ) -> str:
     """문서 생성 후 금지 토큰 스캔, 발견 시 LLM 보강 루프(최대 2회)를 수행한다."""
+    import inspect as _inspect
     import os as _os
     placeholder_refine = _os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
 
-    content = generator_fn(work_item_id, project_brief, *extra_args)
+    # 마지막 파라미터가 prev_* 이름이면 _prev_doc을 위치 인수로 전달
+    _sig = _inspect.signature(generator_fn)
+    _has_prev = list(_sig.parameters)[-1] in ("prev_plan", "prev_spec", "prev_design")
+    if _prev_doc and _has_prev:
+        content = generator_fn(work_item_id, project_brief, *extra_args, _prev_doc)
+    else:
+        content = generator_fn(work_item_id, project_brief, *extra_args)
+
     if not placeholder_refine:
         return content
 
