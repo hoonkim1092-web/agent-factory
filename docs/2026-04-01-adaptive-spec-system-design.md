@@ -4,7 +4,7 @@
 
 - **작성일**: 2026-04-01
 - **상태**: 설계 완료, 구현 대기
-- **관련 문서**: `2026-04-01-maintenance-system-architecture-v2.md`, `2026-03-31-maintenance-update-system-design.md`
+- **관련 문서**: `2026-04-01-maintenance-system-architecture-v2.md`, `docs/archive/superseded/2026-03-31-maintenance-update-system-design.md`
 - **영향 범위**: `core/work_item_generator.py`, `core/approval_gate.py`, `core/work_item_parser.py`, `core/control/maintenance_pipeline.py`, `core/control/execution_policy.py`, `docs/work-items/_template/`
 
 ---

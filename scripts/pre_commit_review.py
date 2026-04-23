@@ -257,7 +257,7 @@ def show_status(workspace: str) -> None:
     print(f"  \ub9ac\ubdf0 \ub514\ub809\ud1a0\ub9ac: {os.path.join(workspace, REVIEWS_DIR)}")
     reviews_dir = os.path.join(workspace, REVIEWS_DIR)
     if os.path.isdir(reviews_dir):
-        review_files = glob.glob(os.path.join(reviews_dir, "*.md"))
+        review_files = glob.glob(os.path.join(reviews_dir, "*-review.md"))
         print(f"  \ub9ac\ubdf0 \ud30c\uc77c \uc218: {len(review_files)}")
     else:
         print(f"  \ub9ac\ubdf0 \ub514\ub809\ud1a0\ub9ac \uc5c6\uc74c")

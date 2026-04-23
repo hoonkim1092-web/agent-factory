@@ -1,11 +1,26 @@
 # Default text normalization for common source and document files.
 *.md   text eol=lf
-docs/2026-03-31-maintenance-update-system-design.md -text
 docs/2026-04-01-adaptive-spec-system-design.md -text
+docs/archive/implementation/global_synergy_plan.md -text
+docs/archive/implementation/global_task.md -text
+docs/archive/implementation/phase3_implementation.md -text
+docs/archive/implementation/phase4_implementation.md -text
+docs/archive/implementation/pipeline_implementation_status.md -text
+docs/archive/research/2026-03-09_gsd_deep_dive_vs_agent_factory.md -text
+docs/archive/research/2026-03-26_agent_factory_gsd_absorption_plan.md -text
+docs/archive/research/benchmark_oh_my_opencode.md -text
 docs/archive/resolved/bug_20260324.md -text
+docs/archive/superseded/2026-03-31-maintenance-update-system-design.md -text
 docs/archive/superseded/2026-04-02-design-paperclip-comparison-features-v1.md -text
 docs/archive/superseded/2026-04-03-design-paperclip-comparison-features-v2.md -text
 "docs/archive/superseded/20260330_ agent 아키텍처및 슈퍼 하네스 설계_아키텍처.md" -text
+docs/archive/vision/M3_Core_Architecture.md -text
+docs/archive/vision/M3_Plan.md -text
+docs/archive/vision/RELEASE_SPEC.md -text
+docs/archive/vision/agentic_os_5_commandments.md -text
+docs/archive/vision/intelligent_memory.md -text
+docs/archive/vision/next_gen_architecture_M4.md -text
+docs/archive/vision/notebooklm_audio_overview.md -text
 *.py   text eol=lf
 *.yaml text eol=lf
 *.yml  text eol=lf

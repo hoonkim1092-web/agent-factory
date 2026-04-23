@@ -1,7 +1,7 @@
 # Agent Factory 유지보수/업데이트 운영 시스템 아키텍처 v2
 
 작성일: 2026-04-01
-기반: `2026-03-31-maintenance-update-system-design.md` (v1) 심층 분석 결과
+기반: `docs/archive/superseded/2026-03-31-maintenance-update-system-design.md` (v1) 심층 분석 결과
 상태: design
 범위: v1 설계의 검증 결과, 누락 영역 보완, 개선된 아키텍처 상세 설계
 
