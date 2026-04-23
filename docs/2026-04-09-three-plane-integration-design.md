@@ -1,7 +1,7 @@
 # 3계층 통합 설계 — Evals-FSA 연결 + 메모리 회상 타이밍 + Plane 경계 정리
 
 > 날짜: 2026-04-09
-> 상태: Reviewed (교차검증 완료 — `docs/code_review/26_0409_three_plane_cross_review.md` 참조)
+> 상태: Reviewed (교차검증 완료 — `docs/archive/code_review/26_0409_three_plane_cross_review.md` 참조)
 > 브랜치: `agent-factory_harness_Claude_Setup_and_Pipeline_v1`
 > 선행 문서: `docs/super_harness_3_layer_architecture.md`
 

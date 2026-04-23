@@ -11,9 +11,9 @@
 > | **이 문서 (v3)** | 최종 구현 명세 | 기준 문서 |
 > | `2026-04-03-design-paperclip-comparison-features-v2.1.md` | 런타임 기준 설계 (v3의 근거) | 참조용 |
 > | `features/claude-code-insights-synergy.md` | 상위 전략 (컨텍스트/메모리/UX만) | 전략 문서 |
-> | `2026-04-03-design-paperclip-comparison-features-v2.md` | 초안 | **Superseded by v2.1** |
-> | `2026-04-02-design-paperclip-comparison-features-v1.md` | 원본 | **Superseded by v2** |
-> | `2026-04-03-code-review.md` | 전체 코드 리뷰 (174파일, 46K줄) | 스냅샷 |
+> | `archive/superseded/2026-04-03-design-paperclip-comparison-features-v2.md` | 초안 | **Superseded by v2.1** |
+> | `archive/superseded/2026-04-02-design-paperclip-comparison-features-v1.md` | 원본 | **Superseded by v2** |
+> | `archive/code_review/2026-04-03-code-review.md` | 전체 코드 리뷰 (174파일, 46K줄) | 스냅샷 |
 >
 > ## 설계 원칙
 >
@@ -40,7 +40,7 @@
 
 ### 프로젝트 규모
 - core/ 174파일, 46,030줄, 서브디렉토리 6개
-- 상세: `2026-04-03-code-review.md` 참조
+- 상세: `archive/code_review/2026-04-03-code-review.md` 참조
 
 ### 구현되어 있지만 연결 안 된 것 (dead code)
 

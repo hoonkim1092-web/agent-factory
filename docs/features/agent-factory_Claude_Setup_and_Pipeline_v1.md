@@ -68,7 +68,7 @@ AF 코드베이스를 이해하는 전용 스킬을 추가한다.
 - 코드 수정 + Blueprint 업데이트 = 같은 커밋 규칙 강제
 
 **af-code-review**
-- `docs/code_review/2026-04-03-code-review.md` 기반 체크 패턴:
+- `docs/archive/code_review/2026-04-03-code-review.md` 기반 체크 패턴:
   - Non-atomic 파일 쓰기 (C2 유형)
   - 스레드 안전성 (H1, H5 유형)
   - Dead code 감지

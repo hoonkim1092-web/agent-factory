@@ -19,6 +19,17 @@ def test_collect_snapshot_excludes_docs_task_by_default(tmp_path: Path):
     assert "docs/keep.md" in files
 
 
+def test_collect_snapshot_excludes_docs_archive_by_default(tmp_path: Path):
+    _write(tmp_path / "docs" / "archive" / "old-design.md", "should_be_excluded")
+    _write(tmp_path / "docs" / "keep.md", "should_remain")
+
+    payload = collect_snapshot(tmp_path, "agent_factory", None, 10)
+    files = payload.get("files", {})
+
+    assert "docs/archive/old-design.md" not in files
+    assert "docs/keep.md" in files
+
+
 def test_collect_snapshot_applies_env_excludes(tmp_path: Path, monkeypatch):
     _write(tmp_path / "docs" / "keep.md", "exclude_me")
     monkeypatch.setenv("CONTEXT_SYNC_EXCLUDE", "docs/keep.md")

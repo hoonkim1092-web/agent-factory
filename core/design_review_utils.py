@@ -37,6 +37,8 @@ INCLUDE_PATTERNS = [
 ]
 
 EXCLUDE_PATTERNS = [
+    "docs/archive/**",
+    "docs/archive/*",
     "docs/code_review/**",
     "docs/code_review/*",
     "docs/reviews/**",

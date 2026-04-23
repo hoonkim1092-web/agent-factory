@@ -3,7 +3,7 @@
 <!-- version: 1.1.0 | date: 2026-04-22 | author: Claude Haiku 4.5 + Codex (cross-review) -->
 <!-- status: AUTHORITATIVE (Phase A 실행 기준 문서) -->
 <!-- base: docs/archive/2026-04-17-AF_Phase_A_Requirements.md (Opus 4.6, 역사 참조용) -->
-<!-- decisions: docs/2026-04-22-phase-a-decisions-required.md (Q1~Q3 확정: 2026-04-22) -->
+<!-- decisions: docs/archive/resolved/2026-04-22-phase-a-decisions-required.md (Q1~Q3 확정: 2026-04-22) -->
 <!-- commit_at_writing: 486041ca (origin/2026-04-14-build-diet) -->
 
 ## 0. 개요
@@ -208,7 +208,7 @@
 - **`SkillPackBootstrapper.check_installed()` 구현** (Q8 Phase A 결정: (a) 탐지만)
   - Claude Code / Codex CLI / Gemini CLI 플러그인 경로에 Superpowers/GStack 존재 여부 감지
   - 미설치 시 경고 로그 + 수동 설치 안내 메시지 출력
-  - 실제 자동 설치(어댑터 3종 구현)는 Phase B로 분리 (근거: `2026-04-22-phase-a-decisions-required.md` §Q8 확정 결정)
+  - 실제 자동 설치(어댑터 3종 구현)는 Phase B로 분리 (근거: `docs/archive/resolved/2026-04-22-phase-a-decisions-required.md` §Q8 확정 결정)
 - RunBudget / ContextWindowManager / SkillPackBootstrapper 직접 테스트 4건
 
 ### Step 3 — EVOLUTION 마무리 (0.5일)

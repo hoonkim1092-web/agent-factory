@@ -1,5 +1,11 @@
 # Default text normalization for common source and document files.
 *.md   text eol=lf
+docs/2026-03-31-maintenance-update-system-design.md -text
+docs/2026-04-01-adaptive-spec-system-design.md -text
+docs/archive/resolved/bug_20260324.md -text
+docs/archive/superseded/2026-04-02-design-paperclip-comparison-features-v1.md -text
+docs/archive/superseded/2026-04-03-design-paperclip-comparison-features-v2.md -text
+"docs/archive/superseded/20260330_ agent 아키텍처및 슈퍼 하네스 설계_아키텍처.md" -text
 *.py   text eol=lf
 *.yaml text eol=lf
 *.yml  text eol=lf

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_EXCLUDE_GLOBS = (
+    "docs/archive/**",
     "docs/task.md",
 )
 REPO_ROOT_ALIASES = ("@repo", "@root", "repo", "root", ".", "./", ".\\")
