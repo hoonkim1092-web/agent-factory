@@ -34,6 +34,11 @@ build/
 # .af/nightly_summary.md, .af/alert.flag, .af/nightly.lock, .af/ise_ledger_*.json
 .af/
 
+# --- Agent Factory local runtime state (per-machine, auto-regenerated) ---
+# Contains CLI session state, Codex/Gemini/Claude runtime caches, auth seeds,
+# sandbox state, sqlite state, shell guards, and absolute local paths.
+**/.af_runtime/
+
 # --- Setup Wizard local state (per-user secrets: TAVILY key, NotebookLM UUIDs) ---
 .af_setup_state.json
 
@@ -45,8 +50,6 @@ projects/default/runs/
 projects/agent_factory/runs/
 projects/gemini_e2e/
 projects/*/resume_brief.md
-projects/*/.af_runtime/cli_sessions/
-projects/*/.af_runtime/direct_exec_result.json
 projects/gemini_live_edit_fix/
 test_output/
 dynamic_log.txt
