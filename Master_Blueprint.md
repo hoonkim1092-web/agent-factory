@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-21 | version: v1.2.22 -->
+<!-- last_updated: 2026-04-23 | version: v1.2.21 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -109,7 +109,8 @@
 | `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | `SkillRegistry` (싱글톤) |
 | `core/swarm_council.py` | 다중 역할 계획·승인 | `SwarmCouncil` |
 | `core/document_policy.py` | 금지 토큰 스캔·입력 계약·Jaccard | `scan_forbidden_tokens()`, `jaccard_similarity()` |
-| `core/work_item_generator.py` | 마크다운 work-item 생성 + 금지 토큰 보강 | `generate_work_items()`, `_generate_and_refine()` |
+| `core/work_item_generator.py` | LLM 기반 work-item 생성 + 금지 토큰 보강 + chained refinement | `generate_work_items()`, `_generate_and_refine()`, `_generate_doc_with_llm()` |
+| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성 | `execute_requirement_prompt()`, `execute_document_prompt()` |
 | `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
 | `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
 
@@ -1226,6 +1227,18 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 마이그레이션 및 런타임 세션 상태 갱신 — workspace `D:\warkSpaces` → `D:\hoonProJect\worktrees` 경로 수정, CLI 사용자명 `HOME→HOON` 업데이트, 세션 ID·transcript_path 신규 등록, skill-usage.jsonl·document_index.json·session_cursor.json 상태 동기화 |
+| 2026-04-23 | v1.2.21 | chore(af-runtime): 워크스페이스 경로 이전 및 런타임 상태 동기화 — `D:\warkSpaces` → `D:\hoonProJect\worktrees` 경로 갱신, `HOME` → `HOON` 사용자 경로 일괄 교체, claude/codex/gemini CLI 세션 상태(session_id·transcript_path) 갱신, codex auth·config·models_cache 런타임 파일 동기화 |
+| 2026-04-23 | v1.2.21 | {"changelog":"chore(runtime): 워크스페이스 경로 재구성 및 CLI 런타임 상태 갱신 — claude/codex/gemini 세션 메타데이터 경로를 D:\\hoonProJect\\worktrees\\agent-factory로 이전, 사용자 홈을 HOME→HOON으로 교정, codex_home 인증·sandbox·state 갱신, .claude/settings.local.json 및 skill-usage 로그 동기화"} |
+| 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 이전 반영 — CLI 세션 경로 `warkSpaces→hoonProJect/worktrees` 업데이트, 사용자 홈 `HOME→HOON` 수정, 세션 커서·브리지 상태 동기화, settings.local.json 경로 갱신, skill-usage 기록 추가 |
+| 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 이전 후 런타임 상태 동기화 — claude/codex/gemini CLI 세션 파일 갱신, workspace 경로 `warkSpaces→hoonProJect/worktrees` 반영, bridge_state 세션 커서 업데이트, document_index 캐시 재생성 |
+| 2026-04-23 | v1.2.21 | chore(runtime): 워크스페이스 경로 마이그레이션(warkSpaces→hoonProJect/worktrees) — claude_cli_run.json 사용자·경로 업데이트(HOME→HOON), codex_home 런타임 상태(auth.json·config.toml·models_cache.json) 갱신, session_cursor.json 브릿지 포인터 이동, document_index.json 캐시 재생성, skill-usage.jsonl 사용 이력 추가 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 런타임 세션 상태 갱신 — claude_cli 워크스페이스 경로 변경(warkSpaces→hoonProJect/worktrees), 세션 ID·트랜스크립트 경로 교체, codex_home auth/config/캐시 업데이트, code-review.md 보안 이슈 기록 추가 |
+| 2026-04-23 | v1.2.21 | chore(runtime): 런타임 환경 경로 마이그레이션 — workspace `HOME→HOON` 및 `warkSpaces→hoonProJect/worktrees` 경로 수정, claude/codex/gemini CLI 세션 상태 갱신, document_index 캐시 재생성, session_cursor 동기화 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 워크스페이스 경로 마이그레이션 및 런타임 세션 상태 일괄 갱신 — `D:\\warkSpaces` → `D:\\hoonProJect\\worktrees` 경로 교체, 사용자 홈 `HOME` → `HOON` 반영, claude/codex/gemini CLI 세션 상태 파일 갱신, codex_home 인증·모델캐시·상태DB 업데이트, session_cursor 동기화 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 워크스페이스 경로 마이그레이션 및 세션 상태 갱신 — claude_cli workspace `D:\\warkSpaces` → `D:\\hoonProJect\\worktrees` 경로 변경, session_id·transcript_path 신규 세션으로 교체, codex_home auth/config/state 파일 갱신, document_index.json 캐시 업데이트 |
+| 2026-04-23 | v1.2.21 | chore(af_runtime): 워크스페이스 경로 마이그레이션 — `D:\warkSpaces\agent-factory` → `D:\hoonProJect\worktrees\agent-factory` 전환, Claude/Codex/Gemini CLI 세션 설정 경로 일괄 갱신, 사용자 HOME→HOON 경로 동기화, bridge state session_cursor 리셋 |
+| 2026-04-23 | v1.2.22 | feat(llm-doc-gen): LLM 기반 work-item 문서 생성 파이프라인 — `core/requirement_llm.py`에 `_DOCUMENT_SYSTEM_PROMPT` + `execute_document_prompt()` 추가(마크다운 전용, execute_requirement_prompt와 CLI/API 경로 대칭). `core/work_item_generator.py` 전면 재구성: ① 기존 4개 f-string 생성 함수를 `_fallback_*`으로 이름 변경(본체 무변경), ② LLM 래퍼 `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design`/`_generate_implementation_tasks` 신규 (각각 `prev_*` 파라미터로 이전 문서 컨텍스트 수신), ③ `_generate_doc_with_llm()` — LLM 실패 시 fallback 자동 전환, 실패 시 WARNING 로깅, ④ `_generate_and_refine()`에 `_prev_doc=""` kwarg + inspect.signature 기반 dispatch 추가, ⑤ `generate_work_items`에 `doc_gen_deadline=300s` + chained refinement(5a plan→5b spec→5c design→5d tasks) 추가. 3-tier review: Tier1 WARN(선행 버그 2건만), Tier2 WARN(effective_prompt CLI 분리 적용), Tier3 PASS |
 | 2026-04-23 | v1.2.22 | feat(graphify): Graphify 외부 도구 wrapper skill 통합 — `skills/graphify/`(action, capabilities: GRAPHIFY_BUILD/GRAPHIFY_QUERY/KNOWLEDGE_GRAPH_INDEX) + `skills/graphify_guide/`(knowledge, retrieval engine 자동 발견용) 신규. Graphify 공식 인스톨러(`graphify install`) 미사용 → CLAUDE.md/.githooks 자동 주입 회피. `subprocess.run(["graphify", ...])`로 외부 CLI 호출(uv tool 격리, Python 3.13). `install-af.sh --with-graphify` / `install-af.ps1 -WithGraphify` 옵션으로 명시적 설치(F1+F2). **Review-gate 범위 확장**: `scripts/enqueue_agent_review.py:26` `_REVIEW_PREFIXES`에 `skills/` 추가, `.githooks/pre-commit:46` 정규식에 `skills/.*\.py` 추가 — 기존엔 `skills/` 변경이 게이트 밖이라 정책 1번이 공허하게 PASS되던 사각지대 해소(F5). `skills/registry.yaml`에 두 엔트리 첫 커밋 동시 추가(F4). 좁은 capability 명명으로 `core_memory.MEMORY_SEARCH` 등과 점수 오염 회피(F3). af-cross-review FIX_FIRST 4건 모두 적용, F6은 Q5(b) action+knowledge skill_id 분리로 해소 |
 | 2026-04-22 | v1.2.22 | feat(phase-a-step1): ISE 배선 복구 B1~B7 + Review-Gate BLOCK 3건 해소 — (B1) project_pipeline.execute() ise 모드 AF_ISE_ENABLED 강제 활성화; (B2) _orchestration_loop에서 _should_decompose() 호출 연결; (B3) ise_strategy_ledger.load() 레거시 해시 경고; (B4) 모든 실패 경로(FSA/evaluator/crash)에 failure_category 필드 추가; (B5) skill_procurer auto_approve ise 포함; (B6) CLI --mode ise routing 수정(L665 elif 추가); (B7) Blueprint §3.2 Phase A Step 1 노트. _needs_llm_intervention crash 카테고리 제외. 테스트: 787P/17F(pre-existing)/3S |
 | 2026-04-21 | v1.2.22 | fix(B2-4): strategy_ledger에 deliverables 패턴 등록 경로 추가 — `record_role_batch` 신규, project_pipeline.py 모듈명+deliverables(앞 4단어) 배치 저장, `tests/test_strategy_ledger.py` 12개 테스트 신규 |
