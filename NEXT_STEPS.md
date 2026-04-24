@@ -35,12 +35,20 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 3 | LLM 기반 work-item 문서 생성 파이프라인 P1+P2 | `af1bd81e` | 2026-04-23 |
 | 4 | Phase A Step 2 COMPACT (RunBudget, FSA guard, PlanVerifier.gate, SkillPackBootstrapper) | `3b42cb06` | 2026-04-23 |
 | 5 | LLM 문서 생성 P3~P6 (prepare 3분할, Clarification UI) | `a12f4493` | 2026-04-24 |
+| 6 | gitignore 보안 정리 (.system_generated/logs+cache untrack) | `0defdfba` | 2026-04-24 |
+| 7 | Cross-PC 메모리 동기화 — Supabase claude_memory 테이블 생성 + push/pull 검증 | — | 2026-04-24 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-### P0: LLM 문서 생성 파이프라인 ✅ 완료 (P3~P6)
+### P0 & P1 & P2: ✅ 모두 완료
+
+- P0: LLM 문서 생성 파이프라인 P3~P6 (`a12f4493`)
+- P1: gitignore 보안 (`0defdfba`)
+- P2: Cross-PC 세션 연속성 — Supabase `claude_memory` 테이블 생성 완료, `end_db`/`start_db` 정상 동작 확인
+
+### (구) P0: LLM 문서 생성 파이프라인 ✅ 완료 (P3~P6)
 
 **설계 문서**: `docs/features/2026-04-07-llm-powered-document-generation.md`
 
