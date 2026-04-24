@@ -564,3 +564,13 @@ No `core/providers/cli.py` changes were present in the diff to review.
 **Changed (20)**: `.claude/settings.local.json, core/memory_system/strategy_ledger.py, tests/_tmp/af-test-1d782932/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-1d782932/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-1d782932/proj_retry/.todo.md, tests/_tmp/af-test-26d98d16/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-26d98d16/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-26d98d16/proj_retry/.todo.md, tests/_tmp/af-test-37c2e253/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-37c2e253/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-37c2e253/proj_retry/.todo.md, tests/_tmp/af-test-62ed486c/proj_retry/.af/ise_ledger_run_retry_fsa.json, tests/_tmp/af-test-62ed486c/proj_retry/.af/lineage_ledger.json, tests/_tmp/af-test-62ed486c/proj_retry/.todo.md, tests/_tmp/af-test-82b151a3/proj_retry/.af/ise_ledger_run_retry_fsa.json ... (+5)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-24 13:03 — `2026-04-14-build-diet` (c9e457b8)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/clarification.py
+
+**Changed (210)**: `.claude/settings.local.json, data/skill-usage.jsonl, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a2fe66cb4ed5_20260310_060825_410585.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a4de250b37b9_20260310_060825_397333.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a505e86e169e_20260310_060825_468578.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a544bee67f5c_20260226_153246_468128.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a5d3412d72d4_20260310_174038_003526.json, projects/global_hoon_main/data/memory/general/codex_chat/user_a934361c0993_20260309_163142_493745.json, projects/global_hoon_main/data/memory/general/codex_chat/user_ab37978c1537_20260226_153246_773490.json, projects/global_hoon_main/data/memory/general/codex_chat/user_abb725748471_20260310_144545_364924.json, projects/global_hoon_main/data/memory/general/codex_chat/user_agent_factory_a613572954af_20260310_174038_111254.json, projects/global_hoon_main/data/memory/general/codex_chat/user_agent_factory_agent_factory_codex_12f60c8b305d_20260226_153246_147480.json, projects/global_hoon_main/data/memory/general/codex_chat/user_agent_factory_cli_e075b366c1e6_20260310_174038_109765.json ... (+195)`
+
+_Review skipped (--no-llm or LLM unavailable)_

@@ -37,6 +37,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 5 | LLM 문서 생성 P3~P6 (prepare 3분할, Clarification UI) | `a12f4493` | 2026-04-24 |
 | 6 | gitignore 보안 정리 (.system_generated/logs+cache untrack) | `0defdfba` | 2026-04-24 |
 | 7 | Cross-PC 메모리 동기화 — Supabase claude_memory 테이블 생성 + push/pull 검증 | — | 2026-04-24 |
+| 8 | P3: PostToolUse hook 연결 — `.py` 편집 시 code-review.md 자동 갱신 | — | 2026-04-24 |
 
 ---
 
@@ -82,10 +83,11 @@ git ls-files | grep -E "auth.json|\.af_runtime|_internal"
 
 ---
 
-### P3: Code-Review 문서 자동 업데이터
+### P3: Code-Review 문서 자동 업데이터 ✅ 완료
 
-- `scripts/code_review_updater.py` (파일 존재), `core/hooks/code_review_doc.py` 구현 대기
-- 현재 `code-review.md`는 수동 갱신 중
+- `scripts/code_review_updater.py` ✅, `core/hooks/code_review_doc.py` ✅, PostToolUse hook ✅
+- `.py` 파일 편집 시 `code-review.md` 자동 갱신 (15초 debounce, --no-llm 빠른 경로)
+- 트리거 경로: PostToolUse(Write|Edit) → `hook_runner.py post_edit_code_review` → `code_review_updater.py`
 
 ---
 
