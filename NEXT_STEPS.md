@@ -91,10 +91,11 @@ git ls-files | grep -E "auth.json|\.af_runtime|_internal"
 
 ---
 
-### P4: 기존 테스트 실패 (pre-existing, 별도 추적)
+### P4: 기존 테스트 실패 ✅ 완료
 
-- `tests/test_requirement_llm.py` — 커밋 `a517e419` 이후 2건 실패
-- 별도 이슈로 추적 (오늘 작업과 무관)
+- `tests/test_requirement_llm.py` 2건 수정 완료 (`ff65f144`)
+- 원인: `a517e419` registry 리팩토링 후 auto-detect 오염 + `codex_cli` 모델 `""` 변경
+- 수정: `get_requested_cli_providers` + `_runtime_providers` 리셋 monkeypatch 추가
 
 ---
 
