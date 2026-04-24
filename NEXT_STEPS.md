@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | 미완료 (B2-6 + 3순위 커밋 필요) |
+| 마지막 커밋 | `63990a71 fix(B2-6+C0+3순위)` |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -39,9 +39,9 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 7 | Cross-PC 메모리 동기화 — Supabase claude_memory 테이블 생성 + push/pull 검증 | — | 2026-04-24 |
 | 8 | P3: PostToolUse hook 연결 — `.py` 편집 시 code-review.md 자동 갱신 | — | 2026-04-24 |
 | 9 | Phase A Step 3+4: EVOLUTION(quality_delta+테스트) + MEMORY(semantic_scores, MemoryScope.PROJECT, M8 에피소드 주입) | `ffc9eaf5` | 2026-04-24 |
-| 10 | version bump 1.2.21→1.2.22 + install-af.ps1 | — | 2026-04-25 |
-| 11 | B2-6 C0+C1+C2: write_project_board atomic write, strategy ledger 모듈별 granularity, nightly summary 모듈 섹션 | — | 2026-04-25 |
-| 12 | 3순위: CheckpointHook 등록, EpisodeRecord 필드 확장, DynamicOrchestrator record_episode | — | 2026-04-25 |
+| 10 | version bump 1.2.21→1.2.22 + install-af.ps1 | `63990a71` | 2026-04-25 |
+| 11 | B2-6 C0+C1+C2: write_project_board atomic write, strategy ledger 모듈별 granularity, nightly summary 모듈 섹션 | `63990a71` | 2026-04-25 |
+| 12 | 3순위: CheckpointHook 등록, EpisodeRecord 필드 확장, DynamicOrchestrator record_episode | `63990a71` | 2026-04-25 |
 
 ---
 
