@@ -1,6 +1,0 @@
-  🚀 [claude_cli] CLI 실행 시작 (timeout: 300초)
-[model_utils] * Model cache expired.
-[model_utils] * Fetching available models from Google API...
-[model_utils] * Failed to list models: No GOOGLE_API_KEY configured. Returning fallback list.
-[model_utils] * [Dynamic Default] tier=flash → models/gemini-2.5-flash
-cli output

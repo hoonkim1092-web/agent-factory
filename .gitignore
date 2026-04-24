@@ -49,6 +49,10 @@ build/
 # --- Session resume brief (auto-regenerated every turn, volatile) ---
 /resume_brief.md
 
+# --- System-generated runtime logs & traces (auto-regenerated, machine-local) ---
+.system_generated/logs/
+.system_generated/cache/
+
 # --- Runtime/Test Artifacts ---
 projects/default/runs/
 projects/agent_factory/runs/

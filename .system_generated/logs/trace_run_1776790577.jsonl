@@ -1,3 +1,0 @@
-{"timestamp": "2026-04-22T01:56:18", "event_type": "run_start", "run_id": "run_1776790577", "project_id": "proj", "agent_name": "cli-agent", "task_input": "execute task"}
-{"timestamp": "2026-04-22T01:56:18", "event_type": "run_end", "run_id": "run_1776790577", "ok": true, "reason": "codex_cli", "duration_ms": 307}
-{"timestamp": "2026-04-22T01:56:18", "event_type": "captured_output", "run_id": "run_1776790577", "content": "[model_utils] * Model cache expired.\n[model_utils] * Fetching available models from Google API...\n[model_utils] * Failed to list models: No GOOGLE_API_KEY configured. Returning fallback list.\n[model_utils] * [Dynamic Default] tier=flash → models/gemini-2.5-flash\ncli output\n"}
