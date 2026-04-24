@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-23 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-24 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -26,30 +26,25 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ---
 
-## 완료된 작업 (오늘 세션, 2026-04-23)
+## 완료된 작업
 
-| # | 작업 | 커밋 |
-|---|------|------|
-| 1 | Graphify 크로스 프로바이더 스킬 통합 Phase 1+2 | `28ae5477` |
-| 2 | Graphify COMPACT 연동 (Phase A Step 2) | `5f42ccba` |
-| 3 | LLM 기반 work-item 문서 생성 파이프라인 P1+P2 | `af1bd81e` |
+| # | 작업 | 커밋 | 날짜 |
+|---|------|------|------|
+| 1 | Graphify 크로스 프로바이더 스킬 통합 Phase 1+2 | `28ae5477` | 2026-04-23 |
+| 2 | Graphify COMPACT 연동 (Phase A Step 2) | `5f42ccba` | 2026-04-23 |
+| 3 | LLM 기반 work-item 문서 생성 파이프라인 P1+P2 | `af1bd81e` | 2026-04-23 |
+| 4 | Phase A Step 2 COMPACT (RunBudget, FSA guard, PlanVerifier.gate, SkillPackBootstrapper) | `3b42cb06` | 2026-04-23 |
+| 5 | LLM 문서 생성 P3~P6 (prepare 3분할, Clarification UI) | `a12f4493` | 2026-04-24 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-### P0: LLM 문서 생성 파이프라인 Phase 3~6
+### P0: LLM 문서 생성 파이프라인 ✅ 완료 (P3~P6)
 
 **설계 문서**: `docs/features/2026-04-07-llm-powered-document-generation.md`
 
-| Phase | 파일 | 작업 내용 |
-|-------|------|----------|
-| **P3** | `core/project_pipeline.py` | `prepare()` → 3분할: `prepare_brief()` + `prepare_documents()` + 기존 하위호환 |
-| **P4** | `core/clarification.py` | 신규: Clarification 질문 생성 + Brief 병합 (MacBook에 존재할 수 있음 — 확인 필요) |
-| **P5** | `interactive_chat.py` | Clarification 질문/답변 UI |
-| **P6** | 검증 | 파서 호환, fallback, Clarification 스킵/기본값 |
-
-**Why**: `(edit required)` 플레이스홀더 없는 실행 가능한 work-item 문서 생성.
+모두 `a12f4493` 커밋에서 완료. 남은 작업 없음.
 
 ---
 
