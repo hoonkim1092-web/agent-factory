@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-24 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-24 Phase A Step 3+4 완료 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -38,10 +38,17 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 6 | gitignore 보안 정리 (.system_generated/logs+cache untrack) | `0defdfba` | 2026-04-24 |
 | 7 | Cross-PC 메모리 동기화 — Supabase claude_memory 테이블 생성 + push/pull 검증 | — | 2026-04-24 |
 | 8 | P3: PostToolUse hook 연결 — `.py` 편집 시 code-review.md 자동 갱신 | — | 2026-04-24 |
+| 9 | Phase A Step 3+4: EVOLUTION(quality_delta+테스트) + MEMORY(semantic_scores, MemoryScope.PROJECT, M8 에피소드 주입) | `ffc9eaf5` | 2026-04-24 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
+
+### Phase A: Step 3+4 ✅ 완료 (`ffc9eaf5`)
+
+- Step 3 (EVOLUTION): GateResult.quality_delta, SkillEvolutionBus/QualityGate/SelfEvolution 직접 테스트 29건
+- Step 4 (MEMORY): MemoryScope.PROJECT, semantic_scores 전달, _recall_graph scope 수정, M8 에피소드 주입
+- **남은 Phase A 작업**: Step 5 — Blueprint 동기화 + exe 빌드 (완료 → 다음 세션에서 버전 bump + 빌드)
 
 ### P0 & P1 & P2: ✅ 모두 완료
 
