@@ -276,6 +276,57 @@ class AgentFactory:
             return self.req.analyze(agent, task_input, workspace=workspace)
         return self.req.analyze(agent, task_input)
 
+    @staticmethod
+    def _collect_clarification_answers(questions: list) -> list[str]:
+        """Clarification 질문을 출력하고 사용자 답변을 수집한다.
+
+        Returns:
+            답변 문자열 리스트 (질문 수와 동일한 길이).
+            /skip 입력 시 모든 질문의 기본값으로 채운 리스트.
+        """
+        print()
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        print("\033[1;36m  Clarification — 설계 정확도 향상\033[0m")
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        print("  프로젝트를 더 정확하게 설계하기 위해 몇 가지 확인이 필요합니다.")
+        print("  Enter = 기본값 사용,  /skip = 전체 스킵 (기본값 일괄 적용)")
+        print()
+
+        answers: list[str] = []
+        for q in questions:
+            q_id = q.get("id", "Q?")
+            question_text = q.get("question", "")
+            why = q.get("why", "")
+            options = q.get("options") or []
+            default = q.get("default", options[0] if options else "")
+
+            print(f"  \033[33m{q_id}.\033[0m {question_text}")
+            if why:
+                print(f"      \033[90m→ {why}\033[0m")
+            for i, opt in enumerate(options, 1):
+                marker = "  \033[32m[기본값]\033[0m" if opt == default else ""
+                print(f"      {i}) {opt}{marker}")
+
+            try:
+                raw = input("      답변: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                raw = "/skip"
+
+            if raw.lower() == "/skip":
+                print("  \033[90m[스킵] 전체 질문 기본값 적용\033[0m")
+                return [q.get("default", "") for q in questions]
+
+            # 숫자 입력 → 해당 옵션 선택
+            if raw.isdigit():
+                idx = int(raw) - 1
+                raw = options[idx] if 0 <= idx < len(options) else default
+
+            answers.append(raw if raw else default)
+            print()
+
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        return answers
+
     def _run_project_with_approval(
         self,
         task_input: str,
@@ -288,20 +339,70 @@ class AgentFactory:
         """
         프로젝트 파이프라인을 2-Phase 로 실행한다.
 
-        Phase 1 — prepare(): 문서 생성 + work-item 자동 채움
+        Phase 1a — prepare_brief(): Evidence + Brief 생성
+        Phase 1.5 — Clarification: 모호성 제거 (approval 모드에서만)
+        Phase 1b — prepare_documents(): RolePlan + TaskBoard + Documents
         승인 게이트: 사용자가 문서를 검토하고 승인 또는 편집
         Phase 2 — execute(): 승인 확인 → 에이전트 실행
         """
-        # Phase 1: 문서 생성
-        print("\n[Pipeline] Phase 1: 프로젝트 문서 생성 중...")
+        # Phase 1a: Brief 생성
+        print("\n[Pipeline] Phase 1a: Evidence + Brief 생성 중...")
         try:
-            prepared = self.project_pipeline.prepare(
+            prepared_brief = self.project_pipeline.prepare_brief(
                 task_input=task_input,
                 workspace=workspace,
                 execution_mode=execution_mode,
                 enable_build=enable_build,
                 requested_role=requested_role,
                 route=route,
+            )
+        except Exception as exc:
+            print(f"\n  [오류] Brief 생성 실패: {exc}")
+            return {"ok": False, "reason": "prepare_failed", "message": str(exc)}
+
+        # Phase 1.5: Clarification (approval 모드에서만)
+        if execution_mode == "approval":
+            try:
+                from core.clarification import (
+                    generate_clarification_questions,
+                    should_skip_clarification,
+                    merge_clarification,
+                )
+                pipeline_type = str((route or {}).get("pipeline", "project"))
+                if not should_skip_clarification(
+                    prepared_brief.project_brief,
+                    pipeline=pipeline_type,
+                    execution_mode=execution_mode,
+                ):
+                    questions = generate_clarification_questions(
+                        prepared_brief.project_brief,
+                        workspace=workspace,
+                        run_id=prepared_brief.run_id,
+                    )
+                    if questions:
+                        answers = self._collect_clarification_answers(questions)
+                        prepared_brief.project_brief = merge_clarification(
+                            prepared_brief.project_brief, questions, answers
+                        )
+                        # Clarification 반영 후 disk의 project_brief.json 원자적 갱신
+                        _pb_path = prepared_brief.project_brief_path
+                        if _pb_path:
+                            try:
+                                self.project_pipeline._write_json(
+                                    _pb_path, prepared_brief.project_brief
+                                )
+                            except Exception as _write_exc:
+                                print(f"  [Clarification] brief 파일 갱신 실패: {_write_exc}")
+            except Exception as _clar_exc:
+                print(f"  [Clarification] 스킵 (오류): {_clar_exc}")
+
+        # Phase 1b: 문서 생성
+        print("\n[Pipeline] Phase 1b: 문서 생성 중...")
+        try:
+            prepared = self.project_pipeline.prepare_documents(
+                prepared_brief,
+                execution_mode=execution_mode,
+                enable_build=enable_build,
             )
         except Exception as exc:
             print(f"\n  [오류] 프로젝트 문서 생성 실패: {exc}")

@@ -126,6 +126,7 @@ a = Analysis(
         'core.web_search',
         'core.work_item_generator',
         'core.work_item_parser',
+        'core.clarification',
         'core.plan_verifier',
         # ── core.continuity ──
         'core.continuity',

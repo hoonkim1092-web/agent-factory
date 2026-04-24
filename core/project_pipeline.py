@@ -35,6 +35,24 @@ PROJECT_ROLE_BASELINE_SKILLS = ("file_handler", "core_memory")
 
 
 @dataclass
+class PreparedBrief:
+    """prepare_brief() 결과 — Evidence + Brief까지만 담은 중간 객체.
+
+    Clarification 단계에서 project_brief를 enriched_brief로 교체한 뒤
+    prepare_documents()에 전달한다.
+    """
+
+    run_id: str
+    workspace: str
+    task_input: str
+    project_brief: dict
+    research_evidence: dict = field(default_factory=dict)
+    research_evidence_path: str = ""
+    project_brief_path: str = ""
+    memory_context: dict = field(default_factory=dict)
+
+
+@dataclass
 class PreparedProject:
     """
     prepare() 의 결과 객체.
@@ -567,10 +585,10 @@ class ProjectPipeline:
         return list(dict.fromkeys(roles)), installed_map
 
     # ------------------------------------------------------------------
-    # Phase 1: prepare
+    # Phase 1a: prepare_brief
     # ------------------------------------------------------------------
 
-    def prepare(
+    def prepare_brief(
         self,
         task_input: str,
         workspace: str,
@@ -578,12 +596,12 @@ class ProjectPipeline:
         enable_build: bool = False,
         requested_role: str = "",
         route: dict | None = None,
-    ) -> PreparedProject:
-        """
-        Phase 1: 문서를 생성하고 work-item 을 자동으로 채운다.
+    ) -> PreparedBrief:
+        """Phase 1a: Evidence 수집 + Brief 생성.
 
-        에이전트를 실행하지 않는다.
-        반환된 PreparedProject 에서 gate().approve() 후 execute() 를 호출해야 한다.
+        Clarification 삽입 포인트를 위해 prepare()에서 분리.
+        반환된 PreparedBrief.project_brief를 enriched_brief로 교체한 뒤
+        prepare_documents()에 전달하면 된다.
         """
         target_workspace = os.path.abspath(workspace)
         os.makedirs(target_workspace, exist_ok=True)
@@ -603,7 +621,6 @@ class ProjectPipeline:
                 _facade.register_adapter(CoreMemoryAdapter())
                 _facade.register_adapter(KnowledgeGraphAdapter(workspace=target_workspace))
                 _run_async_safe(_facade.initialise())
-            # Planning 전 메모리 회상
             from core.control.intake import ControlPlaneIntake
             memory_context = ControlPlaneIntake()._recall_from_memory(task_input)
             if memory_context.get("recall_count", 0) > 0:
@@ -654,7 +671,6 @@ class ProjectPipeline:
                         f"score={_vr.score} gaps={_vr.gaps}"
                     )
             except Exception as exc:
-                # Graceful degradation: 로컬만으로 진행
                 print(f"[ProjectPipeline] research verification failed: {exc}")
                 try:
                     research_evidence = collect_evidence(task_input, workspace=target_workspace) or {}
@@ -665,7 +681,7 @@ class ProjectPipeline:
         self._write_json(research_evidence_path, research_evidence)
         self._save_checkpoint(target_workspace, "evidence_acquisition", research_evidence)
 
-        # -- Brief (graceful degradation) --
+        # -- Brief --
         from core.pipeline_quality import PipelineStageGuard
         _guard = PipelineStageGuard()
 
@@ -699,14 +715,54 @@ class ProjectPipeline:
         self._write_json(project_brief_path, project_brief)
         self._save_checkpoint(target_workspace, "draft_brief", project_brief)
 
-        # -- Planning (graceful degradation) --
+        return PreparedBrief(
+            run_id=run_id,
+            workspace=target_workspace,
+            task_input=task_input,
+            project_brief=project_brief,
+            research_evidence=research_evidence,
+            research_evidence_path=to_portable_path(research_evidence_path),
+            project_brief_path=to_portable_path(project_brief_path),
+            memory_context=memory_context,
+        )
+
+    # ------------------------------------------------------------------
+    # Phase 1b: prepare_documents
+    # ------------------------------------------------------------------
+
+    def prepare_documents(
+        self,
+        prepared_brief: PreparedBrief,
+        execution_mode: str = "approval",
+        enable_build: bool = False,
+    ) -> PreparedProject:
+        """Phase 1b: PreparedBrief → RolePlan → TaskBoard → Documents.
+
+        prepare_brief() 이후, Clarification 적용 완료 상태에서 호출.
+        """
+        target_workspace = prepared_brief.workspace
+        task_input = prepared_brief.task_input
+        project_brief = prepared_brief.project_brief
+        memory_context = prepared_brief.memory_context
+        research_evidence = prepared_brief.research_evidence
+        run_id = prepared_brief.run_id
+        planning_dir = self._planning_dir(target_workspace)
+        research_evidence_path = prepared_brief.research_evidence_path or os.path.join(
+            planning_dir, "research_evidence.json"
+        )
+        project_brief_path = prepared_brief.project_brief_path or os.path.join(
+            planning_dir, "project_brief.json"
+        )
+
+        # -- Planning --
+        from core.pipeline_quality import PipelineStageGuard
+        _guard = PipelineStageGuard()
         pd_agent = build_bootstrap_agent("pd_director")
 
         def _gen_role_plan():
             try:
                 raw = self.planner.plan(task_input, project_brief, memory_context=memory_context)
             except TypeError:
-                # memory_context 미지원 planner (테스트 목업 등) 폴백
                 raw = self.planner.plan(task_input, project_brief)
             return enrich_role_plan(task_input, project_brief, raw, workspace=target_workspace)
 
@@ -739,9 +795,8 @@ class ProjectPipeline:
         )
         todo_path = self._write_todo(target_workspace, role_plan, task_board)
 
-        # -- Work Items (★ 신규) --
+        # -- Work Items --
         slug = slug_from_brief(project_brief)
-        # target_path가 절대경로면 문서를 그 경로에 생성, 아니면 workspace 사용
         _raw_target = str(project_brief.get("target_path") or "").strip()
         doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace
         work_item_files = generate_work_items(
@@ -752,11 +807,10 @@ class ProjectPipeline:
             task_board=task_board,
         )
 
-        # -- Plan-Critique-Verify 사전 루프 --
+        # -- Plan-Critique-Verify --
         try:
             from core.plan_verifier import PlanVerifier
             _pv = PlanVerifier(workspace=target_workspace)
-            # 파일 경로 → 파일 내용으로 변환 (LLM이 실제 계획 내용을 볼 수 있도록)
             _wi_items = []
             for _wi_path in work_item_files.values():
                 try:
@@ -770,7 +824,7 @@ class ProjectPipeline:
                 for _retry in range(2):
                     _refined = _pv.refine(task_input, _wi_items, _plan_result.issues, project_brief)
                     if not _refined or _refined == _wi_items:
-                        break  # refine 결과 없거나 동일하면 LLM 재호출 낭비 방지
+                        break
                     _wi_items = _refined
                     _plan_result = _pv.verify(task_input, _wi_items, project_brief)
                     if _plan_result.passed:
@@ -782,12 +836,9 @@ class ProjectPipeline:
         except Exception as _pv_err:
             print(f"[Pipeline] plan verify skipped: {_pv_err}")
 
-        # -- 구조 검증 (run_structural_gate 연결) --
+        # -- 구조 검증 --
         try:
-            gate_result = self.run_structural_gate(
-                os.path.join(doc_root, "docs", "work-items", slug),
-                "work_item",
-            )
+            gate_result = self.run_structural_gate(project_brief, "work_item")
             if gate_result and gate_result.get("errors"):
                 _safe_print(f"[Pipeline] structural gate warnings: {gate_result.get('errors', [])}")
         except Exception as _gate_err:
@@ -799,7 +850,6 @@ class ProjectPipeline:
             from core.review_report import DocumentReviewSession
             _level = str(project_brief.get("pipeline_level", "dynamic"))
             if _level != "starter":
-                # 문서 내용 수집
                 _documents = {}
                 for _doc_name, _doc_path in work_item_files.items():
                     if _doc_name.endswith(".md") and _doc_name != "approval-gate.md":
@@ -842,7 +892,6 @@ class ProjectPipeline:
                             }
                             break
 
-                        # BLOCK → 문서 수정 후 재시도
                         if _report.judge and _report.judge.fix_instructions:
                             from core.work_item_generator import _refine_document
                             for _dtype, _instr in _report.judge.fix_instructions.items():
@@ -852,7 +901,6 @@ class ProjectPipeline:
                                         feedback=_instr,
                                         project_brief=project_brief,
                                     )
-                                    # 수정된 문서 파일에 반영
                                     if _dtype in work_item_files:
                                         from core.file_io import write_text
                                         write_text(work_item_files[_dtype], _documents[_dtype])
@@ -888,6 +936,33 @@ class ProjectPipeline:
             research_evidence_path=to_portable_path(research_evidence_path),
             doc_root=doc_root,
         )
+
+    # ------------------------------------------------------------------
+    # Phase 1: prepare (하위 호환 래퍼)
+    # ------------------------------------------------------------------
+
+    def prepare(
+        self,
+        task_input: str,
+        workspace: str,
+        execution_mode: str = "approval",
+        enable_build: bool = False,
+        requested_role: str = "",
+        route: dict | None = None,
+    ) -> PreparedProject:
+        """하위 호환 래퍼 — prepare_brief() + prepare_documents() 순차 호출.
+
+        Clarification 없이 바로 진행하는 기존 동작을 유지한다.
+        """
+        brief = self.prepare_brief(
+            task_input=task_input,
+            workspace=workspace,
+            execution_mode=execution_mode,
+            enable_build=enable_build,
+            requested_role=requested_role,
+            route=route,
+        )
+        return self.prepare_documents(brief, execution_mode=execution_mode, enable_build=enable_build)
 
     # ------------------------------------------------------------------
     # Phase 2: execute
