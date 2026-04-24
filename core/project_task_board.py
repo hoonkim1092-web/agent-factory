@@ -148,6 +148,106 @@ def _module_status(tasks: list[dict[str, Any]]) -> str:
     return "pending"
 
 
+# B2-6 v7: INFRA 접두사 집합 — dynamic_orchestrator가 사용하는 모든 인프라성 note 패턴
+_INFRA_NOTE_PREFIXES: tuple[str, ...] = (
+    "infra_failure:",   # dynamic_orchestrator.py:747 (quota, auth 등)
+    "lineage_maxed:",   # dynamic_orchestrator.py:765 (lineage 상한 강제 degrade)
+    "fsa_failed:",      # dynamic_orchestrator.py:822 (FSA 루프 복구 실패, 인프라성 재시도 소진)
+)
+
+
+def _task_is_infra_failure(task: dict) -> bool:
+    """task의 notes가 INFRA 접두사 중 하나를 포함하면 True."""
+    notes = task.get("notes")
+    candidates: list[str] = []
+    if isinstance(notes, list):
+        candidates = [n for n in notes if isinstance(n, str)]
+    elif isinstance(notes, str):
+        candidates = [notes]
+    for n in candidates:
+        stripped = n.strip()
+        if any(stripped.startswith(p) for p in _INFRA_NOTE_PREFIXES):
+            return True
+    return False
+
+
+def _build_board_maps(board: dict) -> tuple[dict[str, dict], dict[str, dict]]:
+    """board를 한 번 스캔하여 task_map, module_map을 빌드한다 (O(n) 1회)."""
+    if not isinstance(board, dict):
+        return {}, {}
+    task_map = {
+        str(t.get("task_id") or ""): t
+        for t in (board.get("tasks") or [])
+        if isinstance(t, dict) and t.get("task_id")
+    }
+    module_map = {
+        str(m.get("id") or ""): m
+        for m in (board.get("modules") or [])
+        if isinstance(m, dict) and m.get("id")
+    }
+    return task_map, module_map
+
+
+def module_outcome_from_board(
+    board: dict, module_id: str,
+    task_map: dict[str, dict] | None = None,
+    module_map: dict[str, dict] | None = None,
+) -> str:
+    """INFRA failure task를 필터링한 모듈 outcome 반환.
+
+    반환값: "completed" | "at_risk" | "skip"
+    """
+    if not isinstance(board, dict) or not module_id:
+        return "skip"
+    if task_map is None or module_map is None:
+        task_map, module_map = _build_board_maps(board)
+
+    mod = module_map.get(module_id)
+    if not mod:
+        return "skip"
+    module_tasks = [
+        task_map[str(tid)] for tid in (mod.get("task_ids") or [])
+        if str(tid) in task_map
+    ]
+    if not module_tasks:
+        return "skip"
+
+    non_infra = [t for t in module_tasks if not _task_is_infra_failure(t)]
+    if not non_infra:
+        return "skip"
+
+    statuses = {str(t.get("status") or "pending") for t in non_infra}
+    if statuses == {"completed"}:
+        return "completed"
+    if "failed" in statuses:
+        return "at_risk"
+    return "skip"
+
+
+def detect_owner_drift(
+    module: dict, board: dict,
+    task_map: dict[str, dict] | None = None,
+) -> bool:
+    """모듈 내 (INFRA·review 외) task의 owner_role이 module.owner_role과 다르면 True."""
+    mod_owner = str(module.get("owner_role") or "")
+    if not mod_owner:
+        return False
+    if task_map is None:
+        task_map, _ = _build_board_maps(board)
+    for tid in (module.get("task_ids") or []):
+        t = task_map.get(str(tid))
+        if not t:
+            continue
+        if _task_is_infra_failure(t):
+            continue
+        if str(t.get("phase") or "") in {"code_review", "cross_validate"}:
+            continue
+        task_owner = str(t.get("owner_role") or "")
+        if task_owner and task_owner != mod_owner:
+            return True
+    return False
+
+
 def _pick_owner_role(
     deliverable: str,
     roles: list[dict[str, Any]],
@@ -572,8 +672,22 @@ def board_todo_items(board: dict[str, Any]) -> list[str]:
 
 
 def write_project_board(workspace: str, board: dict[str, Any]) -> str:
+    import tempfile
     path = os.path.join(os.path.abspath(workspace), BOARD_FILENAME)
-    write_text(path, json.dumps(_recalculate_board(dict(board or {})), ensure_ascii=False, indent=2) + "\n")
+    dir_ = os.path.dirname(path) or "."
+    os.makedirs(dir_, exist_ok=True)
+    payload = json.dumps(_recalculate_board(dict(board or {})), ensure_ascii=False, indent=2) + "\n"
+    fd, tmp = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(payload)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return path
 
 

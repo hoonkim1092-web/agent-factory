@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-24 Phase A Step 3+4 완료 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-25 B2-6 + 3순위 완료 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `eeb7cc37 feat(llm-doc-gen)` |
+| 마지막 커밋 | 미완료 (B2-6 + 3순위 커밋 필요) |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -39,16 +39,31 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 7 | Cross-PC 메모리 동기화 — Supabase claude_memory 테이블 생성 + push/pull 검증 | — | 2026-04-24 |
 | 8 | P3: PostToolUse hook 연결 — `.py` 편집 시 code-review.md 자동 갱신 | — | 2026-04-24 |
 | 9 | Phase A Step 3+4: EVOLUTION(quality_delta+테스트) + MEMORY(semantic_scores, MemoryScope.PROJECT, M8 에피소드 주입) | `ffc9eaf5` | 2026-04-24 |
+| 10 | version bump 1.2.21→1.2.22 + install-af.ps1 | — | 2026-04-25 |
+| 11 | B2-6 C0+C1+C2: write_project_board atomic write, strategy ledger 모듈별 granularity, nightly summary 모듈 섹션 | — | 2026-04-25 |
+| 12 | 3순위: CheckpointHook 등록, EpisodeRecord 필드 확장, DynamicOrchestrator record_episode | — | 2026-04-25 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-### Phase A: Step 3+4 ✅ 완료 (`ffc9eaf5`)
+### Phase A: Step 3+4+5 ✅ 완료
 
 - Step 3 (EVOLUTION): GateResult.quality_delta, SkillEvolutionBus/QualityGate/SelfEvolution 직접 테스트 29건
 - Step 4 (MEMORY): MemoryScope.PROJECT, semantic_scores 전달, _recall_graph scope 수정, M8 에피소드 주입
-- **남은 Phase A 작업**: Step 5 — Blueprint 동기화 + exe 빌드 (완료 → 다음 세션에서 버전 bump + 빌드)
+- Step 5: version 1.2.22 bump + Blueprint 갱신 완료 (exe 빌드는 Windows에서 수행)
+
+### B2-6: ✅ 완료
+
+- C0: write_project_board atomic write
+- C1: strategy ledger 모듈별 granularity (_record_ledger_outcomes, module_outcome_from_board, detect_owner_drift)
+- C2: nightly summary 모듈 섹션, 12건 테스트
+
+### 3순위: ✅ 완료
+
+- CheckpointHook 등록 (agent_runner.py)
+- EpisodeRecord.event_type/failure_pattern/root_cause 필드 추가
+- DynamicOrchestrator._execute_agent_task finally에 record_episode
 
 ### P0 & P1 & P2: ✅ 모두 완료
 

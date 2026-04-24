@@ -333,7 +333,10 @@ AgentRunner.run(agent, task_input, workspace)
 **핵심 내부 흐름:**
 - `terminal_per_agent=True` 설정 → `DynamicOrchestrator` 생성 (`project_pipeline.py:700`)
 - `print_startup_routing_notice()` 호출 후 오케스트레이션 시작
-- `execute()` 완료 후 `StrategyLedger.record_role_batch()` 호출: 모듈명 + deliverables 앞 4단어 패턴을 1회 저장 (B2-4 fix — 이전에는 모듈명만 저장해 `_pick_owner_role` lookup이 항상 miss)
+- `execute()` 완료 후 `_record_ledger_outcomes()` 호출: 모듈별 3-value 판정 (B2-6 fix — 이전에는 전역 status로 전 모듈에 일괄 fail 기록)
+  - `status ∈ {crashed, unknown}` → 전체 skip
+  - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
+- `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
 
 ---
 
@@ -521,6 +524,8 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 **어댑터:** ast_hub, continuity, core_memory, cortex_vector, knowledge_graph, sync_compyne, trace_log
 
 **scope 할당 정책:** `node.project_id is None → GLOBAL, else → PROJECT` (router.py + knowledge_graph.py 통일)
+
+**EpisodeRecord 확장 필드:** `event_type: str`, `failure_pattern: str`, `root_cause: str` (3순위, to_dict/from_dict 포함)
 
 ---
 
@@ -1234,6 +1239,11 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-25 | v1.2.22 | feat(3순위): CheckpointHook 등록(agent_runner.py), EpisodeRecord에 event_type/failure_pattern/root_cause 추가(models.py), DynamicOrchestrator._execute_agent_task finally 블록에 record_episode 추가(success+failure 모두) |
+| 2026-04-25 | v1.2.22 | feat(C2-summary): nightly_summary.py 모듈별 상태 섹션 추가 — _render_modules_section(load_project_board → module.status 집계), ws 우선순위: param > state.active_workspace, tests/test_nightly_summary.py 4건 신규 |
+| 2026-04-25 | v1.2.22 | fix(B2-6): strategy ledger 모듈별 granularity — project_pipeline.py 전역 status 단일 플래그 → _record_ledger_outcomes() 추출(모듈별 3-value 판정), project_task_board.py helpers 4개 추가(_INFRA_NOTE_PREFIXES/_task_is_infra_failure/_build_board_maps/module_outcome_from_board/detect_owner_drift), tests/test_strategy_ledger.py 12건 추가 |
+| 2026-04-25 | v1.2.22 | fix(C0-board): write_project_board atomic write — tempfile+os.replace(crash-safe JSON persistence) |
+| 2026-04-25 | v1.2.22 | chore(version): 1.2.21 → 1.2.22 bump — version.py + install-af.ps1 |
 | 2026-04-24 | v1.2.22 | feat(Phase-A-Step3+4): EVOLUTION+MEMORY 구현 — GateResult.quality_delta, SkillEvolutionBus/SkillQualityGate/SkillSelfEvolutionHook 직접 테스트(29건), MemoryScope.PROJECT, _recall_graph scope 수정, facade semantic_scores 전달(NEW-H2), agent_specializer 에피소드 주입(M8), knowledge_graph.py LOCAL→PROJECT 통일 |
 | 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 환경 전환 후 런타임 세션 상태 갱신 — claude/codex/gemini CLI 워크스페이스 경로 `warkSpaces`→`hoonProJect/worktrees` 마이그레이션, 사용자 홈 `HOME`→`HOON` 적용, codex shell guard·auth·models_cache 파일 갱신, document_index 캐시 재생성 |
 | 2026-04-23 | v1.2.21 | chore(af-runtime): PC 이전 후 워크스페이스 경로 및 CLI 세션 상태 동기화 — workspace `warkSpaces→hoonProJect/worktrees` + 사용자명 `HOME→HOON` 경로 수정, claude/codex/gemini CLI 세션 JSON 갱신, codex_home auth·config·state_5.sqlite 업데이트, benchmark_oh_my_opencode.md 삭제 |

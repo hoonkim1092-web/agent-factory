@@ -1046,44 +1046,12 @@ class ProjectPipeline:
         run_board = orchestrator.run_project(task_input, roles, workspace)
         status = str(run_board.get("current_status", "unknown"))
 
-        # ── strategy ledger: 모듈별 역할 배정 성공/실패 기록 ──────────────
-        # pattern_key = 모듈명 + deliverables 모두 등록 (B2-4 fix).
-        # _pick_owner_role은 deliverable 텍스트로 lookup_best_role을 호출하므로
-        # 모듈명만 저장하면 항상 miss가 난다.
-        # 패턴은 30자 상한으로 트런케이션해 자연어 문장의 단어 단위 오매칭을 방지.
-        # record_role_batch로 한 번의 _save()에 일괄 기록 (I/O 폭주 방지).
-        _succeeded = status == "completed"
-        _project_id = os.path.basename(workspace)
-        try:
-            from core.memory_system.strategy_ledger import get_strategy_ledger
-            _ledger = get_strategy_ledger(workspace)
-        except Exception as _exc:
-            logger.warning("strategy ledger 초기화 실패: %s", _exc)
-            _ledger = None
-        if _ledger is not None:
-            _batch: list[tuple[str, str, str, bool]] = []
-            # _seen은 배치 전체 범위에서 중복을 제거 — 모듈 루프 밖에 위치해야
-            # 서로 다른 모듈이 같은 (pattern, owner_role)을 공유할 때 pass_count가
-            # 이중 계산되는 것을 방지한다.
-            _seen: set[tuple[str, str]] = set()
-            for _mod in (prepared.role_plan.get("modules") or []):
-                _owner = str(_mod.get("owner_role") or "")
-                if not _owner:
-                    # owner_role 미배정 모듈은 학습 대상에서 제외
-                    continue
-                for _raw in [str(_mod.get("name") or "")] + list(_mod.get("deliverables") or []):
-                    # 앞 4단어만 취해 단어 경계에서 절삭: 긴 자연어 deliverable의 midword
-                    # cut 토큰이 lookup_best_role에서 오매칭하는 것을 방지 (B2-4 fix).
-                    _words = _raw.strip().lower().split()
-                    _dp = " ".join(_words[:4]).strip()
-                    if _dp and (_dp, _owner) not in _seen:
-                        _seen.add((_dp, _owner))
-                        _batch.append((_dp, _owner, _project_id, _succeeded))
-            if _batch:
-                try:
-                    _ledger.record_role_batch(_batch)
-                except Exception as _exc:
-                    logger.warning("strategy ledger 배치 기록 실패: %s", _exc)
+        # ── strategy ledger: 모듈별 outcome 기록 (B2-6) ──────────────
+        self._record_ledger_outcomes(
+            status=status,
+            role_plan=prepared.role_plan,
+            workspace=workspace,
+        )
 
         append_dashboard_run(
             {
@@ -1119,6 +1087,86 @@ class ProjectPipeline:
             "todo_path": prepared.todo_path,
             "research_evidence_path": prepared.research_evidence_path,
         }
+
+    def _record_ledger_outcomes(
+        self,
+        status: str,
+        role_plan: dict,
+        workspace: str,
+    ) -> None:
+        """프로젝트 실행 후 strategy ledger에 모듈별 outcome을 기록한다.
+
+        - status in {crashed, unknown} → 전체 skip
+        - 그 외: board 로드 → 모듈별 module_outcome_from_board + detect_owner_drift 판정
+        """
+        _INFRA_STATUSES = {"crashed", "unknown"}
+        if status in _INFRA_STATUSES:
+            logger.info("strategy ledger 기록 skip — 인프라/불확실 실패 (status=%s)", status)
+            return
+
+        try:
+            from core.memory_system.strategy_ledger import get_strategy_ledger
+            from core.project_task_board import (
+                load_project_board,
+                module_outcome_from_board,
+                detect_owner_drift,
+                _build_board_maps,
+            )
+        except Exception as exc:
+            logger.warning("strategy ledger/board import 실패: %s", exc)
+            return
+
+        board = load_project_board(workspace)
+        if not board:
+            logger.info("strategy ledger 기록 skip — board 비어있음")
+            return
+
+        task_map, module_map = _build_board_maps(board)
+
+        ledger = get_strategy_ledger(workspace)
+        project_id = os.path.basename(workspace)
+
+        batch: list[tuple[str, str, str, bool]] = []
+        seen: set[tuple[str, str]] = set()
+
+        for mod in (role_plan.get("modules") or []):
+            owner = str(mod.get("owner_role") or "")
+            if not owner:
+                continue
+            mid = str(mod.get("id") or "")
+            if mid not in module_map:
+                continue
+
+            outcome_label = module_outcome_from_board(
+                board, mid, task_map=task_map, module_map=module_map,
+            )
+            if outcome_label == "completed":
+                outcome = True
+            elif outcome_label == "at_risk":
+                outcome = False
+            else:
+                continue
+
+            board_module = module_map.get(mid)
+            if board_module and detect_owner_drift(board_module, board, task_map=task_map):
+                logger.warning(
+                    "strategy ledger skip — owner drift 감지 (module=%s, plan_owner=%s)",
+                    mid, owner,
+                )
+                continue
+
+            for raw in [str(mod.get("name") or "")] + list(mod.get("deliverables") or []):
+                words = str(raw).strip().lower().split()
+                dp = " ".join(words[:4]).strip()
+                if dp and (dp, owner) not in seen:
+                    seen.add((dp, owner))
+                    batch.append((dp, owner, project_id, outcome))
+
+        if batch:
+            try:
+                ledger.record_role_batch(batch)
+            except Exception as exc:
+                logger.warning("strategy ledger 배치 기록 실패: %s", exc)
 
     # ------------------------------------------------------------------
     # 하위 호환: run() = prepare + 자동 승인 + execute

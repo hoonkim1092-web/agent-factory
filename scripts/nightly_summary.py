@@ -22,6 +22,59 @@ _LEVEL_EMOJI = {
     "CHECKPOINT_ONLY": "⛔",
 }
 
+_MODULE_STATUS_EMOJI = {
+    "completed": "✅",
+    "in_progress": "🔄",
+    "at_risk": "⚠️",
+    "pending": "⏸",
+}
+
+
+def _render_modules_section(workspace: str | Path | None) -> str:
+    from core.project_task_board import load_project_board
+    if not workspace:
+        return "## 모듈별 상태\n\n(프로젝트 비활성)\n"
+    board = load_project_board(str(workspace))
+    modules = board.get("modules") or []
+    if not modules:
+        return "## 모듈별 상태\n\n(모듈 정보 없음)\n"
+    tasks_by_id = {
+        str(t.get("task_id") or ""): t
+        for t in (board.get("tasks") or [])
+        if isinstance(t, dict)
+    }
+    rows = []
+    counts: dict[str, int] = {}
+    for mod in modules:
+        if not isinstance(mod, dict):
+            continue
+        mid = str(mod.get("id") or "")
+        name = str(mod.get("name") or mid)
+        if len(name) > 40:
+            name = name[:40] + "…"
+        owner = str(mod.get("owner_role") or "?")
+        status = str(mod.get("status") or "pending")
+        emoji = _MODULE_STATUS_EMOJI.get(status, "❓")
+        counts[status] = counts.get(status, 0) + 1
+        task_ids = [str(tid) for tid in (mod.get("task_ids") or [])]
+        total = len(task_ids)
+        done = sum(1 for tid in task_ids if tasks_by_id.get(tid, {}).get("status") == "completed")
+        failed = sum(1 for tid in task_ids if tasks_by_id.get(tid, {}).get("status") == "failed")
+        task_col = f"{done}/{total}"
+        if failed:
+            task_col += f" ({failed} failed)"
+        rows.append(f"| {emoji} {status} | {name} | {owner} | {task_col} |")
+
+    table = "\n".join([
+        "| 상태 | 모듈 | 담당 Role | Tasks |",
+        "|------|------|----------|-------|",
+    ] + rows)
+    summary_lines = []
+    for label, key in [("완료", "completed"), ("진행 중", "in_progress"), ("대기", "pending"), ("위험", "at_risk")]:
+        if key in counts:
+            summary_lines.append(f"- **{label}**: {counts[key]}/{len(modules)}")
+    return "## 모듈별 상태\n\n" + table + "\n\n" + "\n".join(summary_lines) + "\n"
+
 
 def render_summary(state: NightlyState, workspace: str | Path | None = None) -> str:
     """state에서 마크다운 요약 문자열을 생성한다."""
@@ -66,6 +119,9 @@ def render_summary(state: NightlyState, workspace: str | Path | None = None) -> 
         lines += ["", "## Lineage 재시도 현황", ""]
         for lid, info in state.watchdog.lineage_counters.items():
             lines.append(f"  - `{lid}`: level={info.get('level', 0)}, attempts={info.get('attempts', 0)}")
+
+    ws_for_board = workspace or getattr(state, "active_workspace", None)
+    lines += ["", _render_modules_section(ws_for_board).rstrip()]
 
     return "\n".join(lines) + "\n"
 

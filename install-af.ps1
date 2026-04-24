@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-Agent Factory CLI v1.2.21 설치 스크립트
+Agent Factory CLI v1.2.22 설치 스크립트
 
 .EXAMPLE
-irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/install-af.ps1 | iex
+irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.22/install-af.ps1 | iex
 #>
 
 param(
@@ -24,14 +24,14 @@ if (-not $isAdmin) {
         $escapedPath = $InstallPath.Replace("'", "''")
         $extraArgs += " -InstallPath '$escapedPath'"
     }
-    $cmdline = "-ExecutionPolicy Bypass -Command `"& { `$tmp = [IO.Path]::GetTempFileName() + '.ps1'; try { irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.21/install-af.ps1 -OutFile `$tmp; & `$tmp${extraArgs} } finally { Remove-Item `$tmp -ErrorAction SilentlyContinue } }`""
+    $cmdline = "-ExecutionPolicy Bypass -Command `"& { `$tmp = [IO.Path]::GetTempFileName() + '.ps1'; try { irm https://raw.githubusercontent.com/hoonkim1092-web/af-fsa/af-fsa_v1.2.22/install-af.ps1 -OutFile `$tmp; & `$tmp${extraArgs} } finally { Remove-Item `$tmp -ErrorAction SilentlyContinue } }`""
     Start-Process powershell -ArgumentList $cmdline -Verb RunAs
     exit
 }
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  Agent Factory CLI v1.2.21 설치" -ForegroundColor Cyan
+Write-Host "  Agent Factory CLI v1.2.22 설치" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # Step 1: 기존 설치 탐지 및 제거
@@ -102,12 +102,12 @@ try {
 }
 
 # Step 3: 다운로드
-$zipFile = "$InstallPath\af-1.2.21.zip"
-Write-Host "`n► af-1.2.21.zip 다운로드 중..." -ForegroundColor Yellow
+$zipFile = "$InstallPath\af-1.2.22.zip"
+Write-Host "`n► af-1.2.22.zip 다운로드 중..." -ForegroundColor Yellow
 try {
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest `
-        -Uri "https://github.com/hoonkim1092-web/af-fsa/raw/af-fsa_v1.2.21/dist/af-1.2.21.zip" `
+        -Uri "https://github.com/hoonkim1092-web/af-fsa/raw/af-fsa_v1.2.22/dist/af-1.2.22.zip" `
         -OutFile $zipFile `
         -UseBasicParsing
     $ProgressPreference = 'Continue'
@@ -248,7 +248,7 @@ if ($WithGraphify) {
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  설치 완료! v1.2.21" -ForegroundColor Green
+Write-Host "  설치 완료! v1.2.22" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  PowerShell을 재시작한 후:" -ForegroundColor White

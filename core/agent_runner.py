@@ -997,6 +997,12 @@ class AgentRunner:
             _safe_print(f"[Runner] DesignReviewHook registration failed: {_dr_err}")
 
         try:
+            from core.hooks.checkpoint import CheckpointHook
+            bus.register(CheckpointHook())
+        except Exception as _cp_err:
+            _safe_print(f"[Runner] CheckpointHook registration failed: {_cp_err}")
+
+        try:
             from core.memory_system.knowledge_injection import KnowledgeInjectionHook
             from core.hooks.memory_consolidation import MemoryConsolidationHook
             from core.memory_system.facade import UnifiedMemoryFacade

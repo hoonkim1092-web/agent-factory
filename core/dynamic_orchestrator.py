@@ -901,6 +901,27 @@ class DynamicOrchestrator:
             self._sync_manifest()
             # 개선 7: 태스크 완료를 메인 루프에 즉시 알린다
             self._task_done_event.set()
+            # episode 기록 — success/failure 모두
+            try:
+                from core.memory_system.models import EpisodeRecord
+                from core.memory_system.facade import UnifiedMemoryFacade
+                _facade = UnifiedMemoryFacade.get_instance()
+                if _facade._initialised:
+                    _ep_ok = any(
+                        e.get("task_id") == task_id or (not task_id and e.get("subtask") == subtask)
+                        for e in (self.state_board.get("completed_subtasks") or [])
+                        if e.get("role") == role
+                    )
+                    _ep = EpisodeRecord(
+                        run_id=run_id,
+                        agent_name=role,
+                        task_input=subtask[:500],
+                        outcome="success" if _ep_ok else "failure",
+                        event_type="agent_task",
+                    )
+                    asyncio.ensure_future(_facade.record_episode(_ep))
+            except Exception:
+                pass
 
     async def _orchestration_loop(self, project_desc: str, roles: List[str], workspace: str | None = None):
         target_workspace = workspace or os.getcwd()
