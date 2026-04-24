@@ -574,7 +574,10 @@ def _compose_prompt(request: CliChatRequest, spec: CliProviderSpec, system_promp
 
 
 def _detect_repo_root(workspace: str) -> str:
-    current = Path(str(workspace or "")).resolve()
+    try:
+        current = Path(str(workspace or "")).resolve()
+    except (NotImplementedError, OSError):
+        return ""
     if current.is_file():
         current = current.parent
     for candidate in (current, *current.parents):
