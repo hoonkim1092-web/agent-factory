@@ -20,6 +20,7 @@ class GateResult:
     pass_rate: float
     eval_report_path: str
     failure_reasons: list[str] = field(default_factory=list)
+    quality_delta: float | None = None
 
 
 class SkillQualityGate:

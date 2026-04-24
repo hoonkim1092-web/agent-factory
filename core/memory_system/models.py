@@ -28,6 +28,7 @@ class MemoryScope(str, Enum):
     LOCAL = "local"
     GLOBAL = "global"
     SESSION = "session"
+    PROJECT = "project"
 
 
 class NodeType(str, Enum):

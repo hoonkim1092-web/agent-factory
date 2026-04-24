@@ -122,7 +122,12 @@ class AgentSpecializer:
         if mailbox and "no mailbox" not in mailbox.lower():
             sections.append(f"[수신 메시지]\n{mailbox}")
 
-        # ── Section 5: 범위 제한 ──
+        # ── Section 5: 에피소드 메모리 주입 (M8 해소) ──
+        episode_context = self._fetch_episode_context(task_meta, workspace)
+        if episode_context:
+            sections.append(f"[과거 학습 (에피소드 메모리)]\n{episode_context}")
+
+        # ── Section 6: 범위 제한 ──
         sections.append(
             "[범위 제한]\n"
             "이 작업 외의 범위는 수행하지 마라. "
@@ -236,3 +241,69 @@ class AgentSpecializer:
                 lines.append(f"  최근 메모: {last_note}")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # 에피소드 메모리 조회 (M8)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _fetch_episode_context(task_meta: dict[str, Any], workspace: str) -> str:
+        """UnifiedMemoryFacade에서 현재 작업과 유사한 과거 에피소드를 조회한다.
+
+        이벤트 루프 안팎 양쪽에서 안전하게 동작한다 (mcp_adapter 패턴).
+        실패 시 빈 문자열 반환 (no-op).
+        """
+        import asyncio
+        import concurrent.futures
+
+        query = (
+            str(task_meta.get("instruction", ""))
+            or str(task_meta.get("title", ""))
+        ).strip()
+        if not query:
+            return ""
+
+        try:
+            from core.memory_system.facade import UnifiedMemoryFacade
+            from core.memory_system.models import MemoryType
+
+            facade = UnifiedMemoryFacade.get_instance()
+            if not facade._initialised:
+                return ""
+
+            async def _search() -> list:
+                return await facade.search_semantic(
+                    query,
+                    limit=3,
+                    memory_type=MemoryType.EPISODIC,
+                )
+
+            # 이미 실행 중인 루프가 있으면 별도 스레드에서 새 루프로 실행
+            try:
+                asyncio.get_running_loop()
+                running = True
+            except RuntimeError:
+                running = False
+
+            if running:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(asyncio.run, _search())
+                    records = future.result(timeout=5.0)
+            else:
+                records = asyncio.run(_search())
+
+            if not records:
+                return ""
+
+            lines: list[str] = []
+            for rec in records:
+                meta = rec.metadata or {}
+                outcome = meta.get("outcome", "?")
+                error = meta.get("error_info", "")
+                summary = rec.content[:120]
+                lines.append(f"- [{outcome}] {summary}" + (f" (오류: {error[:60]})" if error else ""))
+
+            return "\n".join(lines)
+
+        except Exception:
+            return ""

@@ -211,8 +211,20 @@ class UnifiedMemoryFacade:
         # Deduplicate by content_hash
         deduped = _deduplicate(active)
 
-        # Rank by relevance score (Phase 14)
-        scored = decay_mgr.rank_by_relevance(deduped)
+        # Build semantic_scores map: record_id → keyword similarity proxy
+        # (adapters return records without scores; keyword overlap is the best
+        # available signal without a round-trip embedding call)
+        try:
+            from core.memory_system.episode_matcher import keyword_similarity as _ksim
+            semantic_scores = {
+                r.record_id: _ksim(query, r.content)
+                for r in deduped
+            }
+        except Exception:
+            semantic_scores = {}
+
+        # Rank by relevance score (Phase 14) — NEW-H2 fix: pass semantic_scores
+        scored = decay_mgr.rank_by_relevance(deduped, semantic_scores=semantic_scores)
 
         # Return top-N by relevance score
         return [rec for rec, _ in scored[:limit]]
@@ -264,10 +276,15 @@ class UnifiedMemoryFacade:
             else:
                 all_records.extend(res)  # type: ignore[union-attr]
 
-        # Rank by relevance and deduplicate
+        # Rank by relevance and deduplicate — NEW-H2 fix: pass semantic_scores
         deduped = _deduplicate(all_records)
         decay_mgr = MemoryDecayManager()
-        scored = decay_mgr.rank_by_relevance(deduped)
+        try:
+            from core.memory_system.episode_matcher import keyword_similarity as _ksim
+            semantic_scores = {r.record_id: _ksim(query, r.content) for r in deduped}
+        except Exception:
+            semantic_scores = {}
+        scored = decay_mgr.rank_by_relevance(deduped, semantic_scores=semantic_scores)
         return [rec for rec, _ in scored[:limit]]
 
     # ── Episode recording ──────────────────────────────────────────────

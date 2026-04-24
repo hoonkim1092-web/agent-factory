@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-23 | version: v1.2.21 -->
+<!-- last_updated: 2026-04-24 | version: v1.2.22 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -424,17 +424,19 @@ cli_providers = [preferred] + [fallbacks...]
 ---
 
 ### §3.4 AgentSpecializer (`core/agent_specializer.py`)
-<!-- last_updated: 2026-04-02 -->
+<!-- last_updated: 2026-04-24 -->
 
 **메서드:** `specialize(base_agent, task_meta, workspace)`
 
 시스템 프롬프트 구성 순서:
 1. 역할 페르소나 (200자 요약)
 2. 현재 태스크 (id, title, instruction, phase)
-3. 수락 기준
-4. 프로젝트 보드 다이제스트
-5. 메일박스 메시지
-6. 아티팩트 목록
+3. 수락 기준 + 아티팩트
+4. 선행 작업 결과
+5. **과거 에피소드 메모리** (M8 fix — `_fetch_episode_context()`, 이벤트루프 안팎 양쪽 안전)
+6. 범위 제한
+
+`_fetch_episode_context()`: `UnifiedMemoryFacade.search_semantic(EPISODIC, limit=3)` 호출. 이미 실행 중인 루프가 있으면 `ThreadPoolExecutor` 경유.
 
 ---
 
@@ -506,14 +508,19 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 
 | 메서드 | 역할 |
 |--------|------|
-| `write_episodic()` | 실행 에피소드 기록 |
-| `search_semantic()` | 시맨틱 검색 |
+| `record_episode()` | 실행 에피소드 기록 (facade 공식 심볼) |
+| `search_semantic()` | 시맨틱 검색 — keyword_similarity 기반 semantic_scores 전달 (NEW-H2 fix) |
+| `search_all_backends()` | 전체 백엔드 크로스-프로젝트 검색 — 동일 semantic_scores 패치 |
 | `query_graph()` | 지식 그래프 탐색 |
 | `decay()` | 메모리 자동 에이징 |
 
 **메모리 타입:** EPISODIC, SEMANTIC, PROCEDURAL, WORKING, GRAPH
 
+**MemoryScope:** LOCAL, GLOBAL, SESSION, **PROJECT** (Phase A Step 4 추가)
+
 **어댑터:** ast_hub, continuity, core_memory, cortex_vector, knowledge_graph, sync_compyne, trace_log
+
+**scope 할당 정책:** `node.project_id is None → GLOBAL, else → PROJECT` (router.py + knowledge_graph.py 통일)
 
 ---
 
@@ -1227,6 +1234,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-24 | v1.2.22 | feat(Phase-A-Step3+4): EVOLUTION+MEMORY 구현 — GateResult.quality_delta, SkillEvolutionBus/SkillQualityGate/SkillSelfEvolutionHook 직접 테스트(29건), MemoryScope.PROJECT, _recall_graph scope 수정, facade semantic_scores 전달(NEW-H2), agent_specializer 에피소드 주입(M8), knowledge_graph.py LOCAL→PROJECT 통일 |
 | 2026-04-23 | v1.2.21 | chore(af_runtime): 크로스 PC 환경 전환 후 런타임 세션 상태 갱신 — claude/codex/gemini CLI 워크스페이스 경로 `warkSpaces`→`hoonProJect/worktrees` 마이그레이션, 사용자 홈 `HOME`→`HOON` 적용, codex shell guard·auth·models_cache 파일 갱신, document_index 캐시 재생성 |
 | 2026-04-23 | v1.2.21 | chore(af-runtime): PC 이전 후 워크스페이스 경로 및 CLI 세션 상태 동기화 — workspace `warkSpaces→hoonProJect/worktrees` + 사용자명 `HOME→HOON` 경로 수정, claude/codex/gemini CLI 세션 JSON 갱신, codex_home auth·config·state_5.sqlite 업데이트, benchmark_oh_my_opencode.md 삭제 |
 | 2026-04-23 | v1.2.21 | chore(af-runtime): 새 PC 환경으로 CLI 세션 경로 마이그레이션 — workspace `warkSpaces→hoonProJect/worktrees` 일괄 갱신, claude/codex/gemini 세션 설정 파일 경로 업데이트(HOME→HOON), document_index.json 캐시 갱신, benchmark_oh_my_opencode.md 삭제 |

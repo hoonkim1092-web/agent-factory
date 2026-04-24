@@ -203,7 +203,7 @@ class KnowledgeGraphAdapter(MemoryBackendAdapter):
         return self._tag(MemoryRecord(
             record_id=node.node_id,
             memory_type=MemoryType.GRAPH,
-            scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,
+            scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.PROJECT,
             project_id=node.project_id or "",
             content=f"[{node.node_type.value}] {node.label}: {node.description}",
             metadata={

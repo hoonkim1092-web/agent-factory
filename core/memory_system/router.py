@@ -174,10 +174,14 @@ class MemoryRouter:
                         "confidence": node.confidence,
                         "graph_match_score": round(match_score, 4),
                     })
+                    scope = (
+                        MemoryScope.GLOBAL if node.project_id is None
+                        else MemoryScope.PROJECT
+                    )
                     results.append(MemoryRecord(
                         record_id=node.node_id,
                         memory_type=MemoryType.GRAPH,
-                        scope=MemoryScope.LOCAL,
+                        scope=scope,
                         project_id=node.project_id or "",
                         content=node.description,
                         metadata=meta,
