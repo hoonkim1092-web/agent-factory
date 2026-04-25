@@ -215,6 +215,33 @@ def _run_task(orch, task_info: dict, workspace: str, state: NightlyState, tick_i
     return completed_after > completed_before
 
 
+def _sweep_verify_handoffs(workspace: str) -> int:
+    """tick 완료 후 docs/work-items/*/verification-report.md 를 전부 검증.
+
+    반환값: 실패 개수. verdict=BLOCK 발견 시 _check_report가
+    _propagate_block_to_gate로 해당 approval-gate.md를 자동 차단한다.
+    """
+    from pathlib import Path as _P
+    try:
+        from scripts.verify_handoff_checker import _check_report
+    except Exception:
+        return 0
+    ws = _P(workspace)
+    reports = list(ws.glob("docs/work-items/*/verification-report.md"))
+    if not reports:
+        return 0
+    failed = 0
+    for rp in reports:
+        try:
+            if _check_report(rp) != 0:
+                failed += 1
+        except Exception:
+            failed += 1
+    if failed:
+        print(f"[nightly_tick] verify-handoff FAIL {failed}/{len(reports)} (BLOCK 자동 전파됨)", file=sys.stderr)
+    return failed
+
+
 # ── 메인 tick 루틴 ────────────────────────────────────────
 def tick_once(workspace: str | Path | None = None) -> int:
     """단일 tick 실행. 0=정상, 1=skip(이미 실행 중), 2=오류."""
@@ -251,6 +278,15 @@ def tick_once(workspace: str | Path | None = None) -> int:
 
         active_workspace = state.active_workspace or ws
         made_progress = _dispatch_actions(state, active_workspace, tick_id, state_root=ws)
+
+        # P0-C: verify-handoff 런타임 강제 — 이번 tick에서 새로 쓰여졌을 수 있는
+        # verification-report.md들을 스윕. verdict=BLOCK이면 approval-gate 자동 차단.
+        # pre-commit hook은 사람 커밋 경로만 막으므로 nightly 경로에도 같은 강제 필요.
+        if made_progress:
+            try:
+                _sweep_verify_handoffs(active_workspace)
+            except Exception as _vh_exc:
+                print(f"[nightly_tick] verify-handoff 스윕 오류 (tick은 계속): {_vh_exc}", file=sys.stderr)
 
         if made_progress:
             state.watchdog.tick_progress(tick_id)

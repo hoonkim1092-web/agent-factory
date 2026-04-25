@@ -63,7 +63,7 @@
 | `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator`, `restore_from()` (tick 재기동 복원) |
 | `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
 | `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
-| `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
+| `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write, `_MAX_LEVEL=5`, success 시 level/attempts 리셋) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
 | `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()`, `record_role_batch()` |
 | `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
@@ -526,6 +526,12 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 **scope 할당 정책:** `node.project_id is None → GLOBAL, else → PROJECT` (router.py + knowledge_graph.py 통일)
 
 **EpisodeRecord 확장 필드:** `event_type: str`, `failure_pattern: str`, `root_cause: str` (3순위, to_dict/from_dict 포함)
+
+**EpisodeRecord 채움 사이트 (2026-04-25 통합 결함 수정):**
+- `dynamic_orchestrator._execute_agent_task` finally — `state_board.failed_subtasks`에서 latest 매칭 entry의 `failure_category`/`reason` 추출 (`_state_lock` 안에서 캡처)
+- `fsa_loop._record_episode` — `result.failure_patterns` (list) `;` join + `result.root_cause`. 실패 종료 경로(`final_result`/KeyboardInterrupt)는 `last_analysis.error_category`/`root_cause`를 채워 전달
+
+**EpisodeMatcher facade 주입 (P0 FATAL 수정):** `work_item_generator._build_episode_hints_section`이 이전엔 `EpisodeMatcher()`를 facade 없이 호출 → seed-only mode로 런타임 에피소드 회상 차단됐음. `UnifiedMemoryFacade.get_instance()._initialised`일 때 주입.
 
 ---
 
@@ -1239,6 +1245,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-25 | v1.2.22 | fix(integration-2): af-critic + Codex 5.5 후속 검증 5건 수정 — (a) approval_gate.apply_verification_verdict 멱등화: 이미 BLOCK 상태이고 마커 존재 시 early return → _sweep_verify_handoffs 매 tick 호출에 따른 review_notes 무한 누적 차단, (b) fsa_loop _record_episode root_cause 우선순위 변경: result.reason은 max_cycles 종료 시 고정 문자열이므로 last_analysis가 채운 root_cause를 우선해야 의미 보존, (c) lineage_ledger lifetime_attempts(=50) 필드 신규: attempts(연속 streak, success 시 0)와 분리하여 fail-success-fail 패턴이 라이프타임 캡 우회 못하게 함. 레거시 데이터(lifetime_attempts 미존재)는 attempts에서 복사. tests/test_lineage_ledger.py 회귀 테스트 2건 추가, (d) work_item_generator EpisodeMatcher 호출을 asyncio.run → _run_async_safe로 변경: orchestrator의 running loop 안에서도 별도 스레드로 안전 실행 → facade 주입 효과 확보, (e) dynamic_orchestrator._execute_agent_task finally의 record_episode를 ensure_future → await으로 변경: nightly_tick의 loop.close() 시점에 pending task가 폐기되어 episode 유실되던 회귀 차단 |
+| 2026-04-25 | v1.2.22 | fix(integration): 통합 결함 4건 + Codex 추가 발견 1건 일괄 수정 — (1) DynamicOrchestrator._execute_agent_task finally의 EpisodeRecord에 failure_pattern/root_cause 채우기(state_board.failed_subtasks의 failure_category/reason을 _state_lock 안에서 캡처), (2) FSALoop._record_episode 동일 채움 + last_analysis 보존하여 max_cycles/KeyboardInterrupt 종료 시 final_result에 root_cause/패턴 노출, (3) work_item_generator._build_episode_hints_section에 EpisodeMatcher(facade=UnifiedMemoryFacade.get_instance()) 주입 — 이전엔 facade=None으로 seed-only mode였음(P0 FATAL), (4) lineage_ledger _MAX_LEVEL=5 상수화 + is_maxed의 dead-code(`level>5`)를 `>=_MAX_LEVEL`로 수정 + on_task_success가 level/attempts를 1/0으로 리셋(history는 보존)하여 분해 성공 후 다음 lineage 진입에서 즉시 maxed 차단되는 회귀 방지, (5) nightly_tick에 _sweep_verify_handoffs() 추가하여 docs/work-items/*/verification-report.md를 매 made_progress tick마다 검증(verdict=BLOCK 자동 approval-gate 차단). tests/test_lineage_ledger.py 7건 신규(P3 회귀 테스트 포함) |
 | 2026-04-25 | v1.2.22 | feat(3순위): CheckpointHook 등록(agent_runner.py), EpisodeRecord에 event_type/failure_pattern/root_cause 추가(models.py), DynamicOrchestrator._execute_agent_task finally 블록에 record_episode 추가(success+failure 모두) |
 | 2026-04-25 | v1.2.22 | feat(C2-summary): nightly_summary.py 모듈별 상태 섹션 추가 — _render_modules_section(load_project_board → module.status 집계), ws 우선순위: param > state.active_workspace, tests/test_nightly_summary.py 4건 신규 |
 | 2026-04-25 | v1.2.22 | fix(B2-6): strategy ledger 모듈별 granularity — project_pipeline.py 전역 status 단일 플래그 → _record_ledger_outcomes() 추출(모듈별 3-value 판정), project_task_board.py helpers 4개 추가(_INFRA_NOTE_PREFIXES/_task_is_infra_failure/_build_board_maps/module_outcome_from_board/detect_owner_drift), tests/test_strategy_ledger.py 12건 추가 |

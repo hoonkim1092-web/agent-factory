@@ -901,25 +901,45 @@ class DynamicOrchestrator:
             self._sync_manifest()
             # 개선 7: 태스크 완료를 메인 루프에 즉시 알린다
             self._task_done_event.set()
-            # episode 기록 — success/failure 모두
+            # episode 기록 — success/failure 모두 (P0-A: failure_pattern/root_cause 채움)
+            # P2: state_board 읽기를 _state_lock 안에서 수행해 일관성 확보.
             try:
                 from core.memory_system.models import EpisodeRecord
                 from core.memory_system.facade import UnifiedMemoryFacade
                 _facade = UnifiedMemoryFacade.get_instance()
                 if _facade._initialised:
-                    _ep_ok = any(
-                        e.get("task_id") == task_id or (not task_id and e.get("subtask") == subtask)
-                        for e in (self.state_board.get("completed_subtasks") or [])
-                        if e.get("role") == role
-                    )
+                    async with self._state_lock:
+                        _ep_ok = any(
+                            e.get("task_id") == task_id or (not task_id and e.get("subtask") == subtask)
+                            for e in (self.state_board.get("completed_subtasks") or [])
+                            if e.get("role") == role
+                        )
+                        _latest = None
+                        if not _ep_ok:
+                            _failed = [
+                                e for e in (self.state_board.get("failed_subtasks") or [])
+                                if e.get("role") == role
+                                and (e.get("task_id") == task_id if task_id else e.get("subtask") == subtask)
+                            ]
+                            if _failed:
+                                _latest = _failed[-1]
+                    _fp = ""
+                    _rc = ""
+                    if _latest is not None:
+                        _fp = str(_latest.get("failure_category") or "")[:120]
+                        _rc = str(_latest.get("reason") or "")[:200]
                     _ep = EpisodeRecord(
                         run_id=run_id,
                         agent_name=role,
                         task_input=subtask[:500],
                         outcome="success" if _ep_ok else "failure",
                         event_type="agent_task",
+                        failure_pattern=_fp,
+                        root_cause=_rc,
                     )
-                    asyncio.ensure_future(_facade.record_episode(_ep))
+                    # await로 동기 기록 — ensure_future는 nightly_tick의
+                    # loop.close() 시점에 pending task가 폐기되어 episode 유실됨.
+                    await _facade.record_episode(_ep)
             except Exception:
                 pass
 

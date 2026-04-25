@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-25 B2-6 + 3순위 완료 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-25 통합 결함 10건 일괄 수정 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -42,6 +42,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 10 | version bump 1.2.21→1.2.22 + install-af.ps1 | `63990a71` | 2026-04-25 |
 | 11 | B2-6 C0+C1+C2: write_project_board atomic write, strategy ledger 모듈별 granularity, nightly summary 모듈 섹션 | `63990a71` | 2026-04-25 |
 | 12 | 3순위: CheckpointHook 등록, EpisodeRecord 필드 확장, DynamicOrchestrator record_episode | `63990a71` | 2026-04-25 |
+| 13 | 통합 결함 10건 일괄 수정 — Sonnet/Codex 5.5/af-critic 3-Tier 검증 통과 (audit 4건 + Codex 신규 1건 + critic 2건 P0/P1 + cross-review 후속 5건) | (이번) | 2026-04-25 |
 
 ---
 

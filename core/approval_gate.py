@@ -185,8 +185,15 @@ class ApprovalGate:
         if (verdict or "").strip().upper() != "BLOCK":
             return
         current = self._parse()
-        note = _clean(current.get("review_notes"))
-        note = f"{note}\n[자동 차단] {now_iso()}: verification verdict=BLOCK".strip()
+        # 멱등성: 이미 BLOCK 상태이고 review_notes에 차단 마커가 있으면 no-op.
+        # _sweep_verify_handoffs가 매 tick 호출되어 timestamp 라인이 무한 누적되는 회귀 차단.
+        existing_notes = _clean(current.get("review_notes"))
+        if (
+            _clean(current.get("status")) == "verification_blocked"
+            and "verification verdict=BLOCK" in existing_notes
+        ):
+            return
+        note = f"{existing_notes}\n[자동 차단] {now_iso()}: verification verdict=BLOCK".strip()
         gate_statuses = {key: "review_pending" for key in _DOC_FILES}
         content = self._render(
             work_item=_clean(current.get("work_item") or self.slug),

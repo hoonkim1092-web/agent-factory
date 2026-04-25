@@ -662,16 +662,27 @@ def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) 
         return ""
     try:
         from core.memory_system.episode_matcher import EpisodeMatcher, _search_seed_episodes
-        import asyncio
         goal = _clean(project_brief.get("goal") or "")
         if not goal:
             return ""
         brief_text = f"{goal} {' '.join(_clean_list(project_brief.get('deliverables')))}"
         try:
-            matcher = EpisodeMatcher()
-            hits = asyncio.run(matcher.query_similar(brief_text, top_k=5))
+            # P0-B fix: facade 주입 — 미주입 시 seed-only 모드로 폴백되어
+            # 런타임 에피소드가 회상 경로에 들어오지 않음.
+            try:
+                from core.memory_system.facade import UnifiedMemoryFacade
+                _facade = UnifiedMemoryFacade.get_instance()
+                if not getattr(_facade, "_initialised", False):
+                    _facade = None
+            except Exception:
+                _facade = None
+            matcher = EpisodeMatcher(facade=_facade) if _facade else EpisodeMatcher()
+            # _run_async_safe 사용 — 이미 running loop 안(orchestrator 컨텍스트)에서
+            # 호출되어도 별도 스레드에서 실행되므로 RuntimeError로 떨어지지 않음.
+            from core.agent_runner import _run_async_safe
+            hits = _run_async_safe(matcher.query_similar(brief_text, top_k=5))
         except Exception:
-            # asyncio.run 실패(이미 실행 중인 루프, 초기화 오류 등) — 시드 전용 폴백
+            # 그래도 실패하면(초기화 오류 등) — 시드 전용 폴백
             hits = _search_seed_episodes(brief_text, top_k=5)
         if not hits:
             return ""

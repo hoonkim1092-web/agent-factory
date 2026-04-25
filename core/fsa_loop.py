@@ -141,6 +141,7 @@ class FSALoop:
         max_level_reached = 0
         evolved_skill_name = None
         gate_result = None
+        last_analysis = None  # P1: 실패 종료 경로에서 root_cause/패턴 채우기 위해 보존
 
         print_agent_msg("FSA", f"풀 셀프 자동화 모드(FSA) 시작: {run_id}", "🌀")
         print_agent_msg("FSA", f"최대 {self.max_cycles} 사이클 | workspace={target_workspace}", "📋")
@@ -251,6 +252,7 @@ class FSALoop:
                     result=result,
                     ledger=ledger,
                 )
+                last_analysis = analysis  # P1: 실패 종료 시 episode에 패스
 
                 # ── Step 5: ESCALATE — 에스컬레이션 레벨 결정 ──
                 level = self._decide_escalation(ledger, analysis)
@@ -352,9 +354,19 @@ class FSALoop:
                 "meta_cycles": cycle if 'cycle' in dir() else 0,
                 "max_escalation_level": max_level_reached,
                 "strategy_ledger": ledger.to_dict(),
+                "failure_patterns": ["user_interrupt"],
+                "root_cause": "KeyboardInterrupt",
             }
 
         # ── max_cycles 초과 ──
+        # P1: last_analysis가 있으면 root_cause/error_category를 final_result에 노출 →
+        # _record_episode가 EpisodeRecord.failure_pattern/root_cause를 채울 수 있게 함.
+        _final_patterns: list[str] = []
+        _final_root_cause = ""
+        if last_analysis is not None:
+            if getattr(last_analysis, "error_category", ""):
+                _final_patterns.append(str(last_analysis.error_category))
+            _final_root_cause = str(getattr(last_analysis, "root_cause", "") or "")
         final_result = {
             "ok": False,
             "reason": f"최대 재시도 횟수({self.max_cycles}회) 초과로 중단되었습니다.",
@@ -362,6 +374,8 @@ class FSALoop:
             "max_escalation_level": max_level_reached,
             "strategy_ledger": ledger.to_dict(),
             "lineage_id": _lineage_id,
+            "failure_patterns": _final_patterns,
+            "root_cause": _final_root_cause,
         }
         ledger.save(target_workspace)
         self._record_episode(task_input, final_result, evolved_skill_name, gate_result, self.max_cycles)
@@ -736,11 +750,19 @@ class FSALoop:
             from core.memory_system.models import EpisodeRecord
             facade = UnifiedMemoryFacade.get_instance()
             if facade._initialised:
+                _patterns = result.get("failure_patterns") or []
+                _fp = ";".join(str(p) for p in _patterns)[:120] if not result.get("ok") else ""
+                # max_cycles 종료 경로에서 reason은 "최대 재시도 횟수…" 고정 문자열이므로
+                # last_analysis에서 채운 root_cause를 우선해야 의미 있는 정보가 보존됨.
+                _rc = str(result.get("root_cause") or result.get("reason") or "")[:200] if not result.get("ok") else ""
                 episode = EpisodeRecord(
                     task_input=task_input,
                     outcome="success" if result.get("ok") else "failure",
+                    event_type="fsa_cycle",
+                    failure_pattern=_fp,
+                    root_cause=_rc,
                     metadata={
-                        "failure_patterns": result.get("failure_patterns", []),
+                        "failure_patterns": _patterns,
                         "skill_evolved": evolved_skill_name or "",
                         "gate_result": gate_result.pass_rate if gate_result else 0.0,
                         "cycle_count": cycle,
