@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-26 T1-1 canonical Checkpoint + RunEvent + af resume (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-26 T1-2 Atomic Task idempotency + RunEvent per-step (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `7b546ca0 feat(T1-1): canonical Checkpoint + RunEvent + af resume` |
+| 마지막 커밋 | `0320d311 feat(T1-2): Atomic Task idempotency + RunEvent per-step` |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -45,16 +45,24 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 13 | 통합 결함 10건 일괄 수정 — Sonnet/Codex 5.5/af-critic 3-Tier 검증 통과 (audit 4건 + Codex 신규 1건 + critic 2건 P0/P1 + cross-review 후속 5건) | `d809e72f` | 2026-04-25 |
 | 14 | P0-C: event_bus.py W2 per-hook exception handling | `d809e72f` | 2026-04-25 |
 | 15 | T1-1: canonical Checkpoint + RunEvent + af resume 서브커맨드 — 3-Tier 검증 통과 | `7b546ca0` | 2026-04-26 |
+| 16 | T1-2: Atomic Task idempotency + RunEvent per-step — 3-Tier 검증 통과 | `0320d311` | 2026-04-26 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-### T1-2: Atomic Task + Idempotent Retry (다음 작업)
+### T1-2: ✅ 완료 (0320d311)
 
-- `execute()` 내 단계별(materialize/orchestrate) canonical checkpoint 저장
-- `is_stage_done()` 호출부 연결 — 재개 시 완료된 단계 skip
-- DynamicOrchestrator 내 per-agent checkpoint (task-grain idempotency)
+- DynamicOrchestrator idempotency guard + RunEvent per-step 방출
+- _completed_subtask_keys() RunEventStore 세 번째 소스 (재시작 복원)
+- restore_from() run_id 복원
+
+### 다음 작업 (T2-4: 수직 슬라이스)
+
+1. ICP 후보 repo 1개 선정 (사용자 직접)
+2. "함수 1개 버그 수정 + 회귀 테스트 추가" task 정의
+3. end-to-end: repo 연결 → af run → PR
+4. SIGKILL 후 af resume → PR 1건만 생성 확인 (T1-1·T1-2 동시 검증)
 
 ### Phase A: Step 3+4+5 ✅ 완료
 
