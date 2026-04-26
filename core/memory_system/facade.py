@@ -211,15 +211,17 @@ class UnifiedMemoryFacade:
         # Deduplicate by content_hash
         deduped = _deduplicate(active)
 
-        # Build semantic_scores map: record_id → keyword similarity proxy
-        # (adapters return records without scores; keyword overlap is the best
-        # available signal without a round-trip embedding call)
+        # T2-5: Build semantic_scores — prefer vector similarity (_vector_score from
+        # CortexVectorAdapter), fall back to keyword overlap for records without it.
         try:
             from core.memory_system.episode_matcher import keyword_similarity as _ksim
-            semantic_scores = {
-                r.record_id: _ksim(query, r.content)
-                for r in deduped
-            }
+            semantic_scores = {}
+            for r in deduped:
+                vec_score = r.metadata.get("_vector_score")
+                if vec_score is not None:
+                    semantic_scores[r.record_id] = float(vec_score)
+                else:
+                    semantic_scores[r.record_id] = _ksim(query, r.content)
         except Exception:
             semantic_scores = {}
 
@@ -276,12 +278,19 @@ class UnifiedMemoryFacade:
             else:
                 all_records.extend(res)  # type: ignore[union-attr]
 
-        # Rank by relevance and deduplicate — NEW-H2 fix: pass semantic_scores
-        deduped = _deduplicate(all_records)
+        # Evict expired records + rank by relevance
         decay_mgr = MemoryDecayManager()
+        active, _ = decay_mgr.collect_expired(all_records)
+        deduped = _deduplicate(active)
         try:
             from core.memory_system.episode_matcher import keyword_similarity as _ksim
-            semantic_scores = {r.record_id: _ksim(query, r.content) for r in deduped}
+            semantic_scores = {}
+            for r in deduped:
+                vec_score = r.metadata.get("_vector_score")
+                if vec_score is not None:
+                    semantic_scores[r.record_id] = float(vec_score)
+                else:
+                    semantic_scores[r.record_id] = _ksim(query, r.content)
         except Exception:
             semantic_scores = {}
         scored = decay_mgr.rank_by_relevance(deduped, semantic_scores=semantic_scores)
@@ -334,12 +343,23 @@ class UnifiedMemoryFacade:
 # ── Module-level helpers ───────────────────────────────────────────────
 
 def _deduplicate(records: list[MemoryRecord]) -> list[MemoryRecord]:
-    """Remove duplicates by content_hash, keeping the one with the most accesses."""
+    """Remove duplicates by content_hash, keeping the one with the most accesses.
+
+    Tiebreaker: prefer the record that carries _vector_score (from CortexVectorAdapter)
+    so that vector-similarity ranking is not silently discarded by dedup.
+    """
     seen: dict[str, MemoryRecord] = {}
     for r in records:
         key = r.content_hash if r.content_hash else r.record_id
         if key in seen:
-            if r.access_count > seen[key].access_count:
+            existing = seen[key]
+            has_vec = "_vector_score" in r.metadata
+            existing_has_vec = "_vector_score" in existing.metadata
+            prefer = (
+                r.access_count > existing.access_count
+                or (r.access_count == existing.access_count and has_vec and not existing_has_vec)
+            )
+            if prefer:
                 seen[key] = r
         else:
             seen[key] = r

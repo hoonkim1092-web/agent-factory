@@ -101,6 +101,8 @@ class CortexVectorAdapter(MemoryBackendAdapter):
                 "scope": record.scope.value,
                 "ttl_hours": record.ttl_hours,
             }
+            # T2-5: strip transient search score — must not be persisted to Supabase
+            meta.pop("_vector_score", None)
             self._client.save_memory(record.content, meta)
             return True
         except Exception as exc:
@@ -138,12 +140,15 @@ class CortexVectorAdapter(MemoryBackendAdapter):
         if not self._available:
             return []
         try:
-            result = self._client.recall(query, threshold=0.5, limit=limit)
+            pid = project_id or self._project_id
+            result = self._client.recall(query, threshold=0.5, limit=limit, project_id=pid)
+            if not result.get("ok"):
+                logger.error("CortexVectorAdapter.search: recall failed — %s", result.get("error", "unknown"))
+                return []
             matches = result.get("results", [])
             records: list[MemoryRecord] = []
             for m in matches:
                 rec = self._cortex_to_record(m)
-                pid = project_id or self._project_id
                 if pid and rec.project_id and rec.project_id != pid:
                     continue
                 records.append(rec)
@@ -184,7 +189,10 @@ class CortexVectorAdapter(MemoryBackendAdapter):
 
     def _cortex_to_record(self, row: dict[str, Any]) -> MemoryRecord:
         """Convert a cortex row/match result to MemoryRecord."""
-        meta = row.get("metadata", {})
+        meta = dict(row.get("metadata", {}) or {})
+        # T2-5: capture vector similarity score so facade can use it for ranking
+        if "similarity" in row:
+            meta["_vector_score"] = float(row["similarity"])
         content_text = row.get("content", "")
         return self._tag(MemoryRecord(
             record_id=meta.get("record_id", row.get("id", "")),
