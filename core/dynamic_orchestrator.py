@@ -35,7 +35,7 @@ class DynamicOrchestrator:
     Dynamic multi-agent orchestrator driven by a central PM model.
     """
 
-    def __init__(self, mr, max_concurrent: int = 5, terminal_per_agent: bool | None = None, broker=None, visualizer=None):
+    def __init__(self, mr, max_concurrent: int = 5, terminal_per_agent: bool | None = None, broker=None, visualizer=None, run_id: str = ""):
         self.mr = mr
         self.max_concurrent = max_concurrent
         # terminal_per_agent: None이면 환경변수 AGENT_TERMINAL_MODE로 결정 (기본 비활성)
@@ -74,6 +74,7 @@ class DynamicOrchestrator:
         self._manifest_store: OrchestratorManifestStore | None = None
         self._manifest_roles: List[str] = []
         self._manifest_project_desc = ""
+        self._run_id: str = run_id
 
     @classmethod
     def restore_from(cls, snapshot: dict, mr=None) -> "DynamicOrchestrator":
@@ -81,7 +82,7 @@ class DynamicOrchestrator:
 
         nightly tick 재기동 시 호출. short-lived 상태(async handles 등)는 복원 안 함.
         """
-        inst = cls(mr=mr)
+        inst = cls(mr=mr, run_id=snapshot.get("run_id", ""))
         if snapshot.get("active_assignments"):
             inst.active_assignments = dict(snapshot["active_assignments"])
         if snapshot.get("task_retry_count"):
@@ -181,6 +182,17 @@ class DynamicOrchestrator:
                 for task in (board.get("tasks") or []):
                     if isinstance(task, dict) and task.get("status") == "completed":
                         tid = safe_id(task.get("task_id"))
+                        if tid:
+                            keys.add(tid)
+            except Exception:
+                pass
+        # T1-2: RunEvent store — 재시작 후에도 완료 이력 복원
+        if self._run_id:
+            try:
+                from core.events.run_event import get_default_store, RunEventType
+                for ev in get_default_store().list_events(self._run_id):
+                    if ev.event_type == RunEventType.STEP_COMPLETED and ev.step_id:
+                        tid = safe_id(ev.step_id)
                         if tid:
                             keys.add(tid)
             except Exception:
@@ -687,6 +699,16 @@ class DynamicOrchestrator:
         workspace: str | None = None,
         task_id: str = "",
     ):
+        # T1-2: idempotency guard — 이미 완료된 task는 재실행하지 않는다
+        if task_id:
+            _completed = self._completed_subtask_keys()
+            if safe_id(task_id) in _completed:
+                print_agent_msg("System", f"[idempotency] task_id={task_id} already done — skipping [{role}]", "")
+                async with self._state_lock:
+                    self.state_board["agents_status"][role] = "idle"
+                self._task_done_event.set()
+                return
+
         print_agent_msg("System", f"Dispatching [{role}] -> {subtask[:50]}...", "")
         async with self._state_lock:
             self.state_board["agents_status"][role] = "working"
@@ -695,6 +717,27 @@ class DynamicOrchestrator:
 
         # target_workspace를 try 밖에서 초기화해야 except 블록에서도 참조 가능하다.
         target_workspace = workspace or os.getcwd()
+
+        # T1-2: STEP_STARTED RunEvent
+        _emit_run_event = None
+        if self._run_id and task_id:
+            try:
+                from core.events.run_event import RunEvent, RunEventType, get_default_store
+                def _emit_run_event(event_type, payload=None):  # noqa: E306
+                    try:
+                        get_default_store().append(RunEvent(
+                            run_id=self._run_id,
+                            event_type=event_type,
+                            payload=payload or {},
+                            step_id=task_id,
+                            agent_id=role,
+                        ))
+                    except Exception:
+                        pass
+                _emit_run_event(RunEventType.STEP_STARTED, {"role": role, "subtask": subtask[:200]})
+            except Exception:
+                pass
+
         try:
             update_project_board_task(target_workspace, role, subtask, "in_progress", task_id=task_id)
             assignment: Dict[str, Any] = {
@@ -731,6 +774,9 @@ class DynamicOrchestrator:
                 async with self._state_lock:
                     self.state_board["completed_subtasks"].append(completed_entry)
                 update_project_board_task(target_workspace, role, subtask, "completed", note="Success", task_id=task_id)
+                # T1-2: STEP_COMPLETED RunEvent
+                if _emit_run_event:
+                    _emit_run_event(RunEventType.STEP_COMPLETED, {"role": role})
                 await self.memory_hub.update_ast_state(
                     filepath=f"Project_Scope_{role}",
                     author_role=role,
@@ -753,6 +799,10 @@ class DynamicOrchestrator:
                 # ── 실패 분류: INFRA vs IMPLEMENTATION ──
                 from core.failure_classifier import classify_failure, FailureCategory
                 _failure_cat = classify_failure(reason)
+
+                # T1-2: STEP_FAILED RunEvent (non-crash path)
+                if _emit_run_event:
+                    _emit_run_event(RunEventType.STEP_FAILED, {"role": role, "reason": reason[:200]})
 
                 if _failure_cat == FailureCategory.INFRA:
                     # infra 실패: evaluator 호출 안 함 (evaluator 자체도 실패할 수 있음)
@@ -827,6 +877,9 @@ class DynamicOrchestrator:
                                     target_workspace, role, subtask, "completed",
                                     note=f"fsa_cycles={fsa_result.get('meta_cycles', '?')}", task_id=task_id,
                                 )
+                                # T1-2: FSA 성공 경로에도 STEP_COMPLETED 방출
+                                if _emit_run_event:
+                                    _emit_run_event(RunEventType.STEP_COMPLETED, {"role": role, "via": "fsa"})
                                 await self.memory_hub.update_ast_state(
                                     filepath=f"Project_Scope_{role}",
                                     author_role=role,
@@ -889,6 +942,9 @@ class DynamicOrchestrator:
             async with self._state_lock:
                 self.state_board["failed_subtasks"].append(crashed_entry)
             update_project_board_task(target_workspace, role, subtask, "failed", note=str(exc), task_id=task_id)
+            # T1-2: STEP_FAILED RunEvent
+            if _emit_run_event:
+                _emit_run_event(RunEventType.STEP_FAILED, {"role": role, "reason": str(exc)[:200]})
             print_agent_msg(role, f"Task crashed: {exc}", "")
             self._sync_manifest()
         finally:

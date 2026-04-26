@@ -1102,7 +1102,8 @@ class ProjectPipeline:
         task_input = str(prepared.project_brief.get("goal") or "")
         orchestrator = DynamicOrchestrator(
             self.mr, max_concurrent=5, terminal_per_agent=True,
-            broker=self._broker, visualizer=self._visualizer
+            broker=self._broker, visualizer=self._visualizer,
+            run_id=prepared.run_id,
         )
         run_board = orchestrator.run_project(task_input, roles, workspace)
         status = str(run_board.get("current_status", "unknown"))
