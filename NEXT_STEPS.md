@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-25 통합 결함 10건 일괄 수정 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-26 T1-1 canonical Checkpoint + RunEvent + af resume (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `63990a71 fix(B2-6+C0+3순위)` |
+| 마지막 커밋 | `7b546ca0 feat(T1-1): canonical Checkpoint + RunEvent + af resume` |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -42,11 +42,19 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 10 | version bump 1.2.21→1.2.22 + install-af.ps1 | `63990a71` | 2026-04-25 |
 | 11 | B2-6 C0+C1+C2: write_project_board atomic write, strategy ledger 모듈별 granularity, nightly summary 모듈 섹션 | `63990a71` | 2026-04-25 |
 | 12 | 3순위: CheckpointHook 등록, EpisodeRecord 필드 확장, DynamicOrchestrator record_episode | `63990a71` | 2026-04-25 |
-| 13 | 통합 결함 10건 일괄 수정 — Sonnet/Codex 5.5/af-critic 3-Tier 검증 통과 (audit 4건 + Codex 신규 1건 + critic 2건 P0/P1 + cross-review 후속 5건) | (이번) | 2026-04-25 |
+| 13 | 통합 결함 10건 일괄 수정 — Sonnet/Codex 5.5/af-critic 3-Tier 검증 통과 (audit 4건 + Codex 신규 1건 + critic 2건 P0/P1 + cross-review 후속 5건) | `d809e72f` | 2026-04-25 |
+| 14 | P0-C: event_bus.py W2 per-hook exception handling | `d809e72f` | 2026-04-25 |
+| 15 | T1-1: canonical Checkpoint + RunEvent + af resume 서브커맨드 — 3-Tier 검증 통과 | `7b546ca0` | 2026-04-26 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
+
+### T1-2: Atomic Task + Idempotent Retry (다음 작업)
+
+- `execute()` 내 단계별(materialize/orchestrate) canonical checkpoint 저장
+- `is_stage_done()` 호출부 연결 — 재개 시 완료된 단계 skip
+- DynamicOrchestrator 내 per-agent checkpoint (task-grain idempotency)
 
 ### Phase A: Step 3+4+5 ✅ 완료
 
