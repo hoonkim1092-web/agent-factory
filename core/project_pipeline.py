@@ -918,7 +918,7 @@ class ProjectPipeline:
             to_portable_path(todo_path),
         ] + [to_portable_path(p) for p in work_item_files.values()]
 
-        return PreparedProject(
+        prepared = PreparedProject(
             run_id=run_id,
             workspace=target_workspace,
             work_item_slug=slug,
@@ -936,6 +936,51 @@ class ProjectPipeline:
             research_evidence_path=to_portable_path(research_evidence_path),
             doc_root=doc_root,
         )
+
+        # T1-1: canonical checkpoint double-write (이중 쓰기 phase)
+        try:
+            from core.checkpoint.canonical import Checkpoint
+            from core.checkpoint.storage import get_default_storage
+            import hashlib as _hl
+            _ext_digest = _hl.sha256(
+                json.dumps({"task_input": task_input, "workspace": target_workspace}, sort_keys=True).encode()
+            ).hexdigest()[:16]
+            _cp = Checkpoint(
+                run_id=run_id,
+                step_id="prepare_documents",
+                idempotency_key=Checkpoint.make_idempotency_key(slug, 0, _ext_digest),
+                worktree_snapshot=Checkpoint.snapshot_worktree(target_workspace),
+                next_step_cursor="orchestrate",
+                test_acceptance_results={},
+                project_id=project_brief.get("project_id", ""),
+                metadata={
+                    "prepared_project": {
+                        "run_id": run_id,
+                        "workspace": target_workspace,
+                        "work_item_slug": slug,
+                        "project_brief": project_brief,
+                        "role_plan": role_plan,
+                        "task_board": task_board,
+                        "planning_files": planning_files,
+                        "work_item_files": work_item_files,
+                        "project_brief_path": to_portable_path(project_brief_path),
+                        "role_plan_path": to_portable_path(role_plan_path),
+                        "task_board_path": to_portable_path(task_board_path),
+                        "task_execution_plan_path": to_portable_path(task_execution_plan_path),
+                        "todo_path": to_portable_path(todo_path),
+                        "research_evidence": research_evidence,
+                        "research_evidence_path": to_portable_path(research_evidence_path),
+                        "doc_root": doc_root,
+                    },
+                    "task_input": task_input,
+                },
+            )
+            get_default_storage().save(_cp)
+            print(f"[Checkpoint] canonical saved — run_id={run_id} cursor=orchestrate")
+        except Exception as _cp_err:
+            print(f"[Checkpoint] canonical save failed (non-fatal): {_cp_err}")
+
+        return prepared
 
     # ------------------------------------------------------------------
     # Phase 1: prepare (하위 호환 래퍼)
@@ -987,6 +1032,22 @@ class ProjectPipeline:
         """
         workspace = prepared.workspace
         gate = prepared.gate()
+
+        # B2: canonical checkpoint guard — 이미 완료된 run은 재실행하지 않는다
+        try:
+            from core.checkpoint.storage import get_default_storage as _get_store
+            _cp = _get_store().load(prepared.run_id)
+            if _cp and _cp.next_step_cursor == "done":
+                logger.info("[execute] run_id=%s already done — skipping", prepared.run_id)
+                return {
+                    "run_id": prepared.run_id,
+                    "pipeline": "project",
+                    "ok": True,
+                    "reason": "already_done",
+                    "work_item_slug": prepared.work_item_slug,
+                }
+        except Exception:
+            pass
 
         # -- 승인 확인 --
         if not gate.is_execution_open():
@@ -1067,6 +1128,19 @@ class ProjectPipeline:
                 "work_item_slug": prepared.work_item_slug,
             }
         )
+
+        # T1-1: canonical checkpoint → done (run 완료 표시)
+        try:
+            from core.checkpoint.storage import get_default_storage
+            _existing = get_default_storage().load(prepared.run_id)
+            if _existing:
+                from datetime import datetime, timezone
+                _existing.next_step_cursor = "done"
+                _existing.saved_at = datetime.now(timezone.utc).isoformat()
+                _existing.test_acceptance_results["orchestrator_status"] = status
+                get_default_storage().save(_existing)
+        except Exception as _done_err:
+            logger.warning("[execute] done-checkpoint save failed (run_id=%s): %s", prepared.run_id, _done_err)
 
         return {
             "run_id": prepared.run_id,

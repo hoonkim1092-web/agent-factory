@@ -278,6 +278,97 @@ def _run_nightly_tick(rest: list[str]) -> None:
     sys.exit(tick_main(rest))
 
 
+def _run_resume_subcommand(rest: list[str]) -> None:
+    """resume <run_id> — 중단된 run을 재개한다.
+
+    인자 없이 실행하면 재개 가능한 run 목록을 표시한다.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="af resume")
+    parser.add_argument("run_id", nargs="?", default=None, help="재개할 run_id")
+    args = parser.parse_args(rest)
+
+    from core.checkpoint.storage import get_default_storage
+    storage = get_default_storage()
+
+    if not args.run_id:
+        runs = storage.list_runs()
+        resumable = []
+        for rid in runs:
+            cp = storage.load(rid)
+            if cp and cp.next_step_cursor != "done":
+                resumable.append((rid, cp))
+        if not resumable:
+            print("[resume] 재개 가능한 run이 없습니다.")
+            return
+        print("[resume] 재개 가능한 run 목록:")
+        for rid, cp in resumable:
+            print(f"  {rid}  cursor={cp.next_step_cursor}  saved={cp.saved_at[:19]}")
+        return
+
+    cp = storage.load(args.run_id)
+    if not cp:
+        print(f"[resume] run_id={args.run_id} 의 checkpoint를 찾을 수 없습니다.")
+        sys.exit(1)
+
+    if cp.next_step_cursor == "done":
+        print(f"[resume] run_id={args.run_id} 는 이미 완료된 run입니다 (cursor=done).")
+        return
+
+    prepared_data = cp.metadata.get("prepared_project")
+    if not prepared_data:
+        print(f"[resume] checkpoint에 prepared_project 데이터가 없습니다. 처음부터 실행하세요.")
+        sys.exit(1)
+
+    # resume UX 메뉴
+    print(f"\n♻️  [resume] run_id={args.run_id}")
+    print(f"   마지막 저장: {cp.saved_at[:19]}  cursor={cp.next_step_cursor}")
+    print(f"   task: {cp.metadata.get('task_input', '')[:100]}")
+    print()
+    print("  [1] 처음부터 시작 (새 run)")
+    print(f"  [2] 마지막 step부터 재개 (cursor={cp.next_step_cursor})")
+    print("  [q] 취소")
+    choice = input("  선택 (1/2/q, 기본=2): ").strip() or "2"
+
+    if choice == "q":
+        print("  취소됨.")
+        return
+
+    if choice == "1":
+        print("  처음부터 실행합니다. 새 task 명령을 사용하세요 (af run ...).")
+        return
+
+    # choice == "2": restore PreparedProject and call execute()
+    from core.project_pipeline import PreparedProject
+    try:
+        prepared = PreparedProject(**prepared_data)
+    except Exception as exc:
+        print(f"[resume] PreparedProject 복원 실패: {exc}")
+        sys.exit(1)
+
+    print(f"\n[resume] PreparedProject 복원 완료 — workspace={prepared.workspace}")
+
+    # 승인 게이트 확인
+    gate = prepared.gate()
+    if not gate.is_execution_open():
+        print("\n[resume] 승인 게이트가 닫혀 있습니다.")
+        print(f"  승인 파일: {gate.gate_path}")
+        print("  파일에서 execution_open: true 로 변경 후 재실행하거나, 처음부터 실행하세요.")
+        sys.exit(1)
+
+    # execute
+    from agent_launcher import AgentFactory
+    factory = AgentFactory()
+    result = factory.project_pipeline.execute(prepared=prepared)
+
+    if result.get("ok"):
+        print(f"\n  [resume] 완료 — run_id={result.get('run_id')}")
+    else:
+        print(f"\n  [resume] 실패 — {result.get('reason', 'unknown')}")
+        sys.exit(1)
+
+
 # STAGE 1에서 setup gate 이전에 즉시 분기되어야 하는 서브커맨드 dispatch.
 # 단일 진실원천: 새 항목 추가 시 이 dict만 수정하면 STAGE 1 분기에 자동 반영된다
 # (af-critic WARN 5 해소 — 집합/if-체인 이중 진실원천 제거).
@@ -298,6 +389,7 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
     "nightly-stop":    _run_nightly_stop,
     "nightly-status":  _run_nightly_status,
     "nightly-tick":    _run_nightly_tick,
+    "resume":          _run_resume_subcommand,
 }
 
 

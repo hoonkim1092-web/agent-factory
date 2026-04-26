@@ -176,6 +176,12 @@ a = Analysis(
         'core.memory_system.adapters.knowledge_graph',
         'core.memory_system.adapters.sync_compyne',
         'core.memory_system.adapters.trace_log',
+        # ── core.checkpoint + core.events (T1-1) ──
+        'core.checkpoint',
+        'core.checkpoint.canonical',
+        'core.checkpoint.storage',
+        'core.events',
+        'core.events.run_event',
         # ── core.providers ──
         'core.providers',
         # ── NotebookLM CLI (import name: nlm) — 설계문서 §4.6.2 ──
