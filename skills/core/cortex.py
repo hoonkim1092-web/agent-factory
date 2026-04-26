@@ -98,11 +98,13 @@ class CortexClient:
 
         try:
             query_vector = self.embed_query(query)
+            # project_id=None means cross-project search — omit filter entirely.
+            filter_dict = {} if project_id is None else {"project_id": project_id}
             payload = {
                 "query_embedding": query_vector,
                 "match_threshold": threshold,
                 "match_count": limit,
-                "filter": {"project_id": project_id or PROJECT_ID}
+                "filter": filter_dict,
             }
             
             url = f"{self.sb_url}/rest/v1/rpc/match_cortex_memory"
@@ -161,7 +163,7 @@ def apply(ctx):
         query = args.get("query")
         if not query:
             return {"ok": False, "error": "Missing query"}
-        return client.recall(query)
+        return client.recall(query, project_id=ctx.get("project_id", PROJECT_ID))
 
     elif action == "save":
         inp = args.get("input")

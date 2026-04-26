@@ -255,15 +255,19 @@ class UnifiedMemoryFacade:
         query: str,
         *,
         limit: int = 10,
+        memory_type: MemoryType | None = None,
+        scope: MemoryScope | None = None,
     ) -> list[MemoryRecord]:
         """Search across all backends WITHOUT project_id filter (cross-project recall)."""
         self._ensure_initialised()
         timeout = get_config().timeouts.search_timeout
 
+        # Fetch extra per adapter so post-filter (memory_type/scope) doesn't drop below limit.
+        fetch_limit = limit * 3
         # Parallel search across all adapters, no project_id filter
         tasks = [
             asyncio.wait_for(
-                adapter.search(query, limit=limit, project_id=None),
+                adapter.search(query, limit=fetch_limit, project_id=None),
                 timeout=timeout,
             )
             for adapter in self._adapters.values()
@@ -274,13 +278,24 @@ class UnifiedMemoryFacade:
         for i, res in enumerate(results):
             if isinstance(res, BaseException):
                 adapter_name = list(self._adapters.values())[i].backend_name
-                logger.error("search_all on '%s' failed: %s", adapter_name, res)
+                if isinstance(res, asyncio.TimeoutError):
+                    logger.error("search_all on '%s' timed out", adapter_name)
+                else:
+                    logger.error("search_all on '%s' failed: %s", adapter_name, res)
             else:
                 all_records.extend(res)  # type: ignore[union-attr]
 
+        # Filter by type/scope (mirrors search_semantic behaviour)
+        if memory_type:
+            all_records = [r for r in all_records if r.memory_type == memory_type]
+        if scope:
+            all_records = [r for r in all_records if r.scope == scope]
+
         # Evict expired records + rank by relevance
         decay_mgr = MemoryDecayManager()
-        active, _ = decay_mgr.collect_expired(all_records)
+        active, expired = decay_mgr.collect_expired(all_records)
+        if expired:
+            logger.debug("search_all_backends: filtered %d expired records", len(expired))
         deduped = _deduplicate(active)
         try:
             from core.memory_system.episode_matcher import keyword_similarity as _ksim

@@ -140,8 +140,10 @@ class CortexVectorAdapter(MemoryBackendAdapter):
         if not self._available:
             return []
         try:
-            pid = project_id or self._project_id
-            result = self._client.recall(query, threshold=0.5, limit=limit, project_id=pid)
+            # project_id=None  → cross-project: pass None to recall() so CortexClient
+            #                    sends an empty Supabase filter (all projects).
+            # project_id=<str> → scoped: pass the string through unchanged.
+            result = self._client.recall(query, threshold=0.5, limit=limit, project_id=project_id)
             if not result.get("ok"):
                 logger.error("CortexVectorAdapter.search: recall failed — %s", result.get("error", "unknown"))
                 return []
@@ -149,7 +151,7 @@ class CortexVectorAdapter(MemoryBackendAdapter):
             records: list[MemoryRecord] = []
             for m in matches:
                 rec = self._cortex_to_record(m)
-                if pid and rec.project_id and rec.project_id != pid:
+                if project_id is not None and rec.project_id != project_id:
                     continue
                 records.append(rec)
             return records

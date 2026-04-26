@@ -59,6 +59,6 @@ class CrossProjectRecall:
         results = await self._facade.search_all_backends(
             error_description,
             limit=limit * 3,
+            memory_type=MemoryType.GRAPH,
         )
-        graph_results = [r for r in results if r.memory_type == MemoryType.GRAPH]
-        return graph_results[:limit]
+        return results[:limit]

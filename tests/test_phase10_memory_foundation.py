@@ -56,14 +56,14 @@ class InMemoryAdapter(MemoryBackendAdapter):
         results = []
         for r in self._store.values():
             if query.lower() in r.content.lower():
-                if project_id and r.project_id != project_id:
+                if project_id is not None and r.project_id != project_id:
                     continue
                 results.append(r)
         return results[:limit]
 
     async def list_recent(self, *, limit=10, project_id=None):
         recs = sorted(self._store.values(), key=lambda r: r.updated_at, reverse=True)
-        if project_id:
+        if project_id is not None:
             recs = [r for r in recs if r.project_id == project_id]
         return recs[:limit]
 
@@ -294,6 +294,33 @@ class TestFacade:
         results = run(f.search_semantic("info", memory_type=MemoryType.EPISODIC))
         assert all(r.memory_type == MemoryType.EPISODIC for r in results)
 
+    def test_search_all_backends_memory_type_filter(self):
+        # Multi-adapter: both backends have records; filter must work across merge+dedup
+        a1 = InMemoryAdapter("a1")
+        a2 = InMemoryAdapter("a2")
+        f = self._make_facade(a1, a2)
+        run(f.write("semantic info", memory_type=MemoryType.SEMANTIC))
+        run(f.write("episodic info", memory_type=MemoryType.EPISODIC))
+        results = run(f.search_all_backends("info", memory_type=MemoryType.EPISODIC))
+        assert len(results) == 1
+        assert results[0].memory_type == MemoryType.EPISODIC
+
+    def test_search_all_backends_scope_filter(self):
+        a = InMemoryAdapter()
+        f = self._make_facade(a)
+        run(f.write("local data", scope=MemoryScope.LOCAL))
+        run(f.write("project data", scope=MemoryScope.PROJECT))
+        results = run(f.search_all_backends("data", scope=MemoryScope.PROJECT))
+        assert len(results) == 1
+        assert results[0].scope == MemoryScope.PROJECT
+
+    def test_search_all_backends_no_match_returns_empty(self):
+        a = InMemoryAdapter()
+        f = self._make_facade(a)
+        run(f.write("semantic only", memory_type=MemoryType.SEMANTIC))
+        results = run(f.search_all_backends("only", memory_type=MemoryType.EPISODIC))
+        assert results == []
+
 
 # ── 6. CortexVectorAdapter (mock) ────────────────────────────────────
 
@@ -336,6 +363,7 @@ class TestCortexVectorAdapter:
         mock_client_cls = MagicMock()
         mock_client = MagicMock()
         mock_client.recall = MagicMock(return_value={
+            "ok": True,
             "results": [
                 {
                     "content": "found it",
@@ -352,3 +380,21 @@ class TestCortexVectorAdapter:
         assert len(results) == 1
         assert results[0].content == "found it"
         assert results[0].source_backend == "cortex_vector"
+
+    @patch("core.memory_system.adapters.cortex_vector._try_import_cortex")
+    def test_search_cross_project_passes_none_to_recall(self, mock_import):
+        """project_id=None (cross-project) must reach CortexClient.recall as None."""
+        from core.memory_system.adapters.cortex_vector import CortexVectorAdapter
+
+        mock_client_cls = MagicMock()
+        mock_client = MagicMock()
+        mock_client.recall = MagicMock(return_value={"ok": True, "results": []})
+        mock_client_cls.return_value = mock_client
+        mock_import.return_value = mock_client_cls
+
+        adapter = CortexVectorAdapter("proj")
+        run(adapter.initialise())
+        run(adapter.search("anything", project_id=None))
+        mock_client.recall.assert_called_once_with(
+            "anything", threshold=0.5, limit=10, project_id=None
+        )
