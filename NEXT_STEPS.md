@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-26 T2-4 search_all_backends() 필터 + cross-project 격리 수정 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-27 T3-7 Audit/Cost/Approval → RunEvent 통합 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `cb5adfcd feat(T2-4): search_all_backends() 필터 + cross-project 격리 수정` |
+| 마지막 커밋 | `a4965cf1 feat(T3-7): Audit/Cost/Approval → RunEvent 통합` |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -48,6 +48,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 16 | T1-2: Atomic Task idempotency + RunEvent per-step — 3-Tier 검증 통과 | `0320d311` | 2026-04-26 |
 | 17 | T2-5: 벡터 영속화 — similarity 전파 + project_id 동적화 + dedup tiebreaker — 3-Tier 검증 통과 | `2c1eb81a` | 2026-04-26 |
 | 18 | T2-4: search_all_backends() memory_type/scope 필터 + cross-project 격리 수정 + cortex apply() project_id — 3-Tier 검증 통과 | `cb5adfcd` | 2026-04-26 |
+| 19 | T3-7: Audit/Cost/Approval → RunEvent 통합 — COST_INCURRED + APPROVAL_REQUESTED/GRANTED + W3 fix + check_validity 신규 문서 감지 — 3-Tier 검증 통과 | `a4965cf1` | 2026-04-27 |
 
 ---
 
@@ -74,8 +75,17 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 - fetch_limit=limit*3 버퍼, TimeoutError 로깅 분기, expired debug 로그
 - 신규 테스트 4건 + mock fix
 
-**T3-7** (다음 작업, 병행 가능):
-- Audit/Cost/Approval → RunEvent 통합 (T1-1 RunEvent 활용)
+### T3-7: ✅ 완료 (a4965cf1)
+
+- RunBudget COST_INCURRED RunEvent (80%/exhausted 마일스톤)
+- ApprovalGate APPROVAL_REQUESTED/GRANTED RunEvent
+- is_execution_open() W3 fix — check_validity 항상 실행
+- check_validity 신규 문서 감지 (승인 당시 없던 파일 사후 추가)
+- generate_work_items/project_pipeline run_id 전파
+
+**다음 작업 후보**:
+- T3-7 ACCEPT 2 후속: CLI --budget 플래그에 run_id 연결 (set_run_budget 실제 호출 경로)
+- agent_launcher.py approve() run_id 연결
 
 ### Phase A: Step 3+4+5 ✅ 완료
 
