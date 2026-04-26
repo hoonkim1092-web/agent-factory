@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-26 T2-5 벡터 영속화 — similarity 점수 전파 + project_id 동적화 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-26 T2-4 search_all_backends() 필터 + cross-project 격리 수정 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `2c1eb81a feat(T2-5): 벡터 영속화 — similarity 점수 전파 + project_id 동적화` |
+| 마지막 커밋 | `cb5adfcd feat(T2-4): search_all_backends() 필터 + cross-project 격리 수정` |
 | origin 푸시 | ✅ 완료 |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -47,6 +47,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 15 | T1-1: canonical Checkpoint + RunEvent + af resume 서브커맨드 — 3-Tier 검증 통과 | `7b546ca0` | 2026-04-26 |
 | 16 | T1-2: Atomic Task idempotency + RunEvent per-step — 3-Tier 검증 통과 | `0320d311` | 2026-04-26 |
 | 17 | T2-5: 벡터 영속화 — similarity 전파 + project_id 동적화 + dedup tiebreaker — 3-Tier 검증 통과 | `2c1eb81a` | 2026-04-26 |
+| 18 | T2-4: search_all_backends() memory_type/scope 필터 + cross-project 격리 수정 + cortex apply() project_id — 3-Tier 검증 통과 | `cb5adfcd` | 2026-04-26 |
 
 ---
 
@@ -64,15 +65,16 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 - facade: _vector_score 우선 랭킹, dedup tiebreaker, TTL 필터
 - cortex: project_id 동적화, save_memory caller 우선
 
-### 다음 작업
+### T2-4: ✅ 완료 (cb5adfcd)
 
-**T2-4** (사용자 직접 ICP repo 선정 후):
-1. ICP 후보 repo 1개 선정 (사용자 직접)
-2. "함수 1개 버그 수정 + 회귀 테스트 추가" task 정의
-3. end-to-end: repo 연결 → af run → PR
-4. SIGKILL 후 af resume → PR 1건만 생성 확인 (T1-1·T1-2 동시 검증)
+- search_all_backends() memory_type/scope 필터 추가 (search_semantic()과 인터페이스 통일)
+- cortex_vector.py cross-project 격리 수정 (project_id=None → recall에 None 직통 전달)
+- cortex.py apply() recall에 project_id 명시 전달, filter_dict={} if project_id is None
+- cross_project.py find_similar_solutions() memory_type 파라미터 위임
+- fetch_limit=limit*3 버퍼, TimeoutError 로깅 분기, expired debug 로그
+- 신규 테스트 4건 + mock fix
 
-**T3-7** (병행 가능):
+**T3-7** (다음 작업, 병행 가능):
 - Audit/Cost/Approval → RunEvent 통합 (T1-1 RunEvent 활용)
 
 ### Phase A: Step 3+4+5 ✅ 완료
