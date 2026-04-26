@@ -805,6 +805,7 @@ class ProjectPipeline:
             project_brief=project_brief,
             role_plan=role_plan,
             task_board=task_board,
+            run_id=run_id,
         )
 
         # -- Plan-Critique-Verify --
@@ -1049,24 +1050,13 @@ class ProjectPipeline:
         except Exception:
             pass
 
-        # -- 승인 확인 --
+        # -- 승인 확인 (W3: is_execution_open이 check_validity를 내부 실행, 변경 시 자동 invalidate) --
         if not gate.is_execution_open():
             return {
                 "ok": False,
                 "reason": "approval_required",
                 "message": "approval-gate.md 를 승인한 후 실행하세요.",
                 "gate_path": gate.gate_path,
-            }
-
-        # -- 문서 변경 감지 --
-        valid, changed = gate.check_validity()
-        if not valid:
-            gate.invalidate(reason=f"변경된 문서: {', '.join(changed)}")
-            return {
-                "ok": False,
-                "reason": "documents_changed_after_approval",
-                "changed_files": changed,
-                "message": "승인 후 문서가 변경되었습니다. 재승인 후 실행하세요.",
             }
 
         # -- 편집 내용 반영 --
@@ -1273,8 +1263,8 @@ class ProjectPipeline:
         # 자동 승인 (하위 호환) — gate 파일 없으면 먼저 초기화
         _gate = prepared.gate()
         if not os.path.exists(_gate.gate_path):
-            _gate.initialize(prepared.work_item_slug)
-        _gate.approve(approver="auto")
+            _gate.initialize(prepared.work_item_slug, run_id=prepared.run_id)
+        _gate.approve(approver="auto", run_id=prepared.run_id)
 
         return self.execute(
             prepared=prepared,

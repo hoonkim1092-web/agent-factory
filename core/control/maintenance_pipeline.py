@@ -309,17 +309,11 @@ class MaintenancePipeline:
 
             gate = ApprovalGate(self._workspace, slug)
 
+            # W3: is_execution_open이 check_validity를 내부 실행, 변경 시 자동 invalidate
             if not gate.is_execution_open():
                 return {
                     "approved": False,
                     "reasons": [f"approval gate not open for slug={slug!r}"],
-                }
-
-            valid, changed = gate.check_validity()
-            if not valid:
-                return {
-                    "approved": False,
-                    "reasons": [f"approval gate invalidated (changed docs: {changed})"],
                 }
 
             return {"approved": True, "reasons": []}

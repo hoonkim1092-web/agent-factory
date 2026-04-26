@@ -705,6 +705,7 @@ def generate_work_items(
     project_brief: dict[str, Any],
     role_plan: dict[str, Any],
     task_board: dict[str, Any],
+    run_id: str = "",
 ) -> dict[str, str]:
     # target_path가 있으면 프로젝트 디렉토리에 문서를 생성하고,
     # 없으면 기존처럼 workspace(agent-factory 내부)에 생성한다.
@@ -786,7 +787,7 @@ def generate_work_items(
         )
 
     gate = ApprovalGate(doc_root, slug)
-    gate.initialize(work_item_id)
+    gate.initialize(work_item_id, run_id=run_id)
     files["approval-gate.md"] = gate.gate_path
 
     return files

@@ -20,6 +20,25 @@ from typing import Any
 from core.file_io import write_text
 from core.utils import now_iso
 
+
+def _emit_approval_event(event_type: str, gate: "ApprovalGate", run_id: str, approver: str = "") -> None:
+    """RunEvent 방출 — run_id 없으면 no-op. fire-and-forget."""
+    if not run_id:
+        return
+    try:
+        from core.events.run_event import RunEvent, RunEventType, get_default_store
+        et = RunEventType(event_type) if isinstance(event_type, str) else event_type
+        payload: dict = {"slug": gate.slug, "gate_path": gate.gate_path}
+        if approver:
+            payload["approver"] = approver
+        get_default_store().append(RunEvent(
+            run_id=run_id,
+            event_type=et,
+            payload=payload,
+        ))
+    except Exception:
+        pass
+
 GATE_FILENAME = "approval-gate.md"
 
 # 섹션 헤더 상수 — _render와 _parse가 동일 문자열을 참조해 포맷 드리프트 방지
@@ -68,7 +87,7 @@ class ApprovalGate:
     # 공개 API
     # ------------------------------------------------------------------
 
-    def initialize(self, work_item_id: str = "") -> None:
+    def initialize(self, work_item_id: str = "", run_id: str = "") -> None:
         """approval-gate.md 최초 생성 (execution_open: false)."""
         os.makedirs(self.work_item_dir, exist_ok=True)
         content = self._render(
@@ -81,8 +100,9 @@ class ApprovalGate:
             review_notes="",
         )
         write_text(self.gate_path, content)
+        _emit_approval_event("approval_requested", self, run_id)
 
-    def approve(self, approver: str = "user") -> bool:
+    def approve(self, approver: str = "user", run_id: str = "") -> bool:
         """
         현재 문서 해시를 스냅샷에 저장하고 execution_open을 true로 설정.
         gate_path가 없으면 False 반환.
@@ -102,6 +122,7 @@ class ApprovalGate:
             review_notes=_clean(current.get("review_notes")),
         )
         write_text(self.gate_path, content)
+        _emit_approval_event("approval_granted", self, run_id, approver=approver)
         return True
 
     def invalidate(self, reason: str = "") -> None:
@@ -125,11 +146,21 @@ class ApprovalGate:
         write_text(self.gate_path, content)
 
     def is_execution_open(self) -> bool:
-        """execution_open == true 이고 승인 상태인지 확인."""
+        """execution_open == true 이고 승인 상태인지 확인.
+
+        W3 fix: gate가 열려 있어도 check_validity()를 항상 실행한다.
+        문서가 변경된 경우 자동으로 invalidate하고 False를 반환한다.
+        """
         if not os.path.exists(self.gate_path):
             return False
         data = self._parse()
-        return bool(data.get("execution_open")) and _clean(data.get("status")) == "approved"
+        if not (bool(data.get("execution_open")) and _clean(data.get("status")) == "approved"):
+            return False
+        valid, changed = self.check_validity()
+        if not valid:
+            self.invalidate(reason=f"문서 변경 감지 (자동): {', '.join(changed)}")
+            return False
+        return True
 
     def check_validity(self) -> tuple[bool, list[str]]:
         """
@@ -147,13 +178,15 @@ class ApprovalGate:
 
         # 스냅샷 값이 모두 빈 문자열: 승인 시 문서가 없었던 경우
         if not any(snapshots.values()):
-            # 현재도 work_item_dir에 실제 문서가 없으면 변경 없음 → 유효
-            if not any(
-                os.path.exists(os.path.join(self.work_item_dir, fname))
+            # 승인 이후 추가된 파일을 변경으로 분류
+            added = [
+                fname
                 for fname in _DOC_FILES.values()
-            ):
+                if os.path.exists(os.path.join(self.work_item_dir, fname))
+            ]
+            if not added:
                 return True, []
-            return False, ["snapshot hashes are empty — no documents were hashed at approval time"]
+            return False, added
 
         changed: list[str] = []
         current = self.compute_snapshots()
@@ -161,7 +194,10 @@ class ApprovalGate:
             saved = _clean(snapshots.get(key))
             now_hash = _clean(current.get(key))
             if not saved:
-                continue  # 해당 문서 없음 — 선택적
+                # 승인 당시 없었지만 지금 존재하면 변경으로 분류
+                if now_hash:
+                    changed.append(filename)
+                continue
             if saved != now_hash:
                 changed.append(filename)
         return len(changed) == 0, changed
