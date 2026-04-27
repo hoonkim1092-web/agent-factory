@@ -120,6 +120,7 @@ class AgentRunner:
         self._knowledge_skills = []
         self._skill_loader_cache: Dict[str, "AdaptiveSkillLoader"] = {}  # per-model loader cache
         self._current_model_name: str = "default"  # current model name
+        self._sse_hook: "Any | None" = None  # H4: lazy singleton hook — 생성 전/실패 시 None
 
     def _resolve_system_prompt(self, agent: dict) -> str:
         direct = str(agent.get("system_ko", "")).strip()
@@ -976,8 +977,9 @@ class AgentRunner:
         try:
             from core.hooks.skill_self_evolution import SkillSelfEvolutionHook
             from core.skill_evolution_bus import SkillEvolutionBus
-            _sse_hook = SkillSelfEvolutionHook(check_interval=10)
-            bus.register(_sse_hook)
+            if getattr(self, "_sse_hook", None) is None:
+                self._sse_hook = SkillSelfEvolutionHook(check_interval=10)
+            bus.register(self._sse_hook)
             _evo_bus = SkillEvolutionBus.get_instance()
             _evo_bus.bind_runner(self)
             _evo_bus.bind_event_bus(bus)

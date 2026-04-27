@@ -53,9 +53,16 @@ class SkillSelfEvolutionHook:
 
     def post_execute(self, agent_state: dict, result: dict) -> dict:
         """실행 완료 후 주기적 품질 감사 트리거."""
-        self._execution_count += 1
+        # H4: _audit_lock으로 카운터 증가 + 조건 판별을 원자화 (parallel to_thread 환경 대응)
+        # >= check_interval + reset 방식으로 스킵 없이 감사 발화 보장
+        trigger_audit = False
+        with self._audit_lock:
+            self._execution_count += 1
+            if self._execution_count >= self._check_interval:
+                self._execution_count = 0
+                trigger_audit = True
 
-        if self._execution_count % self._check_interval == 0:
+        if trigger_audit:
             self._trigger_audit_async()
 
         return result
@@ -192,9 +199,12 @@ class SkillSelfEvolutionHook:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict:
+        with self._audit_lock:
+            count = self._execution_count
+            in_progress = self._audit_in_progress
         return {
-            "execution_count": self._execution_count,
+            "execution_count": count,
             "check_interval": self._check_interval,
-            "audit_in_progress": self._audit_in_progress,
-            "next_audit_in": self._check_interval - (self._execution_count % self._check_interval),
+            "audit_in_progress": in_progress,
+            "next_audit_in": self._check_interval - count,
         }
