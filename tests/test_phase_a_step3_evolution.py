@@ -104,6 +104,7 @@ class TestSkillEvolutionBus:
             patch.object(bus, "_step4_clear_relevance_caches") as s4,
             patch.object(bus, "_step5_evict_module_cache") as s5,
             patch.object(bus, "_step6_evict_loader_cache") as s6,
+            patch.object(bus, "_step7_broadcast") as s7,
         ):
             bus.on_bulk_enriched(["skill-a", "skill-b"])
             s1.assert_called_once()
@@ -112,6 +113,10 @@ class TestSkillEvolutionBus:
             s4.assert_called_once()
             assert s5.call_count == 2
             s6.assert_called_once()
+            # H3: broadcast는 skill_ids 개수만큼 호출됨
+            assert s7.call_count == 2
+            s7.assert_any_call(skill_id="skill-a", old_version="", new_version="", trigger="metadata_enriched")
+            s7.assert_any_call(skill_id="skill-b", old_version="", new_version="", trigger="metadata_enriched")
 
     def test_on_skill_evolved_calls_all_7_steps(self):
         bus = SkillEvolutionBus()

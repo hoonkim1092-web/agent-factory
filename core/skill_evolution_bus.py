@@ -82,7 +82,7 @@ class SkillEvolutionBus:
             skill_dir:   스킬 디렉토리 경로 (없으면 레지스트리에서 조회)
             old_version: 이전 버전 (로그용)
             new_version: 새 버전 (로그용)
-            trigger:     트리거 출처 ("fsa_failure"|"manual"|"schedule"|"quality_check")
+            trigger:     트리거 출처 ("fsa_failure"|"manual"|"schedule"|"quality_check"|"metadata_enriched")
         """
         logger.info(
             "[EvolutionBus] on_skill_evolved: %s (%s → %s) trigger=%s",
@@ -128,7 +128,17 @@ class SkillEvolutionBus:
             self._step5_evict_module_cache(skill_id)
 
         self._step6_evict_loader_cache()
-        logger.info("[EvolutionBus] bulk 캐시 체인 무효화 완료")
+
+        # H3: 메타 보강 이벤트도 broadcast (후속 hook 관찰성 확보)
+        for skill_id in skill_ids:
+            self._step7_broadcast(
+                skill_id=skill_id,
+                old_version="",
+                new_version="",
+                trigger="metadata_enriched",
+            )
+
+        logger.info("[EvolutionBus] bulk 캐시 체인 무효화 완료 (broadcast 포함)")
 
     # ------------------------------------------------------------------
     # 단계별 구현
