@@ -8,12 +8,18 @@ T3-7에서 audit/cost/approval을 이 스키마로 통합한다.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+_SIZE_WARN_THRESHOLD = 1_048_576  # 1 MiB
+_size_warned_paths: set[str] = set()  # 프로세스 수명 동안 경로별 1회만 경고
 
 
 def _utcnow() -> str:
@@ -33,6 +39,7 @@ class RunEventType(str, Enum):
     COST_INCURRED = "cost_incurred"
     APPROVAL_REQUESTED = "approval_requested"
     APPROVAL_GRANTED = "approval_granted"
+    SKILL_EVOLVED = "skill_evolved"
 
 
 @dataclass
@@ -103,8 +110,19 @@ class FileRunEventStore(RunEventStore):
         try:
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(event.to_dict(), ensure_ascii=False) + "\n")
-        except Exception:
-            pass  # fire-and-forget — event logging must not crash the caller
+            # 파일 크기 경고 (1회만)
+            if path not in _size_warned_paths:
+                try:
+                    if os.path.getsize(path) >= _SIZE_WARN_THRESHOLD:
+                        _size_warned_paths.add(path)
+                        logger.warning(
+                            "[RunEventStore] events.jsonl 크기 초과 (≥1MiB): %s — 오래된 run 정리 권장",
+                            path,
+                        )
+                except OSError:
+                    pass
+        except Exception as exc:
+            logger.error("[RunEventStore] append 실패 (run_id=%s): %s", event.run_id, exc)
 
     def list_events(self, run_id: str) -> list[RunEvent]:
         path = self._path(run_id)

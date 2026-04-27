@@ -242,10 +242,15 @@ class TestSkillSelfEvolutionHook:
         assert stats["next_audit_in"] == 7
         assert stats["audit_in_progress"] is False
 
-    def test_on_skill_evolved_logs(self, caplog):
+    def test_on_skill_evolved_logs(self, caplog, tmp_path):
         import logging
+        from core.events.run_event import FileRunEventStore
+        store = FileRunEventStore(base_dir=str(tmp_path))
         hook = SkillSelfEvolutionHook()
-        with caplog.at_level(logging.INFO, logger="core.hooks.skill_self_evolution"):
+        with (
+            caplog.at_level(logging.INFO, logger="core.hooks.skill_self_evolution"),
+            patch("core.events.run_event.get_default_store", return_value=store),
+        ):
             hook.on_skill_evolved(
                 skill_id="test-skill",
                 old_version="1.0",
@@ -253,6 +258,25 @@ class TestSkillSelfEvolutionHook:
                 trigger="test",
             )
         assert "test-skill" in caplog.text
+
+    def test_record_evolution_emits_run_event(self, tmp_path):
+        """_record_evolution_to_memory → RunEventStore에 SKILL_EVOLVED 방출 검증."""
+        from core.events.run_event import FileRunEventStore, RunEventType
+        store = FileRunEventStore(base_dir=str(tmp_path))
+        hook = SkillSelfEvolutionHook()
+        with patch("core.events.run_event.get_default_store", return_value=store):
+            hook.on_skill_evolved(
+                skill_id="evolve-skill",
+                old_version="2.0",
+                new_version="2.1",
+                trigger="fsa_failure",
+            )
+        events = store.list_events("_skill_evolution")
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.event_type == RunEventType.SKILL_EVOLVED
+        assert evt.payload["skill_id"] == "evolve-skill"
+        assert evt.payload["trigger"] == "fsa_failure"
 
     def test_duplicate_audit_guard(self):
         hook = SkillSelfEvolutionHook(check_interval=1)

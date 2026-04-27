@@ -54,6 +54,7 @@ build/
 .system_generated/cache/
 
 # --- Runtime/Test Artifacts ---
+/runs/
 projects/default/runs/
 projects/agent_factory/runs/
 projects/gemini_e2e/

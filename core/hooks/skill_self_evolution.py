@@ -157,42 +157,28 @@ class SkillSelfEvolutionHook:
         new_version: str,
         trigger: str,
     ) -> None:
-        """진화 이벤트를 UnifiedMemoryFacade에 비동기 기록."""
+        """진화 이벤트를 RunEventStore에 동기 기록.
+
+        run_id는 호출자(AgentRunner 등)가 self._current_run_id를 주입하면
+        실행 컨텍스트와 연관되고, 미주입 시 sentinel "_skill_evolution" 버킷에 기록된다.
+        """
         try:
-            import asyncio
-            import json
-            from core.memory_system.facade import UnifiedMemoryFacade
-            from core.memory_system.models import MemoryType
-            from core.utils import now_iso
+            from core.events.run_event import RunEvent, RunEventType, get_default_store
 
-            facade = UnifiedMemoryFacade.get_instance()
-            if not facade._initialised:
-                return  # 초기화되지 않은 facade는 skip (no-op)
-
-            content = json.dumps({
-                "event_type": "skill_evolution",
-                "skill_id": skill_id,
-                "old_version": old_version,
-                "new_version": new_version,
-                "trigger": trigger,
-                "timestamp": now_iso(),
-            })
-
-            async def _write() -> None:
-                await facade.write(
-                    content,
-                    memory_type=MemoryType.SEMANTIC,
-                    metadata={"event_type": "skill_evolution", "skill_id": skill_id},
-                    target_backend="trace_log",
-                )
-
-            thread = threading.Thread(
-                target=lambda: asyncio.run(_write()),
-                daemon=True,
-            )
-            thread.start()
+            run_id = getattr(self, "_current_run_id", None) or "_skill_evolution"
+            store = get_default_store()
+            store.append(RunEvent(
+                run_id=run_id,
+                event_type=RunEventType.SKILL_EVOLVED,
+                payload={
+                    "skill_id": skill_id,
+                    "old_version": old_version,
+                    "new_version": new_version,
+                    "trigger": trigger,
+                },
+            ))
         except Exception as e:
-            logger.debug("[SelfEvolution] 메모리 기록 실패 (무시): %s", e)
+            logger.debug("[SelfEvolution] 이벤트 기록 실패 (무시): %s", e)
 
     # ------------------------------------------------------------------
     # 상태 조회
