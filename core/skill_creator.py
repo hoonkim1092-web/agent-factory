@@ -732,8 +732,11 @@ def evolve_skill(
         if not os.path.exists(src):
             src = os.path.join(skill_dir, "skill.md")
     bak = src + ".bak"
-    shutil.copy2(src, bak)
-    print(f"[OK] 백업 생성: {bak}")
+    if not os.path.exists(bak):  # stale .bak 보존 (meta.yaml.bak 정책 통일)
+        shutil.copy2(src, bak)
+        print(f"[OK] 백업 생성: {bak}")
+    else:
+        print(f"[OK] 기존 백업 보존: {bak}")
 
     # LLM 진화 요청
     content = generate_skill_content(
@@ -759,6 +762,13 @@ def evolve_skill(
     meta["version"] = new_version
     meta["updated_at"] = datetime.datetime.now().isoformat()
     if skill_type == "action":
+        # H5 v3: meta.yaml 백업 (action 타입 skill에서만 적용, .bak 미존재 시에만)
+        meta_yaml = os.path.join(skill_dir, "meta.yaml")
+        if os.path.exists(meta_yaml) and not os.path.exists(meta_yaml + ".bak"):
+            try:
+                shutil.copy2(meta_yaml, meta_yaml + ".bak")
+            except OSError as e:
+                print(f"[WARN] meta.yaml 백업 실패 (계속 진행): {e}")
         _write_meta(skill_dir, meta)
     print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
