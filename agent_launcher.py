@@ -435,7 +435,7 @@ class AgentFactory:
                 return {"ok": False, "reason": "cancelled_by_user"}
 
             if choice in ("1", "approve", "a"):
-                approved = gate.approve(approver="user")
+                approved = gate.approve(approver="user", run_id=prepared.run_id)
                 if not approved:
                     print("  [오류] approval-gate.md 를 찾을 수 없습니다.")
                     return {"ok": False, "reason": "gate_file_missing"}

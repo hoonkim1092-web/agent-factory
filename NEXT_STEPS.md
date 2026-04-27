@@ -49,6 +49,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 17 | T2-5: 벡터 영속화 — similarity 전파 + project_id 동적화 + dedup tiebreaker — 3-Tier 검증 통과 | `2c1eb81a` | 2026-04-26 |
 | 18 | T2-4: search_all_backends() memory_type/scope 필터 + cross-project 격리 수정 + cortex apply() project_id — 3-Tier 검증 통과 | `cb5adfcd` | 2026-04-26 |
 | 19 | T3-7: Audit/Cost/Approval → RunEvent 통합 — COST_INCURRED + APPROVAL_REQUESTED/GRANTED + W3 fix + check_validity 신규 문서 감지 — 3-Tier 검증 통과 | `a4965cf1` | 2026-04-27 |
+| 20 | T3-7 ACCEPT 2 후속: CLI --budget → set_run_budget run_id 연결 + approve() run_id 전달 + consumed_tokens 역기록 + 즉시 중단 가드 — 3-Tier 검증 통과 | (이번 커밋) | 2026-04-27 |
 
 ---
 
@@ -75,17 +76,15 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 - fetch_limit=limit*3 버퍼, TimeoutError 로깅 분기, expired debug 로그
 - 신규 테스트 4건 + mock fix
 
-### T3-7: ✅ 완료 (a4965cf1)
+### T3-7: ✅ 완료 (a4965cf1) + ACCEPT 2 후속 ✅ 완료 (이번 커밋)
 
 - RunBudget COST_INCURRED RunEvent (80%/exhausted 마일스톤)
 - ApprovalGate APPROVAL_REQUESTED/GRANTED RunEvent
 - is_execution_open() W3 fix — check_validity 항상 실행
 - check_validity 신규 문서 감지 (승인 당시 없던 파일 사후 추가)
 - generate_work_items/project_pipeline run_id 전파
-
-**다음 작업 후보**:
-- T3-7 ACCEPT 2 후속: CLI --budget 플래그에 run_id 연결 (set_run_budget 실제 호출 경로)
-- agent_launcher.py approve() run_id 연결
+- **ACCEPT 2 후속**: nightly_tick set_run_budget(run_id=tick_id) + consumed_tokens 사전 로드/역기록 + warned_80/stopped 플래그 복원 + _dispatch_actions 즉시 중단 + rb_wired 가드
+- **ACCEPT 2 후속**: agent_launcher.py:438 gate.approve(run_id=prepared.run_id)
 
 ### Phase A: Step 3+4+5 ✅ 완료
 

@@ -597,18 +597,20 @@ reason 문자열 기반 실패 분류. `classify_failure(reason) → FailureCate
 INFRA 패턴: `missing_api_key`, `quota`, `429`, `503`, `cli_timeout`, `worker_timeout` 등
 
 ### §3.8.3 RunBudget (`core/run_budget.py`)
-<!-- last_updated: 2026-04-22 -->
+<!-- last_updated: 2026-04-27 -->
 
 글로벌 토큰 예산 추적. 4-char ≈ 1-token 휴리스틱.
 
-**API:** `set_run_budget(max_tokens)`, `get_run_budget()` (모듈 싱글턴)
-**동작:** 80% 경고 출력, 100% `is_exhausted()=True` → orchestrator 자동 중단
-**CLI:** `af run --budget 50000`
+**API:** `set_run_budget(max_tokens, *, run_id, project_id)`, `get_run_budget()` (모듈 싱글턴)
+**동작:** 80% 경고 출력, 100% `is_exhausted()=True` → orchestrator 자동 중단. run_id 설정 시 80%/100% 마일스톤에 COST_INCURRED RunEvent 방출.
+**CLI:** `af nightly-start --budget 50000` → `state.budget.max_tokens` → nightly_tick에서 `set_run_budget(max_tokens, run_id=tick_id)` 호출
 
-**연결 포인트 (Phase A Step 2 fix):**
-- `agent_runner.py:_flush_trace()` — transcript `assistant` 엔트리에서 텍스트 합산 후 `record()` 호출 (기존 `result["text"]` 항상 빈 문자열이었음)
+**연결 포인트:**
+- `agent_runner.py:_flush_trace()` — transcript `assistant` 엔트리에서 텍스트 합산 후 `record()` 호출
 - `fsa_loop.py:FSALoop.run_mission()` — 각 사이클 시작 시 `is_exhausted()` 체크로 조기 탈출
-- `dynamic_orchestrator.py:_orchestration_loop()` — while 루프 최상단 `is_exhausted()` 체크 (기존 구현)
+- `dynamic_orchestrator.py:_orchestration_loop()` — while 루프 최상단 `is_exhausted()` 체크
+- `scripts/nightly_tick.py:tick_once()` — tick 시작 시 `set_run_budget(state.budget.max_tokens, run_id=tick_id)` + `rb.consumed` 사전 로드 + tick 종료 시 `state.budget.consumed_tokens` 역기록 (T3-7 ACCEPT 2, 2026-04-27)
+- `scripts/nightly_tick.py:_dispatch_actions()` — 루프 내 `is_exhausted()` 즉시 중단 체크
 
 ### §3.8.4 SkillPackBootstrapper (`core/skill_pack_bootstrapper.py`)
 <!-- last_updated: 2026-04-22 -->
@@ -1420,6 +1422,7 @@ model_utils.py (독립 모듈)
 | 2026-04-20 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — document_index.json, skill-usage.jsonl, code-review.md, nightly_tick.py, skill-eval-report.json (+21) |
 | 2026-04-20 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, nightly_tick.py (+22) |
 | 2026-04-20 | v1.2.21 | chore(.system_generated): edit: /Users/hoon/workTree/agent-factory/scripts/nightly_tick.py — document_index.json, Master_Blueprint.md, skill-usage.jsonl, code-review.md, nightly_tick.py (+22) |
+| 2026-04-27 | v1.2.22 | feat(T3-7-followup): CLI --budget → set_run_budget run_id 연결 + nightly_tick consumed_tokens 역기록 + approve() run_id 전달 — 3-Tier 검증 통과 |
 | 2026-04-20 | v1.2.21 | fix(review-gate-REVISE): cross-review REVISE 2건 해소 — M1: record_review_done files_snapshot 파라미터 Optional로 변경, None 시 락 내부에서 state["files"] 직접 읽음 → TOCTOU 해소; _post_agent_record는 files_snapshot 없이 호출(lock 내 최신 snapshot 사용). M2: _post_commit_clear에서 git diff HEAD~1 returncode 체크 추가 → 첫 커밋(HEAD~1 없음) 시 silent empty 방지. L1: _post_agent_record sys.path.insert 중복 제거. tests 13종 ALL PASS. |
 | 2026-04-20 | v1.2.21 | fix(review-gate): 교차검증 BLOCK 2건+WARN 2건 해소 — (1) record_review_done/clear_committed_files에 fcntl 파일 락(_state_lock ctx manager) 추가 → 병렬 에이전트 RMW 경쟁 조건 해소; (2) verdict='fail'도 'block'과 동등하게 게이트 차단; (3) post_commit_clear exit_code fail-safe: None 또는 파싱 불가 시 skip; (4) post_agent_record verdict 파싱: 구조화 패턴(_VERDICT_RE/_VERDICT_HEADER_RE)으로 본문 키워드 오탐 방지. tests 13종 ALL PASS. |
 | 2026-04-20 | v1.2.21 | fix(appendix-b): B1-1~5+B2-5+B2-7+B2-8+B3-1+B3-2 수정 — lineage_ledger threading.Lock+_CACHE_LOCK+is_maxed+reset Lock 전면 보호; project_pipeline _write_json atomic(mkstemp+cleanup)+gate.initialize() 가드; run_factory_cli spec None 가드+AGENT_CHAT_PROVIDER 항상 설정; episode_matcher _SEED_STOP_WORDS 모듈 레벨+EpisodeMatcher facade=None 기본값; approval_gate 섹션 상수화+check_validity no-docs PASS; strategy_ledger key에 owner_role+_load merge+from_dict 기본값 0; work_item_generator asyncio.run 폴백 확대; project_task_board e2e_command 키+BOM 제거. 3-tier 교차검증 ALL PASS. |

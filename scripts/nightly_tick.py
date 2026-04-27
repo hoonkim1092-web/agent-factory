@@ -39,6 +39,7 @@ from core.nightly_state import (
     clear_alert,
     save_state,
 )
+from core.run_budget import get_run_budget, set_run_budget
 from scripts.nightly_summary import write_summary
 
 
@@ -137,6 +138,10 @@ def _dispatch_actions(state: NightlyState, workspace: str, tick_id: str, state_r
     made_progress = False
     for task_info in tasks:
         if deadline_exceeded():
+            break
+        if get_run_budget().is_exhausted():
+            # 태스크 단위 조기 종료 — 실행 중인 태스크 내부 소비는 완료 후 다음 반복에서 탐지됨
+            print(f"[nightly_tick] 예산 소진 — tick 중단", file=sys.stderr)
             break
         # next_board_tasks() 반환 dict: `assigned_role`, `subtask_instruction`, `task_id`.
         # 기존 `role`/`subtask_id`/`subtask` 접근은 전부 KeyError/빈값이었음 (B2-1).
@@ -257,6 +262,7 @@ def tick_once(workspace: str | Path | None = None) -> int:
         print(f"[nightly_tick] 이전 tick 진행 중 — skip", file=sys.stderr)
         return 1
 
+    rb_wired = False
     try:
         tick_id = make_tick_id()
         state = load_state(ws)
@@ -276,8 +282,24 @@ def tick_once(workspace: str | Path | None = None) -> int:
         state.last_tick_at = datetime.now(timezone.utc).isoformat()
         state.budget.tick_count += 1
 
+        if state.budget.max_tokens > 0:
+            rb = set_run_budget(
+                state.budget.max_tokens,
+                run_id=tick_id,
+                project_id=state.active_project or "",
+            )
+            rb.consumed = state.budget.consumed_tokens
+            if rb.consumed >= rb.max_tokens * 0.8:
+                rb.warned_80 = True
+            if rb.consumed >= rb.max_tokens:
+                rb.stopped = True
+            rb_wired = True
+
         active_workspace = state.active_workspace or ws
         made_progress = _dispatch_actions(state, active_workspace, tick_id, state_root=ws)
+
+        if rb_wired:
+            state.budget.consumed_tokens = get_run_budget().consumed
 
         # P0-C: verify-handoff 런타임 강제 — 이번 tick에서 새로 쓰여졌을 수 있는
         # verification-report.md들을 스윕. verdict=BLOCK이면 approval-gate 자동 차단.
@@ -316,6 +338,8 @@ def tick_once(workspace: str | Path | None = None) -> int:
             state.consecutive_tick_failures += 1
             if state.consecutive_tick_failures >= ALERT_AFTER_CONSEC_FAIL:
                 mark_alert(ws, f"연속 {state.consecutive_tick_failures}회 tick 실패. 마지막 오류: {exc}")
+            if rb_wired:
+                state.budget.consumed_tokens = get_run_budget().consumed
             save_state(state, ws)
         except Exception:
             pass
