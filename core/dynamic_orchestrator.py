@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -28,6 +29,8 @@ from core.project_task_board import (
 from core.agent_specializer import AgentSpecializer
 from core.message_broker import MessageBroker
 from core.utils import print_agent_msg, safe_id, safe_json_load
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicOrchestrator:
@@ -590,19 +593,24 @@ class DynamicOrchestrator:
                             print_agent_msg("Evolve", f"스킬 진화 성공: {skill_name}", "")
 
             if evolved:
+                name = "(unknown)"  # get_instance() 실패 시 except 블록 NameError 방지
                 try:
-                    bus = SkillEvolutionBus()
+                    bus = SkillEvolutionBus.get_instance()
                     for name in evolved:
                         bus.on_skill_evolved(
-                            skill_name=name,
+                            skill_id=name,
                             trigger="cross_verification_orchestrator",
                             old_version="",
                             new_version="",
                         )
-                except Exception:
-                    pass
+                except Exception as bus_exc:
+                    logger.error(
+                        "[Evolve] SkillEvolutionBus.on_skill_evolved 실패 (skill=%s): %s",
+                        name, bus_exc,
+                    )
         except Exception as exc:
-            print_agent_msg("Evolve", f"자가진화 시도 실패 (무시): {exc}", "")
+            logger.error("[Evolve] _try_evolve_from_patterns 예외: %s", exc)
+            print_agent_msg("Evolve", f"자가진화 시도 실패 (로그 기록): {exc}", "")
 
     async def _run_agent_in_thread(
         self,
