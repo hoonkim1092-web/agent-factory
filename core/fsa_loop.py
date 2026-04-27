@@ -26,10 +26,13 @@ Git 범위 원칙:
 """
 from __future__ import annotations
 
+import logging
 import os
 import json
 import re
 import time
+
+logger = logging.getLogger(__name__)
 
 from core.agent_runner import AgentRunner
 from core.git_manager import GitManager
@@ -610,32 +613,55 @@ class FSALoop:
                     self._rollback_skill(skill_dir, skill_name)
                     return None
 
-            new_version = self._read_skill_version(skill_dir)
-
             gate_result = self._run_quality_gate(skill_dir, skill_name)
+
+            # H5: 3분기 gate 처리
             if gate_result is not None and not gate_result.passed:
+                # 분기 1: FAIL — rollback 후 반환
                 for reason in gate_result.failure_reasons:
                     print_agent_msg("SkillEvolve", reason, "⚠️")
-                print_agent_msg("SkillEvolve", f"품질 게이트 실패 — hot_reload 스킵: {skill_name}", "🚫")
+                print_agent_msg("SkillEvolve", f"품질 게이트 실패 — rollback 시작: {skill_name}", "🚫")
+                self._rollback_skill(skill_dir, skill_name)
                 return gate_result
+
             elif gate_result is not None and gate_result.passed:
-                self._hot_reload_registry(skill_name)
+                # 분기 2: PASS — v7 외부 try/finally로 cleanup 항상 보장
+                new_version = "unknown"
+                try:
+                    try:
+                        self._hot_reload_registry(skill_name)
+                    except Exception as reload_exc:
+                        logger.error("[SkillEvolve] hot_reload 예외 (%s): %s", skill_name, reload_exc)
+                        print_agent_msg("SkillEvolve", f"hot_reload 실패 (계속 진행): {skill_name}", "⚠️")
+                    try:
+                        new_version = self._read_skill_version(skill_dir)
+                    except Exception as ver_exc:
+                        logger.error("[SkillEvolve] read_skill_version 예외 (%s): %s", skill_name, ver_exc)
+                        print_agent_msg("SkillEvolve", f"version 조회 실패 (fallback=unknown): {skill_name}", "⚠️")
+                    try:
+                        evo_bus = SkillEvolutionBus.get_instance()
+                        evo_bus.bind_runner(self.runner)
+                        evo_bus.on_skill_evolved(
+                            skill_id=skill_name,
+                            skill_dir=skill_dir,
+                            old_version=old_version,
+                            new_version=new_version,
+                            trigger="fsa_failure",
+                        )
+                        print_agent_msg("SkillEvolve", f"스킬 진화 성공 + 전체 캐시 무효화: {skill_name}", "✅")
+                    except Exception as bus_exc:
+                        logger.error("[SkillEvolve] EvolutionBus.on_skill_evolved 예외 (%s): %s", skill_name, bus_exc)
+                        print_agent_msg("SkillEvolve", f"EvolutionBus 실패 (계속 진행): {skill_name}", "⚠️")
+                finally:
+                    # Step 4 v7: 외부 finally — BaseException + except 내부 예외 모두에서 도달 보장
+                    self._cleanup_skill_baks(skill_dir)
+                return gate_result
+
             else:
-                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — hot_reload & EvolutionBus 스킵: {skill_name}", "⚠️")
+                # 분기 3: None (gate 자체 예외) — 보수적 rollback
+                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — rollback (보수적): {skill_name}", "⚠️")
+                self._rollback_skill(skill_dir, skill_name)
                 return None
-
-            evo_bus = SkillEvolutionBus.get_instance()
-            evo_bus.bind_runner(self.runner)
-            evo_bus.on_skill_evolved(
-                skill_id=skill_name,
-                skill_dir=skill_dir,
-                old_version=old_version,
-                new_version=new_version,
-                trigger="fsa_failure",
-            )
-
-            print_agent_msg("SkillEvolve", f"스킬 진화 성공 + 전체 캐시 무효화: {skill_name}", "✅")
-            return gate_result
 
         except Exception as e:
             print_agent_msg("SkillEvolve", f"진화 프로세스 예외: {e}", "⚠️")
@@ -698,22 +724,32 @@ class FSALoop:
             return False
 
     def _rollback_skill(self, skill_dir: str, skill_name: str):
-        """진화 실패 시 .bak 파일로 롤백합니다."""
+        """진화 실패 시 .bak 파일로 롤백합니다. meta.yaml/meta.json 포함 (H5 v2)."""
         import shutil
         restored = False
-        for filename in ("skill.py", "SKILL.md", "skill.md"):
+        for filename in ("skill.py", "SKILL.md", "skill.md", "meta.yaml", "meta.json"):
             bak = os.path.join(skill_dir, filename + ".bak")
             src = os.path.join(skill_dir, filename)
             if os.path.exists(bak):
                 try:
-                    shutil.copy2(bak, src)
-                    os.remove(bak)
+                    shutil.move(bak, src)  # same-partition atomic rename (copy2+remove 비원자 패턴 회피)
                     print_agent_msg("SkillEvolve", f"롤백 완료: {skill_name}/{filename}", "⏪")
                     restored = True
                 except Exception as e:
                     print_agent_msg("SkillEvolve", f"롤백 실패: {skill_name}/{filename}: {e}", "⚠️")
         if not restored:
             print_agent_msg("SkillEvolve", f"롤백 대상 .bak 파일 없음: {skill_name}", "⚠️")
+
+    def _cleanup_skill_baks(self, skill_dir: str) -> None:
+        """gate PASS 후 .bak 정리. stale .bak이 다음 진화 사이클에서 enricher의
+        not-exists 체크를 우회하는 것을 막는다."""
+        for filename in ("skill.py", "SKILL.md", "skill.md", "meta.yaml", "meta.json"):
+            bak = os.path.join(skill_dir, filename + ".bak")
+            if os.path.exists(bak):
+                try:
+                    os.remove(bak)
+                except Exception as e:
+                    logger.warning("[SkillEvolve] .bak 정리 실패 %s: %s", bak, e)
 
     def _run_quality_gate(self, skill_dir: str, skill_name: str):
         """품질 게이트를 실행하여 GateResult를 반환합니다. 실패 시 None."""
