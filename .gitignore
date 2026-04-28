@@ -57,6 +57,9 @@ build/
 /runs/
 projects/default/runs/
 projects/agent_factory/runs/
+projects/lotto_predictor_v2/runs/
+projects/lotto_pattern_predictor/runs/
+projects/smoke_test/runs/
 projects/gemini_e2e/
 projects/*/resume_brief.md
 projects/gemini_live_edit_fix/
