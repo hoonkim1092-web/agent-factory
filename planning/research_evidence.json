@@ -1,0 +1,66 @@
+{
+  "workspace_notes": [
+    "existing_todo=.todo.md",
+    "existing_project_board=project_board_state.json",
+    "existing_agents=8"
+  ],
+  "local_references": [
+    {
+      "path": "docs/features/2026-04-24-unified-memory-facade-rag-extension.md",
+      "heading": "### 6.4 기존 `search_all_backends` 호출부",
+      "excerpt": "### 6.4 기존 `search_all_backends` 호출부 - 변경 없음. project_id 필터 없는 무차별 검색 유지 ---",
+      "score": 1.0
+    },
+    {
+      "path": "docs/features/2026-04-24-unified-memory-facade-rag-extension-v3.md",
+      "heading": "# scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+      "excerpt": "# scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+      "score": 0.9229
+    },
+    {
+      "path": "docs/features/2026-04-08-phased-skill-pipeline.md",
+      "heading": "# 현재 (dynamic_orchestrator.py)",
+      "excerpt": "# 현재 (dynamic_orchestrator.py) def run_project(self, task_input, roles, workspace): ``` 슬라이스 필터 파라미터 추가: ```python",
+      "score": 0.7233
+    },
+    {
+      "path": "docs/2026-04-09-three-plane-integration-design.md",
+      "heading": "# 5. 기존 테스트 회귀",
+      "excerpt": "# 5. 기존 테스트 회귀 python -m pytest tests/ -v ``` ---",
+      "score": 0.7185
+    },
+    {
+      "path": "docs/archive/implementation/phase4_implementation.md",
+      "heading": "## 테스트",
+      "excerpt": "## 테스트 `tests/test_phase4_evaluator_skills.py` — 15개 테스트",
+      "score": 0.7142
+    },
+    {
+      "path": "docs/archive/code_review/memory_system_deep_review_2026-03-19.md",
+      "heading": "### 2. `core/memory_system/facade.py` (287줄) ⚠️ **중대 문제 2개**",
+      "excerpt": "### 2. `core/memory_system/facade.py` (287줄) ⚠️ **중대 문제 2개**",
+      "score": 0.7103
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "evidence_summary": [
+    "Workspace note: existing_todo=.todo.md",
+    "Workspace note: existing_project_board=project_board_state.json",
+    "Workspace note: existing_agents=8",
+    "Local reference: docs/features/2026-04-24-unified-memory-facade-rag-extension.md -> ### 6.4 기존 `search_all_backends` 호출부 - 변경 없음. project_id 필터 없는 무차별 검색 유지 ---",
+    "Local reference: docs/features/2026-04-24-unified-memory-facade-rag-extension-v3.md -> # scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+    "Local reference: docs/features/2026-04-08-phased-skill-pipeline.md -> # 현재 (dynamic_orchestrator.py) def run_project(self, task_input, roles, workspace): ``` 슬라이스 필터 파라미터 추가: ```python"
+  ],
+  "sufficiency_gate_passed": true,
+  "_verification": {
+    "score": 0.647,
+    "status": "pass",
+    "gaps": [
+      "no_external_evidence (web or llm_prior)",
+      "notebook_summary_absent"
+    ],
+    "attempt": 0
+  }
+}
