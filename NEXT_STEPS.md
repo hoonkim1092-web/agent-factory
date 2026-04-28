@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-27 T3-7 Audit/Cost/Approval → RunEvent 통합 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-28 Stage-0 Hotfix C1~C7 완료 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,8 +20,8 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `a4965cf1 feat(T3-7): Audit/Cost/Approval → RunEvent 통합` |
-| origin 푸시 | ✅ 완료 |
+| 마지막 커밋 | `3145c224 fix(C7): skill_evolution_safety 공용 모듈 + 3곳 sandbox 검증 통합` |
+| origin 푸시 | ⏳ 미완료 (push 필요) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
 ---
@@ -50,6 +50,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 18 | T2-4: search_all_backends() memory_type/scope 필터 + cross-project 격리 수정 + cortex apply() project_id — 3-Tier 검증 통과 | `cb5adfcd` | 2026-04-26 |
 | 19 | T3-7: Audit/Cost/Approval → RunEvent 통합 — COST_INCURRED + APPROVAL_REQUESTED/GRANTED + W3 fix + check_validity 신규 문서 감지 — 3-Tier 검증 통과 | `a4965cf1` | 2026-04-27 |
 | 20 | T3-7 ACCEPT 2 후속: CLI --budget → set_run_budget run_id 연결 + approve() run_id 전달 + consumed_tokens 역기록 + 즉시 중단 가드 — 3-Tier 검증 통과 | `59b89f72` | 2026-04-27 |
+| 21 | Stage-0 Hotfix C1~C7: self-evolution silent failure 7종 봉쇄 — 3-Tier 검증 통과 | `3145c224` | 2026-04-28 |
 
 ---
 
@@ -85,6 +86,16 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 - generate_work_items/project_pipeline run_id 전파
 - **ACCEPT 2 후속**: nightly_tick set_run_budget(run_id=tick_id) + consumed_tokens 사전 로드/역기록 + warned_80/stopped 플래그 복원 + _dispatch_actions 즉시 중단 + rb_wired 가드
 - **ACCEPT 2 후속**: agent_launcher.py:438 gate.approve(run_id=prepared.run_id)
+
+### Stage-0 Hotfix: ✅ C1~C7 모두 완료 (2026-04-28)
+
+- C1: DynamicOrchestrator on_skill_evolved NameError + silent except 제거
+- C2: SkillEvolutionBus.on_bulk_enriched _step7_broadcast 추가
+- C3: AgentRunner._sse_hook lazy init + SkillSelfEvolutionHook 스레드 안전 카운터
+- C4: FSALoop gate 3-branch + _rollback_skill shutil.move 원자화 + _cleanup_skill_baks
+- C5: skill_creator/skill_enricher .bak 보존 정책 통일 (not-exists guard)
+- C6: RunEvent SKILL_EVOLVED + asyncio+UnifiedMemoryFacade → 동기 RunEventStore
+- C7: skill_evolution_safety 공용 모듈 신규 + 3곳(fsa_loop/cv/do) sandbox 검증 통합
 
 ### Phase A: Step 3+4+5 ✅ 완료
 
