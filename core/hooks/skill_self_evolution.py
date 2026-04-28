@@ -20,6 +20,14 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# trigger 문자열 whitelist (§6.3 / §7.2) — 모듈 상수로 정의해 클래스 내외부에서 동일 참조
+_METADATA_TRIGGERS: frozenset[str] = frozenset({"metadata_enriched"})  # bus.py:138 일치
+_CODE_EVOLUTION_TRIGGERS: frozenset[str] = frozenset({
+    "fsa_failure",                      # fsa_loop.py:649
+    "cross_verification",               # cross_verification.py:679
+    "cross_verification_orchestrator",  # dynamic_orchestrator.py:613
+})
+
 
 class SkillSelfEvolutionHook:
     """
@@ -37,15 +45,22 @@ class SkillSelfEvolutionHook:
         max_enrich_per_cycle: int = 5,
         quality_threshold: float = 0.5,
         coding_engine: Optional[str] = None,
+        run_id: Optional[str] = None,   # Stage 1 추가 (F4) — 필수 권장, None 시 sentinel fallback
     ) -> None:
         self._check_interval = check_interval
         self._max_enrich = max_enrich_per_cycle
         self._quality_threshold = quality_threshold
         self._coding_engine = coding_engine
+        self._run_id = run_id
 
         self._execution_count = 0
         self._audit_lock = threading.Lock()
         self._audit_in_progress = False
+
+    def update_run_id(self, run_id: Optional[str]) -> None:
+        """실행 중 run_id 갱신 — _audit_lock으로 보호하여 audit 스레드와 경합 방지."""
+        with self._audit_lock:
+            self._run_id = run_id
 
     # ------------------------------------------------------------------
     # Hook 인터페이스
@@ -73,13 +88,23 @@ class SkillSelfEvolutionHook:
         old_version: str,
         new_version: str,
         trigger: str,
+        decision: Optional[object] = None,  # EvolutionDecision — Optional import 순환 방지
     ) -> None:
-        """스킬 진화 이벤트 수신 → 로그 + 메모리 기록."""
-        logger.info(
-            "[SelfEvolution] 스킬 진화 완료: %s (%s → %s) trigger=%s",
-            skill_id, old_version or "?", new_version or "?", trigger,
-        )
-        self._record_evolution_to_memory(skill_id, old_version, new_version, trigger)
+        """스킬 진화 이벤트 수신 → trigger 종류별 분기 처리 + 메모리 기록 (§7.2)."""
+        if trigger in _METADATA_TRIGGERS:
+            logger.info("[SelfEvolution] 메타 보강: %s", skill_id)
+        elif trigger in _CODE_EVOLUTION_TRIGGERS:
+            logger.info(
+                "[SelfEvolution] 코드 진화: %s (%s→%s)",
+                skill_id, old_version or "?", new_version or "?",
+            )
+            self._notify_consolidation(skill_id)
+        else:
+            # "manual"/"schedule"/"quality_check" 등 화이트리스트 외 trigger는 정상 경로
+            logger.debug(
+                "[SelfEvolution] 화이트리스트 외 trigger: %s (skill=%s)", trigger, skill_id,
+            )
+        self._record_evolution_to_memory(skill_id, old_version, new_version, trigger, decision)
 
     def on_skill_quality_checked(self, skill_id: str, quality_report: dict) -> None:
         """품질 감사 결과 수신 → 로그."""
@@ -150,32 +175,65 @@ class SkillSelfEvolutionHook:
             with self._audit_lock:
                 self._audit_in_progress = False
 
+    def _notify_consolidation(self, skill_id: str) -> None:
+        """코드 진화 후 memory_consolidation hook에 신호 전파."""
+        try:
+            from core.hooks.memory_consolidation import request_consolidation_hint
+            request_consolidation_hint(skill_id)
+        except Exception as e:
+            logger.debug("[SelfEvolution] consolidation hint 전달 실패 (무시): %s", e)
+
     def _record_evolution_to_memory(
         self,
         skill_id: str,
         old_version: str,
         new_version: str,
         trigger: str,
+        decision: Optional[object] = None,
     ) -> None:
         """진화 이벤트를 RunEventStore에 동기 기록.
 
-        run_id는 호출자(AgentRunner 등)가 self._current_run_id를 주입하면
-        실행 컨텍스트와 연관되고, 미주입 시 sentinel "_skill_evolution" 버킷에 기록된다.
+        trigger 종류와 decision에 따라 RunEventType 4종 중 적절한 타입을 선택한다 (§6.3).
         """
         try:
             from core.events.run_event import RunEvent, RunEventType, get_default_store
+            from core.evolution_types import EvolutionDecision
 
-            run_id = getattr(self, "_current_run_id", None) or "_skill_evolution"
+            # _audit_lock으로 스냅샷해 감사 스레드 실행 중 run_id 교체 경합 방지 (HIGH #3)
+            with self._audit_lock:
+                run_id = self._run_id or "_skill_evolution"
+
+            if trigger in _METADATA_TRIGGERS:
+                event_type = RunEventType.METADATA_ENRICHED
+            elif decision == EvolutionDecision.PUBLISHED:
+                event_type = RunEventType.EVOLUTION_PUBLISHED
+            elif decision == EvolutionDecision.DEFERRED:
+                # DEFERRED: 게이트 미신뢰 — payload.reason으로 ROLLED_BACK과 구분
+                event_type = RunEventType.EVOLUTION_ROLLED_BACK
+            elif decision in (EvolutionDecision.REJECTED, EvolutionDecision.ERROR):
+                event_type = RunEventType.EVOLUTION_ROLLED_BACK
+            elif decision is None and trigger in _CODE_EVOLUTION_TRIGGERS:
+                event_type = RunEventType.EVOLUTION_REQUESTED
+            else:
+                event_type = RunEventType.EVOLUTION_REQUESTED
+
+            payload: dict = {
+                "skill_id": skill_id,
+                "old_version": old_version,
+                "new_version": new_version,
+                "trigger": trigger,
+            }
+            if decision is not None:
+                decision_val = decision.value if hasattr(decision, "value") else str(decision)
+                payload["decision"] = decision_val
+                if decision == EvolutionDecision.DEFERRED:
+                    payload["reason"] = "deferred"
+
             store = get_default_store()
             store.append(RunEvent(
                 run_id=run_id,
-                event_type=RunEventType.SKILL_EVOLVED,
-                payload={
-                    "skill_id": skill_id,
-                    "old_version": old_version,
-                    "new_version": new_version,
-                    "trigger": trigger,
-                },
+                event_type=event_type,
+                payload=payload,
             ))
         except Exception as e:
             logger.debug("[SelfEvolution] 이벤트 기록 실패 (무시): %s", e)

@@ -103,11 +103,12 @@ class HookEventBus:
         old_version: str = "",
         new_version: str = "",
         trigger: str = "manual",
+        decision: object = None,   # Stage 1 추가 — EvolutionDecision, Optional
     ) -> None:
         """스킬 진화 완료 이벤트 브로드캐스트."""
         for hook in self._skill_evolved_hooks:
             try:
-                hook.on_skill_evolved(skill_id, old_version, new_version, trigger)
+                hook.on_skill_evolved(skill_id, old_version, new_version, trigger, decision)
             except Exception as exc:
                 logger.error(
                     "Hook %s.on_skill_evolved failed: %s",

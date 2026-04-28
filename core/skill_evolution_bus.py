@@ -73,6 +73,7 @@ class SkillEvolutionBus:
         old_version: str = "",
         new_version: str = "",
         trigger: str = "manual",
+        decision: object = None,   # Stage 1 추가 — Controller 경로에서 결정값 전달용
     ) -> None:
         """
         스킬 코드 또는 메타데이터 변경 후 호출.
@@ -83,6 +84,7 @@ class SkillEvolutionBus:
             old_version: 이전 버전 (로그용)
             new_version: 새 버전 (로그용)
             trigger:     트리거 출처 ("fsa_failure"|"manual"|"schedule"|"quality_check"|"metadata_enriched")
+            decision:    EvolutionDecision — Controller 경로에서 전달; 직접 호출 사이트는 None 유지
         """
         logger.info(
             "[EvolutionBus] on_skill_evolved: %s (%s → %s) trigger=%s",
@@ -107,8 +109,8 @@ class SkillEvolutionBus:
         # 6. AdaptiveSkillLoader 인스턴스 캐시 제거
         self._step6_evict_loader_cache()
 
-        # 7. 이벤트 브로드캐스트
-        self._step7_broadcast(skill_id, old_version, new_version, trigger)
+        # 7. 이벤트 브로드캐스트 — decision 전달로 hook 라우팅 완성 (§7.2)
+        self._step7_broadcast(skill_id, old_version, new_version, trigger, decision)
 
         logger.info("[EvolutionBus] 캐시 체인 무효화 완료: %s", skill_id)
 
@@ -217,6 +219,7 @@ class SkillEvolutionBus:
         old_version: str,
         new_version: str,
         trigger: str,
+        decision: object = None,   # Stage 1 추가 — Controller 경로에서 결정값 전달용
     ) -> None:
         try:
             if self._event_bus_ref is None:
@@ -226,6 +229,7 @@ class SkillEvolutionBus:
                 old_version=old_version,
                 new_version=new_version,
                 trigger=trigger,
+                decision=decision,
             )
             logger.debug("[EvolutionBus] step7 event broadcast: %s", skill_id)
         except Exception as e:

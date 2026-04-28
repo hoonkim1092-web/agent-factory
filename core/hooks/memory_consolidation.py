@@ -14,10 +14,31 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# 활성 hook 인스턴스 레지스트리 — request_consolidation_hint 글로벌 인터페이스용
+_active_hook: "MemoryConsolidationHook | None" = None
+_active_hook_lock = threading.Lock()   # 병렬 AgentRunner 실행 시 단일 슬롯 보호
+
+
+def register_active_hook(hook: "MemoryConsolidationHook") -> None:
+    """AgentRunner 등이 hook 등록 후 이 함수를 호출해 글로벌 hint 경로를 연결한다."""
+    global _active_hook
+    with _active_hook_lock:
+        _active_hook = hook
+
+
+def request_consolidation_hint(skill_id: str) -> None:
+    """코드 진화 완료 신호 전파 — 활성 hook이 없으면 no-op."""
+    with _active_hook_lock:
+        hook = _active_hook
+    if hook is not None:
+        logger.debug("[MemConsolidation] consolidation hint: skill_id=%s", skill_id)
+        # 현재는 hint 기록만. Phase 2 이후 episode 연결로 확장 예정.
 
 
 class MemoryConsolidationHook:
