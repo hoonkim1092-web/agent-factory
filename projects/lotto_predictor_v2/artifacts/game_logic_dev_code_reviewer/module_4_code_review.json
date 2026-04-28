@@ -1,0 +1,24 @@
+{
+  "verdict": "BLOCK",
+  "issues": [
+    {
+      "severity": "high",
+      "file": "src/lotto/recommender.py:76",
+      "title": "홀짝 패턴 입력을 무시하고 추천 규칙을 하드코딩함",
+      "detail": "`recommend_combinations()`는 `PatternStats.odd_even_ratio`를 입력으로 받지만 실제 판정은 `ALLOWED_ODD_COUNTS = {2, 3, 4}` 와 `3:3` 고정 보너스에만 의존한다. 따라서 과거 통계의 대표 홀짝 비율이 `0:6`, `1:5`, `4:2`처럼 달라져도 추천기는 이를 반영하지 못한다. 실제로 `dominant_ratio='0:6'`인 `PatternStats`를 넣어도 결과가 `2:4`로 반환되어 입력 계약과 설계 의도가 깨진다."
+    },
+    {
+      "severity": "medium",
+      "file": "src/lotto/recommender.py:35",
+      "title": "통계 입력 검증이 없어 잘못된 PatternStats를 조용히 정상 처리함",
+      "detail": "후보 선정과 점수 계산이 `.get(..., 0)` 기본값에 광범위하게 의존해 필수 통계가 빠지거나 왜곡된 `PatternStats`가 들어와도 예외 없이 추천을 계속한다. 이 경우 호출자는 잘못된 통계로 계산된 결과와 정상 결과를 구분할 수 없다. 입력 계약상 5개 패턴 필드가 모두 유효해야 하므로, 범위·키 누락·타입 이상을 초기에 명시적으로 거절해야 한다."
+    },
+    {
+      "severity": "medium",
+      "file": "tests/test_recommender.py:59",
+      "title": "핵심 회귀 테스트가 홀짝 패턴 반영과 비정상 입력 케이스를 검증하지 않음",
+      "detail": "현재 테스트는 기본 반환 개수, 제약 만족, 일부 고가중치 번호 포함 여부만 확인한다. `odd_even_ratio`가 다른 입력에 따라 결과가 바뀌는지, `n_combinations`의 비정상 타입/값, 손상된 `PatternStats`에 대한 예외 처리가 없다. 이미 QA 시나리오에 있던 비정상 입력 계약이 빠져 있어 이번 하드코딩 결함이 그대로 통과했다."
+    }
+  ],
+  "summary": "보안상 직접적인 취약점은 보이지 않았지만, 추천기의 핵심 입력인 홀짝 통계를 실제 의사결정에 반영하지 않아 기능 요구와 인터페이스 계약이 깨져 있다. 여기에 입력 검증과 회귀 테스트도 부족해 잘못된 통계가 조용히 추천 결과로 이어질 수 있으므로 현재 판정은 BLOCK이다."
+}

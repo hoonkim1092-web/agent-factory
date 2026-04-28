@@ -1,0 +1,69 @@
+{
+  "stage": "evidence_acquisition",
+  "saved_at": "2026-04-17T01:16:15",
+  "data_hash": "3c66cb7818f2e0d90d5a72ff03ef6b5a",
+  "data": {
+    "workspace_notes": [
+      "existing_todo=.todo.md",
+      "existing_agents=1"
+    ],
+    "local_references": [
+      {
+        "path": "docs/change_history.md",
+        "heading": "### 2026-04-09T23:49:18",
+        "excerpt": "### 2026-04-09T23:49:18 - Summary: Documentation contract initialized. - Reason: Preserve architecture and workflow changes in a stable project history. - Affected files: `docs/architecture.md`, `docs/change_history.md` - Follow-up: Keep this file append-on...",
+        "score": 1.0
+      },
+      {
+        "path": "docs/architecture.md",
+        "heading": "## Documentation Rule",
+        "excerpt": "## Documentation Rule - When the design changes, update this file in the same task. - Append the matching entry to `docs/change_history.md` before closing the task. - All generated or updated documents in this repository must use the language that matches O...",
+        "score": 0.7871
+      },
+      {
+        "path": "docs/plans/2026-04-16-code-review-cross-validation-pipeline.md",
+        "heading": "### 2.6 역할 동적 등록",
+        "excerpt": "### 2.6 역할 동적 등록 Code Reviewer/Cross Validator 역할은 **태스크 주입 시점에 동적 생성**한다: ```python",
+        "score": 1.0
+      },
+      {
+        "path": "docs/plans/2026-04-16-code-review-cross-validation-pipeline.md",
+        "heading": "### 1.1 기존 교차검증 체계와의 관계",
+        "excerpt": "### 1.1 기존 교차검증 체계와의 관계 AF에는 두 계층의 교차검증이 존재한다: | 계층 | 메커니즘 | 대상 | 트리거 | |------|---------|------|--------| | **사람 수준** | af-critic + af-cross-review (CLAUDE.md hook) | AF 코어 코드 (`core/*.py`) | PostToolUse → UserPromptSubmit | | **에이전트 수준 (신규)** | Code Revie...",
+        "score": 0.847
+      },
+      {
+        "path": "docs/plans/2026-04-16-code-review-cross-validation-pipeline.md",
+        "heading": "## 1. 문제",
+        "excerpt": "## 1. 문제 현재 AF의 검증 체계는 QA Engineer(테스트 작성/실행)만 존재한다. - 코드 품질/보안/설계 리뷰가 누락 - 작성자와 다른 CLI 모델에 의한 교차검증이 없음 - QA는 \"테스트 통과 여부\"만 확인하고 코드 자체를 리뷰하지 않음",
+        "score": 0.4573
+      },
+      {
+        "path": "docs/plans/2026-04-16-code-review-cross-validation-pipeline.md",
+        "heading": "### 2.7 BLOCK 판정 시 수정 루프",
+        "excerpt": "### 2.7 BLOCK 판정 시 수정 루프 ``` Code Reviewer → BLOCK 반환 ↓ _handle_review_verdict() 호출 ↓ 원본 build 태스크를 \"pending\"으로 재설정 + mailbox에 blocker 메시지 전송 (issues 포함) + _block_retry_count[task_id] += 1 ↓ Dev가 수정 후 다시 build → code_review 재진행 ``` **재시도 제한**: ```python",
+        "score": 0.3188
+      }
+    ],
+    "web_references": [],
+    "llm_prior_references": [],
+    "notebook_summary": "Conversation ID: c378ae25-0a63-4c31-892c-7aaf4e621bb6 Use --conversation-id for follow-up questions",
+    "evidence_summary": [
+      "Workspace note: existing_todo=.todo.md",
+      "Workspace note: existing_agents=1",
+      "Local reference: docs/change_history.md -> ### 2026-04-09T23:49:18 - Summary: Documentation contract initialized. - Reason: Preserve architecture and workflow changes in a stable project history. - Affected files: `docs/architecture.md`, `docs/change_history.md` - Follow-up: Keep this file append-on...",
+      "Local reference: docs/architecture.md -> ## Documentation Rule - When the design changes, update this file in the same task. - Append the matching entry to `docs/change_history.md` before closing the task. - All generated or updated documents in this repository must use the language that matches O...",
+      "Local reference: docs/plans/2026-04-16-code-review-cross-validation-pipeline.md -> ### 2.6 역할 동적 등록 Code Reviewer/Cross Validator 역할은 **태스크 주입 시점에 동적 생성**한다: ```python",
+      "NotebookLM synthesis: Conversation ID: c378ae25-0a63-4c31-892c-7aaf4e621bb6 Use --conversation-id for follow-up questions"
+    ],
+    "sufficiency_gate_passed": true,
+    "_verification": {
+      "score": 0.824,
+      "status": "pass",
+      "gaps": [
+        "no_external_evidence (web or llm_prior)"
+      ],
+      "attempt": 0
+    }
+  }
+}

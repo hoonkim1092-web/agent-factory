@@ -1,0 +1,10 @@
+{
+  "_comment": "통계 엔진 파이프라인 골격용 저장소 메타데이터다. 실제 500회차 payload 는 테스트에서 생성해 주입하거나 구현체가 fixture 확장자를 해석하도록 맞춘다.",
+  "metadata": {
+    "version": 1,
+    "generated_at": "2026-04-17T09:00:00+09:00",
+    "last_fetched_at": "2026-04-17T08:55:00+09:00",
+    "expected_draw_count": 500
+  },
+  "draws": []
+}

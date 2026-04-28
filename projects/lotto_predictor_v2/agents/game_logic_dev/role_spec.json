@@ -1,0 +1,22 @@
+{
+  "role_id": "game_logic_dev",
+  "name": "Game Logic Dev",
+  "objective": "핵심 규칙과 상태 전이를 구현한다.",
+  "required_skills": [
+    "error_retry_handling"
+  ],
+  "owned_modules": [
+    "game_logic_dev_module_9"
+  ],
+  "feature_slices": [
+    "핵심 규칙과 상태 전이를 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-04-17T01:29:29"
+}
