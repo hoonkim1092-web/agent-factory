@@ -656,6 +656,18 @@ class CrossVerificationLoop:
                             error_log=f"실패 패턴: {patterns}",
                         )
                         if ok:
+                            # H7: Stage 0 안전망 — sandbox 검증. 실패 시 rollback.
+                            # TODO(Stage1): SelfEvolutionController.submit()으로 교체
+                            from core.skill_evolution_safety import (
+                                verify_evolved_skill_sandbox,
+                                rollback_evolved_skill,
+                            )
+                            skill_py = os.path.join(skill_dir, "skill.py")
+                            if os.path.exists(skill_py):  # action skill만 sandbox 검증 (fsa_loop와 동일 정책)
+                                if not verify_evolved_skill_sandbox(skill_py, skill_name):
+                                    self._print(f"⚠️ 보안/샌드박스 검증 실패 — rollback: {skill_name}", "31")
+                                    rollback_evolved_skill(skill_dir, skill_name)
+                                    continue
                             evolved.append(skill_name)
                             old_v = "unknown"
                             new_v = "evolved"

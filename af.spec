@@ -103,6 +103,7 @@ a = Analysis(
         'core.skill_creator',
         'core.skill_enricher',
         'core.skill_eval_harness',
+        'core.skill_evolution_safety',
         'core.skill_quality_gate',
         'core.skill_evolution_bus',
         'core.skill_feedback',

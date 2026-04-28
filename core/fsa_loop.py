@@ -698,47 +698,25 @@ class FSALoop:
         return None
 
     def _verify_evolved_skill(self, skill_py: str, skill_name: str) -> bool:
-        """진화된 스킬을 샌드박스에서 검증합니다."""
-        try:
-            from core.security_guard import quick_guard, run_isolated
+        """진화된 스킬을 샌드박스에서 검증합니다.
 
-            with open(skill_py, "r", encoding="utf-8") as f:
-                code = f.read()
-
-            safe, violations = quick_guard(code)
-            if not safe:
-                print_agent_msg("SkillEvolve", f"보안 검사 실패 ({skill_name}): {violations}", "🛑")
-                return False
-
-            ok, result, stderr = run_isolated(skill_py, timeout_sec=15)
-            if not ok:
-                reason = result.get("reason", "") or result.get("error", "") or stderr
-                print_agent_msg("SkillEvolve", f"샌드박스 검증 실패 ({skill_name}): {reason}", "🛑")
-                return False
-
-            print_agent_msg("SkillEvolve", f"샌드박스 검증 통과: {skill_name}", "✅")
-            return True
-
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"검증 중 예외 ({skill_name}): {e}", "⚠️")
-            return False
+        # TODO(Stage1): SelfEvolutionController가 직접 candidate staging 처리
+        """
+        from core.skill_evolution_safety import verify_evolved_skill_sandbox
+        result = verify_evolved_skill_sandbox(skill_py, skill_name, timeout_sec=15)
+        if not result:
+            print_agent_msg("SkillEvolve", f"검증 실패 (자세한 사유는 logger): {skill_name}", "🛑")
+        return result
 
     def _rollback_skill(self, skill_dir: str, skill_name: str):
-        """진화 실패 시 .bak 파일로 롤백합니다. meta.yaml/meta.json 포함 (H5 v2)."""
-        import shutil
-        restored = False
-        for filename in ("skill.py", "SKILL.md", "skill.md", "meta.yaml", "meta.json"):
-            bak = os.path.join(skill_dir, filename + ".bak")
-            src = os.path.join(skill_dir, filename)
-            if os.path.exists(bak):
-                try:
-                    shutil.move(bak, src)  # same-partition atomic rename (copy2+remove 비원자 패턴 회피)
-                    print_agent_msg("SkillEvolve", f"롤백 완료: {skill_name}/{filename}", "⏪")
-                    restored = True
-                except Exception as e:
-                    print_agent_msg("SkillEvolve", f"롤백 실패: {skill_name}/{filename}: {e}", "⚠️")
-        if not restored:
-            print_agent_msg("SkillEvolve", f"롤백 대상 .bak 파일 없음: {skill_name}", "⚠️")
+        """진화 실패 시 .bak 파일로 롤백합니다. meta.yaml/meta.json 포함 (H5 v2).
+
+        # TODO(Stage1): SelfEvolutionController가 직접 candidate staging 처리
+        """
+        from core.skill_evolution_safety import rollback_evolved_skill
+        restored = rollback_evolved_skill(skill_dir, skill_name)
+        if restored:
+            print_agent_msg("SkillEvolve", f"롤백 완료: {skill_name}", "⏪")
 
     def _cleanup_skill_baks(self, skill_dir: str) -> None:
         """gate PASS 후 .bak 정리. stale .bak이 다음 진화 사이클에서 enricher의

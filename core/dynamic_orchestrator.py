@@ -589,6 +589,17 @@ class DynamicOrchestrator:
                         skill_dir = os.path.join(skills_dir, skill_name)
                         ok = evolve_skill(skill_dir, feedback=feedback, error_log=error_log[:1000])
                         if ok:
+                            # H7' v4: cross_verification/fsa_loop와 동일 안전망 적용 (silent failure 봉쇄 일관성)
+                            from core.skill_evolution_safety import (
+                                verify_evolved_skill_sandbox,
+                                rollback_evolved_skill,
+                            )
+                            skill_py = os.path.join(skill_dir, "skill.py")
+                            if os.path.exists(skill_py):  # action skill만 sandbox 검증 (fsa_loop와 동일 정책)
+                                if not verify_evolved_skill_sandbox(skill_py, skill_name):
+                                    print_agent_msg("Evolve", f"⚠️ 검증 실패 — rollback: {skill_name}", "")
+                                    rollback_evolved_skill(skill_dir, skill_name)
+                                    continue
                             evolved.append(skill_name)
                             print_agent_msg("Evolve", f"스킬 진화 성공: {skill_name}", "")
 
