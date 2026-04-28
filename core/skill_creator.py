@@ -663,9 +663,8 @@ def update_skill(
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version
     meta["updated_at"] = now
-    if skill_type == "action":
-        _write_meta(skill_dir, meta)
-        print(f"[OK] 버전 bump: {old_version} → {new_version}")
+    _write_meta(skill_dir, meta)
+    print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
     # 검증
     ok, msg = validate_skill(skill_dir)
