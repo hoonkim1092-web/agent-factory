@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -148,11 +149,16 @@ class FileRunEventStore(RunEventStore):
 
 
 _default_store: Optional[RunEventStore] = None
+_default_store_lock = threading.Lock()  # get_default_store() 멀티스레드 초기화 안전
 
 
 def get_default_store(base_dir: str = "runs") -> RunEventStore:
+    """프로세스 싱글톤 RunEventStore 반환. 첫 번째 호출 이후 base_dir는 무시됨.
+    Warning: 테스트에서는 반드시 patch 또는 AF_CHECKPOINT_DIR 설정 필요 — 미적용 시 상태 누출."""
     global _default_store
     if _default_store is None:
-        resolved = os.environ.get("AF_CHECKPOINT_DIR") or base_dir
-        _default_store = FileRunEventStore(base_dir=resolved)
+        with _default_store_lock:
+            if _default_store is None:  # double-checked locking
+                resolved = os.environ.get("AF_CHECKPOINT_DIR") or base_dir
+                _default_store = FileRunEventStore(base_dir=resolved)
     return _default_store

@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-28 Stage-1 Sprint 1 구현 완료 + 3-Tier 검증 통과 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-28 Stage-1 Sprint 2 구현 완료 + 3-Tier 검증 통과 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -53,6 +53,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 21 | Stage-0 Hotfix C1~C7: self-evolution silent failure 7종 봉쇄 — 3-Tier 검증 통과 | `3145c224` | 2026-04-28 |
 | 22 | Stage-1 설계: `docs/2026-04-28-self-evolution-stage1-design.md` v3 (14섹션, 3-라운드 교차검증 통과) + Blueprint §12 C1~C5 동기화 | `32c42196` | 2026-04-28 |
 | 23 | Stage-1 Sprint 1: `core/evolution_types.py`(EvolutionDecision/EvolutionResult) + RunEventType 4종 + `_METADATA_TRIGGERS`/`_CODE_EVOLUTION_TRIGGERS` whitelist + SkillSelfEvolutionHook `run_id=` + decision 체인(bus→event_bus→hook) + memory_consolidation Lock + agent_runner 연결 — 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
+| 24 | Stage-1 Sprint 2: `core/skill_evolution_controller.py`(SelfEvolutionController 7단계 파이프라인) + `core/evolution_ledger.py`(EvolutionLedger JSONL) + EVOLUTION_ROLLED_BACK RunEvent 직접 기록 + _publish() live-snapshot rollback + .bak 배포 방지 + get_default_store() thread-safe 싱글톤 + conftest AF_CHECKPOINT_DIR 픽스처 — 60 테스트 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 
 ---
 
@@ -63,12 +64,10 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ### 다음 후보 (선택)
 
-- **Stage-1 구현 Sprint 2**: `SelfEvolutionController` + `EvolutionLedger` 신규 파일 — 설계: `docs/2026-04-28-self-evolution-stage1-design.md` §1/§4
-  - 기술부채(cross-review ACCEPT): `get_default_store()` threading.Lock 부재 (M8 패턴), trigger vs decision 우선순위 설계 §6.3 주석 보강
-  - af.spec: Sprint 2 완료 후 `# 'core.skill_evolution_controller'` 주석 해제 필수
-- **Stage-1 구현 Sprint 2**: `SelfEvolutionController` + `EvolutionLedger` 신규 파일 — 설계: §1/§4
-- **Stage-1 구현 Sprint 3**: `CandidateStagingArea` candidate 격리 + `.bak` 제거 — 설계: §2/§5
-- **exe 빌드 + Release**: Phase A Step 5에서 version 1.2.22 bump만 됐고 `python build_exe.py` + `gh release create af-fsa_v1.2.22` 미실행
+- **Stage-1 구현 Sprint 3**: 기존 호출자(`fsa_loop.py`, `cross_verification.py`) → `SelfEvolutionController.submit()` 교체 — 설계: §2/§5
+  - knowledge skill 진화 경로 Controller 지원 여부 확인 후 `skill.py` 체크 로직 수정
+  - candidate 생성 경로 `config_paths.PROJECT_ROOT` 기준 절대경로로 전환
+- **exe 빌드 + Release**: version 1.2.22 bump됐고 `python build_exe.py` + `gh release create af-fsa_v1.2.22` 미실행
 
 ---
 
