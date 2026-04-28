@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
           }
         ]
       }
@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
           }
         ]
       }
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
           }
         ]
       }
@@ -88,7 +88,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
           }
         ]
       }
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
           }
         ]
       }
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_edit_code_review",
+            "command": "python3 ./scripts/hook_runner.py post_edit_code_review",
             "timeout": 30
           }
         ]
