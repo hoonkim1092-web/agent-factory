@@ -53,6 +53,10 @@ build/
 .system_generated/logs/
 .system_generated/cache/
 
+# --- Stage 1 Self-Evolution Runtime Artifacts (auto-generated, machine-local) ---
+candidates/
+data/evolution/
+
 # --- Runtime/Test Artifacts ---
 /runs/
 projects/default/runs/

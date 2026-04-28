@@ -563,17 +563,10 @@ class FSALoop:
         self, error_reason: str, eval_reasoning: str, run_id: str, cycle: int
     ):
         """
-        실패 원인에서 스킬 이름을 추출하고, 해당 스킬을 자동 진화시킵니다.
-
-        흐름:
-          1. 에러 로그/평가에서 스킬 디렉토리 식별
-          2. evolve_skill()로 LLM 기반 코드 개선
-          3. security_guard.run_isolated()로 샌드박스 검증
-          4. 품질 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 호출
-          5. 실패 시 .bak 롤백 유지
+        실패 원인에서 스킬 이름을 추출하고 SelfEvolutionController로 진화시킵니다.
 
         Returns:
-            GateResult | None: 품질 게이트 결과 (진화 미발생 시 None)
+            GateResult | None: PUBLISHED → passed=True, 그 외 → passed=False / None
         """
         skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
         if not skill_dir:
@@ -582,90 +575,40 @@ class FSALoop:
         skill_name = os.path.basename(skill_dir)
         print_agent_msg("SkillEvolve", f"스킬 진화 시도: {skill_name} (cycle {cycle})", "🧬")
 
-        try:
-            from core.skill_creator import evolve_skill
-            from core.skill_enricher import enrich_skill_metadata
-            from core.skill_evolution_bus import SkillEvolutionBus
+        from core.skill_evolution_controller import SelfEvolutionController
+        from core.evolution_types import EvolutionDecision
+        from core.skill_quality_gate import GateResult
 
-            coding_engine = None
-            if hasattr(self.runner, 'mr') and hasattr(self.runner.mr, 'pick'):
-                coding_engine = self.runner.mr.pick('coding')
+        controller = SelfEvolutionController(run_id=run_id)
+        result = controller.submit(
+            skill_dir=skill_dir,
+            skill_id=skill_name,
+            trigger="fsa_failure",
+            feedback=eval_reasoning,
+            error_log=error_reason,
+        )
 
-            old_version = self._read_skill_version(skill_dir)
-
-            success = evolve_skill(
-                skill_dir=skill_dir,
-                feedback=eval_reasoning,
-                error_log=error_reason,
-                coding_engine=coding_engine,
+        if result.decision == EvolutionDecision.PUBLISHED:
+            try:
+                self._hot_reload_registry(skill_name)
+            except Exception as reload_exc:
+                logger.error("[SkillEvolve] hot_reload 예외 (%s): %s", skill_name, reload_exc)
+            print_agent_msg("SkillEvolve", f"스킬 진화 성공: {skill_name}", "✅")
+        else:
+            print_agent_msg(
+                "SkillEvolve",
+                f"진화 결과: {result.decision.value} ({result.rejection_reason})",
+                "⚠️",
             )
 
-            if not success:
-                print_agent_msg("SkillEvolve", f"진화 실패, 기존 코드 유지: {skill_name}", "⚠️")
-                return None
-
-            enrich_skill_metadata(skill_dir, coding_engine=coding_engine, force=True)
-
-            skill_py = os.path.join(skill_dir, "skill.py")
-            if os.path.exists(skill_py):
-                verified = self._verify_evolved_skill(skill_py, skill_name)
-                if not verified:
-                    self._rollback_skill(skill_dir, skill_name)
-                    return None
-
-            gate_result = self._run_quality_gate(skill_dir, skill_name)
-
-            # H5: 3분기 gate 처리
-            if gate_result is not None and not gate_result.passed:
-                # 분기 1: FAIL — rollback 후 반환
-                for reason in gate_result.failure_reasons:
-                    print_agent_msg("SkillEvolve", reason, "⚠️")
-                print_agent_msg("SkillEvolve", f"품질 게이트 실패 — rollback 시작: {skill_name}", "🚫")
-                self._rollback_skill(skill_dir, skill_name)
-                return gate_result
-
-            elif gate_result is not None and gate_result.passed:
-                # 분기 2: PASS — v7 외부 try/finally로 cleanup 항상 보장
-                new_version = "unknown"
-                try:
-                    try:
-                        self._hot_reload_registry(skill_name)
-                    except Exception as reload_exc:
-                        logger.error("[SkillEvolve] hot_reload 예외 (%s): %s", skill_name, reload_exc)
-                        print_agent_msg("SkillEvolve", f"hot_reload 실패 (계속 진행): {skill_name}", "⚠️")
-                    try:
-                        new_version = self._read_skill_version(skill_dir)
-                    except Exception as ver_exc:
-                        logger.error("[SkillEvolve] read_skill_version 예외 (%s): %s", skill_name, ver_exc)
-                        print_agent_msg("SkillEvolve", f"version 조회 실패 (fallback=unknown): {skill_name}", "⚠️")
-                    try:
-                        evo_bus = SkillEvolutionBus.get_instance()
-                        evo_bus.bind_runner(self.runner)
-                        evo_bus.on_skill_evolved(
-                            skill_id=skill_name,
-                            skill_dir=skill_dir,
-                            old_version=old_version,
-                            new_version=new_version,
-                            trigger="fsa_failure",
-                        )
-                        print_agent_msg("SkillEvolve", f"스킬 진화 성공 + 전체 캐시 무효화: {skill_name}", "✅")
-                    except Exception as bus_exc:
-                        logger.error("[SkillEvolve] EvolutionBus.on_skill_evolved 예외 (%s): %s", skill_name, bus_exc)
-                        print_agent_msg("SkillEvolve", f"EvolutionBus 실패 (계속 진행): {skill_name}", "⚠️")
-                finally:
-                    # Step 4 v7: 외부 finally — BaseException + except 내부 예외 모두에서 도달 보장
-                    self._cleanup_skill_baks(skill_dir)
-                return gate_result
-
-            else:
-                # 분기 3: None (gate 자체 예외) — 보수적 rollback
-                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — rollback (보수적): {skill_name}", "⚠️")
-                self._rollback_skill(skill_dir, skill_name)
-                return None
-
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"진화 프로세스 예외: {e}", "⚠️")
-            return None
+        return GateResult(
+            passed=result.decision == EvolutionDecision.PUBLISHED,
+            skill_path=skill_dir,
+            recommended_stage="active" if result.decision == EvolutionDecision.PUBLISHED else "draft",
+            pass_rate=1.0 if result.decision == EvolutionDecision.PUBLISHED else 0.0,
+            eval_report_path="",
+            failure_reasons=[result.rejection_reason] if result.rejection_reason else [],
+        )
 
     def _detect_failed_skill_dir(self, error_reason: str, eval_reasoning: str) -> str | None:
         """에러 로그에서 실패한 스킬 디렉토리를 추출합니다."""
@@ -696,38 +639,6 @@ class FSALoop:
                 continue
 
         return None
-
-    def _verify_evolved_skill(self, skill_py: str, skill_name: str) -> bool:
-        """진화된 스킬을 샌드박스에서 검증합니다.
-
-        # TODO(Stage1): SelfEvolutionController가 직접 candidate staging 처리
-        """
-        from core.skill_evolution_safety import verify_evolved_skill_sandbox
-        result = verify_evolved_skill_sandbox(skill_py, skill_name, timeout_sec=15)
-        if not result:
-            print_agent_msg("SkillEvolve", f"검증 실패 (자세한 사유는 logger): {skill_name}", "🛑")
-        return result
-
-    def _rollback_skill(self, skill_dir: str, skill_name: str):
-        """진화 실패 시 .bak 파일로 롤백합니다. meta.yaml/meta.json 포함 (H5 v2).
-
-        # TODO(Stage1): SelfEvolutionController가 직접 candidate staging 처리
-        """
-        from core.skill_evolution_safety import rollback_evolved_skill
-        restored = rollback_evolved_skill(skill_dir, skill_name)
-        if restored:
-            print_agent_msg("SkillEvolve", f"롤백 완료: {skill_name}", "⏪")
-
-    def _cleanup_skill_baks(self, skill_dir: str) -> None:
-        """gate PASS 후 .bak 정리. stale .bak이 다음 진화 사이클에서 enricher의
-        not-exists 체크를 우회하는 것을 막는다."""
-        for filename in ("skill.py", "SKILL.md", "skill.md", "meta.yaml", "meta.json"):
-            bak = os.path.join(skill_dir, filename + ".bak")
-            if os.path.exists(bak):
-                try:
-                    os.remove(bak)
-                except Exception as e:
-                    logger.warning("[SkillEvolve] .bak 정리 실패 %s: %s", bak, e)
 
     def _run_quality_gate(self, skill_dir: str, skill_name: str):
         """품질 게이트를 실행하여 GateResult를 반환합니다. 실패 시 None."""

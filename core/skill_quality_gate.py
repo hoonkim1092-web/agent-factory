@@ -43,6 +43,20 @@ class SkillQualityGate:
     ) -> GateResult:
         import os
         skill_py = os.path.join(skill_path, "skill.py")
+
+        # knowledge skill: skill.py 없고 SKILL.md 있으면 문서 전용으로 간주 — gate 통과
+        if not os.path.exists(skill_py) and (
+            os.path.exists(os.path.join(skill_path, "SKILL.md")) or
+            os.path.exists(os.path.join(skill_path, "skill.md"))
+        ):
+            return GateResult(
+                passed=True,
+                skill_path=skill_path,
+                recommended_stage="active",
+                pass_rate=1.0,
+                eval_report_path="",
+            )
+
         try:
             report = self.harness.evaluate(
                 skill_py,

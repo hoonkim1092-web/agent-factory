@@ -564,19 +564,19 @@ class DynamicOrchestrator:
         return self.evaluator.evaluate_failure(role=role, instruction=instruction, error_log=error_log)
 
     def _try_evolve_from_patterns(self, failure_patterns: list, error_log: str, workspace: str) -> None:
-        """failure_patterns에서 관련 스킬을 찾아 자가진화를 시도한다."""
+        """failure_patterns에서 관련 스킬을 찾아 SelfEvolutionController로 진화시킨다."""
         try:
             import re as _re
-            from core.skill_creator import evolve_skill
-            from core.skill_evolution_bus import SkillEvolutionBus
+            from core.config_paths import SKILLS_DIR
+            from core.skill_evolution_controller import SelfEvolutionController
+            from core.evolution_types import EvolutionDecision
 
-            skills_dir = os.path.join(os.path.dirname(__file__), "..", "skills")
-            if not os.path.isdir(skills_dir):
+            if not os.path.isdir(SKILLS_DIR):
                 return
 
             skill_names = [
-                d for d in os.listdir(skills_dir)
-                if os.path.isdir(os.path.join(skills_dir, d)) and not d.startswith(".")
+                d for d in os.listdir(SKILLS_DIR)
+                if os.path.isdir(os.path.join(SKILLS_DIR, d)) and not d.startswith(".")
             ]
             feedback = f"failure_patterns: {failure_patterns}"
             evolved = []
@@ -586,39 +586,22 @@ class DynamicOrchestrator:
                 for skill_name in skill_names:
                     name_lower = skill_name.lower().replace("-", "_")
                     if any(kw and kw in name_lower for kw in keywords if len(kw) > 2):
-                        skill_dir = os.path.join(skills_dir, skill_name)
-                        ok = evolve_skill(skill_dir, feedback=feedback, error_log=error_log[:1000])
-                        if ok:
-                            # H7' v4: cross_verification/fsa_loop와 동일 안전망 적용 (silent failure 봉쇄 일관성)
-                            from core.skill_evolution_safety import (
-                                verify_evolved_skill_sandbox,
-                                rollback_evolved_skill,
-                            )
-                            skill_py = os.path.join(skill_dir, "skill.py")
-                            if os.path.exists(skill_py):  # action skill만 sandbox 검증 (fsa_loop와 동일 정책)
-                                if not verify_evolved_skill_sandbox(skill_py, skill_name):
-                                    print_agent_msg("Evolve", f"⚠️ 검증 실패 — rollback: {skill_name}", "")
-                                    rollback_evolved_skill(skill_dir, skill_name)
-                                    continue
+                        skill_dir = os.path.join(SKILLS_DIR, skill_name)
+                        controller = SelfEvolutionController(run_id=self._run_id)
+                        result = controller.submit(
+                            skill_dir=skill_dir,
+                            skill_id=skill_name,
+                            trigger="cross_verification_orchestrator",
+                            feedback=feedback,
+                            error_log=error_log[:1000],
+                        )
+                        if result.decision == EvolutionDecision.PUBLISHED:
                             evolved.append(skill_name)
                             print_agent_msg("Evolve", f"스킬 진화 성공: {skill_name}", "")
 
             if evolved:
-                name = "(unknown)"  # get_instance() 실패 시 except 블록 NameError 방지
-                try:
-                    bus = SkillEvolutionBus.get_instance()
-                    for name in evolved:
-                        bus.on_skill_evolved(
-                            skill_id=name,
-                            trigger="cross_verification_orchestrator",
-                            old_version="",
-                            new_version="",
-                        )
-                except Exception as bus_exc:
-                    logger.error(
-                        "[Evolve] SkillEvolutionBus.on_skill_evolved 실패 (skill=%s): %s",
-                        name, bus_exc,
-                    )
+                pass  # bus.on_skill_evolved는 Controller._publish에서 이미 발화됨
+
         except Exception as exc:
             logger.error("[Evolve] _try_evolve_from_patterns 예외: %s", exc)
             print_agent_msg("Evolve", f"자가진화 시도 실패 (로그 기록): {exc}", "")

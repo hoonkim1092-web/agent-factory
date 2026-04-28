@@ -7,11 +7,10 @@ Stage 1 스킬 진화 단일 진입점.
 LLM 진화, sandbox 검증, quality gate, publish 또는 폐기까지 한 번에 처리하고
 EvolutionResult를 반환한다.
 
-Sprint 2 구현 범위:
-- SelfEvolutionController.__init__ / submit / _create_candidate / _verify_sandbox / _publish
-- RunBudget 연동 (F8): record() / is_exhausted() / remaining()
-- EvolutionLedger 선택 연동 (Optional — 병렬 트랙)
-- Stage 1 설계서 §1 / §9 기반
+Sprint 3 구현 범위:
+- _create_candidate: 절대경로 (config_paths.CANDIDATES_DIR 기준)
+- knowledge skill 지원: skill.py 없어도 SKILL.md 있으면 sandbox 검증 스킵
+- 호출 사이트 교체: fsa_loop / cross_verification / dynamic_orchestrator → submit()
 """
 from __future__ import annotations
 
@@ -22,6 +21,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+from core.config_paths import CANDIDATES_DIR
 from core.evolution_types import EvolutionDecision, EvolutionResult
 
 if TYPE_CHECKING:
@@ -138,22 +138,27 @@ class SelfEvolutionController:
             cost_tokens = (self._budget.consumed - pre_consumed) if self._budget else 0
 
             # 7. Sandbox 검증 (quick_guard + run_isolated)
-            # skill.py 없음 = evolve_skill 성공 후 파일 생성 실패 → REJECTED
+            # knowledge skill: SKILL.md 기반 — skill.py 없음은 정상이므로 sandbox 스킵
+            # action skill: skill.py 없으면 evolve 후 파일 생성 실패 → REJECTED
             skill_py = os.path.join(candidate_dir, "skill.py")
             if not os.path.exists(skill_py):
-                logger.warning("[Controller] evolve 후 skill.py 미생성: %s", skill_id)
-                self._discard_candidate(candidate_dir)
-                return self._make_result(
-                    skill_id=skill_id,
-                    decision=EvolutionDecision.REJECTED,
-                    candidate_dir=None,
-                    new_version=None,
-                    rejection_reason="skill_py_not_found_after_evolve",
-                    cost_tokens=cost_tokens,
-                    trigger=trigger,
-                    old_version=old_version,
-                )
-            verified = self._verify_sandbox(skill_py, skill_id)
+                if self._is_knowledge_skill(candidate_dir):
+                    verified = True
+                else:
+                    logger.warning("[Controller] evolve 후 skill.py 미생성: %s", skill_id)
+                    self._discard_candidate(candidate_dir)
+                    return self._make_result(
+                        skill_id=skill_id,
+                        decision=EvolutionDecision.REJECTED,
+                        candidate_dir=None,
+                        new_version=None,
+                        rejection_reason="skill_py_not_found_after_evolve",
+                        cost_tokens=cost_tokens,
+                        trigger=trigger,
+                        old_version=old_version,
+                    )
+            else:
+                verified = self._verify_sandbox(skill_py, skill_id)
             if not verified:
                 self._discard_candidate(candidate_dir)
                 return self._make_result(
@@ -248,7 +253,7 @@ class SelfEvolutionController:
         skill_id = os.path.basename(live_dir.rstrip(os.sep))
         run_id_part = self._run_id or "_no_run"
         ts = str(int(time.time() * 1000))
-        candidate_dir = os.path.join("candidates", skill_id, run_id_part, ts)
+        candidate_dir = os.path.join(CANDIDATES_DIR, skill_id, run_id_part, ts)
         os.makedirs(candidate_dir, exist_ok=True)
 
         # live 파일 복사
@@ -267,6 +272,14 @@ class SelfEvolutionController:
 
         logger.debug("[Controller] candidate 생성: %s → %s", live_dir, candidate_dir)
         return candidate_dir
+
+    @staticmethod
+    def _is_knowledge_skill(candidate_dir: str) -> bool:
+        """SKILL.md 있고 skill.py 없으면 knowledge skill (sandbox 검증 불필요)."""
+        return (
+            os.path.exists(os.path.join(candidate_dir, "SKILL.md")) or
+            os.path.exists(os.path.join(candidate_dir, "skill.md"))
+        )
 
     def _verify_sandbox(self, skill_py: str, skill_id: str) -> bool:
         """quick_guard + run_isolated. skill_evolution_safety.verify_*와 동일 로직."""

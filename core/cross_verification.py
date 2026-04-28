@@ -623,24 +623,20 @@ class CrossVerificationLoop:
     # ── 내부 메서드: 자가진화 ──
 
     def _trigger_evolution(self, judgment: JudgmentResult) -> None:
-        """실패 패턴 기반으로 관련 스킬을 자가진화시킨다."""
+        """실패 패턴 기반으로 관련 스킬을 SelfEvolutionController로 진화시킨다."""
         try:
-            from core.skill_evolution_bus import SkillEvolutionBus
-            from core.skill_creator import evolve_skill
             from core.config_paths import SKILLS_DIR
+            from core.skill_evolution_controller import SelfEvolutionController
+            from core.evolution_types import EvolutionDecision
 
-            bus = SkillEvolutionBus.get_instance()
             patterns = judgment.failure_patterns
-
             self._print(f"자가진화 트리거: 패턴 {patterns}", "35")
 
-            # 패턴에서 스킬 이름 추출 (예: "security:sql_injection" → "sql", "security")
             keywords = set()
             for p in patterns:
                 parts = re.split(r"[:\-_]", p.lower())
                 keywords.update(parts)
 
-            # 관련 스킬 탐색
             evolved = []
             if os.path.isdir(SKILLS_DIR):
                 for skill_name in os.listdir(SKILLS_DIR):
@@ -650,34 +646,16 @@ class CrossVerificationLoop:
                     name_lower = skill_name.lower().replace("-", "_")
                     if any(kw in name_lower for kw in keywords if len(kw) > 3):
                         self._print(f"스킬 진화 시도: {skill_name}", "35")
-                        ok = evolve_skill(
+                        controller = SelfEvolutionController()
+                        result = controller.submit(
                             skill_dir=skill_dir,
+                            skill_id=skill_name,
+                            trigger="cross_verification",
                             feedback=judgment.feedback,
                             error_log=f"실패 패턴: {patterns}",
                         )
-                        if ok:
-                            # H7: Stage 0 안전망 — sandbox 검증. 실패 시 rollback.
-                            # TODO(Stage1): SelfEvolutionController.submit()으로 교체
-                            from core.skill_evolution_safety import (
-                                verify_evolved_skill_sandbox,
-                                rollback_evolved_skill,
-                            )
-                            skill_py = os.path.join(skill_dir, "skill.py")
-                            if os.path.exists(skill_py):  # action skill만 sandbox 검증 (fsa_loop와 동일 정책)
-                                if not verify_evolved_skill_sandbox(skill_py, skill_name):
-                                    self._print(f"⚠️ 보안/샌드박스 검증 실패 — rollback: {skill_name}", "31")
-                                    rollback_evolved_skill(skill_dir, skill_name)
-                                    continue
+                        if result.decision == EvolutionDecision.PUBLISHED:
                             evolved.append(skill_name)
-                            old_v = "unknown"
-                            new_v = "evolved"
-                            bus.on_skill_evolved(
-                                skill_id=skill_name,
-                                skill_dir=skill_dir,
-                                old_version=old_v,
-                                new_version=new_v,
-                                trigger="cross_verification",
-                            )
 
             if evolved:
                 self._print(f"진화 완료: {evolved}", "32")
