@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `이번 세션 — Stage-1 설계 + Blueprint §12 C1~C5 동기화` |
+| 마지막 커밋 | `32c42196 docs(stage1-design): Stage-1 설계 v3 + Blueprint §12 C1~C5 동기화` |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -51,7 +51,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 19 | T3-7: Audit/Cost/Approval → RunEvent 통합 — COST_INCURRED + APPROVAL_REQUESTED/GRANTED + W3 fix + check_validity 신규 문서 감지 — 3-Tier 검증 통과 | `a4965cf1` | 2026-04-27 |
 | 20 | T3-7 ACCEPT 2 후속: CLI --budget → set_run_budget run_id 연결 + approve() run_id 전달 + consumed_tokens 역기록 + 즉시 중단 가드 — 3-Tier 검증 통과 | `59b89f72` | 2026-04-27 |
 | 21 | Stage-0 Hotfix C1~C7: self-evolution silent failure 7종 봉쇄 — 3-Tier 검증 통과 | `3145c224` | 2026-04-28 |
-| 22 | Stage-1 설계: `docs/2026-04-28-self-evolution-stage1-design.md` v3 (14섹션, 3-라운드 교차검증 통과) + Blueprint §12 C1~C5 동기화 | 이번 커밋 | 2026-04-28 |
+| 22 | Stage-1 설계: `docs/2026-04-28-self-evolution-stage1-design.md` v3 (14섹션, 3-라운드 교차검증 통과) + Blueprint §12 C1~C5 동기화 | `32c42196` | 2026-04-28 |
 
 ---
 
