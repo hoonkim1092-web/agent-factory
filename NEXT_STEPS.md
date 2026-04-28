@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-28 Stage-0 Hotfix C1~C7 완료 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-28 Stage-1 설계 완료 + Blueprint §12 C1~C5 동기화 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,8 +20,8 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `3145c224 fix(C7): skill_evolution_safety 공용 모듈 + 3곳 sandbox 검증 통합` |
-| origin 푸시 | ⏳ 미완료 (push 필요) |
+| 마지막 커밋 | `이번 세션 — Stage-1 설계 + Blueprint §12 C1~C5 동기화` |
+| origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
 ---
@@ -51,81 +51,21 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 19 | T3-7: Audit/Cost/Approval → RunEvent 통합 — COST_INCURRED + APPROVAL_REQUESTED/GRANTED + W3 fix + check_validity 신규 문서 감지 — 3-Tier 검증 통과 | `a4965cf1` | 2026-04-27 |
 | 20 | T3-7 ACCEPT 2 후속: CLI --budget → set_run_budget run_id 연결 + approve() run_id 전달 + consumed_tokens 역기록 + 즉시 중단 가드 — 3-Tier 검증 통과 | `59b89f72` | 2026-04-27 |
 | 21 | Stage-0 Hotfix C1~C7: self-evolution silent failure 7종 봉쇄 — 3-Tier 검증 통과 | `3145c224` | 2026-04-28 |
+| 22 | Stage-1 설계: `docs/2026-04-28-self-evolution-stage1-design.md` v3 (14섹션, 3-라운드 교차검증 통과) + Blueprint §12 C1~C5 동기화 | 이번 커밋 | 2026-04-28 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-### T1-2: ✅ 완료 (0320d311)
+> **2026-04-28 정리**: 모든 우선순위 항목이 완료되어 "완료된 작업" 테이블로 이동 완료.
+> 현재 미완료 작업 없음. 새 작업이 시작되면 이 섹션에 추가.
 
-- DynamicOrchestrator idempotency guard + RunEvent per-step 방출
-- _completed_subtask_keys() RunEventStore 세 번째 소스 (재시작 복원)
-- restore_from() run_id 복원
+### 다음 후보 (선택)
 
-### T2-5: ✅ 완료 (2c1eb81a)
-
-- CortexVectorAdapter: similarity 점수 캡처, project_id 동적화, transient 값 영속화 방지
-- facade: _vector_score 우선 랭킹, dedup tiebreaker, TTL 필터
-- cortex: project_id 동적화, save_memory caller 우선
-
-### T2-4: ✅ 완료 (cb5adfcd)
-
-- search_all_backends() memory_type/scope 필터 추가 (search_semantic()과 인터페이스 통일)
-- cortex_vector.py cross-project 격리 수정 (project_id=None → recall에 None 직통 전달)
-- cortex.py apply() recall에 project_id 명시 전달, filter_dict={} if project_id is None
-- cross_project.py find_similar_solutions() memory_type 파라미터 위임
-- fetch_limit=limit*3 버퍼, TimeoutError 로깅 분기, expired debug 로그
-- 신규 테스트 4건 + mock fix
-
-### T3-7: ✅ 완료 (a4965cf1) + ACCEPT 2 후속 ✅ 완료 (이번 커밋)
-
-- RunBudget COST_INCURRED RunEvent (80%/exhausted 마일스톤)
-- ApprovalGate APPROVAL_REQUESTED/GRANTED RunEvent
-- is_execution_open() W3 fix — check_validity 항상 실행
-- check_validity 신규 문서 감지 (승인 당시 없던 파일 사후 추가)
-- generate_work_items/project_pipeline run_id 전파
-- **ACCEPT 2 후속**: nightly_tick set_run_budget(run_id=tick_id) + consumed_tokens 사전 로드/역기록 + warned_80/stopped 플래그 복원 + _dispatch_actions 즉시 중단 + rb_wired 가드
-- **ACCEPT 2 후속**: agent_launcher.py:438 gate.approve(run_id=prepared.run_id)
-
-### Stage-0 Hotfix: ✅ C1~C7 모두 완료 (2026-04-28)
-
-- C1: DynamicOrchestrator on_skill_evolved NameError + silent except 제거
-- C2: SkillEvolutionBus.on_bulk_enriched _step7_broadcast 추가
-- C3: AgentRunner._sse_hook lazy init + SkillSelfEvolutionHook 스레드 안전 카운터
-- C4: FSALoop gate 3-branch + _rollback_skill shutil.move 원자화 + _cleanup_skill_baks
-- C5: skill_creator/skill_enricher .bak 보존 정책 통일 (not-exists guard)
-- C6: RunEvent SKILL_EVOLVED + asyncio+UnifiedMemoryFacade → 동기 RunEventStore
-- C7: skill_evolution_safety 공용 모듈 신규 + 3곳(fsa_loop/cv/do) sandbox 검증 통합
-
-### Phase A: Step 3+4+5 ✅ 완료
-
-- Step 3 (EVOLUTION): GateResult.quality_delta, SkillEvolutionBus/QualityGate/SelfEvolution 직접 테스트 29건
-- Step 4 (MEMORY): MemoryScope.PROJECT, semantic_scores 전달, _recall_graph scope 수정, M8 에피소드 주입
-- Step 5: version 1.2.22 bump + Blueprint 갱신 완료 (exe 빌드는 Windows에서 수행)
-
-### B2-6: ✅ 완료
-
-- C0: write_project_board atomic write
-- C1: strategy ledger 모듈별 granularity (_record_ledger_outcomes, module_outcome_from_board, detect_owner_drift)
-- C2: nightly summary 모듈 섹션, 12건 테스트
-
-### 3순위: ✅ 완료
-
-- CheckpointHook 등록 (agent_runner.py)
-- EpisodeRecord.event_type/failure_pattern/root_cause 필드 추가
-- DynamicOrchestrator._execute_agent_task finally에 record_episode
-
-### P0 & P1 & P2: ✅ 모두 완료
-
-- P0: LLM 문서 생성 파이프라인 P3~P6 (`a12f4493`)
-- P1: gitignore 보안 (`0defdfba`)
-- P2: Cross-PC 세션 연속성 — Supabase `claude_memory` 테이블 생성 완료, `end_db`/`start_db` 정상 동작 확인
-
-### (구) P0: LLM 문서 생성 파이프라인 ✅ 완료 (P3~P6)
-
-**설계 문서**: `docs/features/2026-04-07-llm-powered-document-generation.md`
-
-모두 `a12f4493` 커밋에서 완료. 남은 작업 없음.
+- **Stage-1 구현 Sprint 1**: `core/evolution_types.py` (EvolutionDecision enum/dataclass) + hook `run_id=` 파라미터 추가 + trigger whitelist (`_METADATA_TRIGGERS` / `_CODE_EVOLUTION_TRIGGERS`) — 설계: `docs/2026-04-28-self-evolution-stage1-design.md` §6/§7/§3
+- **Stage-1 구현 Sprint 2**: `SelfEvolutionController` + `EvolutionLedger` 신규 파일 — 설계: §1/§4
+- **Stage-1 구현 Sprint 3**: `CandidateStagingArea` candidate 격리 + `.bak` 제거 — 설계: §2/§5
+- **exe 빌드 + Release**: Phase A Step 5에서 version 1.2.22 bump만 됐고 `python build_exe.py` + `gh release create af-fsa_v1.2.22` 미실행
 
 ---
 
