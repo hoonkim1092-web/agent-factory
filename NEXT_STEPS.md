@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-28 Stage-1 설계 완료 + Blueprint §12 C1~C5 동기화 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-28 Stage-1 Sprint 1 구현 완료 + 3-Tier 검증 통과 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `32c42196 docs(stage1-design): Stage-1 설계 v3 + Blueprint §12 C1~C5 동기화` |
+| 마지막 커밋 | Stage-1 Sprint 1 구현 — evolution_types, RunEventType 4종, decision 체인, run_id 주입 |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -52,6 +52,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 20 | T3-7 ACCEPT 2 후속: CLI --budget → set_run_budget run_id 연결 + approve() run_id 전달 + consumed_tokens 역기록 + 즉시 중단 가드 — 3-Tier 검증 통과 | `59b89f72` | 2026-04-27 |
 | 21 | Stage-0 Hotfix C1~C7: self-evolution silent failure 7종 봉쇄 — 3-Tier 검증 통과 | `3145c224` | 2026-04-28 |
 | 22 | Stage-1 설계: `docs/2026-04-28-self-evolution-stage1-design.md` v3 (14섹션, 3-라운드 교차검증 통과) + Blueprint §12 C1~C5 동기화 | `32c42196` | 2026-04-28 |
+| 23 | Stage-1 Sprint 1: `core/evolution_types.py`(EvolutionDecision/EvolutionResult) + RunEventType 4종 + `_METADATA_TRIGGERS`/`_CODE_EVOLUTION_TRIGGERS` whitelist + SkillSelfEvolutionHook `run_id=` + decision 체인(bus→event_bus→hook) + memory_consolidation Lock + agent_runner 연결 — 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 
 ---
 
@@ -62,7 +63,9 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ### 다음 후보 (선택)
 
-- **Stage-1 구현 Sprint 1**: `core/evolution_types.py` (EvolutionDecision enum/dataclass) + hook `run_id=` 파라미터 추가 + trigger whitelist (`_METADATA_TRIGGERS` / `_CODE_EVOLUTION_TRIGGERS`) — 설계: `docs/2026-04-28-self-evolution-stage1-design.md` §6/§7/§3
+- **Stage-1 구현 Sprint 2**: `SelfEvolutionController` + `EvolutionLedger` 신규 파일 — 설계: `docs/2026-04-28-self-evolution-stage1-design.md` §1/§4
+  - 기술부채(cross-review ACCEPT): `get_default_store()` threading.Lock 부재 (M8 패턴), trigger vs decision 우선순위 설계 §6.3 주석 보강
+  - af.spec: Sprint 2 완료 후 `# 'core.skill_evolution_controller'` 주석 해제 필수
 - **Stage-1 구현 Sprint 2**: `SelfEvolutionController` + `EvolutionLedger` 신규 파일 — 설계: §1/§4
 - **Stage-1 구현 Sprint 3**: `CandidateStagingArea` candidate 격리 + `.bak` 제거 — 설계: §2/§5
 - **exe 빌드 + Release**: Phase A Step 5에서 version 1.2.22 bump만 됐고 `python build_exe.py` + `gh release create af-fsa_v1.2.22` 미실행

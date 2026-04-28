@@ -978,7 +978,9 @@ class AgentRunner:
             from core.hooks.skill_self_evolution import SkillSelfEvolutionHook
             from core.skill_evolution_bus import SkillEvolutionBus
             if getattr(self, "_sse_hook", None) is None:
-                self._sse_hook = SkillSelfEvolutionHook(check_interval=10)
+                self._sse_hook = SkillSelfEvolutionHook(check_interval=10, run_id=run_id)
+            else:
+                self._sse_hook.update_run_id(run_id)   # 재진입 시 run_id 갱신 (thread-safe)
             bus.register(self._sse_hook)
             _evo_bus = SkillEvolutionBus.get_instance()
             _evo_bus.bind_runner(self)
@@ -1006,13 +1008,14 @@ class AgentRunner:
 
         try:
             from core.memory_system.knowledge_injection import KnowledgeInjectionHook
-            from core.hooks.memory_consolidation import MemoryConsolidationHook
+            from core.hooks.memory_consolidation import MemoryConsolidationHook, register_active_hook
             from core.memory_system.facade import UnifiedMemoryFacade
             from core.memory_system.adapters.knowledge_graph import KnowledgeGraphAdapter
             from core.memory_system.adapters.core_memory import CoreMemoryAdapter
 
             _mem_ki_hook = KnowledgeInjectionHook()
             _mem_mc_hook = MemoryConsolidationHook()
+            register_active_hook(_mem_mc_hook)  # Stage 1: _notify_consolidation 글로벌 경로 연결
 
             _agent_name = str(agent.get("name", ""))
             _pid = str(project_id or "agent_factory")

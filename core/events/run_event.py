@@ -39,7 +39,11 @@ class RunEventType(str, Enum):
     COST_INCURRED = "cost_incurred"
     APPROVAL_REQUESTED = "approval_requested"
     APPROVAL_GRANTED = "approval_granted"
-    SKILL_EVOLVED = "skill_evolved"
+    SKILL_EVOLVED = "skill_evolved"                          # deprecated — 1 sprint 호환 유지
+    METADATA_ENRICHED = "metadata_enriched"                  # bulk_enrich → on_bulk_enriched
+    EVOLUTION_REQUESTED = "evolution_requested"              # Controller.submit() 진입
+    EVOLUTION_PUBLISHED = "evolution_published"              # candidate → live publish 성공
+    EVOLUTION_ROLLED_BACK = "evolution_rolled_back"          # REJECTED/DEFERRED/ERROR → candidate 폐기
 
 
 @dataclass
