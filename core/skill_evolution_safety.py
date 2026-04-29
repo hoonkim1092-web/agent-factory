@@ -3,10 +3,8 @@ core/skill_evolution_safety.py
 ==============================
 스킬 진화 안전망 헬퍼. fsa_loop와 cross_verification이 공유.
 
-Stage 0 임시 모듈. Stage 1에서 SelfEvolutionController로 흡수 예정.
-
-# TODO(Stage1): SelfEvolutionController가 이 모듈을 흡수하면서
-#               candidate staging 기반으로 재구성. 본 모듈은 deprecated 후 제거.
+# DEPRECATED (Stage 2 정리 대상): SelfEvolutionController._verify_sandbox()가 현재 위임 호출 중.
+# 삭제 전 Controller에 인라인 후 제거할 것 — Sprint 4 이후 예정.
 """
 from __future__ import annotations
 
@@ -23,7 +21,7 @@ def verify_evolved_skill_sandbox(skill_py: str, skill_name: str, *, timeout_sec:
     """
     진화된 스킬을 보안 검사 + 샌드박스 실행으로 검증.
 
-    fsa_loop._verify_evolved_skill (core/fsa_loop.py:674-698)와 동일 로직:
+    SelfEvolutionController._verify_sandbox (Sprint 1+)에서 위임 호출하는 로직:
       1. quick_guard(code) — 금지 import/함수 정적 검사
       2. run_isolated(skill_py) — 서브프로세스 + 타임아웃 실행
 

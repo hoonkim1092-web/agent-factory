@@ -79,6 +79,8 @@ class FSALoop:
         self.agent_mgr = agent_mgr
         self._visualizer = visualizer
         self.max_cycles = 5
+        # DEFERRED/ERROR로 진화가 불가능했던 스킬 — run 중 재시도 차단
+        self._evolution_failed_skills: set[str] = set()
 
         # ISE-level 분석/재설계/정체감지 엔진
         model_name = "gemini-1.5-pro-latest"
@@ -120,6 +122,9 @@ class FSALoop:
                 "lineage_id": str | None,
             }
         """
+        # run 단위 상태 초기화
+        self._evolution_failed_skills = set()
+
         # ── 워크스페이스 설정 ──
         target_workspace = workspace or os.getcwd()
         if not target_workspace or not os.path.isdir(target_workspace):
@@ -259,6 +264,9 @@ class FSALoop:
 
                 # ── Step 5: ESCALATE — 에스컬레이션 레벨 결정 ──
                 level = self._decide_escalation(ledger, analysis)
+                # 진화 불가 스킬이 기록된 경우 Level 4 루프 방지 — Level 5로 강제 에스컬레이션
+                if level == 4 and self._evolution_failed_skills:
+                    level = 5
                 max_level_reached = max(max_level_reached, level)
 
                 # 원장에 시도 기록
@@ -309,12 +317,17 @@ class FSALoop:
                         run_id=run_id,
                         cycle=cycle,
                     )
-                    if gate_result is not None:
+                    if gate_result is not None and gate_result.passed:
                         evolved_skill_name = (
                             gate_result.skill_path.split(os.sep)[-1]
                             if gate_result.skill_path else None
                         )
-                    current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
+                    if gate_result is None:
+                        # 진화 실패/불가/미탐지 → 전략 전환
+                        current_task = self.redesigner.apply_pivot(task_input, analysis, ledger)
+                    else:
+                        # gate_result는 항상 GateResult(passed=True) — PUBLISHED 성공
+                        current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
 
                 elif level == 5:
                     print_agent_msg("FSA", "태스크 분해: 서브태스크로 분할 실행합니다", "🔀")
@@ -566,13 +579,19 @@ class FSALoop:
         실패 원인에서 스킬 이름을 추출하고 SelfEvolutionController로 진화시킵니다.
 
         Returns:
-            GateResult | None: PUBLISHED → passed=True, 그 외 → passed=False / None
+            GateResult | None: PUBLISHED → GateResult(passed=True), 그 외 모두 → None
         """
         skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
         if not skill_dir:
             return None
 
         skill_name = os.path.basename(skill_dir)
+
+        # 이미 이 run에서 DEFERRED/ERROR 이력이 있는 스킬은 재시도하지 않음
+        if skill_name in self._evolution_failed_skills:
+            logger.info("[SkillEvolve] 이미 진화 불가 판정(%s) — 재시도 스킵", skill_name)
+            return None
+
         print_agent_msg("SkillEvolve", f"스킬 진화 시도: {skill_name} (cycle {cycle})", "🧬")
 
         from core.skill_evolution_controller import SelfEvolutionController
@@ -601,13 +620,17 @@ class FSALoop:
                 "⚠️",
             )
 
+        # PUBLISHED만 성공 — REJECTED/DEFERRED/ERROR 모두 run 내 재시도 차단
+        if result.decision != EvolutionDecision.PUBLISHED:
+            self._evolution_failed_skills.add(skill_name)
+            return None
+
         return GateResult(
-            passed=result.decision == EvolutionDecision.PUBLISHED,
+            passed=True,
             skill_path=skill_dir,
-            recommended_stage="active" if result.decision == EvolutionDecision.PUBLISHED else "draft",
-            pass_rate=1.0 if result.decision == EvolutionDecision.PUBLISHED else 0.0,
+            recommended_stage="active",
+            pass_rate=1.0,
             eval_report_path="",
-            failure_reasons=[result.rejection_reason] if result.rejection_reason else [],
         )
 
     def _detect_failed_skill_dir(self, error_reason: str, eval_reasoning: str) -> str | None:
@@ -639,23 +662,6 @@ class FSALoop:
                 continue
 
         return None
-
-    def _run_quality_gate(self, skill_dir: str, skill_name: str):
-        """품질 게이트를 실행하여 GateResult를 반환합니다. 실패 시 None."""
-        try:
-            from core.skill_quality_gate import SkillQualityGate
-            gate = SkillQualityGate()
-            result = gate.validate(skill_dir, auto_register=True)
-            print_agent_msg(
-                "SkillEvolve",
-                f"품질 게이트 결과: {skill_name} — {'통과' if result.passed else '실패'} "
-                f"(pass_rate={result.pass_rate:.1%}, stage={result.recommended_stage})",
-                "🔬",
-            )
-            return result
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"품질 게이트 예외 ({skill_name}): {e}", "⚠️")
-            return None
 
     # ══════════════════════════════════════════════════════════════
     #  에피소드 기록 / 유틸

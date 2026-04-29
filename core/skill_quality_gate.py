@@ -5,8 +5,11 @@ core/skill_quality_gate.py
 Quality Plane 컴포넌트.
 """
 from __future__ import annotations
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from core.skill_registry import SkillRegistry
@@ -49,6 +52,8 @@ class SkillQualityGate:
             os.path.exists(os.path.join(skill_path, "SKILL.md")) or
             os.path.exists(os.path.join(skill_path, "skill.md"))
         ):
+            if auto_register:
+                self._register_knowledge_skill(skill_path)
             return GateResult(
                 passed=True,
                 skill_path=skill_path,
@@ -126,3 +131,18 @@ class SkillQualityGate:
             self.registry.register(metadata)
         except Exception:
             pass
+
+    def _register_knowledge_skill(self, skill_path: str) -> None:
+        """knowledge skill(SKILL.md 전용)을 레지스트리에 등재한다. eval report 없음."""
+        try:
+            import os
+            from core.skill_metadata_adapter import auto_detect_and_convert
+            skill_name = os.path.basename(skill_path)
+            metadata = auto_detect_and_convert(skill_path, skill_name)
+            if metadata is None:
+                logger.warning("[SkillQualityGate] knowledge skill metadata 변환 실패 — 등재 스킵: %s", skill_path)
+                return
+            metadata.lifecycle_stage = "active"
+            self.registry.register(metadata)
+        except Exception as e:
+            logger.warning("[SkillQualityGate] knowledge skill 등재 실패: %s — %s", skill_path, e)

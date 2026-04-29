@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-29 Stage-1 Sprint 3 구현 완료 + 3-Tier 검증 통과 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-29 Sprint 3 WARN 클리어 완료 + 9-라운드 3-Tier 검증 통과 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -55,6 +55,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 23 | Stage-1 Sprint 1: `core/evolution_types.py`(EvolutionDecision/EvolutionResult) + RunEventType 4종 + `_METADATA_TRIGGERS`/`_CODE_EVOLUTION_TRIGGERS` whitelist + SkillSelfEvolutionHook `run_id=` + decision 체인(bus→event_bus→hook) + memory_consolidation Lock + agent_runner 연결 — 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 | 24 | Stage-1 Sprint 2: `core/skill_evolution_controller.py`(SelfEvolutionController 7단계 파이프라인) + `core/evolution_ledger.py`(EvolutionLedger JSONL) + EVOLUTION_ROLLED_BACK RunEvent 직접 기록 + _publish() live-snapshot rollback + .bak 배포 방지 + get_default_store() thread-safe 싱글톤 + conftest AF_CHECKPOINT_DIR 픽스처 — 60 테스트 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 | 25 | Stage-1 Sprint 3: 호출사이트 3개(fsa_loop._try_evolve_failed_skill, cross_verification._trigger_evolution, dynamic_orchestrator._try_evolve_from_patterns) → SelfEvolutionController.submit() 교체, 3메서드 제거(_verify_evolved_skill/_rollback_skill/_cleanup_skill_baks), CANDIDATES_DIR 절대경로(config_paths.py), knowledge skill 지원(_is_knowledge_skill + SkillQualityGate early-return), skill_creator meta.yaml.bak 제거, GateResult 필수 필드 추가 — 70 테스트 3-Tier 검증 통과 | (커밋 예정) | 2026-04-29 |
+| 26 | Sprint 3 WARN 클리어 (9-라운드 3-Tier): fsa_loop DEFERRED/ERROR/REJECTED→None+_evolution_failed_skills 차단, Level 4 apply_pivot 조건 정리, gate_result is None 단순화, Level 4→5 강제에스컬레이션, run_mission 초기화, skill_quality_gate knowledge skill auto_register+_register_knowledge_skill, skill_creator update_skill knowledge type 보존(setdefault), skill_evolution_safety DEPRECATED 마커, fixture 모듈 속성 복원, 테스트 4종 신규 추가 — 81 테스트 통과 | (커밋 예정) | 2026-04-29 |
 
 ---
 
@@ -67,6 +68,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 - **exe 빌드 + Release**: version 1.2.22 bump됐고 `python build_exe.py` + `gh release create af-fsa_v1.2.22` 미실행
 - **Stage-1 Sprint 4 후보**: enrich_skill_metadata를 Controller 내부 publish 후 호출 연결 + Ledger 통합 테스트 보강
+- **Sprint 4 기술부채**: (1) knowledge skill description/when_to_use 빈 값 등재 — skill_metadata_adapter SKILL.md fallback, (2) `_evolution_failed_skills` 전역 차단 → 스킬별 조건으로 좁히기 (line 268)
 
 ---
 

@@ -658,7 +658,8 @@ def update_skill(
             # 백업 복원
             shutil.copy2(bak, src)
 
-    # 버전 bump
+    # 버전 bump — type 누락 시 감지된 skill_type 보존 (knowledge → action 오염 방지)
+    meta.setdefault("type", skill_type)
     old_version = meta.get("version", "0.1.0")
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version

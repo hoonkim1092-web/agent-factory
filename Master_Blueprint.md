@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-04-28 | version: v1.2.22 -->
+<!-- last_updated: 2026-04-29 | version: v1.2.22 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -71,7 +71,7 @@
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
 | `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | `SkillPackBootstrapper`, `check_installed()`, `missing()`, `installed()` |
-| `core/fsa_loop.py:1-480` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한) | `FSALoop`, `run_mission()`, `_decide_escalation()` |
+| `core/fsa_loop.py:1-480` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한) | `FSALoop`, `run_mission()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
 | `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
 | `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | `SkillSelfEvolutionHook` |
@@ -100,7 +100,7 @@
 | `core/skill_creator.py` | 스킬 생성·진화 | `evolve_skill()` |
 | `core/skill_enricher.py` | 스킬 메타데이터 자동 생성 | `enrich_skill_metadata()`, `bulk_enrich_all_skills()` |
 | `core/skill_eval_harness.py` | 계약/숨겨진/섀도우 테스트 | `SkillEvalHarness` |
-| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — knowledge skill early-return 지원 | `SkillQualityGate`, `GateResult` |
+| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — knowledge skill early-return + auto_register 지원 | `SkillQualityGate`, `GateResult`, `_register_knowledge_skill()` |
 | `core/evolution_types.py` | Stage-1 공유 타입 (Sprint 1 신규) | `EvolutionDecision`, `EvolutionResult` |
 | `core/skill_evolution_bus.py:1-241` | 7단계 캐시 무효화 체인 | `SkillEvolutionBus.on_skill_evolved()` |
 | `core/skill_evolution_safety.py` | 스킬 진화 안전망 헬퍼 (Stage 0 임시, Stage 1 흡수 예정) | `verify_evolved_skill_sandbox()`, `rollback_evolved_skill()` |
@@ -1255,6 +1255,7 @@ model_utils.py (독립 모듈)
 | 2026-04-28 | v1.2.22 | chore(settings): Claude hook 절대경로·이름 적용 및 Stage-1 gitignore 추가 — hook_runner.py 5개 훅 명령을 `$PWD` 상대경로→Windows 절대경로로 고정, 각 훅에 `name` 필드 추가, git log/status/codex exec 등 Bash 허용 항목 확장, `.gitignore`에 Stage-1 진화 런타임 산출물(`/candidates/` `/data/evolution/`) 제외 규칙 신규 추가 |
 | 2026-04-28 | v1.2.22 | chore(settings): Claude hook 절대경로 고정 및 allowlist 확장 — hook 명령 `python3 ./` → `python D:/hoonProJect/...` 절대경로 변경 + name 필드 신규 추가, bash allowlist에 git·codex exec 패턴 추가, `.gitignore` Stage-1 진화 파이프라인 산출물(`/candidates/`, `/data/evolution/`) 제외 규칙 추가, `syncCompyne/memory_store.py` 수정, `skills/registry.yaml` 업데이트 |
 | 2026-04-28 | v1.2.22 | chore(settings): Windows 절대경로 hook 마이그레이션 및 Stage-1 gitignore 추가 — hook 명령 `python3`+`$PWD` → `python`+절대경로 전환, `codex exec`·`git log/status/rev-list` Bash 권한 신규 추가, `.gitignore`에 `/candidates/`·`/data/evolution/` Stage-1 런타임 경로 추가, `skills/registry.yaml` 및 스킬 평가 리포트 갱신 |
+| 2026-04-29 | (unreleased) | fix(sprint3-warn-clear): Sprint 3 WARN 클리어 — 9-라운드 3-Tier 검증 통과. (1) fsa_loop.py: `_evolution_failed_skills: set[str]` 신규 + `run_mission()` 초기화, Level 4→5 강제 에스컬레이션(set 비어있지 않을 때), `_try_evolve_failed_skill` REJECTED/DEFERRED/ERROR 모두 `None` 반환+set 차단, Level 4 분기 dead `elif/else` 제거(if None→apply_pivot, else→redesign). (2) skill_quality_gate.py: knowledge skill early-return에 `auto_register=True` 시 `_register_knowledge_skill()` 호출 추가 + warning 로그 정비, `_register_knowledge_skill()` silent fail→logger.warning 교체. (3) skill_creator.py: `update_skill()` `meta.setdefault("type", skill_type)` 추가 — knowledge→action 타입 오염 방지. (4) skill_evolution_safety.py: DEPRECATED 주석 정비. (5) tests/test_phase7_dep_graph_evolve.py: `test_rollback_skill` 제거(Sprint 3에서 삭제된 메서드), `_setup_fsa_module` fixture originals dict save/restore 패턴으로 오염 방지, 신규 테스트 4건(PUBLISHED→GateResult(passed=True), REJECTED/DEFERRED/ERROR→None+retry 차단). 81 테스트 통과(--ignore=tests/test_gemini_smoke.py). |
 | 2026-04-29 | (unreleased) | feat(stage1-sprint3): Stage-1 Sprint 3 — 호출 사이트 3개 교체(fsa_loop._try_evolve_failed_skill, cross_verification._trigger_evolution, dynamic_orchestrator._try_evolve_from_patterns → SelfEvolutionController.submit() 단일 호출), _verify_evolved_skill/_rollback_skill/_cleanup_skill_baks 3메서드 제거, CANDIDATES_DIR 절대경로 도입(config_paths.py+_create_candidate), knowledge skill 지원(_is_knowledge_skill staticmethod + SkillQualityGate.validate() SKILL.md early-return), skill_creator.py meta.yaml.bak 생성 블록 제거 + knowledge skill _write_meta 호출 복원, fsa_loop GateResult 필수 필드(recommended_stage/eval_report_path) 추가, .gitignore candidates//data/evolution/ 추가. 70 테스트 통과(af-test-runner PASS / af-critic BLOCK→수정→PASS / af-cross-review BLOCK→수정→PASS). |
 | 2026-04-28 | (unreleased) | feat(stage1-sprint2): Stage-1 Sprint 2 — core/skill_evolution_controller.py 신규(SelfEvolutionController 7단계 파이프라인: budget guard → candidate staging → evolve_skill → record_budget → sandbox verify → quality gate → publish), core/evolution_ledger.py 신규(EvolutionLedger append-only JSONL, threading.Lock, stats/list_for_skill/list_for_run), _publish() live-snapshot rollback(신규 파일 잔류 방지 + snap 복원 실패 시 snap 정리) + .bak 배포 방지 필터, _emit_rolled_back_event() REJECTED/DEFERRED/ERROR 시 EVOLUTION_ROLLED_BACK RunEvent 직접 기록(BLOCK fix), get_default_store() double-checked locking thread-safe 싱글톤, af.spec hiddenimport 추가, tests/conftest.py AF_CHECKPOINT_DIR + singleton reset fixture, 60 테스트 통과(af-test-runner PASS / af-critic WARN→ACCEPT / af-cross-review ACCEPT). |
 | 2026-04-28 | (unreleased) | feat(stage1-sprint1): Stage-1 Sprint 1 — core/evolution_types.py 신규(EvolutionDecision 4종 + EvolutionResult dataclass), RunEventType 4분화(METADATA_ENRICHED/EVOLUTION_REQUESTED/EVOLUTION_PUBLISHED/EVOLUTION_ROLLED_BACK), SkillSelfEvolutionHook run_id= 주입 + update_run_id(thread-safe) + _METADATA_TRIGGERS/_CODE_EVOLUTION_TRIGGERS frozenset whitelist + _record_evolution_to_memory decision 라우팅, HookEventBus.run_skill_evolved/SkillEvolutionBus.on_skill_evolved/SkillEvolutionBus._step7_broadcast decision 파라미터 체인 연결, memory_consolidation register_active_hook/request_consolidation_hint + threading.Lock, agent_runner SkillSelfEvolutionHook(run_id=run_id) + update_run_id 재진입 갱신 + register_active_hook. 3-Tier 검증 통과(af-test-runner PASS / af-critic WARN→PASS / af-cross-review PASS). af.spec core.evolution_types 등록 + Sprint 2/3 placeholder 주석. |

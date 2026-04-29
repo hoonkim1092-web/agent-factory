@@ -257,16 +257,27 @@ class TestFSALoopSkillEvolve:
 
         # 무거운 모듈을 가짜로 대체 (아직 로드 안 된 경우만)
         stubs = {}
+        originals = {}  # 기존 모듈 속성 복원용
         for mod_name in ("core.agent_runner", "core.git_manager", "core.evaluator"):
             if mod_name not in sys.modules:
                 fake = type(sys)("fake_" + mod_name)
                 stubs[mod_name] = fake
                 sys.modules[mod_name] = fake
 
-        # 필수 클래스 스텁
-        sys.modules["core.agent_runner"].AgentRunner = MagicMock
-        sys.modules["core.git_manager"].GitManager = MagicMock
+        # 필수 클래스 스텁 — 기존 속성 저장 후 교체
+        for attr_info in [
+            ("core.agent_runner", "AgentRunner", MagicMock),
+            ("core.git_manager", "GitManager", MagicMock),
+        ]:
+            mod_name, attr, replacement = attr_info
+            mod = sys.modules[mod_name]
+            originals[(mod_name, attr)] = getattr(mod, attr, None)
+            setattr(mod, attr, replacement)
+
         mock_evaluator = MagicMock()
+        originals[("core.evaluator", "StrategyEvaluator")] = getattr(
+            sys.modules["core.evaluator"], "StrategyEvaluator", None
+        )
         sys.modules["core.evaluator"].StrategyEvaluator = lambda **kw: mock_evaluator
 
         # FSALoop import (또는 이미 있으면 reload)
@@ -282,7 +293,17 @@ class TestFSALoopSkillEvolve:
 
         yield
 
-        # 정리: 스텁만 제거
+        # 정리: 기존 속성 복원 → 스텁 제거
+        for (mod_name, attr), original in originals.items():
+            mod = sys.modules.get(mod_name)
+            if mod is not None:
+                if original is None:
+                    try:
+                        delattr(mod, attr)
+                    except AttributeError:
+                        pass
+                else:
+                    setattr(mod, attr, original)
         for mod_name in stubs:
             sys.modules.pop(mod_name, None)
         sys.modules.pop("core.fsa_loop", None)
@@ -338,19 +359,6 @@ class TestFSALoopSkillEvolve:
         assert safe is False
         assert len(violations) > 0
 
-    def test_rollback_skill(self, tmp_path):
-        """.bak 파일로 롤백 동작 확인"""
-        skill_dir = tmp_path / "my_skill"
-        skill_dir.mkdir()
-        (skill_dir / "skill.py").write_text("# evolved version")
-        (skill_dir / "skill.py.bak").write_text("# original version")
-
-        self.fsa._rollback_skill(str(skill_dir), "my_skill")
-
-        content = (skill_dir / "skill.py").read_text()
-        assert content == "# original version"
-        assert not (skill_dir / "skill.py.bak").exists()
-
     def test_hot_reload_registry(self):
         """핫리로딩이 예외 없이 동작"""
         from unittest.mock import patch, MagicMock
@@ -362,3 +370,100 @@ class TestFSALoopSkillEvolve:
         with patch("core.skill_registry.get_global_registry", return_value=mock_registry):
             self.fsa._hot_reload_registry("test_skill")
             mock_registry.auto_load_from_directories.assert_called_once_with(force=True)
+
+    def test_try_evolve_published_returns_passed_gate_result(self, tmp_path):
+        """PUBLISHED → GateResult(passed=True) 반환"""
+        from unittest.mock import patch, MagicMock
+        from core.evolution_types import EvolutionDecision, EvolutionResult
+
+        skill_dir = tmp_path / "my_skill"
+        skill_dir.mkdir()
+        skill_dir = str(skill_dir)
+
+        mock_result = MagicMock(spec=EvolutionResult)
+        mock_result.decision = EvolutionDecision.PUBLISHED
+        mock_result.rejection_reason = None
+
+        with patch("core.skill_evolution_controller.SelfEvolutionController") as mock_ctrl_cls:
+            mock_ctrl_cls.return_value.submit.return_value = mock_result
+            with patch.object(self.fsa, "_hot_reload_registry"):
+                with patch.object(self.fsa, "_detect_failed_skill_dir", return_value=skill_dir):
+                    gate = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 1)
+
+        assert gate is not None
+        assert gate.passed is True
+        assert gate.pass_rate == 1.0
+
+    def test_try_evolve_rejected_returns_none_and_blocks_retry(self, tmp_path):
+        """REJECTED → None 반환 + 같은 스킬 재시도 차단"""
+        from unittest.mock import patch, MagicMock
+        from core.evolution_types import EvolutionDecision, EvolutionResult
+
+        skill_dir = tmp_path / "my_skill"
+        skill_dir.mkdir()
+        skill_dir = str(skill_dir)
+
+        mock_result = MagicMock(spec=EvolutionResult)
+        mock_result.decision = EvolutionDecision.REJECTED
+        mock_result.rejection_reason = "sandbox failed"
+
+        with patch("core.skill_evolution_controller.SelfEvolutionController") as mock_ctrl_cls:
+            mock_ctrl_cls.return_value.submit.return_value = mock_result
+            with patch.object(self.fsa, "_detect_failed_skill_dir", return_value=skill_dir):
+                gate1 = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 1)
+                gate2 = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 2)
+
+        assert gate1 is None
+        assert gate2 is None
+        assert mock_ctrl_cls.call_count == 1
+        assert mock_ctrl_cls.return_value.submit.call_count == 1
+
+    def test_try_evolve_deferred_returns_none_and_blocks_retry(self, tmp_path):
+        """DEFERRED → None 반환 + 같은 스킬 재시도 차단"""
+        from unittest.mock import patch, MagicMock
+        from core.evolution_types import EvolutionDecision, EvolutionResult
+
+        skill_dir = tmp_path / "my_skill"
+        skill_dir.mkdir()
+        skill_dir = str(skill_dir)
+
+        mock_result = MagicMock(spec=EvolutionResult)
+        mock_result.decision = EvolutionDecision.DEFERRED
+        mock_result.rejection_reason = "gate unreliable"
+
+        with patch("core.skill_evolution_controller.SelfEvolutionController") as mock_ctrl_cls:
+            mock_ctrl_cls.return_value.submit.return_value = mock_result
+            with patch.object(self.fsa, "_detect_failed_skill_dir", return_value=skill_dir):
+                gate1 = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 1)
+                # 2번째 시도: submit이 호출되면 안 됨
+                gate2 = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 2)
+
+        assert gate1 is None
+        assert gate2 is None
+        # 첫 번째 호출에서만 컨트롤러 생성 + submit 호출
+        assert mock_ctrl_cls.call_count == 1
+        assert mock_ctrl_cls.return_value.submit.call_count == 1
+
+    def test_try_evolve_error_returns_none_and_blocks_retry(self, tmp_path):
+        """ERROR → None 반환 + 같은 스킬 재시도 차단"""
+        from unittest.mock import patch, MagicMock
+        from core.evolution_types import EvolutionDecision, EvolutionResult
+
+        skill_dir = tmp_path / "my_skill"
+        skill_dir.mkdir()
+        skill_dir = str(skill_dir)
+
+        mock_result = MagicMock(spec=EvolutionResult)
+        mock_result.decision = EvolutionDecision.ERROR
+        mock_result.rejection_reason = "exception"
+
+        with patch("core.skill_evolution_controller.SelfEvolutionController") as mock_ctrl_cls:
+            mock_ctrl_cls.return_value.submit.return_value = mock_result
+            with patch.object(self.fsa, "_detect_failed_skill_dir", return_value=skill_dir):
+                gate = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 1)
+                gate2 = self.fsa._try_evolve_failed_skill("error", "reasoning", "run1", 2)
+
+        assert gate is None
+        assert gate2 is None
+        assert mock_ctrl_cls.call_count == 1
+        assert mock_ctrl_cls.return_value.submit.call_count == 1
