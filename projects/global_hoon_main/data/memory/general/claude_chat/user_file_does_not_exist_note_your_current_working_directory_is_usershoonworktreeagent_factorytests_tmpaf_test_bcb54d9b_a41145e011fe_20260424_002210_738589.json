@@ -1,0 +1,18 @@
+{
+  "key": "user File does not exist Note your current working directory is UsershoonworkTreeagent-factorytests_tmpaf-test-bcb54d9b",
+  "value": "[user] File does not exist. Note: your current working directory is /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-bcb54d9b.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T00:22:10.738690+00:00",
+  "updated_at": "2026-04-24T00:22:10.738690+00:00",
+  "details": {
+    "text": "[user] File does not exist. Note: your current working directory is /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-bcb54d9b.",
+    "event_timestamp": "2026-04-24T00:21:14.064Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-bcb54d9b/fa0f78c3-7ae5-42b4-a3b6-c1e9d9d50af0.jsonl",
+    "session_line": 12,
+    "provider": "claude"
+  }
+}

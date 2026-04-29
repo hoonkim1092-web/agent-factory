@@ -1,0 +1,18 @@
+{
+  "key": "user Agent Factory 프로젝트의 최근 변경사항을 자율 탐색하여 코드 리뷰해주세요변경 파일 목록 corefsa_looppy coreproject_task_boardpy corewatchdogpy proje",
+  "value": "[user] Agent Factory 프로젝트의 최근 변경사항을 자율 탐색하여 코드 리뷰해주세요.  변경 파일 목록: core/fsa_loop.py, core/project_task_board.py, core/watchdog.py, projects/lotto_mobile_web/server/app.py, projects/lotto_predictor_v2/src/lotto/cli.py  워크스페이스: /Users/hoon/workTree/agent-facto...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T12:00:22.572191+00:00",
+  "updated_at": "2026-04-23T12:00:22.572191+00:00",
+  "details": {
+    "text": "[user] Agent Factory 프로젝트의 최근 변경사항을 자율 탐색하여 코드 리뷰해주세요.\n\n변경 파일 목록: core/fsa_loop.py, core/project_task_board.py, core/watchdog.py, projects/lotto_mobile_web/server/app.py, projects/lotto_predictor_v2/src/lotto/cli.py\n\n워크스페이스: /Users/hoon/workTree/agent-factory\n\n각 피드백을 수용/기각/보류로 판정하고 BLOCK 이슈가 있으면 명확히 표시해주세요.",
+    "event_timestamp": "2026-04-18T13:05:47.707Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c/subagents/agent-a025b1b31da8aa375.jsonl",
+    "session_line": 0,
+    "provider": "claude"
+  }
+}

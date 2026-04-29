@@ -1,0 +1,18 @@
+{
+  "key": "user DhoonProJectworktreesagent-factorycoreskill_retrieval_enginepy22class ReuseDecisionDhoonProJectworktreesagent-facto",
+  "value": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py:22:class ReuseDecision: D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-23-    need_skill_id: str D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T04:56:34.735695+00:00",
+  "updated_at": "2026-04-22T04:56:34.735695+00:00",
+  "details": {
+    "text": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py:22:class ReuseDecision:\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-23-    need_skill_id: str\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-24-    candidate_skill_id: str = \"\"\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-25-    mode: str = \"forge\"\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-26-    confidence: float = 0.0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-27-    score: int = 0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-28-    threshold_high: float = 0.85\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-29-    threshold_enhance: float = 0.70\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-30-    threshold_medium: float = 0.60\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-31-    verified: bool = False\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-32-    rationale: str = \"\"\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-33-    base_score: int = 0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-34-    historical_score: int = 0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-35-    combined_score: int = 0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-36-    historical_weight: float = 0.0\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_retrieval_engine.py-37-    used_historical_signal: bool = False",
+    "event_timestamp": "2026-04-07T06:04:09.492Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 74,
+    "provider": "claude"
+  }
+}

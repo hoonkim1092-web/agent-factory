@@ -1,0 +1,18 @@
+{
+  "key": "user 60        selfenhance_confidence  floatenhance_confidence61        selfmedium_confidence  floatmedium_confidence62 ",
+  "value": "[user] 60\t        self.enhance_confidence = float(enhance_confidence) 61\t        self.medium_confidence = float(medium_confidence) 62\t        self.historical_weight = max(0.0, min(0.5, float(historical_weight))) 63\t 64\t    def decide_reuse( 65\t        self,...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-27T09:44:50.537766+00:00",
+  "updated_at": "2026-04-27T09:44:50.537766+00:00",
+  "details": {
+    "text": "[user] 60\t        self.enhance_confidence = float(enhance_confidence)\n61\t        self.medium_confidence = float(medium_confidence)\n62\t        self.historical_weight = max(0.0, min(0.5, float(historical_weight)))\n63\t\n64\t    def decide_reuse(\n65\t        self,\n66\t        need_skill_id: str,\n67\t        evidence: dict[str, Any] | None,\n68\t        *,\n69\t        feedback_loop: SkillFeedbackLoop | None = None,\n70\t        feedback_summaries: dict[str, SkillFeedbackSummary] | None = None,\n71\t    ) -> ReuseDecision:\n72\t        payload = evidence if isinstance(evidence, dict) else {}\n73\t        ranked_candidates = self._rank_candidates(\n74\t            payload,\n75\t            feedback_loop=feedback_loop,\n76\t            feedback_summaries=feedback_summaries,\n77\t        )\n78\t        best = ranked_candidates[0] if ranked_candidates else {}\n79\t\n80\t        candidate_skill_id = safe_id(str(best.get(\"candidate_skill_id\") or payload.get(\"top_candidate\") or \"\"))\n81\t        verified = bool(best.get(\"verified\", payload.get(\"verified\", False)))\n82\t        base_score = int(best.get(\"base_score\") or self._normalize_score(payload.get(\"top_score\")))\n83\t        historical_score = int(best.get(\"historical_score\") or base_score)\n84\t        combined_score = int(best.get(\"combined_score\") or base_score)\n85\t        used_historical_signal = bool(best.get(\"used_historical_signal\", False))\n86\t        historical_weight = float(best.get(\"historical_weight\") or 0.0)\n87\t        confidence = round(combined_score / 100.0, 3)\n88\t        rationale = self._build_rationale(payload, best, combined_score)\n89\t\n90\t        if payload is evidence:\n91\t            payload[\"top_candidate\"] = candidate_skill_id\n92\t            payload[\"top_score\"] = combined_score\n93\t            payload[\"top_score_base\"] = base_score\n94\t            payload[\"top_score_historical\"] = historical_score\n95\t            payload[\"verified\"] = verified\n96\t            payload[\"matching_rationale\"] = rationale\n97\t            if ranked_candidates:\n98\t                payload[\"candidates\"] = ranked_candidates\n99\t                payload[\"feedback_history\"] = [best.get(\"feedback_summary\") or {}] if best.get(\"feedback_summary\") else []",
+    "event_timestamp": "2026-04-07T06:01:59.031Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 23,
+    "provider": "claude"
+  }
+}

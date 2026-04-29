@@ -264,9 +264,7 @@ class FSALoop:
 
                 # ── Step 5: ESCALATE — 에스컬레이션 레벨 결정 ──
                 level = self._decide_escalation(ledger, analysis)
-                # 진화 불가 스킬이 기록된 경우 Level 4 루프 방지 — Level 5로 강제 에스컬레이션
-                if level == 4 and self._evolution_failed_skills:
-                    level = 5
+                level, detected_skill_dir = self._apply_evolution_guard(level, result, analysis)
                 max_level_reached = max(max_level_reached, level)
 
                 # 원장에 시도 기록
@@ -316,6 +314,7 @@ class FSALoop:
                         eval_reasoning=analysis.evaluator_reasoning,
                         run_id=run_id,
                         cycle=cycle,
+                        skill_dir=detected_skill_dir,
                     )
                     if gate_result is not None and gate_result.passed:
                         evolved_skill_name = (
@@ -572,8 +571,35 @@ class FSALoop:
     #  스킬 진화 (기존 FSA 로직 보존)
     # ══════════════════════════════════════════════════════════════
 
+    def _apply_evolution_guard(
+        self, level: int, result: dict, analysis
+    ) -> tuple[int, str | None]:
+        """Level 4→5 강제 가드: 현재 사이클 탐지 스킬이 이미 차단됐을 때만 강제.
+
+        탐지 실패(_cand_name=None) 시에도 Level 5로 강제해 무한 루프를 방지한다.
+        Returns (adjusted_level, detected_skill_dir_or_None).
+        detected_skill_dir는 _try_evolve_failed_skill에 전달해 이중 탐색을 방지한다.
+        """
+        if level != 4 or not self._evolution_failed_skills:
+            return level, None
+        cand_dir = self._detect_failed_skill_dir(
+            result.get("reason", ""), analysis.evaluator_reasoning
+        )
+        cand_name = os.path.basename(cand_dir) if cand_dir else None
+        if not cand_name:
+            logger.warning("[EvolutionGuard] 스킬명 탐지 실패 — Level 5 강제 에스컬레이션")
+            return 5, None
+        if cand_name in self._evolution_failed_skills:
+            return 5, cand_dir
+        return level, cand_dir
+
     def _try_evolve_failed_skill(
-        self, error_reason: str, eval_reasoning: str, run_id: str, cycle: int
+        self,
+        error_reason: str,
+        eval_reasoning: str,
+        run_id: str,
+        cycle: int,
+        skill_dir: str | None = None,
     ):
         """
         실패 원인에서 스킬 이름을 추출하고 SelfEvolutionController로 진화시킵니다.
@@ -581,7 +607,8 @@ class FSALoop:
         Returns:
             GateResult | None: PUBLISHED → GateResult(passed=True), 그 외 모두 → None
         """
-        skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
+        if skill_dir is None:
+            skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
         if not skill_dir:
             return None
 

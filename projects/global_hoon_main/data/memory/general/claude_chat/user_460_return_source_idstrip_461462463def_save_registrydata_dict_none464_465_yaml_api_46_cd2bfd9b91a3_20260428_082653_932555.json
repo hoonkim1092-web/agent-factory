@@ -1,0 +1,18 @@
+{
+  "key": "user 460    return source_idstrip_461462463def _save_registrydata dict - None464    465    YAML 레지스트리 파일 저장 기존 API 호환성46",
+  "value": "[user] 460\t    return source_id.strip(\"_\") 461\t 462\t 463\tdef _save_registry(data: dict) -> None: 464\t    \"\"\" 465\t    YAML 레지스트리 파일 저장 (기존 API 호환성). 466\t 467\t    Args: 468\t        data: {\"skills\": {...}, \"install_candidates\": {...}} 469\t    \"\"\" 470\t    os.ma...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:26:53.932687+00:00",
+  "updated_at": "2026-04-28T08:26:53.932687+00:00",
+  "details": {
+    "text": "[user] 460\t    return source_id.strip(\"_\")\n461\t\n462\t\n463\tdef _save_registry(data: dict) -> None:\n464\t    \"\"\"\n465\t    YAML 레지스트리 파일 저장 (기존 API 호환성).\n466\t\n467\t    Args:\n468\t        data: {\"skills\": {...}, \"install_candidates\": {...}}\n469\t    \"\"\"\n470\t    os.makedirs(os.path.dirname(REGISTRY_FILE), exist_ok=True)\n471\t    write_yaml(REGISTRY_FILE, data)\n472\t\n473\t\n474\tdef check_skill_exists(skill_id: str) -> bool:\n475\t    \"\"\"스킬 존재 여부 확인 (기존 API 호환성)\"\"\"\n476\t    ensure_skills_loaded()\n477\t    metadata = get_skill_metadata_global(skill_id)\n478\t    return metadata is not None\n479\t\n480\t\n481\tdef rebuild_registry_from_disk() -> None:\n482\t    \"\"\"\n483\t    디스크의 스킬 디렉토리에서 레지스트리 재구축 (기존 API 호환성).\n484\t    \"\"\"\n485\t    get_global_registry().auto_load_from_directories(force=True)\n486\t\n487\t\n488\tdef _normalize_skill_entry(skill_name: str, entry: dict) -> tuple[str, dict]:\n489\t    \"\"\"\n490\t    스킬 엔트리를 정규화 (기존 API 호환성).\n491\t\n492\t    Args:\n493\t        skill_name: 스킬 이름\n494\t        entry: 스킬 엔트리 딕셔너리",
+    "event_timestamp": "2026-04-07T06:02:25.604Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 55,
+    "provider": "claude"
+  }
+}

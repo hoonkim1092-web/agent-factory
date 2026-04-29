@@ -1,0 +1,18 @@
+{
+  "key": "user DhoonProJectworktreesagent-factorycorepolicypy31        installable_statuses DhoonProJectworktreesagent-factorycore",
+  "value": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\policy.py:31:        \"installable_statuses\": [ D:\\hoonProJect\\worktrees\\agent-factory\\core\\policy.py:33:            for x in (qg.get(\"installable_statuses\") or [\"active\"]) D:\\hoonProJect\\worktrees\\agent-fac...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:32:57.467791+00:00",
+  "updated_at": "2026-04-28T08:32:57.467791+00:00",
+  "details": {
+    "text": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\policy.py:31:        \"installable_statuses\": [\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\policy.py:33:            for x in (qg.get(\"installable_statuses\") or [\"active\"])\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\registry_manager.py:343:            \"installable_statuses\": [safe_id(str(s)) for s in (qg.get(\"installable_statuses\") or [\"active\"])],\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\registry_manager.py:365:        return status in qg.get(\"installable_statuses\", [\"active\"])\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_promotion.py:112:        installable = next_stage in set(self.quality_gate.get(\"installable_statuses\") or [\"active\"])",
+    "event_timestamp": "2026-04-07T06:01:54.695Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 17,
+    "provider": "claude"
+  }
+}

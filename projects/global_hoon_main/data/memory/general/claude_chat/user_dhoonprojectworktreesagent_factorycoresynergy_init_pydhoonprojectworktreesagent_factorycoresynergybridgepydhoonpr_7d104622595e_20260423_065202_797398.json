@@ -1,0 +1,18 @@
+{
+  "key": "user DhoonProJectworktreesagent-factorycoresynergy__init__pyDhoonProJectworktreesagent-factorycoresynergybridgepyDhoonPr",
+  "value": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\__init__.py D:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\bridge.py D:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\job.py D:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\process.py D:...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T06:52:02.797491+00:00",
+  "updated_at": "2026-04-23T06:52:02.797491+00:00",
+  "details": {
+    "text": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\__init__.py\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\bridge.py\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\job.py\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\process.py\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\synergy\\tools.py",
+    "event_timestamp": "2026-03-26T01:15:50.404Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f74429c3-f40c-484b-8532-91e75f526deb/subagents/agent-ad5316b1a3d9ba0ba.jsonl",
+    "session_line": 48,
+    "provider": "claude"
+  }
+}

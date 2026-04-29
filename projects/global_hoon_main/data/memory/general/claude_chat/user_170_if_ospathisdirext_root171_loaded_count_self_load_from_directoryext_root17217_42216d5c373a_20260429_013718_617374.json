@@ -1,0 +1,18 @@
+{
+  "key": "user 170                if ospathisdirext_root171                    loaded_count  self_load_from_directoryext_root17217",
+  "value": "[user] 170\t                if os.path.isdir(ext_root): 171\t                    loaded_count += self._load_from_directory(ext_root) 172\t 173\t            self._auto_loaded = True 174\t            self._external_scanned = True 175\t            self._last_scan_ti...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T01:37:18.617552+00:00",
+  "updated_at": "2026-04-29T01:37:18.617552+00:00",
+  "details": {
+    "text": "[user] 170\t                if os.path.isdir(ext_root):\n171\t                    loaded_count += self._load_from_directory(ext_root)\n172\t\n173\t            self._auto_loaded = True\n174\t            self._external_scanned = True\n175\t            self._last_scan_time = time.time()\n176\t            return loaded_count\n177\t\n178\t    _SKIP_DIRS = {\"forge\", \"_external_cache\", \"__pycache__\", \"warehouse\"}\n179\t\n180\t    def _load_from_directory(self, base_dir: str, _depth: int = 0) -> int:\n181\t        \"\"\"디렉토리 하위의 모든 스킬을 로드합니다 (최대 3단계 재귀).\"\"\"\n182\t        if _depth > 3:\n183\t            return 0\n184\t\n185\t        count = 0\n186\t        try:\n187\t            for item in os.listdir(base_dir):\n188\t                skill_dir = os.path.join(base_dir, item)\n189\t                if not os.path.isdir(skill_dir):\n190\t                    continue\n191\t\n192\t                if item.startswith(\".\") or item in self._SKIP_DIRS:\n193\t                    continue\n194\t\n195\t                metadata = auto_detect_and_convert(skill_dir, item)\n196\t                if metadata:\n197\t                    self.register(metadata)\n198\t                    count += 1\n199",
+    "event_timestamp": "2026-04-07T06:02:24.716Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 53,
+    "provider": "claude"
+  }
+}

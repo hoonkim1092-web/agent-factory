@@ -1,0 +1,18 @@
+{
+  "key": "user command-namemodelcommand-name            command-messagemodelcommand-message            command-argscommand-args",
+  "value": "[user] <command-name>/model</command-name>             <command-message>model</command-message>             <command-args></command-args>",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T04:56:34.601159+00:00",
+  "updated_at": "2026-04-22T04:56:34.601159+00:00",
+  "details": {
+    "text": "[user] <command-name>/model</command-name>\n            <command-message>model</command-message>\n            <command-args></command-args>",
+    "event_timestamp": "2026-03-26T02:41:18.342Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f74429c3-f40c-484b-8532-91e75f526deb/subagents/agent-acompact-f83f0230ba8ac7b4.jsonl",
+    "session_line": 633,
+    "provider": "claude"
+  }
+}

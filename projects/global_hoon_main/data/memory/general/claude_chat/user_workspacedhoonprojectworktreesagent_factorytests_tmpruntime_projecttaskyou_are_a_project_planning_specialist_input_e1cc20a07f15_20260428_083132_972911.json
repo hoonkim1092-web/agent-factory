@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceDhoonProJectworktreesagent-factorytests_tmpruntime_projectTaskYou are a project planning specialist Input-",
+  "value": "[user] [Workspace]  D:\\hoonProJect\\worktrees\\agent-factory\\tests\\_tmp\\runtime_project    [Task]  You are a project planning specialist.    ## Input  - Task: Implement a browser poker game  - Evidence:  ### Evidence Summary  - Local reference: docs/architect...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:31:32.973187+00:00",
+  "updated_at": "2026-04-28T08:31:32.973187+00:00",
+  "details": {
+    "text": "[user] [Workspace]\r\nD:\\hoonProJect\\worktrees\\agent-factory\\tests\\_tmp\\runtime_project\r\n\r\n[Task]\r\nYou are a project planning specialist.\r\n\r\n## Input\r\n- Task: Implement a browser poker game\r\n- Evidence:\r\n### Evidence Summary\r\n- Local reference: docs/architecture.md -> game state is split by module.\r\n- Web reference: Poker rules -> verify state transitions and winner evaluation.\r\n### Web Research\r\n- Poker rules: verify state transitions and winner evaluation.\r\n  source: https://example.com/poker-rules\r\n### Deep Analysis\r\nPrefer isolated game-rule modules and explicit verification checkpoints.\r\n### Local References\r\n- docs/architecture.md: # Modules\r\n- Brief:\r\n{\"goal\": \"Implement a browser poker game\", \"constraints\": [\"network_allowed\"], \"required_skills\": [\"frontend_game_ui\", \"gameplay_core\", \"integration_test_guard\"], \"role_hints\": [\"frontend_dev\", \"qa_engineer\"], \"deliverables\": [\"game ui\", \"game rules\", \"test checklist\"], \"risks\": [\"rule evaluation bug\"], \"research_notes\": [\"seed\"], \"tech_stack\": [\"vanilla_js\"], \"evidence_summary\": [\"Local reference: docs/architecture.md -> game state is split by module.\", \"Web reference: Poker rules -> verify state transitions and winner evaluation.\"], \"local_references\": [{\"path\": \"docs/architecture.md\", \"heading\": \"# Modules\", \"excerpt\": \"game state is split by module.\", \"score\": 0.9}], \"web_references\": [{\"url\": \"https://example.com/poker-rules\", \"title\": \"Poker rules\", \"excerpt\": \"verify state transitions and winner evaluation.\", \"score\": 0.8}], \"notebook_summary\": \"Prefer isolated game-rule modules and explicit verification checkpoints.\", \"route\": {\"pipeline\": \"project\"}, \"generated_at\": \"2026-04-23T15:48:40\", \"requested_role\": \"General\"}\r\n\r\n## Output Format\r\nReturn a complete markdown document with the following structure:\r\n\r\n# Feature Plan\r\n\r\n## Metadata\r\n- work_item: implement-a-browser-poker-game\r\n- status: draft\r\n- last_updated: 2026-04-23T15:48:40\r\n\r\n## Project Overview\r\n(2-3 paragraphs: 배경, 동기, 핵심 가치 제안)\r\n\r\n## Scope\r\n(각 모듈 이름과 역할 1-2줄. Evidence 기반 기술 제약 포함)\r\n\r\n## Deliverables\r\n(구체적 산출물 목록)\r\n\r\n## Stakeholders\r\n(역할별 담당 영역)\r\n\r\n## Risks and Mitigations\r\n(각 리스크에 대한 구체적 완화 방안)\r\n\r\n## Research Findings\r\n(Evidence에서 핵심 발견 사항 요약)\r\n\r\n## References\r\n(로컬/웹 출처)\r\n\r\n## Approval Request\r\n- Review this scope and confirm approval-gate.md when ready.\r\n\r\nRules:\r\n- 한국어로 작성\r\n- Evidence가 있으면 반드시 근거로 활용\r\n- \"(edit required)\" 사용 금지 — 정보 부족 시 합리적 추론으로 채울 것\r\n- Brief 데이터를 그대로 복사하지 말고 프로젝트 기획자 관점으로 재구성",
+    "event_timestamp": "2026-04-23T06:48:43.173Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory-tests--tmp-runtime-project/b4fa1f02-729c-4c55-b484-b52f363e2bf9.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

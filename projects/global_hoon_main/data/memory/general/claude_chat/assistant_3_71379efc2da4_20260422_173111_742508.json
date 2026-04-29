@@ -1,0 +1,18 @@
+{
+  "key": "assistant 교차검증 에이전트 3개를 백그라운드로 병렬 실행합니다",
+  "value": "[assistant] 교차검증 에이전트 3개를 백그라운드로 병렬 실행합니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T17:31:11.742638+00:00",
+  "updated_at": "2026-04-22T17:31:11.742638+00:00",
+  "details": {
+    "text": "[assistant] 교차검증 에이전트 3개를 백그라운드로 병렬 실행합니다.",
+    "event_timestamp": "2026-04-18T13:05:39.416Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

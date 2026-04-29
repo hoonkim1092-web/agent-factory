@@ -1,0 +1,18 @@
+{
+  "key": "user 265            f for f in selfstate_boardfailed_subtasks-5266            if fgetfailure_category  infra267        2",
+  "value": "[user] 265\t            f for f in self.state_board[\"failed_subtasks\"][-5:] 266\t            if f.get(\"failure_category\") != \"infra\" 267\t        ]) 268\t        if recent_failures >= 3: 269\t            return True 270\t        return False 271\t 272\t    async de...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T07:43:00.168896+00:00",
+  "updated_at": "2026-04-28T07:43:00.168896+00:00",
+  "details": {
+    "text": "[user] 265\t            f for f in self.state_board[\"failed_subtasks\"][-5:]\n266\t            if f.get(\"failure_category\") != \"infra\"\n267\t        ])\n268\t        if recent_failures >= 3:\n269\t            return True\n270\t        return False\n271\t\n272\t    async def _lilith_decide_next(\n273\t        self,\n274\t        project_desc: str,\n275\t        roles: List[str],\n276\t        workspace: str | None = None,\n277\t    ) -> List[Dict[str, str]]:\n278\t        working_count = sum(1 for status in self.state_board[\"agents_status\"].values() if status == \"working\")\n279\t        if working_count >= self.max_concurrent:\n280\t            return []\n281\t\n282\t        available_roles = [role for role in roles if self.state_board[\"agents_status\"].get(role, \"idle\") == \"idle\"]\n283\t        if not available_roles:\n284\t            return []\n285\t\n286\t        todo_content = \"\"\n287\t        target_workspace = workspace or os.getcwd()\n288\t        board = load_project_board(target_workspace)\n289\t        if self._todo_fully_completed(target_workspace):\n290\t            return []\n291\t        todo_path = os.path.join(target_workspace, \".todo.md\")\n292\t        if os.path.exists(todo_path):\n293\t            with open(todo_path, \"r\", encoding=\"utf-8\") as handle:\n294\t                todo_content = handle.read()",
+    "event_timestamp": "2026-04-08T06:55:06.065Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/ff368c38-bc5d-4e4c-8714-7ebc909742fd.jsonl",
+    "session_line": 12,
+    "provider": "claude"
+  }
+}

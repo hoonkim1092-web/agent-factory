@@ -34,6 +34,10 @@ INCLUDE_PATTERNS = [
     "docs/**/*feature*.md",
     "docs/*design*.md",
     "docs/*feature*.md",
+    # YYYY-MM-DD-*.md 형식 날짜 포함 설계문서 — CLAUDE.md 문서 규칙 대응
+    # flat/recursive 쌍을 모두 등록 (다른 키워드 패턴과 동일한 대칭)
+    "docs/**/20??-??-??-*.md",
+    "docs/20??-??-??-*.md",
 ]
 
 EXCLUDE_PATTERNS = [
@@ -43,6 +47,12 @@ EXCLUDE_PATTERNS = [
     "docs/code_review/*",
     "docs/reviews/**",
     "docs/reviews/*",
+    # work-item 4-문서 세트는 별도 경로(af-doc-qa 3-agent)로 처리됨
+    "docs/work-items/**",
+    "docs/work-items/*",
+    # 짧은 참조성 패턴 노트 — 2026-04-21-design-doc-review-gate.md §1.1 design 분류 제외 확정
+    "docs/patterns/**",
+    "docs/patterns/*",
 ]
 
 # ── 코드 교차검증 패턴 ──────────────────────────────────────────────────────

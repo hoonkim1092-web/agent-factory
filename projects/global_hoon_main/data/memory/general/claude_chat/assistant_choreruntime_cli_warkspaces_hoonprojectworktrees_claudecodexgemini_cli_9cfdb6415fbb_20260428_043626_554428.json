@@ -1,0 +1,18 @@
+{
+  "key": "assistant choreruntime 워크스페이스 경로 마이그레이션 및 CLI 세션 상태 갱신  warkSpaces  hoonProJectworktrees 경로 변경 claudecodexgemini CLI 세션 ",
+  "value": "[assistant] chore(runtime): 워크스페이스 경로 마이그레이션 및 CLI 세션 상태 갱신 — `warkSpaces` → `hoonProJect/worktrees` 경로 변경, claude/codex/gemini CLI 세션 JSON 갱신, codex_home 런타임 파일(auth.json·config.toml·models_cache.json) 업데이트, skill-usage.jsonl 사용 이력 추가",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T04:36:26.554510+00:00",
+  "updated_at": "2026-04-28T04:36:26.554510+00:00",
+  "details": {
+    "text": "[assistant] chore(runtime): 워크스페이스 경로 마이그레이션 및 CLI 세션 상태 갱신 — `warkSpaces` → `hoonProJect/worktrees` 경로 변경, claude/codex/gemini CLI 세션 JSON 갱신, codex_home 런타임 파일(auth.json·config.toml·models_cache.json) 업데이트, skill-usage.jsonl 사용 이력 추가",
+    "event_timestamp": "2026-04-23T10:11:16.358Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f6b37cc6-0794-4f7e-a03d-75c0993bc989.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

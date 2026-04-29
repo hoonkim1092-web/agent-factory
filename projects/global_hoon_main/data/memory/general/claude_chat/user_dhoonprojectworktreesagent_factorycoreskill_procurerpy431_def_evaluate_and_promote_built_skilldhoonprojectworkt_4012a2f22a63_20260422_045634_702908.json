@@ -1,0 +1,18 @@
+{
+  "key": "user DhoonProJectworktreesagent-factorycoreskill_procurerpy431    def _evaluate_and_promote_built_skillDhoonProJectworkt",
+  "value": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_procurer.py:431:    def _evaluate_and_promote_built_skill( D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_procurer.py:580:            meta = self._evaluate_and_promote_built_skill(",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T04:56:34.702954+00:00",
+  "updated_at": "2026-04-22T04:56:34.702954+00:00",
+  "details": {
+    "text": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_procurer.py:431:    def _evaluate_and_promote_built_skill(\nD:\\hoonProJect\\worktrees\\agent-factory\\core\\skill_procurer.py:580:            meta = self._evaluate_and_promote_built_skill(",
+    "event_timestamp": "2026-04-07T06:01:53.972Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 15,
+    "provider": "claude"
+  }
+}

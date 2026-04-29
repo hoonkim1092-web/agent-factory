@@ -1,0 +1,18 @@
+{
+  "key": "user total 80drwxr-xr-x 1 HOON 197121 0  3월 12 1426 drwxr-xr-x 1 HOON 197121 0  3월 25 1153 drwxr-xr-x 1 HOON 197121 0  3",
+  "value": "[user] total 80 drwxr-xr-x 1 HOON 197121 0  3월 12 14:26 . drwxr-xr-x 1 HOON 197121 0  3월 25 11:53 .. drwxr-xr-x 1 HOON 197121 0  3월 24 20:14 agent_factory drwxr-xr-x 1 HOON 197121 0  3월 12 14:25 default drwxr-xr-x 1 HOON 197121 0  3월  9 12:15 factory_test_0...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T04:56:34.682193+00:00",
+  "updated_at": "2026-04-22T04:56:34.682193+00:00",
+  "details": {
+    "text": "[user] total 80\ndrwxr-xr-x 1 HOON 197121 0  3월 12 14:26 .\ndrwxr-xr-x 1 HOON 197121 0  3월 25 11:53 ..\ndrwxr-xr-x 1 HOON 197121 0  3월 24 20:14 agent_factory\ndrwxr-xr-x 1 HOON 197121 0  3월 12 14:25 default\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 factory_test_01\ndrwxr-xr-x 1 HOON 197121 0  3월 10 10:16 gemini_live_edit\ndrwxr-xr-x 1 HOON 197121 0  3월 18 19:01 global_hoon_main\ndrwxr-xr-x 1 HOON 197121 0  3월 12 14:26 logi-mind-v22\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 minesweeper\ndrwxr-xr-x 1 HOON 197121 0  3월 12 14:26 smoke_codex_cli_short_task\ndrwxr-xr-x 1 HOON 197121 0  3월 12 14:26 smoke_codex_factory\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_debug\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_final\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_fsa\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_fsa2\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_fsa3\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_fsa4\ndrwxr-xr-x 1 HOON 197121 0  3월  9 12:15 tictactoe_test",
+    "event_timestamp": "2026-03-26T01:15:56.279Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f74429c3-f40c-484b-8532-91e75f526deb/subagents/agent-ad5316b1a3d9ba0ba.jsonl",
+    "session_line": 67,
+    "provider": "claude"
+  }
+}

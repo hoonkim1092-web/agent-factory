@@ -36,7 +36,9 @@
       "Bash(grep \"\\\\.py$\")",
       "Bash(supabase --version)",
       "Bash(echo \"exit=$?\")",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(npm list *)",
+      "mcp__codex__codex"
     ],
     "deny": [
       "Bash(rm:*)",
@@ -70,6 +72,22 @@
           {
             "type": "command",
             "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./scripts/check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./scripts/check_design_pending.py"
           }
         ]
       }

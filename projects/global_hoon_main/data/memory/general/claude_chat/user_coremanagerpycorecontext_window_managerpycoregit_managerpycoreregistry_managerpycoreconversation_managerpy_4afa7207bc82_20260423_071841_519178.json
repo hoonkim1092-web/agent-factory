@@ -1,0 +1,18 @@
+{
+  "key": "user coremanagerpycorecontext_window_managerpycoregit_managerpycoreregistry_managerpycoreconversation_managerpy",
+  "value": "[user] core\\manager.py core\\context_window_manager.py core\\git_manager.py core\\registry_manager.py core\\conversation_manager.py",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T07:18:41.519253+00:00",
+  "updated_at": "2026-04-23T07:18:41.519253+00:00",
+  "details": {
+    "text": "[user] core\\manager.py\ncore\\context_window_manager.py\ncore\\git_manager.py\ncore\\registry_manager.py\ncore\\conversation_manager.py",
+    "event_timestamp": "2026-04-08T06:55:16.361Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/ff368c38-bc5d-4e4c-8714-7ebc909742fd.jsonl",
+    "session_line": 24,
+    "provider": "claude"
+  }
+}

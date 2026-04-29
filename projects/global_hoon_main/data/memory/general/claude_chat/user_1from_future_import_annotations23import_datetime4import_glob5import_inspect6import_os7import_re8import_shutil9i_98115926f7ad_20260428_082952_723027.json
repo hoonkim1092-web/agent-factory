@@ -1,0 +1,18 @@
+{
+  "key": "user 1from __future__ import annotations23import datetime4import glob5import inspect6import os7import re8import shutil9i",
+  "value": "[user] 1\tfrom __future__ import annotations 2\t 3\timport datetime 4\timport glob 5\timport inspect 6\timport os 7\timport re 8\timport shutil 9\timport subprocess 10\t 11\tfrom core.policy import resolve_quality_gate_policy 12\tfrom core.skill_eval_harness import Ski...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:29:52.723154+00:00",
+  "updated_at": "2026-04-28T08:29:52.723154+00:00",
+  "details": {
+    "text": "[user] 1\tfrom __future__ import annotations\n2\t\n3\timport datetime\n4\timport glob\n5\timport inspect\n6\timport os\n7\timport re\n8\timport shutil\n9\timport subprocess\n10\t\n11\tfrom core.policy import resolve_quality_gate_policy\n12\tfrom core.skill_eval_harness import SkillEvalHarness\n13\tfrom core.skill_feedback import SkillFeedbackLoop\n14\tfrom core.skill_promotion import SkillPromotionManager\n15\tfrom core.skill_registry import check_skill_exists, register_skill\n16\tfrom core.skill_retrieval_engine import SkillRetrievalEngine\n17\tfrom core.utils import now_iso, resolve_knowledge_skill_path, resolve_skill_paths, safe_id, skill_markdown_filenames\n18\t\n19\t\n20\tFACTORY_ROOT = os.getcwd()\n21\tAGENT_PROJECT_ROOT = os.getenv(\"AGENT_PROJECT_ROOT\")\n22\t\n23\tif AGENT_PROJECT_ROOT:\n24\t    AGENTS_DIR = os.path.join(AGENT_PROJECT_ROOT, \"agents\")\n25\t    FORGE_DIR = os.path.join(AGENT_PROJECT_ROOT, \"skills\", \"forge\")\n26\telse:\n27\t    AGENTS_DIR = os.path.join(FACTORY_ROOT, \"agents\")\n28\t    FORGE_DIR = os.path.join(FACTORY_ROOT, \"skills\", \"forge\")\n29\t\n30\tWAREHOUSE_DIR = os.path.join(FACTORY_ROOT, \"skills\", \"warehouse\")",
+    "event_timestamp": "2026-04-07T06:02:26.840Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 59,
+    "provider": "claude"
+  }
+}

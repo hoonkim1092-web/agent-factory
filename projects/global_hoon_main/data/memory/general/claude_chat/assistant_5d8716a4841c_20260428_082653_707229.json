@@ -1,0 +1,18 @@
+{
+  "key": "assistant 변경된 파일들을 검토하겠습니다",
+  "value": "[assistant] 변경된 파일들을 검토하겠습니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:26:53.707276+00:00",
+  "updated_at": "2026-04-28T08:26:53.707276+00:00",
+  "details": {
+    "text": "[assistant] 변경된 파일들을 검토하겠습니다.",
+    "event_timestamp": "2026-04-23T09:55:29.150Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f28741b3-1e19-434a-984d-e6526d550b54.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

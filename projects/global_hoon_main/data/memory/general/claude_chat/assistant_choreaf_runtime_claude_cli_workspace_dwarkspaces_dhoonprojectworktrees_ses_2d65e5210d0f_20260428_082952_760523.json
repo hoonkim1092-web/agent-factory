@@ -1,0 +1,18 @@
+{
+  "key": "assistant choreaf_runtime 워크스페이스 경로 마이그레이션 및 세션 상태 갱신  claude_cli workspace DwarkSpaces  DhoonProJectworktrees 경로 변경 ses",
+  "value": "[assistant] chore(af_runtime): 워크스페이스 경로 마이그레이션 및 세션 상태 갱신 — claude_cli workspace `D:\\\\warkSpaces` → `D:\\\\hoonProJect\\\\worktrees` 경로 변경, session_id·transcript_path 신규 세션으로 교체, codex_home auth/config/state 파일 갱신, document_index.json 캐시 업데이트",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:29:52.760584+00:00",
+  "updated_at": "2026-04-28T08:29:52.760584+00:00",
+  "details": {
+    "text": "[assistant] chore(af_runtime): 워크스페이스 경로 마이그레이션 및 세션 상태 갱신 — claude_cli workspace `D:\\\\warkSpaces` → `D:\\\\hoonProJect\\\\worktrees` 경로 변경, session_id·transcript_path 신규 세션으로 교체, codex_home auth/config/state 파일 갱신, document_index.json 캐시 업데이트",
+    "event_timestamp": "2026-04-23T09:28:36.006Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fef8b996-9f50-4ac9-88a2-46fb1234d2f9.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

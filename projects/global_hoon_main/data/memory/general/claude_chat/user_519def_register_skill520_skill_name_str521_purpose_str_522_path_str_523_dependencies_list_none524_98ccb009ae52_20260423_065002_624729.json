@@ -1,0 +1,18 @@
+{
+  "key": "user 519def register_skill520    skill_name str521    purpose str  522    path str  523    dependencies list  None524   ",
+  "value": "[user] 519\tdef register_skill( 520\t    skill_name: str, 521\t    purpose: str = \"\", 522\t    path: str = \"\", 523\t    dependencies: list = None, 524\t    **kwargs 525\t) -> None: 526\t    \"\"\" 527\t    스킬을 레지스트리에 등록 (기존 API 호환성). 528\t 529\t    기존 API: register_skill...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T06:50:02.624887+00:00",
+  "updated_at": "2026-04-23T06:50:02.624887+00:00",
+  "details": {
+    "text": "[user] 519\tdef register_skill(\n520\t    skill_name: str,\n521\t    purpose: str = \"\",\n522\t    path: str = \"\",\n523\t    dependencies: list = None,\n524\t    **kwargs\n525\t) -> None:\n526\t    \"\"\"\n527\t    스킬을 레지스트리에 등록 (기존 API 호환성).\n528\t\n529\t    기존 API: register_skill(skill_name, purpose, path, dependencies, ...)\n530\t    내부적으로는 YAML 레지스트리 파일에 저장.\n531\t\n532\t    Args:\n533\t        skill_name: 스킬 이름\n534\t        purpose: 스킬 목적\n535\t        path: 스킬 파일 경로\n536\t        dependencies: 의존성 목록\n537\t        **kwargs: 기타 필드\n538\t    \"\"\"\n539\t    data = _load_registry()\n540\t    skills = data.get(\"skills\", {})\n541\t\n542\t    # skill_id는 이름 기반 정규화 (숫자 ID는 check_skill_exists() 등에서 찾을 수 없음)\n543\t    from core.utils import safe_id as _safe_id\n544\t    stype = kwargs.pop(\"stype\", kwargs.pop(\"type\", \"action\"))\n545\t    skill_id = _safe_id(skill_name) or skill_name.lower().replace(\" \", \"_\")\n546\t\n547\t    status = kwargs.pop(\"status\", \"draft\")\n548\t\n549\t    # 새 스킬 엔트리\n550\t    skill_entry = {\n551\t        \"skill_id\": skill_id,\n552\t        \"skill_name\": skill_name,\n553\t        \"purpose\": purpose,\n554\t        \"path\": path,\n555\t        \"dependencies\": dependencies or [],\n556\t        \"type\": stype,\n557\t        \"status\": status,\n558\t    }\n559\t    skill_entry.update(kwargs)\n560\t\n561\t    skills[skill_id] = skill_entry\n562\t    data[\"skills\"] = skills\n563\t    _save_registry(data)\n564",
+    "event_timestamp": "2026-04-07T06:02:30.385Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 61,
+    "provider": "claude"
+  }
+}

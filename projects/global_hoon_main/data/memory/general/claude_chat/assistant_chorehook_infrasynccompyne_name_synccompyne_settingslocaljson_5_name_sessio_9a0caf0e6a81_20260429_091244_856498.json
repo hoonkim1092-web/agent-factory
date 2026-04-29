@@ -1,0 +1,18 @@
+{
+  "key": "assistant chorehook-infrasyncCompyne 훅 name 식별자 추가 및 커맨드 재배치 syncCompyne 모듈 갱신  settingslocaljson 훅 5개에 name 필드 추가sessio",
+  "value": "[assistant] chore(hook-infra+syncCompyne): 훅 name 식별자 추가 및 커맨드 재배치, syncCompyne 모듈 갱신 — settings.local.json 훅 5개에 name 필드 추가(sessionstart/userpromptsubmit/precompact/stop/sessionend), UserPromptSubmit 훅을 check_pending_review.py → hook_runner.py로 교체, git pul...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T09:12:44.856593+00:00",
+  "updated_at": "2026-04-29T09:12:44.856593+00:00",
+  "details": {
+    "text": "[assistant] chore(hook-infra+syncCompyne): 훅 name 식별자 추가 및 커맨드 재배치, syncCompyne 모듈 갱신 — settings.local.json 훅 5개에 name 필드 추가(sessionstart/userpromptsubmit/precompact/stop/sessionend), UserPromptSubmit 훅을 check_pending_review.py → hook_runner.py로 교체, git pull/stash 허용 명령 추가, syncCompyne 4개 파일(memory_store.py·project_log_cli.py·workspace_context_cli.py·WORKSPACE_CONTEXT.md) 업데이트",
+    "event_timestamp": "2026-04-29T09:12:43.111Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/ffe99554-93dd-46a2-99ce-da53e6794589.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}
