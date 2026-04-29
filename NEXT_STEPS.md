@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-29 hook 인프라 수정 + P1 설계문서 작성 + 3-Tier 검증 통과 → 다음 PC에서 T3(exe 빌드) 또는 P1 Sprint A 진행 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-30 Phase 0 Proof-Carrying Review 구현 완료 (`24be4ace`) → 다음 PC에서 T3(exe 빌드) 또는 P1 Sprint A 진행 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `875d5081` fix(sprint3-warn-clear): Sprint 3 WARN 클리어 — 9-라운드 3-Tier 검증 통과 |
+| 마지막 커밋 | `24be4ace` feat(phase0-proof-carrying-review): Phase 0 — Blast Radius + 라운드 모델 + claim ID |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -58,13 +58,14 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 24 | Stage-1 Sprint 2: `core/skill_evolution_controller.py`(SelfEvolutionController 7단계 파이프라인) + `core/evolution_ledger.py`(EvolutionLedger JSONL) + EVOLUTION_ROLLED_BACK RunEvent 직접 기록 + _publish() live-snapshot rollback + .bak 배포 방지 + get_default_store() thread-safe 싱글톤 + conftest AF_CHECKPOINT_DIR 픽스처 — 60 테스트 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 | 25 | Stage-1 Sprint 3: 호출사이트 3개(fsa_loop._try_evolve_failed_skill, cross_verification._trigger_evolution, dynamic_orchestrator._try_evolve_from_patterns) → SelfEvolutionController.submit() 교체, 3메서드 제거(_verify_evolved_skill/_rollback_skill/_cleanup_skill_baks), CANDIDATES_DIR 절대경로(config_paths.py), knowledge skill 지원(_is_knowledge_skill + SkillQualityGate early-return), skill_creator meta.yaml.bak 제거, GateResult 필수 필드 추가 — 70 테스트 3-Tier 검증 통과 | `0778ed42` | 2026-04-29 |
 | 26 | Sprint 3 WARN 클리어 (9-라운드 3-Tier): fsa_loop DEFERRED/ERROR/REJECTED→None+_evolution_failed_skills 차단, Level 4 apply_pivot 조건 정리, gate_result is None 단순화, Level 4→5 강제에스컬레이션, run_mission 초기화, skill_quality_gate knowledge skill auto_register+_register_knowledge_skill, skill_creator update_skill knowledge type 보존(setdefault), skill_evolution_safety DEPRECATED 마커, fixture 모듈 속성 복원, 테스트 4종 신규 추가 — 81 테스트 통과 | `875d5081` | 2026-04-29 |
-| 29 | P1 설계문서 + hook 인프라 수정: `docs/2026-04-29-multi-provider-cross-review.md` (350줄, 13섹션) + `scripts/check_design_pending.py` (design 큐 폴링, JSON timestamp debounce, fired pruning) + `core/design_review_utils.py` (날짜패턴·work-items·patterns INCLUDE/EXCLUDE) + `settings.local.json` (PostToolUse 복원, check_design_pending 등록) + `CLAUDE.md` (af-design-review-pending 룰) — 3-Tier 검증 통과 | (이번 커밋) | 2026-04-29 |
+| 29 | P1 설계문서 + hook 인프라 수정: `docs/2026-04-29-multi-provider-cross-review.md` (350줄, 13섹션) + `scripts/check_design_pending.py` (design 큐 폴링, JSON timestamp debounce, fired pruning) + `core/design_review_utils.py` (날짜패턴·work-items·patterns INCLUDE/EXCLUDE) + `settings.local.json` (PostToolUse 복원, check_design_pending 등록) + `CLAUDE.md` (af-design-review-pending 룰) — 3-Tier 검증 통과 | `6566c459` | 2026-04-29 |
+| 30 | Phase 0 Proof-Carrying Review: `scripts/blast_radius.py` (결정적 Tier 분류기, path/regex, LLM 없음) + `review_gate.py` (round_started_at 토큰 모델, claim_id AF-RG format, clear 리셋, BLOCK fall-through) + `enqueue_agent_review.py` (_state_lock RMW + classify_with_content 락 밖 선계산) + `check_pending_review.py` (_state_lock RMW + cap/warn-only 1회 알림) + `af-critic.md` (BLOCK 기준 명시, 0 findings valid) + `tests/test_review_gate_phase0.py` (20 tests, 20 passed) — 모든 High 이슈 해소 | `24be4ace` | 2026-04-30 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-> **2026-04-29 정리**: Sprint 3 + WARN 클리어 완료. Sprint 4 기술부채 2건 + Release 대기 중.
+> **2026-04-30 정리**: Phase 0 Proof-Carrying Review 완료 (20 tests). Sprint 4 기술부채 2건 + Release 대기 중.
 
 ### Sprint 4 — 다음 작업 (우선순위순)
 
