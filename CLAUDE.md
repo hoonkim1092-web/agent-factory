@@ -36,15 +36,19 @@
   - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
 
 ### 교차검증 자동 실행
-- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-test-runner → af-critic → af-cross-review 에이전트를 **순서대로** 실행한다 (tier 1→2→3 순서 필수)
+- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
 - UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review **2개를 병렬 실행**한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)
-- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-critic + af-cross-review 2개를 병렬 실행**한다 (2026-04-21 확정 — af-doc-qa는 work-item 4-문서 세트 전용이므로 단일 설계문서에 부적합)
+- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-critic + af-cross-review 2개를 병렬 실행**한다 (2026-04-21 확정)
 - **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-critic + af-cross-review **3개를 병렬 실행**한다
-- 교차검증 결과에서 BLOCK 판정 시 발견 사항을 즉시 수정한다
+- 교차검증 결과에서 **BLOCK 판정 시에만** 발견 사항을 수정한다. **WARN은 advisory** — 자동 수정 의무 없음 (Phase 0 정책, 2026-04-30: 무한루프 방지)
 
-### Review-Gate 규칙 (2026-04-20 활성화)
-- `.py` 파일 수정 후 `git commit` 전 af-test-runner(tier 1) → af-critic(tier 2) → af-cross-review(tier 3) **3단계 완주 필수**
-- 순서 위반(tier 2만 실행 등) 또는 재편집(리뷰 완료 후 파일 수정) 시 commit이 자동 차단됨
+### Review-Gate 규칙 (Phase 0 갱신 2026-04-30)
+- `.py` 파일 수정 후 `git commit` 전 필수 tier 완주:
+  - **Tier 1 파일** (docs/, README, 단순 설정): af-test-runner만
+  - **Tier 2~3 파일** (core/, scripts/, 일반 코드): af-test-runner → af-critic → af-cross-review 순서
+  - 분류는 `scripts/blast_radius.py`가 결정 (`subprocess`, `shell=True`, hook launcher 등은 자동 Tier 3)
+- **max_rounds=2 캡** — 같은 큐는 최대 2라운드까지만 자동 발화. 이후엔 사용자가 수동 결정 (재리뷰 vs 우회)
+- **WARN-only no-fire** — 직전 라운드가 BLOCK 없이 완료됐다면 (전부 WARN/PASS) 재편집해도 자동 재발화 안 함
 - **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
 - `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
 - 진단: `python3 scripts/review_gate.py --debug`
