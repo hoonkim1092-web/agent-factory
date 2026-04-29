@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 046  gaps     핵심 근거가 docsarchitecturemd와 httpsexamplecompoker-rules 두 개뿐이며 실제 포커 규칙 출처는 placeholder 성격",
+  "value": "[assistant] {   \"score\": 0.46,   \"gaps\": [     \"핵심 근거가 `docs/architecture.md`와 `https://example.com/poker-rules` 두 개뿐이며, 실제 포커 규칙 출처는 placeholder 성격이라 신뢰 가능한 웹 근거로 보기 어렵다.\",     \"핸드 랭킹, 킥커 비교, 스플릿 팟, 딜러 왼쪽 나머지 칩 배분 등 규칙 세부사항에 대한 구체적 출처가 없다.\",     \"브라우저 ES M...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:39:04.949911+00:00",
+  "updated_at": "2026-04-29T14:39:04.949911+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.46,\n  \"gaps\": [\n    \"핵심 근거가 `docs/architecture.md`와 `https://example.com/poker-rules` 두 개뿐이며, 실제 포커 규칙 출처는 placeholder 성격이라 신뢰 가능한 웹 근거로 보기 어렵다.\",\n    \"핸드 랭킹, 킥커 비교, 스플릿 팟, 딜러 왼쪽 나머지 칩 배분 등 규칙 세부사항에 대한 구체적 출처가 없다.\",\n    \"브라우저 ES Module의 `file://` CORS 제한, Chrome/Firefox 호환성, 200ms 성능 목표 등 기술적 주장이 별도 근거 없이 제시되어 있다.\",\n    \"Vanilla JS 단일 HTML/JS/CSS 구조가 최선이라는 판단은 요구사항에는 부합하지만, 테스트 자동화나 유지보수 관점의 대안 비교가 얕다.\",\n    \"implementation-tasks.md의 모든 `e2e_command`가 `(needs_backfill)`이라 승인 기준 AC-10 및 Episode Hints와 충돌한다.\",\n    \"실제 구현 파일, 테스트 파일, 실행 명령, 검증 결과가 없으므로 산출물 완성도를 확인할 수 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"표준 텍사스 홀덤 규칙을 기준으로 한다는 범위 정의는 있으나, 어떤 공식/권위 있는 규칙 문서를 따르는지 명시되어 있지 않다.\",\n    \"딜러 포지션이 라운드마다 로테이션된다는 요구사항은 제시됐지만 현재 구현 계획에서 실제 상태 전이와 검증 방식이 부족하다.\",\n    \"동점 시 나머지 칩을 딜러 왼쪽 플레이어에게 우선 배분한다는 규칙은 출처가 없다.\",\n    \"`evaluateHand(cards)`가 7장 미만 입력 시 오류를 throw해야 한다는 설계 결정은 합리적이지만 외부 근거가 아닌 내부 정책이다.\",\n    \"셔플 무작위성을 `shuffle()` 10회 반복으로 검증한다는 테스트 전략은 통계적으로 충분하다는 근거가 없다.\",\n    \"핸드 평가가 200ms 이내 완료되어야 한다는 성능 기준은 사용자 요구나 측정 근거 없이 설정되어 있다.\",\n    \"최신 Chrome/Firefox에서 ES6+ 문법과 모듈 사용이 문제없다는 주장은 일반적으로 타당하지만 구체적 호환성 근거가 없다.\",\n    \"`game-rules.js`를 순수 함수 모듈로 만들면 테스트 가능성이 확보된다는 주장은 설계상 타당하지만, 프로젝트 아키텍처 문서 외에는 보강 근거가 없다.\",\n    \"UI와 규칙 모듈을 병렬 구현 가능하다는 판단은 인터페이스가 확정되지 않은 상태에서는 리스크가 있다.\",\n    \"승인 게이트가 존재하지만 approver, version snapshot, 실제 review notes가 비어 있어 승인 가능 상태라는 근거가 없다.\"\n  ],\n  \"strengths\": [\n    \"로컬 아키텍처 근거인 `docs/architecture.md`의 모듈 분리 원칙을 계획, 스펙, 설계 전반에 일관되게 반영했다.\",\n    \"핵심 위험인 포커 핸드 평가 버그를 명확히 식별하고, 규칙 엔진 분리와 고정 테스트 케이스를 완화책으로 제안했다.\",\n    \"UI와 게임 규칙의 단방향 의존 구조가 명확하며, DOM 비의존 규칙 모듈이라는 설계는 테스트 가능성 측면에서 적절하다.\",\n    \"상태 전이 흐름, 공개 API, 데이터 모델, acceptance criteria가 비교적 구체적으로 정의되어 있다.\",\n    \"대안으로 단일 파일, 클래스 기반 OOP, localStorage 사용을 검토하고 기각 사유를 제시했다.\"\n  ],\n  \"revision_instructions\": [\n    \"placeholder 웹 참조인 `https://example.com/poker-rules`를 제거하고, 신뢰 가능한 포커 규칙 출처를 명시하라.\",\n    \"핸드 랭킹, 킥커 비교, 스플릿 팟, 폴드 승리, 베팅 라운드 전환 규칙마다 출처 또는 프로젝트 내 결정 기록을 연결하라.\",\n    \"`implementation-tasks.md`의 모든 `(needs_backfill)`을 실제 실행 가능한 `e2e_command`로 교체하라.\",\n    \"테스트 전략에 최소 1개의 실제 비mock 실행 경로를 포함하고, exit code 0 검증 조건을 승인 게이트에 반영하라.\",\n    \"셔플 검증은 무작위성 보장 테스트가 아니라 덱 무결성, 중복 없음, 순서 변경 가능성 확인 수준으로 재정의하라.\",\n    \"성능 목표 200ms의 근거를 추가하거나 acceptance criteria에서 제거하라.\",\n    \"ES Module `file://` 제한은 실행 방식 요구사항으로 명확히 정리하고, 로컬 HTTP 서버 명령을 테스트 체크리스트에 포함하라.\",\n    \"approval-gate.md에 실제 approver, 문서 버전, review notes, gate decision을 채워 승인 가능 여부를 판단할 수 있게 하라.\"\n  ]\n}",
+    "event_timestamp": "2026-04-29T14:39:04.714Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-1adc5263/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-38-36-019dd9ad-74b7-74f0-8f8b-902dcb9edc5c.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

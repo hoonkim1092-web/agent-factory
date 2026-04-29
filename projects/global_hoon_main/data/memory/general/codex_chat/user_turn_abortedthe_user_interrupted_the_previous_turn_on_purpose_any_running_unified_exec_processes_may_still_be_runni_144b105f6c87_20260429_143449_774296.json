@@ -1,0 +1,18 @@
+{
+  "key": "user turn_abortedThe user interrupted the previous turn on purpose Any running unified exec processes may still be runni",
+  "value": "[user] <turn_aborted> The user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed. </turn_aborted>",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:34:49.774887+00:00",
+  "updated_at": "2026-04-29T14:34:49.774887+00:00",
+  "details": {
+    "text": "[user] <turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>",
+    "event_timestamp": "2026-04-28T22:22:10.727Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T07-21-52-019dd62f-383a-7e21-9656-7c4f6f54a15f.jsonl",
+    "session_line": 28,
+    "provider": "codex"
+  }
+}

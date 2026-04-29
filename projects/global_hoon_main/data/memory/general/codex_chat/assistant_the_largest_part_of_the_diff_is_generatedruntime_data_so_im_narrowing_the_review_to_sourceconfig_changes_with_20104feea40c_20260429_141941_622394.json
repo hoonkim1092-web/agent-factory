@@ -1,0 +1,18 @@
+{
+  "key": "assistant The largest part of the diff is generatedruntime data so Im narrowing the review to sourceconfig changes with ",
+  "value": "[assistant] The largest part of the diff is generated/runtime data, so I’m narrowing the review to source/config changes with security or behavior impact.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:19:41.622956+00:00",
+  "updated_at": "2026-04-29T14:19:41.622956+00:00",
+  "details": {
+    "text": "[assistant] The largest part of the diff is generated/runtime data, so I’m narrowing the review to source/config changes with security or behavior impact.",
+    "event_timestamp": "2026-04-28T14:04:56.957Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T23-04-18-019dd467-af9a-7db0-879f-f30077157d71.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

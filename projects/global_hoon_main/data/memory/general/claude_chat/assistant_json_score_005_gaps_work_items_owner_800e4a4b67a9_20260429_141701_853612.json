@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 005  gaps     work_items 배열이 비어 있음  실행 가능한 작업 항목이 전혀 없음    각 작업 항목에 담당자owner가 없음    리스크 식별 및 완화 전략",
+  "value": "[assistant] ```json {   \"score\": 0.05,   \"gaps\": [     \"work_items 배열이 비어 있음 — 실행 가능한 작업 항목이 전혀 없음\",     \"각 작업 항목에 담당자(owner)가 없음\",     \"리스크 식별 및 완화 전략 누락\",     \"관찰·검증 가능한 인수 기준(acceptance criteria) 전무\",     \"goal이 'test goal'로 의미 없는 플레이스홀더 — 실제 목표 서술 없음\",...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:17:01.853944+00:00",
+  "updated_at": "2026-04-29T14:17:01.853944+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.05,\n  \"gaps\": [\n    \"work_items 배열이 비어 있음 — 실행 가능한 작업 항목이 전혀 없음\",\n    \"각 작업 항목에 담당자(owner)가 없음\",\n    \"리스크 식별 및 완화 전략 누락\",\n    \"관찰·검증 가능한 인수 기준(acceptance criteria) 전무\",\n    \"goal이 'test goal'로 의미 없는 플레이스홀더 — 실제 목표 서술 없음\",\n    \"requested_role이 빈 문자열 — 어떤 역할이 이 작업을 수행하는지 불명확\",\n    \"route가 빈 객체 — 실행 경로 미정의\",\n    \"타임라인·마일스톤 없음\",\n    \"의존성(dependencies) 정보 없음\"\n  ],\n  \"strengths\": [\n    \"스키마 구조 자체는 유효한 JSON 형식을 따름\",\n    \"generated_at 타임스탬프가 존재하여 생성 시각 추적 가능\"\n  ],\n  \"revision_instructions\": [\n    \"goal을 구체적이고 측정 가능한 목표 서술로 교체하라 (예: '무엇을, 왜, 언제까지' 포함)\",\n    \"work_items 배열에 최소 1개 이상의 작업 항목을 추가하고, 각 항목에 title·owner·due_date 필드를 포함하라\",\n    \"risks 배열을 최상위 레벨에 추가하고, 각 리스크에 description·likelihood·impact·mitigation 필드를 포함하라\",\n    \"acceptance_criteria 배열을 추가하고, 각 기준을 'Given/When/Then' 또는 명확한 검증 조건 형태로 작성하라\",\n    \"requested_role에 실제 역할을 기입하라 (예: 'backend-engineer', 'product-manager')\",\n    \"route 객체에 실행 경로 정보를 채워라 (예: provider, model, pipeline 등)\",\n    \"item_count는 work_items 길이와 일치하도록 자동 계산되거나 수동으로 업데이트하라\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-29T14:17:00.478Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-15f326db/154a8a1a-1bff-4b29-8ac2-192edd0bac16.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

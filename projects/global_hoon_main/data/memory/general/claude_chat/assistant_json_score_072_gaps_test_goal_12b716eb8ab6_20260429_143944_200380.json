@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 072  gaps     원본 요청 test goal이 실질적 비즈니스기술 목표가 아닌 플레이스홀더이므로 생성된 계획 전체가 목표 특화 내용 없이 범용 템플릿 수준에 머물러 있",
+  "value": "[assistant] ```json {   \"score\": 0.72,   \"gaps\": [     \"원본 요청 'test goal'이 실질적 비즈니스·기술 목표가 아닌 플레이스홀더이므로, 생성된 계획 전체가 목표 특화 내용 없이 범용 템플릿 수준에 머물러 있음\",     \"프로젝트 수준의 전체 일정(deadline)이 없고 상대 마일스톤('WI-N 완료 후 X일')만 존재 — 외부 납기 기준점이 없으면 크리티컬 패스 계산 불가\",     \"WI-005 AC...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:39:44.200935+00:00",
+  "updated_at": "2026-04-29T14:39:44.200935+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.72,\n  \"gaps\": [\n    \"원본 요청 'test goal'이 실질적 비즈니스·기술 목표가 아닌 플레이스홀더이므로, 생성된 계획 전체가 목표 특화 내용 없이 범용 템플릿 수준에 머물러 있음\",\n    \"프로젝트 수준의 전체 일정(deadline)이 없고 상대 마일스톤('WI-N 완료 후 X일')만 존재 — 외부 납기 기준점이 없으면 크리티컬 패스 계산 불가\",\n    \"WI-005 AC 2번 항목이 'progress_log.md(WI-004)의 BLOCKED 항목 해소'를 조건으로 요구하여 '이 WI 단독으로 판단 가능'이라는 설계 원칙과 모순\",\n    \"WI-005 리스크 1번 mitigation이 '묵시적 승인 정책 적용 여부를 WI-001에서 결정'이라고 명시하나, WI-001 deliverables에 해당 결정 항목이 없어 전방 참조가 공중에 뜸\",\n    \"WI-001~003 사이에 병렬 실행 가능성이 전혀 검토되지 않음 — 완전 직렬 체인(route_order 1→2→3→4→5)은 총 소요 시간 최대화\",\n    \"예산·리소스 제약이 WI-001로 위임되어 있으나 WI-001 deliverables에는 예산 수치 범위(예: 상한선)가 없어 후속 WI의 예산 기반 mitigation이 동작 불가\",\n    \"WI-004 실행 산출물 파일명이 'output_main.md 또는 목표에 따른 결과물 파일'로 조건부 처리 — 실제 파일명이 미확정이면 AC 검증 시 파일 존재 여부를 자동화할 수 없음\"\n  ],\n  \"strengths\": [\n    \"14개 전체 리스크에 각각 구체적 mitigation이 매핑되어 있어 리스크 커버리지가 완전함\",\n    \"모든 deliverable에 구체적 파일명(goal_definition.md, as_is_analysis.md 등)이 명시되어 있어 산출물 존재 여부를 파일 시스템으로 즉시 검증 가능\",\n    \"플레이스홀더 목표에 대한 메타 인식이 WI-001에 명시적으로 반영되어 있고, 합의 실패 시 3일 내 종료 기준(exit_decision.md)을 포함함\",\n    \"WI-003 에스컬레이션 절차가 WI-004 블로커 mitigation에서 교차 참조되어 있어 실행 단계의 대응 절차가 문서 체인으로 연결됨\",\n    \"WI-005의 AC가 이전 WI AC를 집계하는 대신 WI-001 KPI를 직접 참조하도록 설계되어 있어 독립 검증 원칙을 대체로 준수함\",\n    \"모든 work item에 owner, requested_role, priority, estimated_effort가 빠짐없이 배정됨\",\n    \"WI-001에 out-of-scope 목록 의무화가 명시되어 범위 크리프 리스크 mitigation이 구조적으로 강제됨\"\n  ],\n  \"revision_instructions\": [\n    \"WI-005 AC 2번을 'progress_log.md에서 BLOCKED 항목 존재 시 acceptance_test_report.md에 예외 처리 근거를 직접 기재한다'로 수정하여 단독 판단 원칙과 일관성 확보\",\n    \"WI-001 deliverables에 '묵시적 승인 정책 적용 여부 결정 기록(approval_policy.md 또는 goal_definition.md 내 섹션)'을 추가하여 WI-005 mitigation의 전방 참조 완성\",\n    \"WI-002와 WI-003 의존성을 재검토: WI-002 데이터 수집과 WI-003 계획 수립의 일부(역할 배정)는 WI-001 완료 후 병렬 착수 가능 — route_order 대신 explicit 병렬 그룹 필드 추가 권장\",\n    \"WI-004 deliverables에서 'output_main.md 또는 목표에 따른 결과물 파일'을 'WI-001 goal_definition.md에 명시된 산출물 파일명을 따른다'로 수정하여 파일명 결정 책임을 WI-001로 위임하고 AC 자동화 가능성 확보\",\n    \"프로젝트 수준 메타데이터(project_brief)에 전체 목표 납기일(target_completion_date) 또는 'TBD — WI-001 완료 후 확정' 플래그를 추가하여 크리티컬 패스 계산의 기준점 마련\",\n    \"WI-001 deliverables에 '예산 상한선 및 리소스 헤드카운트 범위'를 goal_definition.md 필수 섹션으로 명문화하여 WI-002~005의 예산 기반 mitigation이 실제 수치를 참조할 수 있도록 보장\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-29T14:39:41.587Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-061b397a/9f76dc8c-b48a-4793-b6b1-de1c06de4d5c.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

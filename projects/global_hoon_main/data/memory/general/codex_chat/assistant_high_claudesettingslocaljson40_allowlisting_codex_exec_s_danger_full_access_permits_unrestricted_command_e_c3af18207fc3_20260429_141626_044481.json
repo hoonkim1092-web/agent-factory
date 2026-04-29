@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljson40  allowlisting codex exec -s danger-full-access permits unrestricted command e",
+  "value": "[assistant] - [High] .claude/settings.local.json:40 — allowlisting `codex exec -s danger-full-access` permits unrestricted command execution and can bypass sandbox protections.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:16:26.044639+00:00",
+  "updated_at": "2026-04-29T14:16:26.044639+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:40 — allowlisting `codex exec -s danger-full-access` permits unrestricted command execution and can bypass sandbox protections.",
+    "event_timestamp": "2026-04-27T22:31:45.184Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T07-31-27-019dd111-a414-7962-9604-7152a7817b6e.jsonl",
+    "session_line": 19,
+    "provider": "codex"
+  }
+}

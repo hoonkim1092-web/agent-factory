@@ -1,0 +1,18 @@
+{
+  "key": "assistant Im also checking the hook change because the new event type suggests a producer path may have been added there",
+  "value": "[assistant] I’m also checking the hook change because the new event type suggests a producer path may have been added there, and review findings should catch call-site failures too.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:05:07.579035+00:00",
+  "updated_at": "2026-04-29T14:05:07.579035+00:00",
+  "details": {
+    "text": "[assistant] I’m also checking the hook change because the new event type suggests a producer path may have been added there, and review findings should catch call-site failures too.",
+    "event_timestamp": "2026-04-27T22:31:42.849Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T07-31-27-019dd111-a361-7920-a4f7-526a6abd730b.jsonl",
+    "session_line": 16,
+    "provider": "codex"
+  }
+}

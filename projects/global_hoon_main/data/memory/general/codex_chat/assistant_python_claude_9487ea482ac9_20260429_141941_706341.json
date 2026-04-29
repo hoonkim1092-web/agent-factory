@@ -1,0 +1,18 @@
+{
+  "key": "assistant 핵심 변경은 두 Python 파일과 Claude 로컬 설정입니다 리뷰 포맷에 맞춰 실제 라인 번호를 확인하고 있습니다",
+  "value": "[assistant] 핵심 변경은 두 Python 파일과 Claude 로컬 설정입니다. 리뷰 포맷에 맞춰 실제 라인 번호를 확인하고 있습니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:19:41.706465+00:00",
+  "updated_at": "2026-04-29T14:19:41.706465+00:00",
+  "details": {
+    "text": "[assistant] 핵심 변경은 두 Python 파일과 Claude 로컬 설정입니다. 리뷰 포맷에 맞춰 실제 라인 번호를 확인하고 있습니다.",
+    "event_timestamp": "2026-04-28T22:22:10.691Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T07-21-52-019dd62f-383a-7e21-9656-7c4f6f54a15f.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 035  gaps     핵심 목표가 여전히 test goal로 남아 있어 산출물이 실제 문제 사용자 범위 성공 조건에 근거하지 못한다    references 필드에 문서명이 제시되",
+  "value": "[assistant] {   \"score\": 0.35,   \"gaps\": [     \"핵심 목표가 여전히 'test goal'로 남아 있어 산출물이 실제 문제, 사용자, 범위, 성공 조건에 근거하지 못한다.\",     \"references 필드에 문서명이 제시되어 있지만 구체 인용, 경로 검증, 발췌, 버전, 접근 가능성이 없어 증거로 보기 어렵다.\",     \"Review-Gate, Master_Blueprint, CLAUDE.md, memory 파일,...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:48:14.409541+00:00",
+  "updated_at": "2026-04-29T14:48:14.409541+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.35,\n  \"gaps\": [\n    \"핵심 목표가 여전히 'test goal'로 남아 있어 산출물이 실제 문제, 사용자, 범위, 성공 조건에 근거하지 못한다.\",\n    \"references 필드에 문서명이 제시되어 있지만 구체 인용, 경로 검증, 발췌, 버전, 접근 가능성이 없어 증거로 보기 어렵다.\",\n    \"Review-Gate, Master_Blueprint, CLAUDE.md, memory 파일, GitHub Release 등 특정 프로세스가 실제 프로젝트에 적용된다는 근거가 없다.\",\n    \"대안적 실행 방식이 고려되지 않았다. 예를 들어 단순 테스트 목표라면 릴리즈 준비, E2E, GitHub Release 없이 범위 정의와 검증만으로 충분할 수 있다.\",\n    \"일정 추정치와 담당 역할이 제시되어 있지만 산정 근거, 팀 구성, 작업 규모, 기술 스택 정보가 없다.\",\n    \"생성 시각은 포함되어 있으나 참조 문서나 정책의 최신성 확인 근거가 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"S.M.A.R.T 기준을 충족하는 목표 재정의가 필요하다는 주장\",\n    \"이해관계자 목록과 역할 문서화가 필요한 작업이라는 주장\",\n    \"작업 항목당 0.5일에서 5일 기준을 적용해야 한다는 주장\",\n    \"외부 의존 서비스(API, DB)의 준비 지연 위험이 존재한다는 주장\",\n    \"py_compile, pytest, 80% 커버리지 기준이 이 목표에 적합하다는 주장\",\n    \"af-test-runner, af-critic, af-cross-review 3단계 Review-Gate가 필수라는 주장\",\n    \"Master_Blueprint.md §12 변경 이력을 구현 커밋과 동일 커밋에서 업데이트해야 한다는 주장\",\n    \"버전 파일 bump와 GitHub Release 생성이 필요한 릴리즈 준비 단계라는 주장\",\n    \"dist/*.zip 100MB 초과로 git push 실패가 발생할 수 있다는 주장\",\n    \"Blueprint 미업데이트로 pre-commit hook이 차단된다는 주장\"\n  ],\n  \"strengths\": [\n    \"작업 항목이 의존성, 소유자, 수락 기준, 위험, 완화책을 포함해 구조화되어 있다.\",\n    \"모호한 원 요청을 구체화해야 한다는 문제 인식은 타당하다.\",\n    \"각 작업 항목에 검증 가능한 완료 기준을 포함하려는 시도가 있다.\",\n    \"위험과 완화책을 별도로 분리해 실행 리스크를 드러낸 점은 유용하다.\"\n  ],\n  \"revision_instructions\": [\n    \"먼저 'test goal'의 실제 의도, 사용자, 범위, 제외 범위, 성공 지표를 확인하고 project_brief에 반영한다.\",\n    \"references의 각 항목에 실제 파일 경로, 관련 섹션, 근거 요약을 추가하고 존재하지 않거나 확인되지 않은 참조는 제거한다.\",\n    \"프로젝트에 실제로 존재하는 도구와 절차만 작업 항목에 포함한다. Review-Gate, Blueprint, GitHub Release가 필수가 아니라면 조건부 항목으로 낮춘다.\",\n    \"각 일정 추정치에 산정 근거를 추가하거나 불확실성 범위를 명시한다.\",\n    \"간단한 목표 검증, 프로토타입, 문서-only 처리, 정식 구현 및 릴리즈 같은 대안 경로를 비교한다.\",\n    \"최신성 검토를 위해 생성일뿐 아니라 참조 문서의 수정일, 적용 중인 정책 또는 도구 버전을 기록한다.\"\n  ]\n}",
+    "event_timestamp": "2026-04-29T14:45:41.238Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-89b90b31/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-45-20-019dd9b3-9c4e-7351-aa8e-11d366cfbe33.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 042  gaps     목표가 test goal 플레이스홀더 그대로이며 전체 산출물이 실제 목표 없이 메타-플래닝계획을 위한 계획으로만 구성됨  비즈니스 가치를 측정할 기준점",
+  "value": "[assistant] ```json {   \"score\": 0.42,   \"gaps\": [     \"목표가 'test goal' 플레이스홀더 그대로이며, 전체 산출물이 실제 목표 없이 메타-플래닝(계획을 위한 계획)으로만 구성됨 — 비즈니스 가치를 측정할 기준점 없음\",     \"모든 due_date가 'TBD'로, 납기·크리티컬 패스 산정이 전혀 되지 않음. WI-005가 타임라인 수립을 맡지만 WI-005 자체도 due_date = TBD\",     \"...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:18:25.091842+00:00",
+  "updated_at": "2026-04-29T14:18:25.091842+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.42,\n  \"gaps\": [\n    \"목표가 'test goal' 플레이스홀더 그대로이며, 전체 산출물이 실제 목표 없이 메타-플래닝(계획을 위한 계획)으로만 구성됨 — 비즈니스 가치를 측정할 기준점 없음\",\n    \"모든 due_date가 'TBD'로, 납기·크리티컬 패스 산정이 전혀 되지 않음. WI-005가 타임라인 수립을 맡지만 WI-005 자체도 due_date = TBD\",\n    \"project_brief.route = {} 이고 requested_role = \\\"\\\" 인 상태가 출력 JSON에도 그대로 전파됨 — 생성기가 입력 결함을 검출하지 못했음\",\n    \"Phase 2 이후 마일스톤이 정의되지 않음. Phase 0/1만 존재하며 실제 실행·검증·릴리즈 단계 부재\",\n    \"프로젝트 레벨 성공 지표(KPI / OKR) 없음. WI-001 내부에서 정의하도록 위임했지만 artifact 자체에는 없음\",\n    \"각 work item당 리스크가 1개뿐 — 기술 리스크, 외부 의존성 리스크, 예산 리스크 등 카테고리별 분류 없음\",\n    \"의존성 체인(WI-001→002→003→004→005)이 선형 직렬이어서 병렬화 가능 여부를 검토하지 않음. WI-003과 WI-004는 동시 착수 가능함에도 순차 처리됨\",\n    \"에스컬레이션 경로 및 의사결정 권한자(DRI, Decision-making authority) 미정의\"\n  ],\n  \"strengths\": [\n    \"5개 모든 work item에 owner와 requested_role이 명시됨 — 책임 공백 없음\",\n    \"각 work item의 acceptance_criteria가 관찰 가능하고 검증 가능한 형태(SMART 형식, RACI, 리스크 레지스터 항목 수 등)로 작성됨\",\n    \"모든 리스크에 구체적인 완화 전략이 1:1 매핑되어 있음\",\n    \"WI-001이 'test goal' 플레이스홀더를 탐지하고 목표 구체화를 P0 선행 작업으로 배치한 설계 판단은 적절함\",\n    \"의존성이 명시적 ID 참조(WI-001, WI-002 등)로 표현되어 추적 가능함\",\n    \"route 필드가 각 work item 수준에서 단계별로 서술됨\"\n  ],\n  \"revision_instructions\": [\n    \"입력 goal이 플레이스홀더('test goal', 빈 문자열, 3단어 이하 등)인 경우 생성을 거부하거나 AskUserQuestion으로 실제 목표를 수집한 뒤 재생성하도록 upstream 라우터에 가드 조건 추가\",\n    \"project_brief 레벨에 summary_success_metrics 배열을 추가하고 최소 1개 이상의 정량 지표를 필수 필드로 지정 — WI-001에만 위임하지 말 것\",\n    \"WI-003과 WI-004의 의존성을 재검토하여 병렬 실행 가능 여부를 명시; 가능하면 parallel_with 필드 도입 또는 dependencies에서 제거\",\n    \"due_date를 TBD 대신 상대적 표현(generated_at 기준 +N일)이라도 채우거나, WI-005 완료 후 back-fill하는 이중 단계 구조로 명시\",\n    \"각 work item의 risks 배열에 최소 2개 리스크(기술/운영 각 1개)를 요구하는 스키마 검증 추가\",\n    \"Phase 2+(실행·검증·릴리즈) 마일스톤을 포함하는 milestone_plan 섹션을 최상위에 추가하고 각 work item의 milestone 값과 연동\",\n    \"project_brief.route = {} 또는 requested_role = \\\"\\\" 감지 시 경고 플래그(warnings 배열)를 artifact에 포함시켜 소비자가 미완성 입력을 인지하도록 처리\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-29T14:18:22.912Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-15f326db/eb705711-3ee0-40af-bff3-c1beca2891ec.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

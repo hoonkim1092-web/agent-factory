@@ -5,11 +5,11 @@ skills:
     - abc
     id: abc
     last_test_ok: true
-    meta_path: D:\hoonProJect\worktrees\agent-factory\tests\_tmp\af-test-ba801729\skills\abc\meta.yaml
+    meta_path: /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-79f36da5/skills/abc/meta.yaml
     name: abc
-    path: D:\hoonProJect\worktrees\agent-factory\tests\_tmp\af-test-ba801729\skills\abc\skill.py
+    path: /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-79f36da5/skills/abc/skill.py
     status: active
-    updated_at: '2026-04-29T10:42:31'
+    updated_at: '2026-04-29T23:51:55'
     version: 0.1.0
   accept_changes:
     capabilities:
@@ -1020,14 +1020,14 @@ skills:
     - new_skill
     dependencies: []
     id: new_skill
-    last_eval_report: D:\hoonProJect\worktrees\agent-factory\skills\new_skill\skill-eval-report.json
+    last_eval_report: /Users/hoon/workTree/agent-factory/skills/new_skill/skill-eval-report.json
     last_test_ok: false
     lifecycle_stage: candidate
     meta_path: skills/new_skill/meta.yaml
     name: new_skill
     path: skills/new_skill/skill.py
     promotion_reason: external_eval_passed
-    promotion_updated_at: '2026-04-29T10:42:35'
+    promotion_updated_at: '2026-04-29T23:51:57'
     purpose: ''
     skill_id: new_skill
     skill_name: new_skill
@@ -1498,208 +1498,4 @@ skills:
     path: skills/stitch_design/skill.py
     purpose: ''
     skill_id: stitch_design
-    skill_name: Stitch AI Design Tool
-    status: active
-    type: action
-    updated_at: '2026-02-13T02:10:00'
-    version: 1.0.0
-  summarize-failure:
-    capabilities:
-    - summarize-failure
-    - 에러분석
-    - 실패원인
-    - failure
-    category: eval
-    dependencies: []
-    id: summarize-failure
-    meta_path: skills/evaluator/summarize_failure/meta.yaml
-    name: Summarize Failure
-    path: skills/evaluator/summarize_failure/skill.py
-    purpose: 실패한 에이전트 실행의 원인을 분석하고 심각도 판정 및 수정 제안을 생성
-    skill_id: summarize-failure
-    skill_name: summarize-failure
-    status: active
-    type: action
-    updated_at: '2026-03-13T00:00:00'
-    version: 1.0.0
-  thumbnail:
-    capabilities:
-    - thumbnail
-    dependencies: []
-    id: thumbnail
-    last_test_ok: true
-    meta_path: ''
-    name: thumbnail
-    path: skills/warehouse/skills/pptx/scripts/thumbnail.py
-    purpose: Legacy auto-registered skill.
-    skill_id: thumbnail
-    skill_name: thumbnail
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:05:09'
-    version: 1.0.0
-  trace-execution:
-    capabilities:
-    - trace-execution
-    - 로그분석
-    - 실행흐름
-    - debugging
-    category: eval
-    dependencies: []
-    id: trace-execution
-    meta_path: skills/evaluator/trace_execution/meta.yaml
-    name: Trace Execution
-    path: skills/evaluator/trace_execution/skill.py
-    purpose: JSONL 로그에서 에이전트 실행 흐름을 추출하고 구조화된 분석 결과를 반환
-    skill_id: trace-execution
-    skill_name: trace-execution
-    status: active
-    type: action
-    updated_at: '2026-03-13T00:00:00'
-    version: 1.0.0
-  trigger_rule_design:
-    capabilities:
-    - trigger_rule_design
-    dependencies: []
-    id: trigger_rule_design
-    last_test_ok: true
-    meta_path: skills/trigger_rule_design/meta.yaml
-    name: trigger_rule_design
-    path: skills/trigger_rule_design/skill.py
-    purpose: ''
-    skill_id: trigger_rule_design
-    skill_name: trigger_rule_design
-    status: active
-    type: action
-    updated_at: '2026-02-20T02:22:54'
-    version: 1.0.0
-  unpack:
-    capabilities:
-    - unpack
-    dependencies: []
-    id: unpack
-    last_test_ok: true
-    meta_path: ''
-    name: unpack
-    path: skills/warehouse/skills/xlsx/scripts/office/unpack.py
-    purpose: Legacy auto-registered skill.
-    skill_id: unpack
-    skill_name: unpack
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:16:29'
-    version: 1.0.0
-  user_flow_optimization:
-    capabilities:
-    - user_flow
-    - mermaid
-    - diagram
-    dependencies: []
-    id: user_flow_optimization
-    last_test_ok: true
-    meta_path: skills/user_flow_optimization/meta.yaml
-    name: User Flow Optimization
-    path: skills/user_flow_optimization/skill.py
-    purpose: ''
-    skill_id: user_flow_optimization
-    skill_name: User Flow Optimization
-    status: active
-    type: action
-    updated_at: '2026-02-12T18:15:00'
-    version: 1.0.0
-  utilities:
-    capabilities:
-    - utilities
-    dependencies: []
-    id: utilities
-    last_test_ok: true
-    meta_path: ''
-    name: utilities
-    path: skills/warehouse/skills/docx/scripts/utilities.py
-    purpose: Legacy auto-registered skill.
-    skill_id: utilities
-    skill_name: utilities
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:05:04'
-    version: 1.0.0
-  validate:
-    capabilities:
-    - validate
-    dependencies: []
-    id: validate
-    last_test_ok: true
-    meta_path: ''
-    name: validate
-    path: skills/warehouse/skills/xlsx/scripts/office/validate.py
-    purpose: Legacy auto-registered skill.
-    skill_id: validate
-    skill_name: validate
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:16:29'
-    version: 1.0.0
-  validators:
-    capabilities:
-    - validators
-    dependencies: []
-    id: validators
-    last_test_ok: true
-    meta_path: ''
-    name: validators
-    path: skills/warehouse/skills/slack-gif-creator/core/validators.py
-    purpose: Legacy auto-registered skill.
-    skill_id: validators
-    skill_name: validators
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:05:12'
-    version: 1.0.0
-  with_server:
-    capabilities:
-    - with_server
-    dependencies: []
-    id: with_server
-    last_test_ok: true
-    meta_path: ''
-    name: with_server
-    path: skills/warehouse/skills/webapp-testing/scripts/with_server.py
-    purpose: Legacy auto-registered skill.
-    skill_id: with_server
-    skill_name: with_server
-    status: active
-    type: action
-    updated_at: '2026-02-24T15:05:13'
-    version: 1.0.0
-  zero_downtime_deployment_playbook:
-    capabilities:
-    - zero_downtime_deployment_playbook
-    dependencies: []
-    id: zero_downtime_deployment_playbook
-    last_test_ok: true
-    meta_path: ''
-    name: zero_downtime_deployment_playbook
-    path: skills/forge/zero_downtime_deployment_playbook.py
-    purpose: Legacy auto-registered skill.
-    skill_id: zero_downtime_deployment_playbook
-    skill_name: zero_downtime_deployment_playbook
-    status: active
-    type: action
-    updated_at: '2026-03-05T02:32:49'
-    version: 1.0.0
-  zero_integration_parsing_spec:
-    capabilities:
-    - zero_integration_parsing_spec
-    dependencies: []
-    id: zero_integration_parsing_spec
-    last_test_ok: true
-    meta_path: skills/zero_integration_parsing_spec/meta.yaml
-    name: zero_integration_parsing_spec
-    path: skills/zero_integration_parsing_spec/skill.py
-    purpose: ''
-    skill_id: zero_integration_parsing_spec
-    skill_name: zero_integration_parsing_spec
-    status: active
-    type: action
-    updated_at: '2026-02-20T02:22:54'
-    version: 1.0.0
+    skill_name: Stitch AI De

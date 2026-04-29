@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Medium corefsa_looppy268  Any failed evolution in a run forces all later Level 4 attempts to Level 5 so an u",
+  "value": "[assistant] - [Medium] core/fsa_loop.py:268 — Any failed evolution in a run forces all later Level 4 attempts to Level 5, so an unrelated skill failure can prevent valid evolution of a different skill. - [Medium] core/skill_quality_gate.py:50 — Knowledge sk...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:29:04.006167+00:00",
+  "updated_at": "2026-04-29T14:29:04.006167+00:00",
+  "details": {
+    "text": "[assistant] - [Medium] core/fsa_loop.py:268 — Any failed evolution in a run forces all later Level 4 attempts to Level 5, so an unrelated skill failure can prevent valid evolution of a different skill.\n- [Medium] core/skill_quality_gate.py:50 — Knowledge skills pass the quality gate solely by having `SKILL.md`/`skill.md`, bypassing existing frontmatter validation and allowing malformed skills to be published/registered.\n- [Low] .claude/settings.local.json:62 — Hook commands now hard-code `/Users/hoon/workTree/agent-factory`, so the hooks break when the repo is moved, cloned elsewhere, or run by another user.",
+    "event_timestamp": "2026-04-29T00:19:19.425Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T09-18-30-019dd69a-0372-7c32-a291-873433201648.jsonl",
+    "session_line": 53,
+    "provider": "codex"
+  }
+}

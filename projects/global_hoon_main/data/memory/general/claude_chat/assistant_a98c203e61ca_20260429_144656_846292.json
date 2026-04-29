@@ -1,0 +1,18 @@
+{
+  "key": "assistant 세 문서 파일을 읽겠습니다",
+  "value": "[assistant] 세 문서 파일을 읽겠습니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:46:56.846402+00:00",
+  "updated_at": "2026-04-29T14:46:56.846402+00:00",
+  "details": {
+    "text": "[assistant] 세 문서 파일을 읽겠습니다.",
+    "event_timestamp": "2026-04-29T14:45:59.976Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-81428b3f/88450f67-3749-4fde-9a9f-c0f389ea3065.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

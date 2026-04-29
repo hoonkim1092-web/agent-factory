@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljson43  Broad allowlist entry Bashgit  permits destructive or sensitive git operatio",
+  "value": "[assistant] - [High] .claude/settings.local.json:43 — Broad allowlist entry `Bash(git *)` permits destructive or sensitive git operations, bypassing the narrower command approvals above.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:16:26.584930+00:00",
+  "updated_at": "2026-04-29T14:16:26.584930+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:43 — Broad allowlist entry `Bash(git *)` permits destructive or sensitive git operations, bypassing the narrower command approvals above.",
+    "event_timestamp": "2026-04-28T14:01:30.411Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T23-01-15-019dd464-e5d6-7ed1-a6ed-b58b76259ff9.jsonl",
+    "session_line": 16,
+    "provider": "codex"
+  }
+}

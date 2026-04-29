@@ -3867,3 +3867,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 - **[Low]** `.claude/settings.local.json:131` — Missing newline at EOF. Not functional but violates POSIX and can cause diff noise in future patches.
 - **[Info]** `data/skill-usage.jsonl` — Diff is truncated; new entries reference macOS path `/Users/hoon/workTree/...` while the primary workspace is `D:/hoonProJect/worktrees/...`. Cross-machine path inconsistency in event records may break tooling that reads `report_path`/`promotion_path` fields.
 - **[Info]** `syncCompyne/*.py` — Listed as changed but diff is not included. Cannot assess for bugs or security issues without the content.
+
+---
+
+## 2026-04-29 22:51 — `2026-04-14-build-diet` (b23ed4c3)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/scripts/cli_hook_bridge.py
+
+**Changed (9)**: `.claude/settings.local.json, .gitignore, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_41bfa7a6eaa6_20260409_054107_412648.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_41bfa7a6eaa6_20260422_045634_746431.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_e93551d557d5_20260409_054107_343939.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_e93551d557d5_20260422_045634_692606.json, projects/global_hoon_main/data/memory/general/claude_chat/user_your_task_is_to_create_a_detailed_summary_of_the_conversation_so_far_paying_close_attention_to_the_users_explicit_r_dfef392e9ae6_20260409_054107_281213.json, projects/global_hoon_main/data/memory/general/claude_chat/user_your_task_is_to_create_a_detailed_summary_of_the_conversation_so_far_paying_close_attention_to_the_users_explicit_r_dfef392e9ae6_20260422_045634_633539.json, scripts/cli_hook_bridge.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljson48  Bashcodex exec  와일드카드 allowlist는 codex exec를 통한 임의 명령 실행 범위를 열어 둡니다- High cl",
+  "value": "[assistant] - [High] .claude/settings.local.json:48 — `Bash(codex exec *)` 와일드카드 allowlist는 `codex exec`를 통한 임의 명령 실행 범위를 열어 둡니다. - [High] .claude/settings.local.json:43 — `Bash(git *)`는 deny 목록의 특정 destructive 패턴을 우회할 수 있는 광범위한 git 실행 허용으로, allowlist를 필요한...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:16:27.094353+00:00",
+  "updated_at": "2026-04-29T14:16:27.094353+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:48 — `Bash(codex exec *)` 와일드카드 allowlist는 `codex exec`를 통한 임의 명령 실행 범위를 열어 둡니다.\n- [High] .claude/settings.local.json:43 — `Bash(git *)`는 deny 목록의 특정 destructive 패턴을 우회할 수 있는 광범위한 git 실행 허용으로, allowlist를 필요한 read-only 명령으로 좁혀야 합니다.\n- [High] .claude/settings.local.json:66 — `Bash(pip3 install *)` 와일드카드는 승인 없이 임의 패키지 설치를 허용해 dependency confusion/악성 패키지 실행 경로가 됩니다.\n- [High] .claude/settings.local.json:97 — `Bash(.venv/bin/python *)`는 저장소 내 임의 Python 스크립트 실행을 포괄 허용하므로 사실상 shell allowlist 경계를 약화합니다.\n- [Medium] .claude/settings.local.json:127 — 훅이 `$PWD` 대신 `/Users/hoon/workTree/agent-factory` 절대 경로로 고정되어 다른 checkout/worktree에서 세션 훅이 실패합니다.\n- [Medium] core/skill_quality_gate.py:52 — `SKILL.md`만 있으면 평가 없이 `active`로 자동 등록되어, 잘못되거나 미검증된 knowledge skill이 즉시 활성화됩니다.\n- [Medium] core/skill_quality_gate.py:146 — registry 등록 실패를 전부 삼켜서 자동 등록 실패가 성공한 gate 결과로 보고됩니다.",
+    "event_timestamp": "2026-04-28T22:29:28.909Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T07-28-39-019dd635-6e34-7411-8f5a-86ac2bda1c34.jsonl",
+    "session_line": 53,
+    "provider": "codex"
+  }
+}

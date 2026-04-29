@@ -1,0 +1,18 @@
+{
+  "key": "user  AGENTSmd instructions for UsershoonworkTreeagent-factoryINSTRUCTIONS AGENTSThis file is auto-generated Do not edit",
+  "value": "[user] # AGENTS.md instructions for /Users/hoon/workTree/agent-factory  <INSTRUCTIONS> # AGENTS                  This file is auto-generated. Do not edit manually.                  ## Role Emoji Mapping                  | Role | Emoji |         | --- | ---...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:43:56.130192+00:00",
+  "updated_at": "2026-04-29T14:43:56.130192+00:00",
+  "details": {
+    "text": "[user] # AGENTS.md instructions for /Users/hoon/workTree/agent-factory\n\n<INSTRUCTIONS>\n# AGENTS\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\nThis file is auto-generated. Do not edit manually.\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\n## Role Emoji Mapping\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\n| Role | Emoji |\r\r\r\r\r\r\r\r\n| --- | --- |\r\r\r\r\r\r\r\r\n| Architect | 🐍 |\r\r\r\r\r\r\r\r\n| PM | 😈 |\r\r\r\r\r\r\r\r\n| Designer | 🎨 |\r\r\r\r\r\r\r\r\n| Dev | ☠️ |\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\n## Agents (6)\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\nSource: `agents` (recursive YAML scan)\r\r\r\r\r\r\r\r\n\r\r\r\r\r\r\r\r\n| Kind | Agent ID | Name | Role | Emoji | YAML |\r\r\r\r\r\r\r\r\n| --- | --- | --- | --- | --- | --- |\r\r\r\r\r\r\r\r\n| file | iguro_obanai | Iguro Obanai | Backend Architect (CTO Level 5) | 🐍 | `agents/iguro_obanai.yaml` |\r\r\r\r\r\r\r\r\n| file | deadbyte | Deadbyte | Frontend Architect | ☠️ | `agents/deadbyte.yaml` |\r\r\r\r\r\r\r\r\n| file | himari | Himari | Super Research Architect | 🦽 | `agents/himari.yaml` |\r\r\r\r\r\r\r\r\n| file | tanjiro_logimind_planning_director | Kamado Tanjiro | Logi-Mind System Planning Director | 🎴 | `agents/tanjiro_logimind_planning_director.yaml` |\r\r\r\r\r\r\r\r\n| file | lilith | Lilith | Senior PM (Level 7) & Agent Factory Orchestrator (HITL enforced) | 😈 | `agents/lilith.yaml` |\r\r\r\r\r\r\r\r\n| file | saiba_midori | Saiba Midori | UI/UX Design Director | 🎨 | `agents/saiba_midori.yaml` |\r\r\r\r\r\r\r\r\n\n</INSTRUCTIONS>\n<environment_context>\n  <cwd>/Users/hoon/workTree/agent-factory</cwd>\n  <shell>zsh</shell>\n  <current_date>2026-04-29</current_date>\n  <timezone>Asia/Seoul</timezone>\n</environment_context>",
+    "event_timestamp": "2026-04-29T00:18:38.105Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T09-18-31-019dd69a-0567-7d83-8731-8b76ed94b222.jsonl",
+    "session_line": 3,
+    "provider": "codex"
+  }
+}

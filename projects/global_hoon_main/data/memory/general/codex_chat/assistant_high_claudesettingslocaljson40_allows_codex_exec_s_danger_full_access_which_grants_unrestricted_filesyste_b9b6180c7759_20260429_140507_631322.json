@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljson40  Allows codex exec -s danger-full-access  which grants unrestricted filesyste",
+  "value": "[assistant] - [High] .claude/settings.local.json:40 — Allows `codex exec -s danger-full-access ...`, which grants unrestricted filesystem/network-capable execution and bypasses the configured safety boundary. - [High] .claude/settings.local.json:43 — `Bash(...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:05:07.631657+00:00",
+  "updated_at": "2026-04-29T14:05:07.631657+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:40 — Allows `codex exec -s danger-full-access ...`, which grants unrestricted filesystem/network-capable execution and bypasses the configured safety boundary.\n- [High] .claude/settings.local.json:43 — `Bash(codex exec *)` broadly permits arbitrary nested Codex execution, making the more specific deny/allow policy easy to bypass.\n- [Medium] core/hooks/skill_self_evolution.py:164 — `_current_run_id` is never initialized in this hook, so all skill evolution events fall back to `runs/_skill_evolution/events.jsonl` and lose per-run attribution.",
+    "event_timestamp": "2026-04-27T22:56:09.557Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T07-55-37-019dd127-c5da-7ef3-8871-3d3ba461cbf4.jsonl",
+    "session_line": 34,
+    "provider": "codex"
+  }
+}

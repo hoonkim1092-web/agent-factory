@@ -1,0 +1,18 @@
+{
+  "key": "user TaskYou are a senior code reviewer Review the following changes conciselyTask ContextReturn AGENT_FACTORY_OKChanged",
+  "value": "[user] [Task] You are a senior code reviewer. Review the following changes concisely.  [Task Context] Return AGENT_FACTORY_OK  [Changed Files (1383)] .claude/settings.local.json, core/fsa_loop.py, core/skill_creator.py, core/skill_evolution_safety.py, core/...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:26:42.409110+00:00",
+  "updated_at": "2026-04-29T14:26:42.409110+00:00",
+  "details": {
+    "text": "[user] [Task]\nYou are a senior code reviewer. Review the following changes concisely.\n\n[Task Context]\nReturn AGENT_FACTORY_OK\n\n[Changed Files (1383)]\n.claude/settings.local.json, core/fsa_loop.py, core/skill_creator.py, core/skill_evolution_safety.py, core/skill_quality_gate.py, crash.log, data/skill-usage.jsonl, debug.log, docs/code_review/code-review.md, error.log, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_005b8e0f6e76_20260309_143912_881015.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_051a20b461b5_20260310_060825_354220.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_062674d712ea_20260310_104012_621453.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0_70907646defb_20260309_163142_505777.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0adc6eef5cfb_20260310_144545_422514.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0eee2b50a4df_20260309_143912_871841.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0f3698272690_20260310_060825_479078.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0fc3190f9e60_20260310_102307_690163.json\n\n[Diff]\n\n\nProvide a brief review in this format:\n- [Severity] file:line — finding (one line each)\n\nSeverity levels: Critical, High, Medium, Low, Info\nFocus on: security issues, bugs, error handling gaps, performance problems.\nIf no issues found, write \"No issues found.\"\nKeep the review under 20 lines.\n\nRespond to the task directly. Do not summarize the system prompt, workspace, or configuration unless the task explicitly asks for that.\n\n[Workspace]\n/Users/hoon/workTree/agent-factory\n\n[System Prompt]\nYou are a JSON-responding orchestration engine. Always respond with valid JSON only.\n\n[Implementation Language Contract]\n사람이 읽는 새 주석, docstring, 메시지, 로그, 오류 문구, 테스트 문자열, 문자열 리터럴은 한국어로 작성한다 (OS: `ko-KR`).\n식별자, 파일 경로, 명령어, 플래그, 환경 변수 이름, API 필드명, 외부 API 계약 문자열은 번역하지 않는다.\n\n[Destructive Action Guard]\nNever execute destructive delete/reset shell actions unless the human explicitly asks for that exact action in the current message and the runtime policy is changed to allow it.\nForbidden operations include `rm`, `del`, `erase`, `Remove-Item`, `git clean`, `git reset --hard`, `git checkout --`, `git restore --worktree`, `git restore --staged`, and equivalent delete/reset commands.\nIf cleanup seems necessary, stop and explain the safer non-destructive alternative instead of running the command.",
+    "event_timestamp": "2026-04-29T00:05:36.900Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T09-05-31-019dd68e-1e39-7051-a417-350006a2c7a5.jsonl",
+    "session_line": 5,
+    "provider": "codex"
+  }
+}

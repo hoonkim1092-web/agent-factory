@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Critical claudesettingslocaljson43  Bashgit  allowlist permits destructive git operations like git reset --h",
+  "value": "[assistant] - [Critical] .claude/settings.local.json:43 — `Bash(git *)` allowlist permits destructive git operations like `git reset --hard`/`git clean` variants that can bypass the narrower deny patterns. - [High] .claude/settings.local.json:48 — `Bash(cod...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:26:42.283509+00:00",
+  "updated_at": "2026-04-29T14:26:42.283509+00:00",
+  "details": {
+    "text": "[assistant] - [Critical] .claude/settings.local.json:43 — `Bash(git *)` allowlist permits destructive git operations like `git reset --hard`/`git clean` variants that can bypass the narrower deny patterns.\n- [High] .claude/settings.local.json:48 — `Bash(codex exec *)` grants arbitrary Codex command execution, including potentially unsafe sandbox/approval options.\n- [High] .claude/settings.local.json:66 — `Bash(pip3 install *)` allows arbitrary package installation and setup hooks, creating a code-execution supply-chain risk.\n- [High] .claude/settings.local.json:90 — `Bash(.../.venv/bin/python *)` allows arbitrary Python script/module execution from the workspace.\n- [Medium] .claude/settings.local.json:119 — hook command hardcodes `/Users/hoon/workTree/agent-factory`, so cloned/moved worktrees silently lose SessionStart/UserPrompt/Stop/SessionEnd hook behavior.",
+    "event_timestamp": "2026-04-28T14:01:42.553Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/28/rollout-2026-04-28T23-01-10-019dd464-d43a-7e81-a5a6-ce0549209b25.jsonl",
+    "session_line": 32,
+    "provider": "codex"
+  }
+}

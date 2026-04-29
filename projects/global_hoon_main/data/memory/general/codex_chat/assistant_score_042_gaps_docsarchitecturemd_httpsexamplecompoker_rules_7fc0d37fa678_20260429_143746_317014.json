@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 042  gaps     핵심 근거 중 실제로 검증 가능한 출처는 docsarchitecturemd 하나뿐이며 웹 근거로 제시된 httpsexamplecompoker-rules는 신뢰",
+  "value": "[assistant] {   \"score\": 0.42,   \"gaps\": [     \"핵심 근거 중 실제로 검증 가능한 출처는 `docs/architecture.md` 하나뿐이며, 웹 근거로 제시된 `https://example.com/poker-rules`는 신뢰 가능한 포커 규칙 출처가 아니다.\",     \"텍사스 홀덤으로 범위가 암묵적으로 확정되었지만 원 요청은 단순히 `build a poker game`이므로 게임 변형 선택 근거가 부족하다.\",...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T14:37:46.317549+00:00",
+  "updated_at": "2026-04-29T14:37:46.317549+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.42,\n  \"gaps\": [\n    \"핵심 근거 중 실제로 검증 가능한 출처는 `docs/architecture.md` 하나뿐이며, 웹 근거로 제시된 `https://example.com/poker-rules`는 신뢰 가능한 포커 규칙 출처가 아니다.\",\n    \"텍사스 홀덤으로 범위가 암묵적으로 확정되었지만 원 요청은 단순히 `build a poker game`이므로 게임 변형 선택 근거가 부족하다.\",\n    \"Vanilla JS, ES Modules, 로컬 서버 필요성, 최신 브라우저 호환성 같은 기술 판단은 합리적이지만 별도 근거가 없다.\",\n    \"테스트 전략이 대부분 수동 체크리스트 중심이며, `integration_test_guard` 및 에피소드 힌트의 `e2e_command 필수` 요구와 충돌한다.\",\n    \"`implementation-tasks.md`의 모든 `e2e_command`가 `(needs_backfill)`이라 승인 게이트의 완료 조건을 충족할 수 없다.\",\n    \"패 평가 정확성, 타이브레이커, 상태 전이 검증을 요구하지만 구체적인 표준 규칙 출처나 예제 케이스가 부족하다.\",\n    \"승인 문서에는 `bug_fix_spec_status`가 포함되어 있으나 실제 산출물에는 bug fix spec이 없어 상태 모델이 불명확하다.\"\n  ],\n  \"unsupported_claims\": [\n    \"브라우저에서 즉시 실행 가능한 텍사스 홀덤 포커 게임을 구현한다는 결정은 원 요청에서 직접 도출되지 않는다.\",\n    \"외부 참조 기준을 따른다고 했지만 실제 웹 참조가 `example.com`이라 규칙 검증 근거로 사용할 수 없다.\",\n    \"Fisher-Yates 셔플을 사용한다는 설계 결정은 타당하지만 별도 요구사항이나 근거에 연결되어 있지 않다.\",\n    \"ES2020 기능이 최신 Chrome, Firefox, Safari에서 모두 네이티브 지원된다는 주장은 출처가 없다.\",\n    \"사용자 입력 후 200ms 이내 완료라는 성능 기준은 요구사항에서 갑자기 등장하며 근거가 없다.\",\n    \"React CDN UMD 방식이 개발 경험을 저하시킨다는 판단은 주관적이며 근거가 없다.\",\n    \"Markdown 체크리스트만으로 의도적 버그 주입 시 즉시 실패를 감지할 수 있다는 주장은 자동 실행 경로가 없어 과장되어 있다.\",\n    \"`file://`에서 ES Module 제한이 AC-UI-1의 검증 대상처럼 언급되지만, AC-UI-1은 `index.html` 직접 열기를 요구하고 설계는 로컬 서버를 권장해 서로 충돌한다.\"\n  ],\n  \"strengths\": [\n    \"게임 룰 모듈과 UI 모듈을 분리하려는 방향은 로컬 근거인 `docs/architecture.md`의 모듈 분리 원칙과 잘 맞는다.\",\n    \"패 평가 버그, 타이브레이커, 상태 전이 오류를 주요 리스크로 식별한 점은 포커 게임 구현에서 적절하다.\",\n    \"요구사항, 수용 기준, 설계, 작업 목록이 같은 산출물 구조를 공유해 추적성은 비교적 좋다.\",\n    \"게임 룰 모듈을 DOM API와 분리하고 순수 함수로 설계하려는 결정은 테스트 가능성을 높인다.\",\n    \"에이스 로우 스트레이트, 투페어 비교, 완전 동점 같은 구체적 엣지케이스를 일부 언급한 점은 유용하다.\"\n  ],\n  \"revision_instructions\": [\n    \"포커 규칙 근거를 `example.com` 대신 신뢰 가능한 실제 출처로 교체하고, 족보 순위·타이브레이커·텍사스 홀덤 진행 순서에 직접 연결하라.\",\n    \"원 요청이 특정 포커 변형을 지정하지 않았으므로 텍사스 홀덤 선택을 명시적 가정으로 표시하거나 5-card draw 등 대안을 비교한 뒤 선택 근거를 남겨라.\",\n    \"`implementation-tasks.md`의 `(needs_backfill)`을 실제 실행 가능한 검증 명령으로 바꾸고, 최소 1개의 비mock e2e 실행 경로를 포함하라.\",\n    \"수동 체크리스트 외에 `game-rules.js`를 직접 실행하는 자동 검증 파일 또는 브라우저 기반 smoke test를 추가하도록 설계를 수정하라.\",\n    \"`file://` 직접 실행 요구와 ES Module 로컬 서버 권장 사이의 충돌을 해결하라. 단일 HTML 인라인 방식으로 갈지, 로컬 서버 실행을 공식 실행 방법으로 할지 하나로 정리하라.\",\n    \"성능 기준 200ms, ES2020 호환성, CDN 사용 가능성 등 기술 주장은 출처 또는 프로젝트 정책 근거를 추가하거나 요구사항에서 제거하라.\",\n    \"승인 게이트의 `bug_fix_spec_status`처럼 현재 산출물에 없는 항목은 제거하거나 해당 문서를 실제 산출물로 추가하라.\"\n  ]\n}",
+    "event_timestamp": "2026-04-29T14:37:46.033Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-9f97d888/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-37-17-019dd9ac-3dda-7472-a28f-ae1ad7d7c300.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}
