@@ -1251,6 +1251,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-29 | v1.2.22 | `chore(settings): 권한 목록 정리·훅 절대경로 전환 및 syncCompyne 일괄 갱신 — 불필요 Bash 권한 32개 제거, 훅에 name 필드 신규 추가(SessionStart/UserPromptSubmit/PreCompact/Stop), python3→python 절대경로 변환, syncCompyne memory_store·project_log_cli·workspace_context_cli·문서 6개 수정, skills registry·eval·promotion 보고서 갱신` |
 | 2026-04-29 | v1.2.22 | chore(settings/syncCompyne): hook 명령 절대경로·이름 필드 추가 및 권한 목록 정리 — settings.local.json 불필요 Bash 권한 30개 제거, hook command python3→python 절대경로 변환, hook name 필드 신규 추가, syncCompyne 모듈 4종(memory_store/project_log_cli/workspace_context_cli/AGENTS) 업데이트, skills registry·eval-report 갱신 |
 | 2026-04-29 | v1.2.22 | `chore(settings/syncCompyne): Claude hook 절대 경로 전환 및 permissions 정리 — hook 명령 python3/$PWD → python/Windows 절대경로 교체, 각 hook에 name 필드 신규 추가, 불필요 permissions 30여 항목 제거, syncCompyne memory_store·project_log_cli·workspace_context_cli 수정, skills registry·eval-report 갱신` |
 | 2026-04-29 | v1.2.22 | chore(settings): Windows 절대경로 hook 명령어로 전환 — permissions 불필요 항목 정리, 각 hook에 name 필드 추가, PostToolUse 훅 제거, syncCompyne(memory_store/project_log_cli/workspace_context_cli) 업데이트, 스킬 레지스트리·평가 리포트 갱신 |
