@@ -1,41 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git checkout *)",
-      "Bash(git rm *)",
-      "Bash(git stash *)",
-      "Bash(git clean *)",
-      "Bash(git reset *)",
-      "Bash(./start_db agent-factory *)",
-      "Bash(codex --version)",
-      "Bash(cat)",
-      "Read(//tmp/**)",
-      "Bash(git mv *)",
+      "Bash(python -m pytest tests/test_phase7_dep_graph_evolve.py -v --tb=short --no-header)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(git push *)",
-      "Bash(python -m pytest --version)",
-      "Bash(python -m pytest tests/ -q --tb=no -p no:cacheprovider --timeout=30)",
-      "Bash(echo \"EXIT=$?\")",
-      "Bash(python -m pytest tests/ --timeout=30)",
-      "Bash(python -m pytest tests/ -q --tb=no -p no:cacheprovider)",
-      "Bash(python *)",
-      "Bash(where codex *)",
-      "Bash(command -v codex)",
+      "Bash(git commit -m 'feat\\(T2-per-skill-escalation\\): fsa_loop per-skill 에스컬레이션 가드 *)",
       "Bash(git commit *)",
-      "Bash(python3 -m pytest tests/ --ignore=tests/_tmp --ignore=tests/test_integration --ignore=tests/test_cli_providers.py -q --tb=line)",
-      "Bash(python3 -m pytest tests/test_plan_verifier.py tests/test_fsa_loop.py -v --tb=short)",
-      "Bash(python3 *)",
-      "Bash(git pull *)",
-      "Bash(wait)",
-      "Bash(git -C /Users/hoon/workTree/agent-factory log --oneline --follow core/control/maintenance_pipeline.py)",
-      "Bash(git -C /Users/hoon/workTree/agent-factory show HEAD~1:core/control/maintenance_pipeline.py)",
-      "Bash(git -C /Users/hoon/workTree/agent-factory diff HEAD~1 -- core/control/maintenance_pipeline.py)",
-      "Bash(git -C /Users/hoon/workTree/agent-factory diff HEAD~1 -- core/pdca_commands.py)",
-      "Bash(git -C /Users/hoon/workTree/agent-factory diff HEAD~1 --name-only)",
-      "Bash(grep \"\\\\.py$\")",
-      "Bash(supabase --version)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(git push *)",
+      "Bash(python scripts/check_design_pending.py)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python -c \"import json; print\\(json.dumps\\({'a':1}\\)\\)\")",
+      "Bash(python scripts/design_review_trigger.py docs/2026-04-29-multi-provider-cross-review.md --source claude)",
+      "Bash(python -c ' *)",
+      "Bash(python *)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(command -v codex)",
+      "Bash(codex --version)",
+      "Bash(grep -E '\\\\.\\(py\\)$')"
     ],
     "deny": [
       "Bash(rm:*)",
@@ -58,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -68,7 +48,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/check_design_pending.py"
           }
         ]
       }
@@ -78,7 +74,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -88,7 +84,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -98,7 +94,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py cli_hook_bridge --provider claude --workspace $PWD --run-id claude_cli_run --repo-root $PWD"
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -109,8 +105,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./scripts/hook_runner.py post_edit_code_review",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py post_edit_code_review",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py post_edit_design_review",
+            "timeout": 10
           }
         ]
       }

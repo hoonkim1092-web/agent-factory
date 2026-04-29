@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-29 Sprint 3 WARN 클리어 완료 + 커밋 푸시 완료 → 다음 PC에서 Sprint 4 진행 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-29 hook 인프라 수정 + P1 설계문서 작성 + 3-Tier 검증 통과 → 다음 PC에서 T3(exe 빌드) 또는 P1 Sprint A 진행 (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -58,6 +58,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 24 | Stage-1 Sprint 2: `core/skill_evolution_controller.py`(SelfEvolutionController 7단계 파이프라인) + `core/evolution_ledger.py`(EvolutionLedger JSONL) + EVOLUTION_ROLLED_BACK RunEvent 직접 기록 + _publish() live-snapshot rollback + .bak 배포 방지 + get_default_store() thread-safe 싱글톤 + conftest AF_CHECKPOINT_DIR 픽스처 — 60 테스트 3-Tier 검증 통과 | (커밋 예정) | 2026-04-28 |
 | 25 | Stage-1 Sprint 3: 호출사이트 3개(fsa_loop._try_evolve_failed_skill, cross_verification._trigger_evolution, dynamic_orchestrator._try_evolve_from_patterns) → SelfEvolutionController.submit() 교체, 3메서드 제거(_verify_evolved_skill/_rollback_skill/_cleanup_skill_baks), CANDIDATES_DIR 절대경로(config_paths.py), knowledge skill 지원(_is_knowledge_skill + SkillQualityGate early-return), skill_creator meta.yaml.bak 제거, GateResult 필수 필드 추가 — 70 테스트 3-Tier 검증 통과 | `0778ed42` | 2026-04-29 |
 | 26 | Sprint 3 WARN 클리어 (9-라운드 3-Tier): fsa_loop DEFERRED/ERROR/REJECTED→None+_evolution_failed_skills 차단, Level 4 apply_pivot 조건 정리, gate_result is None 단순화, Level 4→5 강제에스컬레이션, run_mission 초기화, skill_quality_gate knowledge skill auto_register+_register_knowledge_skill, skill_creator update_skill knowledge type 보존(setdefault), skill_evolution_safety DEPRECATED 마커, fixture 모듈 속성 복원, 테스트 4종 신규 추가 — 81 테스트 통과 | `875d5081` | 2026-04-29 |
+| 29 | P1 설계문서 + hook 인프라 수정: `docs/2026-04-29-multi-provider-cross-review.md` (350줄, 13섹션) + `scripts/check_design_pending.py` (design 큐 폴링, JSON timestamp debounce, fired pruning) + `core/design_review_utils.py` (날짜패턴·work-items·patterns INCLUDE/EXCLUDE) + `settings.local.json` (PostToolUse 복원, check_design_pending 등록) + `CLAUDE.md` (af-design-review-pending 룰) — 3-Tier 검증 통과 | (이번 커밋) | 2026-04-29 |
 
 ---
 
@@ -72,6 +73,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | ~~**T1**~~ ✅ | ~~knowledge skill SKILL.md fallback~~ | ~~`core/skill_metadata_adapter.py`~~ | 완료 `cf461e01` — _fill_missing_description + frontmatter 우선, 5개 테스트 |
 | ~~**T2**~~ ✅ | ~~`_evolution_failed_skills` per-skill 조건 좁히기~~ | ~~`core/fsa_loop.py`~~ | 완료 `33000436` — _apply_evolution_guard 메서드, 탐지 실패 Level 5 강제, 26개 테스트 |
 | **T3** (다음) | exe 빌드 + GitHub Release | `build_exe.py`, `af.spec` | `python build_exe.py` → `dist/af-1.2.22.zip`, `gh release create af-fsa_v1.2.22`. macOS 빌드 환경 확인 필요. |
+| **T4** | ensure_watcher() 동시 스폰 race 수정 | `core/design_review_utils.py` | PostToolUse 병렬 호출 시 watcher 프로세스 중복 spawn 방지 — advisory lock 또는 atomic mkdir 패턴. check: _is_watcher_alive() + _start_watcher() 사이 TOCTOU 제거. |
 
 ---
 
@@ -100,7 +102,10 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | `.claude/agents/af-cross-review.md` | Step 0에서 감지 → 동적 fan-out (codex/gemini 병렬 호출) |
 | `CLAUDE.md` | "교차검증 자동 실행" 룰: "Codex 호출" → "가용 외부 프로바이더 모두 호출 (없으면 skip)" |
 
-**진행 순서**: 설계문서(`docs/2026-XX-XX-multi-provider-cross-review.md`) → af-critic+af-cross-review 2-agent 검증 → 구현 → 3-Tier 검증 → 커밋
+**진행 순서**: ~~설계문서(`docs/2026-04-29-multi-provider-cross-review.md`)~~ ✅ → ~~af-critic+af-cross-review 2-agent 검증~~ ✅ → **구현 시작** (Sprint A: `core/provider_detect.py`) → 3-Tier 검증 → Sprint B (`af-cross-review.md` fan-out)
+
+**Sprint A** (다음): `core/provider_detect.py` 신규 — `detect(name) → ProviderState`, TTL 1h 캐시(`~/.af/provider_cache.json`), `AF_SKIP_PROVIDER` env var 우회
+**Sprint B**: `.claude/agents/af-cross-review.md` Step 0에서 detect() 호출 → 가용 프로바이더 병렬 fan-out
 
 ---
 
