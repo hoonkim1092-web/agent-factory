@@ -1,0 +1,112 @@
+{
+  "_comment": [
+    "settings.local.json is machine-local and gitignored.",
+    "Copy this file to settings.local.json and adjust PYTHON below:",
+    "  Mac/Linux : python3  (default)",
+    "  Windows   : replace python3 with python"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(echo *)"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git checkout --:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_design_pending.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_code_review",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_design_review",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

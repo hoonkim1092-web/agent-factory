@@ -23,10 +23,12 @@ handle_hook_event = _mod.handle_hook_event
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Bridge CLI hook events into agent-factory continuity.")
     parser.add_argument("--provider", required=True, choices=("claude", "gemini"))
-    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--workspace", default="")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--repo-root", default="")
     args = parser.parse_args(argv)
+    if not args.workspace:
+        args.workspace = _PROJECT_ROOT
 
     raw = sys.stdin.read().strip()
     payload = json.loads(raw) if raw else {}
