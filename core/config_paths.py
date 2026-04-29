@@ -86,6 +86,8 @@ GLOBAL_MEMORY_DIR = os.path.join(GLOBAL_DATA_DIR, "memory")
 REGISTRY_PATH = os.path.join(SKILLS_DIR, "registry.yaml")
 WORKFLOW_PATH = os.path.join(SKILLS_DIR, "workflow_registry.yaml")
 
+CANDIDATES_DIR = os.path.join(BASE_DIR, "candidates")
+
 for d in [
     PROJECTS_DIR,
     GLOBAL_AGENTS_DIR,

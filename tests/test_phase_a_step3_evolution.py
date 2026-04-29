@@ -255,7 +255,7 @@ class TestSkillSelfEvolutionHook:
                 skill_id="test-skill",
                 old_version="1.0",
                 new_version="1.1",
-                trigger="test",
+                trigger="fsa_failure",  # _CODE_EVOLUTION_TRIGGERS에 속해야 INFO 레벨 로그 발생
             )
         assert "test-skill" in caplog.text
 
@@ -274,7 +274,9 @@ class TestSkillSelfEvolutionHook:
         events = store.list_events("_skill_evolution")
         assert len(events) == 1
         evt = events[0]
-        assert evt.event_type == RunEventType.SKILL_EVOLVED
+        # Stage-1 Sprint-1: RunEventType 4종 분화.
+        # fsa_failure ∈ _CODE_EVOLUTION_TRIGGERS, decision=None → EVOLUTION_REQUESTED 라우팅
+        assert evt.event_type == RunEventType.EVOLUTION_REQUESTED
         assert evt.payload["skill_id"] == "evolve-skill"
         assert evt.payload["trigger"] == "fsa_failure"
 

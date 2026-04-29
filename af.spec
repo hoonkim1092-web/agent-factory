@@ -53,8 +53,8 @@ a = Analysis(
         'core.engine_auth',
         'core.evaluator',
         'core.evolution_types',
-        # 'core.skill_evolution_controller',  # TODO: Stage-1 Sprint 2 구현 후 활성화
-        # 'core.evolution_ledger',            # TODO: Stage-1 Sprint 3 구현 후 활성화
+        'core.skill_evolution_controller',
+        'core.evolution_ledger',
         'core.executor',
         'core.failure_classifier',
         'core.external_skill_candidate_importer',

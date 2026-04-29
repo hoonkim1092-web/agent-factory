@@ -658,14 +658,14 @@ def update_skill(
             # 백업 복원
             shutil.copy2(bak, src)
 
-    # 버전 bump
+    # 버전 bump — type 누락 시 감지된 skill_type 보존 (knowledge → action 오염 방지)
+    meta.setdefault("type", skill_type)
     old_version = meta.get("version", "0.1.0")
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version
     meta["updated_at"] = now
-    if skill_type == "action":
-        _write_meta(skill_dir, meta)
-        print(f"[OK] 버전 bump: {old_version} → {new_version}")
+    _write_meta(skill_dir, meta)
+    print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
     # 검증
     ok, msg = validate_skill(skill_dir)
@@ -761,15 +761,7 @@ def evolve_skill(
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version
     meta["updated_at"] = datetime.datetime.now().isoformat()
-    if skill_type == "action":
-        # H5 v3: meta.yaml 백업 (action 타입 skill에서만 적용, .bak 미존재 시에만)
-        meta_yaml = os.path.join(skill_dir, "meta.yaml")
-        if os.path.exists(meta_yaml) and not os.path.exists(meta_yaml + ".bak"):
-            try:
-                shutil.copy2(meta_yaml, meta_yaml + ".bak")
-            except OSError as e:
-                print(f"[WARN] meta.yaml 백업 실패 (계속 진행): {e}")
-        _write_meta(skill_dir, meta)
+    _write_meta(skill_dir, meta)
     print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
     # 검증
