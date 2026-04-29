@@ -467,3 +467,43 @@ class TestFSALoopSkillEvolve:
         assert gate2 is None
         assert mock_ctrl_cls.call_count == 1
         assert mock_ctrl_cls.return_value.submit.call_count == 1
+
+    def test_per_skill_guard_different_skill_stays_level4(self):
+        """_evolution_failed_skills에 skill-A 있어도 현재 실패가 skill-B면 Level 4 유지."""
+        from unittest.mock import patch, MagicMock
+
+        self.fsa._evolution_failed_skills = {"skill-a"}
+        analysis_mock = MagicMock()
+        analysis_mock.evaluator_reasoning = ""
+
+        with patch.object(self.fsa, "_detect_failed_skill_dir", return_value="/skills/skill-b"):
+            adjusted_level, _ = self.fsa._apply_evolution_guard(4, {"reason": ""}, analysis_mock)
+
+        assert adjusted_level == 4, "다른 스킬 실패 시 Level 4를 Level 5로 강제하면 안 됨"
+
+    def test_per_skill_guard_same_skill_forces_level5(self):
+        """_evolution_failed_skills에 있는 스킬이 현재 실패 스킬과 같으면 Level 5 강제."""
+        from unittest.mock import patch, MagicMock
+
+        self.fsa._evolution_failed_skills = {"skill-a"}
+        analysis_mock = MagicMock()
+        analysis_mock.evaluator_reasoning = ""
+
+        with patch.object(self.fsa, "_detect_failed_skill_dir", return_value="/skills/skill-a"):
+            adjusted_level, _ = self.fsa._apply_evolution_guard(4, {"reason": ""}, analysis_mock)
+
+        assert adjusted_level == 5, "같은 스킬이 이미 차단됐으면 Level 5로 강제해야 함"
+
+    def test_per_skill_guard_detection_failure_forces_level5(self):
+        """스킬 탐지 실패(None)해도 _evolution_failed_skills 있으면 Level 5 강제 (무한 루프 방지)."""
+        from unittest.mock import patch, MagicMock
+
+        self.fsa._evolution_failed_skills = {"skill-a"}
+        analysis_mock = MagicMock()
+        analysis_mock.evaluator_reasoning = ""
+
+        with patch.object(self.fsa, "_detect_failed_skill_dir", return_value=None):
+            adjusted_level, cand_dir = self.fsa._apply_evolution_guard(4, {"reason": ""}, analysis_mock)
+
+        assert adjusted_level == 5, "탐지 실패 시에도 Level 5로 강제해야 무한 루프 방지"
+        assert cand_dir is None
