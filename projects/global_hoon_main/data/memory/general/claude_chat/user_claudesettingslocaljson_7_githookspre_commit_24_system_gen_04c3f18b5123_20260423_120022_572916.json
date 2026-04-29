@@ -1,0 +1,18 @@
+{
+  "key": "user claudesettingslocaljson                         7 - githookspre-commit                               24  system_gen",
+  "value": "[user] .claude/settings.local.json                      |   7 +-  .githooks/pre-commit                             |  24 +++  .system_generated/cache/document_index.json      |   2 +-  Master_Blueprint.md                              |  28 +++  core/approva...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T12:00:22.573138+00:00",
+  "updated_at": "2026-04-23T12:00:22.573138+00:00",
+  "details": {
+    "text": "[user] .claude/settings.local.json                      |   7 +-\n .githooks/pre-commit                             |  24 +++\n .system_generated/cache/document_index.json      |   2 +-\n Master_Blueprint.md                              |  28 +++\n core/approval_gate.py                            |  27 ++-\n core/document_policy.py                          |   8 +\n core/fsa_loop.py                                 |  58 ++++-\n core/project_task_board.py                       |   4 +-\n core/watchdog.py                                 |  20 ++\n core/work_item_generator.py                      |  15 ++\n data/skill-usage.jsonl                           |   1 +\n docs/code_review/code-review.md                  | 257 +++++++++++++++++++++++\n docs/work-items/_template/verification-report.md |  10 +\n projects/lotto_mobile_web/server/app.py          |   8 +-\n projects/lotto_predictor_v2/src/lotto/cli.py     |   9 +-\n scripts/blueprint_updater.py                     |   3 +-\n scripts/code_review_updater.py                   |   3 +-\n scripts/hook_runner.py                           |  28 ++-\n scripts/migrate_workitem_e2e.py                  | 136 ++++++++++++\n scripts/verify_handoff_checker.py                | 133 ++++++++++++\n skill-eval-report.json                           |   2 +-\n skills/new_skill/skill-eval-report.json          |   2 +-\n skills/new_skill/skill-promotion.json            |   4 +-\n skills/registry.yaml                             |   8 +-\n 24 files changed, 761 insertions(+), 36 deletions(-)",
+    "event_timestamp": "2026-04-18T13:05:50.835Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c/subagents/agent-a025b1b31da8aa375.jsonl",
+    "session_line": 3,
+    "provider": "claude"
+  }
+}

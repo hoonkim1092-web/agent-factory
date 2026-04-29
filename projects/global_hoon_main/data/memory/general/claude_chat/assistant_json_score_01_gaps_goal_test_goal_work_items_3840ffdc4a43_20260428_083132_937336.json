@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 01  gaps     목표goal가 test goal로만 기술되어 있어 실제 구현 대상이 무엇인지 불명확    work_items 배열이 비어 있어 수행할 작업 단계가 전혀 ",
+  "value": "[assistant] ```json {   \"score\": 0.1,   \"gaps\": [     \"목표(goal)가 'test goal'로만 기술되어 있어 실제 구현 대상이 무엇인지 불명확\",     \"work_items 배열이 비어 있어 수행할 작업 단계가 전혀 정의되지 않음\",     \"requested_role이 빈 문자열로, 담당 역할/모듈 배정이 없음\",     \"route 객체가 비어 있어 실행 경로·의존성 흐름을 파악할 수 없음\",     \"기...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:31:32.937514+00:00",
+  "updated_at": "2026-04-28T08:31:32.937514+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.1,\n  \"gaps\": [\n    \"목표(goal)가 'test goal'로만 기술되어 있어 실제 구현 대상이 무엇인지 불명확\",\n    \"work_items 배열이 비어 있어 수행할 작업 단계가 전혀 정의되지 않음\",\n    \"requested_role이 빈 문자열로, 담당 역할/모듈 배정이 없음\",\n    \"route 객체가 비어 있어 실행 경로·의존성 흐름을 파악할 수 없음\",\n    \"기술 스택, 언어, 프레임워크 등 기술적 선택에 대한 정보 전무\",\n    \"성공 기준(acceptance criteria)이 정의되지 않음\",\n    \"예상 산출물(deliverables)이 명시되지 않음\"\n  ],\n  \"strengths\": [\n    \"JSON 스키마 구조(goal, work_items, project_brief)는 향후 확장 가능한 형태를 갖추고 있음\",\n    \"generated_at 타임스탬프가 포함되어 있어 이력 추적 기반은 마련됨\"\n  ],\n  \"unsupported_claims\": [\n    \"artifact 자체에 어떠한 주장도 없으므로 검증할 클레임이 존재하지 않음 — 이는 곧 artifact가 사실상 빈 껍데기임을 의미\"\n  ],\n  \"revision_instructions\": [\n    \"goal 필드를 구체적이고 측정 가능한 목표 문장으로 교체할 것 (예: '사용자 인증 API를 JWT 기반으로 구현하여 로그인·로그아웃·토큰 갱신 엔드포인트를 제공한다')\",\n    \"work_items 배열에 최소 3개 이상의 항목을 추가하고, 각 항목에 id, title, description, assignee_role, dependencies, acceptance_criteria 필드를 포함할 것\",\n    \"requested_role에 실제 역할(예: 'backend-dev', 'architect')을 지정하여 책임 소재를 명확히 할 것\",\n    \"route 객체에 실행 순서·의존 관계 맵(예: {\\\"step1\\\": \\\"step2\\\", \\\"step2\\\": \\\"step3\\\"})을 정의할 것\",\n    \"project_brief 내에 기술 스택(tech_stack), 제약 조건(constraints), 완료 기준(definition_of_done) 필드를 추가할 것\",\n    \"artifact 완성 후 af-critic + af-cross-review 2개 에이전트 병렬 교차검증을 수행할 것 (CLAUDE.md 단일 설계문서 규칙 준수)\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-28T08:24:54.213Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory-tests--tmp-runtime-project/73a42fd5-9280-4855-85f2-2d079dda478c.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

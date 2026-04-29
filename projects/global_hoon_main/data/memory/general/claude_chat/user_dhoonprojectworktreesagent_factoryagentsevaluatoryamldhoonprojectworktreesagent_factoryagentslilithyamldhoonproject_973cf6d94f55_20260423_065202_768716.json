@@ -1,0 +1,18 @@
+{
+  "key": "user DhoonProJectworktreesagent-factoryagentsevaluatoryamlDhoonProJectworktreesagent-factoryagentslilithyamlDhoonProJect",
+  "value": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\agents\\evaluator.yaml D:\\hoonProJect\\worktrees\\agent-factory\\agents\\lilith.yaml D:\\hoonProJect\\worktrees\\agent-factory\\agents\\test_agent.yaml D:\\hoonProJect\\worktrees\\agent-factory\\agents\\deadbyte.yaml D:\\hoonPr...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T06:52:02.768789+00:00",
+  "updated_at": "2026-04-23T06:52:02.768789+00:00",
+  "details": {
+    "text": "[user] D:\\hoonProJect\\worktrees\\agent-factory\\agents\\evaluator.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\lilith.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\test_agent.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\deadbyte.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\himari.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\iguro_obanai.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\saiba_midori.yaml\nD:\\hoonProJect\\worktrees\\agent-factory\\agents\\tanjiro_logimind_planning_director.yaml",
+    "event_timestamp": "2026-03-26T01:15:40.331Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f74429c3-f40c-484b-8532-91e75f526deb/subagents/agent-ad5316b1a3d9ba0ba.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

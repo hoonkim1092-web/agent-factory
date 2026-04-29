@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 01  gaps     work_items 배열이 비어 있어 어떤 작업도 정의되지 않음  목표 달성을 위한 구체적 태스크가 없음    deliverable 없음 산출물 담당자o",
+  "value": "[assistant] ```json {   \"score\": 0.1,   \"gaps\": [     \"work_items 배열이 비어 있어 어떤 작업도 정의되지 않음 — 목표 달성을 위한 구체적 태스크가 없음\",     \"deliverable 없음: 산출물, 담당자(owner), 마감일이 전혀 지정되지 않음\",     \"리스크 항목이 전무하여 완화 전략도 존재하지 않음\",     \"인수 기준(acceptance criteria) 미정의 — 목표 달성 여부를 판...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T01:34:19.123398+00:00",
+  "updated_at": "2026-04-29T01:34:19.123398+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.1,\n  \"gaps\": [\n    \"work_items 배열이 비어 있어 어떤 작업도 정의되지 않음 — 목표 달성을 위한 구체적 태스크가 없음\",\n    \"deliverable 없음: 산출물, 담당자(owner), 마감일이 전혀 지정되지 않음\",\n    \"리스크 항목이 전무하여 완화 전략도 존재하지 않음\",\n    \"인수 기준(acceptance criteria) 미정의 — 목표 달성 여부를 판단할 수단이 없음\",\n    \"requested_role이 빈 문자열이어서 작업 책임자가 불명확\",\n    \"route 객체가 비어 있어 실행 경로와 의존 관계를 파악할 수 없음\",\n    \"goal이 'test goal'로만 기재되어 있어 실질적 목표 내용이 없음\"\n  ],\n  \"strengths\": [\n    \"JSON 구조 자체는 유효하고 파싱 가능한 형태\",\n    \"project_brief와 최상위 goal 필드가 일치하여 내부 정합성은 유지됨\",\n    \"generated_at 타임스탬프가 기록되어 생성 시각 추적 가능\"\n  ],\n  \"revision_instructions\": [\n    \"goal을 측정 가능한 형태로 구체화할 것 (예: '무엇을, 언제까지, 어떤 기준으로' 포함)\",\n    \"work_items 배열에 최소 1개 이상의 태스크를 추가하고 각 항목에 id, title, owner, due_date, status 필드를 포함할 것\",\n    \"각 work_item에 acceptance_criteria 배열을 추가하고 관찰·검증 가능한 조건을 명시할 것 (예: '단위 테스트 통과율 100%', '응답 시간 200ms 이하')\",\n    \"risks 배열을 최상위 또는 각 work_item에 추가하고 각 리스크에 description, probability, impact, mitigation 필드를 포함할 것\",\n    \"requested_role에 실제 역할을 기재하여 작업 책임자를 명확히 할 것\",\n    \"route 객체에 실행 단계, 의존 관계, 우선순위를 정의할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-28T08:24:51.711Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory-tests--tmp-runtime-project/668f1a8d-b64c-4577-814b-f43c50944949.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceDhoonProJectworktreesagent-factorytests_tmpaf-test-a0943993TaskTask profile original_request test goal goa",
+  "value": "[user] [Workspace]  D:\\hoonProJect\\worktrees\\agent-factory\\tests\\_tmp\\af-test-a0943993    [Task]  Task profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-04-28T17:32:43\", \"requested_role\": \"\", \"route\": {}}    Artifact to c...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:36:40.650256+00:00",
+  "updated_at": "2026-04-28T08:36:40.650256+00:00",
+  "details": {
+    "text": "[user] [Workspace]\r\nD:\\hoonProJect\\worktrees\\agent-factory\\tests\\_tmp\\af-test-a0943993\r\n\r\n[Task]\r\nTask profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-04-28T17:32:43\", \"requested_role\": \"\", \"route\": {}}\r\n\r\nArtifact to critique:\r\n\r\n{\r\n  \"goal\": \"test goal\",\r\n  \"work_items\": [],\r\n  \"item_count\": 0,\r\n  \"project_brief\": {\r\n    \"goal\": \"test goal\",\r\n    \"generated_at\": \"2026-04-28T17:32:43\",\r\n    \"requested_role\": \"\",\r\n    \"route\": {}\r\n  }\r\n}",
+    "event_timestamp": "2026-04-28T08:32:46.426Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory-tests--tmp-af-test-a0943993/40d48fdc-3b71-4c4c-8a6d-4c2a68492f12.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "user test_project_task_board_dispatchpy",
+  "value": "[user] test_project_task_board_dispatch.py",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T12:00:22.619494+00:00",
+  "updated_at": "2026-04-23T12:00:22.619494+00:00",
+  "details": {
+    "text": "[user] test_project_task_board_dispatch.py",
+    "event_timestamp": "2026-04-18T13:06:06.172Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c/subagents/agent-a594d1d300a194c9a.jsonl",
+    "session_line": 11,
+    "provider": "claude"
+  }
+}

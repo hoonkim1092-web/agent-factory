@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 005  gaps     work_items is empty  no deliverables tasks or subtasks defined    No owners assigned",
+  "value": "[assistant] ```json {   \"score\": 0.05,   \"gaps\": [     \"work_items is empty — no deliverables, tasks, or subtasks defined\",     \"No owners assigned to any work item (none exist)\",     \"No risks identified and no mitigation strategies present\",     \"No accep...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T02:04:20.541593+00:00",
+  "updated_at": "2026-04-24T02:04:20.541593+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.05,\n  \"gaps\": [\n    \"work_items is empty — no deliverables, tasks, or subtasks defined\",\n    \"No owners assigned to any work item (none exist)\",\n    \"No risks identified and no mitigation strategies present\",\n    \"No acceptance criteria — nothing observable or testable\",\n    \"requested_role is empty string — executor role is undefined\",\n    \"route is empty object — no routing or agent assignment logic captured\",\n    \"goal 'test goal' is a placeholder with zero actionable content; original request carries no real intent to decompose\"\n  ],\n  \"strengths\": [\n    \"Schema structure is valid and parseable JSON\",\n    \"goal field is consistently echoed in both root and project_brief (no field mismatch)\",\n    \"generated_at timestamp is present and correctly formatted\"\n  ],\n  \"revision_instructions\": [\n    \"Replace 'test goal' with a concrete, outcome-oriented goal statement (e.g., 'Deliver X by doing Y so that Z')\",\n    \"Populate work_items with at least one item per logical deliverable; each item must include: id, title, description, owner, priority, and acceptance_criteria\",\n    \"Add a risks array to project_brief; each risk entry must have: description, likelihood, impact, and mitigation\",\n    \"Define requested_role with a non-empty value identifying the primary executor role\",\n    \"Populate route with routing keys that map this task to an agent or team\",\n    \"Each acceptance criterion must be phrased as a verifiable condition (e.g., 'CI passes with zero failures', 'endpoint returns 200 within 200 ms under 100 RPS')\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-24T02:04:18.879Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-01c680d0/4fccf760-4f44-49f0-b016-34f6ed333a77.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

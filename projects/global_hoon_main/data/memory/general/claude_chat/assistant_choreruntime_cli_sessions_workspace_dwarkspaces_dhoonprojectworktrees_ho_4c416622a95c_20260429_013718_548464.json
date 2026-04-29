@@ -1,0 +1,18 @@
+{
+  "key": "assistant choreruntime 워크스페이스 경로 및 사용자 계정 마이그레이션  cli_sessions workspace DwarkSpaces  DhoonProJectworktrees 경로 갱신 사용자 HO",
+  "value": "[assistant] chore(runtime): 워크스페이스 경로 및 사용자 계정 마이그레이션 — cli_sessions workspace `D:\\warkSpaces` → `D:\\hoonProJect\\worktrees` 경로 갱신, 사용자 `HOME` → `HOON` 계정 전환, codex_home 인증·설정·모델캐시 신규 PC 동기화, document_index 캐시 재생성, NEXT_STEPS.md 작업 상태 업데이트",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-29T01:37:18.548515+00:00",
+  "updated_at": "2026-04-29T01:37:18.548515+00:00",
+  "details": {
+    "text": "[assistant] chore(runtime): 워크스페이스 경로 및 사용자 계정 마이그레이션 — cli_sessions workspace `D:\\warkSpaces` → `D:\\hoonProJect\\worktrees` 경로 갱신, 사용자 `HOME` → `HOON` 계정 전환, codex_home 인증·설정·모델캐시 신규 PC 동기화, document_index 캐시 재생성, NEXT_STEPS.md 작업 상태 업데이트",
+    "event_timestamp": "2026-04-23T10:28:01.437Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f4c52c5f-10ff-4897-a2e9-132ad9a682e6.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

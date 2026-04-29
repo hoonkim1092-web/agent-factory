@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Critical af_runtimecodex_homeauthjson  OpenAI refresh_token access_token id_token 이메일이 Git에 평문 추적됨 즉시 OpenAI",
+  "value": "[assistant] - **[Critical]** `.af_runtime/codex_home/auth.json` — OpenAI `refresh_token`, `access_token`, `id_token`, 이메일이 Git에 평문 추적됨. 즉시 OpenAI 세션 revoke 필요. `.gitignore` 추가만으론 부족 — `git filter-repo` 또는 BFG로 히스토리 정제 필수. - **[Critical]** `.af_runtime/codex...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:29:52.669230+00:00",
+  "updated_at": "2026-04-28T08:29:52.669230+00:00",
+  "details": {
+    "text": "[assistant] - **[Critical]** `.af_runtime/codex_home/auth.json` — OpenAI `refresh_token`, `access_token`, `id_token`, 이메일이 Git에 평문 추적됨. 즉시 OpenAI 세션 revoke 필요. `.gitignore` 추가만으론 부족 — `git filter-repo` 또는 BFG로 히스토리 정제 필수.\n- **[Critical]** `.af_runtime/codex_home/state_5.sqlite` — SQLite DB가 Git에 커밋됨. 세션 내 민감 데이터(토큰, 대화 내용) 포함 가능. 즉시 `.gitignore` 처리 및 히스토리 정제 필요.\n- **[High]** `.af_runtime/codex_home/cap_sid` — capability/session ID가 Git에 추적됨. 세션 재사용 공격 벡터 가능성. `.gitignore` 처리 필요.\n- **[High]** `.af_runtime/cli_sessions/` 전체 — 런타임 상태 파일(세션 ID, 트랜스크립트 경로, task_preview 내용)이 커밋됨. 운영 상태는 `.gitignore` 처리해야 함.\n- **[High]** `.af_runtime/codex_home/.sandbox/sandbox.log` — 로그 파일이 Git에 추적됨. 실행 명령, 경로 정보 노출 위험.\n- **[Medium]** `.af_runtime/codex_home/auth.json` — `refresh_token`은 만료 없이 신규 access_token 발급 가능. revoke 없이 비활성화 불가.\n- **[Medium]** `CLAUDE.md`, `NEXT_STEPS.md`, `data/skill-usage.jsonl` — 실제 기능 변경 없이 런타임/상태 파일과 함께 커밋됨. 커밋 범위 분리 권장.\n- **[Info]** 워크스페이스 경로 `D:\\\\warkSpaces` → `D:\\\\hoonProJect\\\\worktrees` 마이그레이션 — 의도된 변경으로 보임.\n\n**즉시 조치**: OpenAI 세션 revoke → `auth.json`, `state_5.sqlite`, `cap_sid`, `.af_runtime/cli_sessions/`, `sandbox.log` → `.gitignore` 추가 → `git filter-repo`로 히스토리 정제.",
+    "event_timestamp": "2026-04-23T10:25:09.784Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f51778ed-73da-45fe-b875-173ea4301cc0.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

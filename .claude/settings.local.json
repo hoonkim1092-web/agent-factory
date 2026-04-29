@@ -15,7 +15,12 @@
       "Bash(echo \"exit code: $?\")",
       "Bash(command -v codex)",
       "Bash(codex --version)",
-      "Bash(grep -E '\\\\.\\(py\\)$')"
+      "Bash(grep -E '\\\\.\\(py\\)$')",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "mcp__codex__codex",
+      "Bash(npm list *)",
+      "Bash(tasklist)"
     ],
     "deny": [
       "Bash(rm:*)",
@@ -48,14 +53,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/check_pending_review.py"
           }
         ]
@@ -65,6 +62,14 @@
           {
             "type": "command",
             "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/check_design_pending.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }

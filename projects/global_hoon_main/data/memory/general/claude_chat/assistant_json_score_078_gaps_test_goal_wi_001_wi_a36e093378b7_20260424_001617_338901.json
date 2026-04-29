@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 078  gaps     목표가 test goal 플레이스홀더로 고정되어 있어 전체 계획이 실제 비즈니스 가치와 연결되지 않는다 WI-001이 이를 해결하려 하지만 후속 WI-",
+  "value": "[assistant] ```json {   \"score\": 0.78,   \"gaps\": [     \"목표가 'test goal' 플레이스홀더로 고정되어 있어 전체 계획이 실제 비즈니스 가치와 연결되지 않는다. WI-001이 이를 해결하려 하지만, 후속 WI-002~005의 내용도 여전히 추상적 템플릿 수준에 머물러 있다.\",     \"WI-005의 수용 기준 '모든 KPI가 WI-002 기준선 대비 목표치를 달성한다'에서 목표치(target value)가...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T00:16:17.340424+00:00",
+  "updated_at": "2026-04-24T00:16:17.340424+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.78,\n  \"gaps\": [\n    \"목표가 'test goal' 플레이스홀더로 고정되어 있어 전체 계획이 실제 비즈니스 가치와 연결되지 않는다. WI-001이 이를 해결하려 하지만, 후속 WI-002~005의 내용도 여전히 추상적 템플릿 수준에 머물러 있다.\",\n    \"WI-005의 수용 기준 '모든 KPI가 WI-002 기준선 대비 목표치를 달성한다'에서 목표치(target value)가 어디에도 정의되지 않았다. WI-002는 기준선만 수집하며 목표치 설정 절차가 없다.\",\n    \"WI-004의 estimated_effort가 '가변 (WBS 기반)'으로 공란에 가깝다. WBS는 WI-003 산출물인데, WI-004 착수 전 WBS가 확정된다는 의존성이 route에만 표현되고 공수 산정 시점이 명시되지 않았다.\",\n    \"WI-004 수용 기준 '회귀 버그가 발생하지 않는다'는 측정 방법·범위·판단 주체가 없어 관찰 불가능하다.\",\n    \"project_brief.requested_role과 route가 모두 빈 값이다. 라우팅 정보가 없으면 시스템이 올바른 워크플로우를 선택할 수 없다.\",\n    \"프로젝트 수준의 전체 완료 기한(deadline)이 존재하지 않는다. WI-003 마일스톤 로드맵 산출물에 절대 날짜 포함이 명시되어 있으나 그 기준점(end date)이 없다.\",\n    \"WI-003 수용 기준 '1~3일 내 완료 가능한 크기' 판단이 주관적이다. 누가, 어떤 기준으로 크기를 승인하는지 정의되지 않았다.\"\n  ],\n  \"strengths\": [\n    \"10개 전체 리스크에 likelihood·impact·mitigation이 빠짐없이 작성되었다.\",\n    \"WI-001→002→003→004→005 선형 의존성 체인이 명확하고 순환 참조가 없다.\",\n    \"모든 work item에 requested_role(owner)이 지정되어 있다.\",\n    \"각 WI에 alternatives_considered가 제공되어 설계 결정의 근거가 추적 가능하다.\",\n    \"WI-004가 Review-Gate 3단계(af-test-runner→af-critic→af-cross-review), Blueprint 동일 커밋 업데이트, 한국어 구현 언어 계약 등 프로젝트 컨벤션을 수용 기준으로 직접 포함했다.\",\n    \"WI-005가 GitHub 100MB 제한, Supabase 미설정 케이스 등 배포 시 발생 빈도 높은 엣지 케이스를 리스크로 명시했다.\",\n    \"WI-002 수용 기준에 '데이터 수집 일자·출처 명시' 조건이 포함되어 분석 결과의 최신성 검증이 가능하다.\"\n  ],\n  \"revision_instructions\": [\n    \"WI-001에 '확정된 목표를 WI-002~005 각 항목에 back-propagate한다'는 절차를 추가하거나, WI-002~005 description을 WI-001 완료 후 갱신하는 조건부 주석을 달아 플레이스홀더 전파를 방지한다.\",\n    \"WI-002 deliverables에 'KPI 목표치(target value) 정의서'를 추가하고, WI-005 수용 기준의 '목표치'가 이 산출물을 참조함을 명시한다.\",\n    \"WI-004 estimated_effort를 'WI-003 WBS 확정 후 재산정 (현재 placeholder)'으로 수정하거나, 유사 구현 사례 기반 범위 추정치(예: 5~20일)를 병기한다.\",\n    \"WI-004 수용 기준 '회귀 버그가 발생하지 않는다'를 '기존 pytest 스위트 통과율이 100%를 유지한다 (tests/ 전체 기준)'처럼 측정 가능한 형태로 교체한다.\",\n    \"project_brief.route에 최소한 workflow 키를 채우고, requested_role에 기본 역할(예: 'product_owner')을 설정하여 라우팅 오류를 예방한다.\",\n    \"WI-001 또는 WI-003에 프로젝트 전체 마감 날짜(절대 일자) 확정 절차를 수용 기준으로 추가한다.\",\n    \"WI-003 수용 기준 '1~3일 크기' 조건에 '담당 팀 리드가 플래닝 포커 또는 상대적 추정(story point)으로 검증'처럼 승인 주체와 방법을 명시한다.\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-24T00:16:16.288Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-0837e91e/c2abe1f5-4b38-4d8f-a841-9d3230c0d291.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

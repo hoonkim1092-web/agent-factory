@@ -584,3 +584,3286 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (104)**: `.claude/settings.local.json, af.spec, core/cross_verification.py, core/dynamic_orchestrator.py, core/fsa_loop.py, projects/global_hoon_main/data/memory/general/codex_chat/user_e382e2aeae16_20260310_144545_389276.json, projects/global_hoon_main/data/memory/general/codex_chat/user_e397d6845625_20260310_065854_438869.json, projects/global_hoon_main/data/memory/general/codex_chat/user_e65d7908b5e0_20260226_153246_782309.json, projects/global_hoon_main/data/memory/general/codex_chat/user_e736364d3199_20260310_144545_344240.json, projects/global_hoon_main/data/memory/general/codex_chat/user_e9c492db6c1f_20260310_065854_379731.json, projects/global_hoon_main/data/memory/general/codex_chat/user_end_db_agent_factory_b68f578618ba_20260309_143912_886620.json, projects/global_hoon_main/data/memory/general/codex_chat/user_end_db_agent_factory_cd779874c3e8_20260310_144545_352957.json, projects/global_hoon_main/data/memory/general/codex_chat/user_end_db_antigravity_201ae2978647_20260226_160958_691630.json, projects/global_hoon_main/data/memory/general/codex_chat/user_end_db_antigravity_5556b0e6aa4e_20260226_153246_733927.json, projects/global_hoon_main/data/memory/general/codex_chat/user_envagent_global_user_key_environmentgetenvironmentvariableagent_global_user_keyuser_e831467de9d1_20260226_153246_477160.json ... (+89)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 10:31 — `2026-04-14-build-diet` (9d491d6c)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\core\skill_metadata_adapter.py
+
+**Changed (8)**: `core/skill_metadata_adapter.py, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 13:34 — `2026-04-14-build-diet` (d0947735)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json:38 — "Bash(codex exec *)" 와일드카드 허용은 임의 codex 명령 실행을 허용하므로 보안 리스크. 허용 범위를 구체적인 서브커맨드로 제한 필요.
+
+- [High]   .claude/settings.local.json:62,72,82,92,102 — python3 + $PWD → 하드코딩된 절대 경로(D:/hoonProJect/worktrees/agent-factory)로 교체. 다른 PC·워크트리에서 hook이 즉시 깨짐. $PWD 또는 상대 경로 유지 권장.
+
+- [Medium] data/skill-usage.jsonl — report_path/promotion_path에 두 가지 절대 경로 혼재: /Users/hoon/workTree/ (Mac) 와 D:\\warkSpaces\\agent-factory\\ (Windows, 오탈자 "warkSpaces"). 경로가 런타임에 쓰인다면 파일 조회 실패.
+
+- [Low]    data/skill-usage.jsonl — skill-eval-report.json 레코드 여러 줄이 contract_pass_rate=0.0, runtime_total=0인 채로 candidate 승격. 평가 데이터 없이 승격되는 로직이 의도적인지 확인 필요.
+
+- [Info]   .claude/settings.local.json — settings.local.json은 PC-로컬 파일이나 git 추적 중. 절대 경로가 커밋되면 팀 공유 시 오염 발생. .gitignore 추가 또는 settings.json과 분리 고려.
+```
+
+**요약**: 핵심 문제는 `codex exec *` 와일드카드 허용(보안)과 하드코딩 절대 경로(이식성). 두 항목 모두 수정 권장.
+
+---
+
+## 2026-04-29 13:35 — `2026-04-14-build-diet` (03335e38)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:37 — `Bash(codex exec *)` 와일드카드 허용은 임의의 codex exec 명령을 모두 승인함. 최소 권한 원칙 위반 — 실제 사용 패턴에 맞게 구체적 명령으로 제한 필요.",
+    "- [Medium] .claude/settings.local.json:62~106 — 훅 command가 `D:/hoonProJect/worktrees/agent-factory/` 하드코드 절대경로로 고정됨. 다른 PC·워크트리에서 이식 불가. `$PWD` 또는 환경변수 기반으로 복원 권장.",
+    "- [Low] .claude/settings.local.json:125 — 파일 끝 개행 없음(no newline at EOF). JSON 파서 무결성 문제는 없으나 컨벤션 불일치.",
+    "- [Info] data/skill-usage.jsonl — 신규 skill_promotion 이벤트 행 추가. 기능상 이상 없음.",
+    "- [Info] 나머지 14개 파일(docs, memory, syncCompyne) — diff 본문 미포함으로 내용 검토 불가. 주요 변경이 있다면 별도 diff 제공 필요."
+  ],
+  "summary": "핵심 위험은 두 가지: codex exec 와일드카드 권한(High)과 훅 절대경로 하드코딩(Medium). 나머지는 경미하거나 정보성."
+}
+```
+
+---
+
+## 2026-04-29 13:35 — `2026-04-14-build-diet` (019cc3ce)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `\"Bash(codex exec *)\"` 와일드카드 허용은 임의의 codex exec 명령 실행을 허용하므로 권한 범위가 지나치게 넓음. 구체적인 서브커맨드로 제한 필요.",
+    "- [High] .claude/settings.local.json:62,72,82,92,102 — 훅 command에 절대경로(`D:/hoonProJect/worktrees/agent-factory`) 하드코딩. 다른 PC/워크트리로 이동 시 훅이 무음 실패하며, settings.local.json이 커밋되므로 다른 개발자에게도 전파됨.",
+    "- [Medium] .claude/settings.local.json — `python3` → `python` 변경. Windows에서 `python`이 Microsoft Store 스텁으로 해석될 수 있어 훅 실행 실패 위험. `python3` 유지 또는 전체 경로 명시 권장.",
+    "- [Medium] .claude/settings.local.json — `$PWD` 제거로 상대경로 기반 실행이 불가능해짐. worktree 체크아웃 위치가 바뀌면 전체 훅이 고장. 환경변수 또는 git-toplevel 기반 동적 경로 사용 권장.",
+    "- [Low] .claude/settings.local.json:125 — 파일 끝 개행 누락(no newline at end of file). 일부 git diff 도구 및 린터에서 경고 발생.",
+    "- [Info] data/skill-usage.jsonl, skill-eval-report.json — 자동 생성 데이터 파일이 소스 커밋에 포함됨. `.gitignore` 처리 여부 재검토 권장 (런타임 상태 데이터는 리포에 추적 불필요).",
+    "- [Info] syncCompyne/*.py — diff 본문이 잘려 있어 Python 파일 변경 내용 검증 불가. 해당 파일의 실질 변경이 있다면 별도 리뷰 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:36 — `2026-04-14-build-diet` (9ff808b7)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` 와일드카드 허용은 임의 codex 명령 실행을 열어줌. 최소 권한 원칙 위반.",
+    "- [High] .claude/settings.local.json:62,71,81,92,103 — 훅 커맨드에 절대 경로 하드코딩(`D:/hoonProJect/worktrees/agent-factory`). 다른 PC/경로에서 세션 훅 전체 무음 실패. `$PWD` 또는 상대 경로로 복원 필요.",
+    "- [Medium] data/skill-usage.jsonl — `report_path`/`promotion_path`에 macOS 경로(`/Users/hoon/workTree/...`) 혼재. Windows 워크트리 경로와 불일치 — 이벤트 재처리 시 경로 해석 오류 가능.",
+    "- [Low] .claude/settings.local.json (마지막 줄) — 파일 끝 개행 제거. diff noise 및 일부 파서 호환성 문제.",
+    "- [Info] 변경 범위가 feat(T1) 제목과 불일치. SKILL.md fallback 로직 관련 `.py` 파일 변경이 diff에 없음 — 실제 구현 파일이 누락되었거나 별도 커밋으로 분리 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:36 — `2026-04-14-build-diet` (62cb8c0c)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+[
+  {
+    "severity": "High",
+    "file": ".claude/settings.local.json",
+    "line": "60-110",
+    "finding": "모든 hook command가 `D:/hoonProJect/worktrees/agent-factory` 절대 경로로 하드코딩됨. 다른 PC·워크트리에서 즉시 실패. 원래 `$PWD` 변수 방식으로 복원 필요."
+  },
+  {
+    "severity": "High",
+    "file": ".claude/settings.local.json",
+    "line": "37",
+    "finding": "`Bash(codex exec *)` 와일드카드 허용 추가 — 임의 codex 명령을 무제한 실행할 수 있어 권한 범위가 과도하게 넓음. 허용 패턴을 구체적으로 제한해야 함."
+  },
+  {
+    "severity": "Medium",
+    "file": ".claude/settings.local.json",
+    "line": "60-110",
+    "finding": "`python3` → `python` 변경. Windows 환경에서는 동작하나, `python`이 PATH에 없거나 Python 2를 가리키는 환경에서 hook silent-fail 가능."
+  },
+  {
+    "severity": "Medium",
+    "file": "data/skill-usage.jsonl",
+    "line": "all new entries",
+    "finding": "`report_path` / `promotion_path` 필드에 `/Users/hoon/workTree/agent-factory/` macOS 절대 경로가 기록됨. 현재 Windows 워크스페이스와 불일치 — 경로 해석 시 오류 발생 가능."
+  },
+  {
+    "severity": "Low",
+    "file": ".claude/settings.local.json",
+    "line": "125",
+    "finding": "파일 끝 개행 문자 제거(`\\ No newline at end of file`). JSON 파일 표준 위반이며 일부 파서에서 경고 발생."
+  }
+]
+```
+
+---
+
+## 2026-04-29 13:37 — `2026-04-14-build-diet` (097f0332)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` wildcard allows ANY codex exec command; should be scoped to specific subcommands to prevent unintended privilege escalation.",
+    "- [Medium] .claude/settings.local.json:62,72,82,92,102 — Hardcoded absolute Windows path `D:/hoonProJect/worktrees/agent-factory` replaces portable `$PWD`; breaks if repo is moved or used on another machine/worktree.",
+    "- [Medium] .claude/settings.local.json — `python3` replaced with `python`; on Windows `python` may resolve to Python 2 or the Store stub, causing silent failures. Use explicit `python3` or full path.",
+    "- [Low] .claude/settings.local.json:125 — Trailing newline removed (no newline at end of file). Minor POSIX convention violation; some tools diff-noisily against this.",
+    "- [Info] data/skill-usage.jsonl — Appended promotion event rows contain `/Users/hoon/workTree/...` (macOS path) in `report_path`/`promotion_path`; these are log data but indicate the event was generated on a different machine. Not a bug, but suggests the log was partially replayed cross-environment.",
+    "- [Info] Changed files list includes syncCompyne/*.py, skills/*, docs/code_review/code-review.md, and bridge state JSONs but no diff was provided for them — review is limited to the supplied diff only."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:37 — `2026-04-14-build-diet` (1775d8e6)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` 와일드카드 허용은 codex exec 경로를 통한 임의 명령 실행을 허용함. 최소 권한 원칙 위반 — 필요한 서브커맨드만 명시적으로 열거해야 함.",
+    "- [High] .claude/settings.local.json:62~106 — 절대경로 하드코딩(`D:/hoonProJect/worktrees/agent-factory`). 워크스페이스 이동 또는 다른 PC에서 실행 시 모든 hook이 침묵하며 실패. `$PWD` 또는 환경변수 기반으로 복원해야 함.",
+    "- [Medium] .claude/settings.local.json:62~106 — `python3` → `python` 변경. Windows 환경에서는 일반적으로 `python`이 맞지만, 일관성 없이 혼용되거나 PATH에 없는 경우 hook 무음 실패 위험.",
+    "- [Medium] data/skill-usage.jsonl — `report_path` / `promotion_path` 값이 macOS 경로(`/Users/hoon/workTree/...`)로 기록됨. Windows 환경에서 생성된 이벤트임에도 Mac 경로가 삽입 — 경로 생성 로직이 OS를 감지하지 못하는 버그 의심.",
+    "- [Low] .claude/settings.local.json (마지막 줄) — 파일 끝 개행 없음(no newline at EOF). JSON 파싱에는 무해하나 git diff 노이즈 유발.",
+    "- [Info] 변경 범위 불일치: 커밋 메시지는 `feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback`이나 diff에서 SKILL.md fallback 관련 코드 변경이 없음. 실제 core 변경이 누락되었거나 커밋 메시지가 잘못된 것으로 보임 — 확인 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:38 — `2026-04-14-build-diet` (8f859574)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\tests\test_phase7_dep_graph_evolve.py
+
+**Changed (19)**: `.claude/settings.local.json, Master_Blueprint.md, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md ... (+4)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 13:38 — `2026-04-14-build-diet` (8f859574)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (17)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+2)`
+
+### Findings
+
+```
+- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` wildcard grants unrestricted codex execution permission; scope is too broad, should be narrowed to specific subcommands.
+- [High] .claude/settings.local.json:62,72,83,93,103 — Hardcoded absolute Windows paths (`D:/hoonProJect/worktrees/...`) replace portable `$PWD`. Breaks on any other machine or if the repo is relocated; defeats the purpose of worktree isolation.
+- [Medium] core/fsa_loop.py:270-274 — If `_detect_failed_skill_dir()` returns `None` (skill name undetectable from log text), `_cand_name` is `None`, `None in self._evolution_failed_skills` is always `False`, and Level 4 → 5 escalation is silently skipped. A skill that exhausted evolution budget but produces ambiguous error text will loop indefinitely at Level 4.
+- [Low] .claude/settings.local.json:125 — Missing newline at end of file (cosmetic, but diff noise in future patches).
+- [Info] core/fsa_loop.py:264-278 — The per-skill escalation refinement is correct in intent (avoids blocking unrelated skills), but the silent fallback on detection failure (see Medium above) should at minimum emit a warning log.
+```
+
+**Summary:** Two actionable issues — the wildcard `codex exec *` permission needs tightening, and the `None`-detection fallback in the Level 4→5 escalation path can suppress escalation silently. The hardcoded paths are a portability regression that should revert to `$PWD`-relative or an env var.
+
+---
+
+## 2026-04-29 13:39 — `2026-04-14-build-diet` (89a68f56)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- [High] `.claude/settings.local.json:38` — `"Bash(codex exec *)"` wildcard allows any codex exec command. Overly broad; scope to specific subcommands.
+- [High] `core/fsa_loop.py:270-274` — If `_detect_failed_skill_dir()` returns `None` (skill dir undetectable from reason string), `_cand_name` is `None`, `None in self._evolution_failed_skills` is always `False`, so Level 4→5 escalation silently never fires — potential infinite loop in FSA.
+- [Medium] `.claude/settings.local.json:61,71,81,92,103` — All hook commands hardcoded to `D:/hoonProJect/worktrees/agent-factory`. Breaks on any other machine or if the worktree path changes. Previous `$PWD` was portable.
+- [Medium] `.claude/settings.local.json` — `python3` replaced with `python` (Windows-specific). Cross-platform portability lost; inconsistent with rest of codebase convention.
+- [Low] `core/fsa_loop.py:266-274` — New logic adds two local variables (`_cand_dir`, `_cand_name`) with leading underscore naming, suggesting temporaries, but they exist only in this branch with no cleanup concern. Minor readability issue.
+- [Info] `.claude/settings.local.json:125` — Missing newline at end of file.
+
+**Critical path risk:** The `_cand_name is None` silent no-op in `fsa_loop.py:274` is the most dangerous change — it can cause Level 4 to loop indefinitely if skill name detection fails from the reason string. Add an explicit fallback: escalate to 5 when detection returns `None` to preserve the original safety guarantee.
+
+---
+
+## 2026-04-29 13:40 — `2026-04-14-build-diet` (a27c3bea)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- [High] `.claude/settings.local.json:38` — `Bash(codex exec *)` wildcard allowlist는 임의 codex 명령을 제한 없이 허용. 명시적 허용 패턴으로 좁혀야 함.
+- [Medium] `.claude/settings.local.json:62,71,82,93,103` — 절대 경로 하드코딩(`D:/hoonProJect/...`)으로 다른 PC·워크트리에서 hook이 즉시 실패. 원래 `$PWD` 방식이 이식성 우월.
+- [Medium] `.claude/settings.local.json:62` — `python3` → `python` 변경. Windows에서 `python`이 Python 2 또는 Microsoft Store 래퍼를 가리킬 수 있어 실행 환경 의존성 생김.
+- [Medium] `core/fsa_loop.py:267` — `_detect_failed_skill_dir()` 메서드 호출이 diff에 정의 없음. 메서드 부재 시 `AttributeError`로 FSA 루프 전체 크래시.
+- [Low] `core/fsa_loop.py:270` — `_cand_name = None`일 때 `None in self._evolution_failed_skills` 평가는 안전하나, 의도적 fallback인지 주석 없어 의미 모호.
+- [Low] `.claude/settings.local.json:EOF` — trailing newline 제거(`\ No newline at end of file`). POSIX 규범 위반, 일부 도구에서 diff 노이즈 발생.
+- [Info] `data/skill-usage.jsonl`, `skill-eval-report.json` 등 런타임 생성 데이터 파일이 커밋에 포함 — `.gitignore` 처리 권장.
+
+**핵심 우선순위:** `_detect_failed_skill_dir` 존재 여부 즉시 확인(Medium→Critical 가능), codex exec 와일드카드 범위 축소.
+
+---
+
+## 2026-04-29 13:40 — `2026-04-14-build-diet` (71dabe3f)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[High]** `core/fsa_loop.py:273-275` — `_cand_name is None` when `_detect_failed_skill_dir()` returns `None` (e.g., reason string is ambiguous). `None not in self._evolution_failed_skills` → level stays 4 → next cycle re-enters the same path → potential infinite loop at Level 4. Old logic was a safe fallback; new logic removed it without a `None` guard.
+- **[High]** `.claude/settings.local.json` — `"Bash(codex exec *)"` wildcard grants execution of any `codex exec` subcommand. Too broad; should enumerate specific allowed subcommands.
+- **[Medium]** `.claude/settings.local.json` — All hook `command` values now hardcode `D:/hoonProJect/worktrees/agent-factory`. Breaks on any other machine or worktree path. Prior `$PWD` was portable; the hardcoded path should at minimum be documented as machine-specific and not checked into shared settings.
+- **[Low]** `.claude/settings.local.json` — Missing newline at end of file (JSON linters/editors will flag this).
+- **[Info]** `core/fsa_loop.py:267-268` — Comment correctly explains the intent of per-skill gating vs. global block; the logic is sound when `_cand_name` is non-`None`. Fix: add `or _cand_name is None` fallback to escalate when skill is undetectable.
+
+**Recommended fix for the High bug:**
+```python
+if _cand_name is None or _cand_name in self._evolution_failed_skills:
+    level = 5
+```
+This restores safe escalation when skill detection fails.
+
+---
+
+## 2026-04-29 13:41 — `2026-04-14-build-diet` (acae4bb1)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\core\fsa_loop.py
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 13:41 — `2026-04-14-build-diet` (edc86894)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\tests\test_phase7_dep_graph_evolve.py
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 13:42 — `2026-04-14-build-diet` (7ec39231)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **High** `.claude/settings.local.json` — Hardcoded absolute Windows paths (`D:/hoonProJect/worktrees/agent-factory`) replace the portable `$PWD`. These paths break on any other machine or if the worktree is relocated.
+- **Medium** `.claude/settings.local.json:38` — `Bash(codex exec *)` wildcard is extremely broad; it permits arbitrary `codex exec` commands without restriction. Scope should be narrowed to specific commands or paths.
+- **Low** `.claude/settings.local.json` — `python3` → `python`: on Windows this is usually fine, but inconsistent with the rest of the codebase convention; consider keeping one form.
+- **Low** `core/fsa_loop.py:588` — `_cand_name` check passes even when `_cand_dir` is set but `_cand_name` is not in `_evolution_failed_skills`; in that case the guard returns `(level, _cand_dir)` at line 590, forwarding a non-None `skill_dir` into `_try_evolve_failed_skill` which will re-detect and may double-process the same skill dir. Verify this is the intended path.
+- **Info** `core/fsa_loop.py:574-590` — Refactor is clean overall; extracting `_apply_evolution_guard` and threading `skill_dir` through removes the redundant `_detect_failed_skill_dir` call in `_try_evolve_failed_skill`.
+- **Info** `.claude/settings.local.json` — Missing newline at end of file (cosmetic, but some tools warn on this).
+
+**Primary concern is the hardcoded absolute paths in `settings.local.json`** — this file is checked in and will silently fail for anyone else cloning the repo.
+
+---
+
+## 2026-04-29 13:43 — `2026-04-14-build-diet` (df59c73c)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "location": ".claude/settings.local.json:lines 62-106",
+      "finding": "Hardcoded absolute Windows paths (`D:/hoonProJect/worktrees/agent-factory/`) replace portable `$PWD`. Breaks portability across machines or if worktree moves — hooks will silently fail with no error surfaced to the user."
+    },
+    {
+      "severity": "High",
+      "location": ".claude/settings.local.json:38",
+      "finding": "`\"Bash(codex exec *)\"` in allow list uses a wildcard — effectively permits arbitrary `codex exec` invocations. Should be scoped to a specific subcommand/argument pattern rather than `*`."
+    },
+    {
+      "severity": "Medium",
+      "location": "core/fsa_loop.py:_apply_evolution_guard (diff truncated)",
+      "finding": "Diff is cut off after the early-return condition (`if level != 4 or not self._evolution_failed_skills:`). Cannot verify the return value on that branch — if it does not return a valid `(int, ...)` tuple, callers unpack incorrectly and raise a `TypeError` at runtime."
+    },
+    {
+      "severity": "Low",
+      "location": "core/fsa_loop.py:316",
+      "finding": "`_detected_skill_dir` uses a leading-underscore convention (Python idiom for \"intentionally unused\") but is actively passed as a keyword argument. Rename to `detected_skill_dir` for clarity."
+    },
+    {
+      "severity": "Low",
+      "location": ".claude/settings.local.json:125",
+      "finding": "Missing newline at end of file. Minor but can cause noisy diffs and some tools reject files without EOF newline."
+    }
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:44 — `2026-04-14-build-diet` (90c1d5c5)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json:37 — `Bash(codex exec *)` wildcard grants unrestricted
+           codex execution permission. Any codex subcommand is now auto-approved; scope to
+           specific known commands instead.
+
+- [Medium] .claude/settings.local.json:61,71,82,93,103 — Hardcoded absolute Windows paths
+           `D:/hoonProJect/worktrees/agent-factory/...` replace the portable `$PWD`. Breaks on
+           any other machine or if the worktree is moved. Use an env-var or relative path.
+
+- [Medium] core/fsa_loop.py:582-590 — When `_cand_dir` is None (skill undetectable) but
+           `_evolution_failed_skills` is non-empty, level stays 4 and
+           `_try_evolve_failed_skill(skill_dir=None)` re-invokes `_detect_failed_skill_dir`
+           (double search). Old guard forced level 5 unconditionally in this case. Regression
+           risk: if detection is persistently unreliable, the run may loop at level 4 indefinitely
+           rather than escalating.
+
+- [Low]    core/fsa_loop.py:574 — Return type `tuple` should be `tuple[int, str | None]` for
+           type-checker coverage and call-site clarity.
+
+- [Low]    syncCompyne/memory_store.py — New SQLite store added without visible test coverage
+           in the diff. The `ensure_db` / `_get_project_id` flow has no error path for a
+           read-only filesystem.
+
+- [Info]   .claude/settings.local.json — Missing newline at EOF (cosmetic, but causes noisy
+           git diffs).
+```
+
+**Summary:** The `codex exec *` wildcard and hardcoded absolute paths are the two actionable items before merging. The level-4 regression is a logic edge case worth a targeted unit test.
+
+---
+
+## 2026-04-29 13:44 — `2026-04-14-build-diet` (4d1dcd20)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json — "Bash(codex exec *)" 와일드카드 허용: codex가 실행할 수 있는 모든 명령이 Claude Code 허용 목록에 포함됨. codex exec의 인자 범위를 명시적으로 제한해야 함.
+
+- [Medium] .claude/settings.local.json — 모든 hook command를 하드코딩된 절대 경로(D:/hoonProJect/worktrees/agent-factory/...)로 변경. 다른 PC·경로에서 실행하면 hooks가 무음 실패. 원래 `$PWD` 기반 상대 경로가 더 안전함. settings.local.json이 PC별 설정임을 감안해도 팀 공유 시 문제.
+
+- [Medium] core/fsa_loop.py:571 — _apply_evolution_guard() 구현 본체가 diff에서 잘려 있어 전체 로직 검증 불가. 특히 detected_skill_dir 탐색 실패 시(None 반환) _try_evolve_failed_skill 내부에서 None-guard가 있는지 확인 필요.
+
+- [Low]    core/fsa_loop.py — 반환 타입 힌트가 `tuple` (generic). `tuple[int, str | None]`으로 명시하면 오용 방지.
+
+- [Low]    .claude/settings.local.json — 파일 말미 개행 누락(no newline at EOF). git diff 노이즈 발생.
+
+- [Info]   core/fsa_loop.py:316 — skill_dir를 _apply_evolution_guard에서 함께 반환해 이중 탐색을 제거한 리팩터는 설계상 적절함.
+```
+
+**핵심 요약**: `codex exec *` 와일드카드가 가장 위험한 변경. 절대 경로 하드코딩은 이식성 문제. `_apply_evolution_guard` 전체 구현이 보이지 않아 None-safety는 별도 확인 필요.
+
+---
+
+## 2026-04-29 13:45 — `2026-04-14-build-diet` (3fb79b86)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **High** `.claude/settings.local.json` — `"Bash(codex exec *)"` 와일드카드 허용은 임의 codex 명령 실행을 허용함. 허용 범위가 지나치게 넓음.
+- **High** `.claude/settings.local.json` — `$PWD` 상대 경로를 `D:/hoonProJect/worktrees/agent-factory/` 절대 경로로 교체해 머신 이식성 완전 제거. 다른 PC·CI에서 hook 실패함.
+- **Medium** `core/fsa_loop.py:574` — 반환 타입 `tuple` 미파라미터화. `tuple[int, str | None]`으로 명시 필요.
+- **Medium** `core/fsa_loop.py:582-590` — `_apply_evolution_guard`가 `_cand_name` 미일치 시 `(level, _cand_dir)`를 반환해 Level 4→호출 경로로 `skill_dir`를 전달함. 이전 인라인 로직(`_evolution_failed_skills`만 체크)보다 경로가 추가됐으나 `_cand_dir`가 None이 아닌 경우 하위 `_try_evolve_failed_skill`에서 이중 탐지가 발생할 수 있음 — `_detect_failed_skill_dir` 재호출 분기(line 607)와 충돌 위험.
+- **Low** `.claude/settings.local.json` — 파일 말미 개행 제거(EOF newline missing). POSIX 규칙 위반, diff 노이즈 원인.
+- **Info** `core/fsa_loop.py:596-598` — `_try_evolve_failed_skill` 시그니처에 `skill_dir: str | None = None` 추가 — `None` 방어 분기(line 606)로 하위 호환성 유지됨. 정상.
+
+---
+
+## 2026-04-29 13:46 — `2026-04-14-build-diet` (3d9f4ae9)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+Code review complete.
+
+---
+
+- **[High]** `.claude/settings.local.json:38` — `"Bash(codex exec *)"` 와일드카드 허용은 모든 인자를 허용하므로 임의 명령 실행 경로가 열림. 구체적인 허용 패턴으로 좁혀야 함.
+
+- **[High]** `.claude/settings.local.json:62,71,81,92,103` — hook `command`에 `D:/hoonProJect/worktrees/agent-factory` 하드코딩. 다른 PC/worktree에서 즉시 broken. `settings.local.json`은 gitignore되어야 하거나 `$PWD` 복원이 맞음. (이 파일이 커밋에 포함된 것 자체가 문제)
+
+- **[Medium]** `core/fsa_loop.py:587` — `_cand_dir`이 `None`일 때 `os.path.basename(None)`은 `AttributeError`. 가드가 `if level != 4 or not self._evolution_failed_skills: return level, None`으로 조기 리턴하므로 이 경로는 `_evolution_failed_skills`가 비어있지 않을 때만 실행되는데, `_detect_failed_skill_dir`이 `None`을 반환할 수 있어 즉시 크래시.
+
+- **[Medium]** `core/fsa_loop.py:321` — `gate_result.skill_path`가 `None`이면 `split(os.sep)[-1]`이 `AttributeError`. `if gate_result.skill_path` 체크가 있지만 전체 삼항식이 `None`을 할당하며 이후 `evolved_skill_name`이 사용될 경우 추적하기 어려운 버그.
+
+- **[Low]** `.claude/settings.local.json` — 파일 끝 개행 제거(`\ No newline at end of file`). JSON 파일 표준 위반, 일부 파서에서 문제 가능.
+
+- **[Info]** `_apply_evolution_guard` 리팩터링 자체는 의도(현재 사이클 스킬이 이미 실패한 경우에만 L5 강제)가 명확하고 `_try_evolve_failed_skill`의 이중 탐색 제거는 개선.
+
+**필수 수정**: `os.path.basename(None)` 크래시 (Medium), `settings.local.json` 하드코딩 제거 (High).
+
+---
+
+## 2026-04-29 13:47 — `2026-04-14-build-diet` (7858bcc5)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+충분한 맥락을 확보했습니다. 리뷰를 작성합니다.
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json — 훅 명령어에 Windows 절대 경로 하드코딩(`D:/hoonProJect/worktrees/agent-factory`). 다른 PC나 클론 경로에서 즉시 깨짐. `$PWD` 방식으로 되돌리거나 상대 경로 사용 권장.",
+    "- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` 와일드카드 허용. `codex exec`에 임의 인수가 통과되므로 악의적 프롬프트가 셸 명령 실행으로 이어질 수 있음. 명시적 서브커맨드로 제한할 것.",
+    "- [Medium] core/fsa_loop.py:574–590 — `_apply_evolution_guard`가 `_detect_failed_skill_dir`를 호출하면서, 호출 측(`run` 루프)이 이후 `_try_evolve_failed_skill`에 `skill_dir`를 전달하지 않아도 내부에서 한 번 더 탐색한다. `skill_dir`가 `None`인 채로 `_try_evolve_failed_skill` 진입 시 이중 탐색 가능 — diff:314행 `skill_dir=_detected_skill_dir` 전달로 해소됐는지 확인 필요.",
+    "- [Medium] core/fsa_loop.py:587 — `_cand_dir`가 `None`인데 `os.path.basename(None)` 호출 경로 없음. 그러나 `_cand_name` 계산 전에 `_cand_dir` 가드가 `if _cand_dir else None`으로 처리됨 — 정상. 단, `_cand_dir`가 빈 문자열 `\"\"`이면 `basename`이 `\"\"` 반환 → `in self._evolution_failed_skills` 검사 통과 불가. 엣지케이스.",
+    "- [Low] .claude/settings.local.json — 파일 끝 개행 제거(`\\ No newline at end of file`). 일부 도구와 diff 출력에서 노이즈 발생. 개행 유지 권장.",
+    "- [Info] tests/test_phase7_dep_graph_evolve.py — `_apply_evolution_guard` 신규 로직에 대한 직접 단위 테스트 없음. `level==4 + _evolution_failed_skills` 분기, `level!=4` 분기, `_cand_name not in failed_skills` 분기 각각 커버 필요."
+  ],
+  "verdict": "High 2건 수정 후 머지 권장"
+}
+```
+
+**요약:** 절대 경로 하드코딩(이식성 파괴)과 `codex exec *` 와일드카드 허용(보안)이 High 이슈입니다. `_apply_evolution_guard` 리팩터링 자체는 논리적으로 올바르나, 신규 분기에 대한 단위 테스트가 없습니다.
+
+---
+
+## 2026-04-29 13:48 — `2026-04-14-build-diet` (21c3cc59)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+Code review findings:
+
+- **[High]** `.claude/settings.local.json:58–103` — Hook commands hardcoded to absolute Windows path `D:/hoonProJect/worktrees/agent-factory/`. The original `$PWD`-relative form worked cross-machine; this breaks on any other dev box or CI. Should use a portable path or env var.
+
+- **[Medium]** `.claude/settings.local.json:38` — `"Bash(codex exec *)"` wildcard added to allow list. This permits any `codex exec` subcommand without restriction. If `codex exec` can spawn shell commands, this is a broad permission grant with no audit trail.
+
+- **[Low]** `core/fsa_loop.py:587` — `os.path.basename(_cand_dir) if _cand_dir else None` — `_cand_dir` can legitimately be an empty string `""` (falsy), which would silently return `None` and skip the guard even when a dir was detected as empty string. Use `if _cand_dir is not None` for the guard condition.
+
+- **[Low]** `core/fsa_loop.py:574` — Return type annotation is `tuple` (bare). Should be `tuple[int, str | None]` for clarity and static analysis.
+
+- **[Info]** `.claude/settings.local.json` — Missing trailing newline (`\ No newline at end of file`). Minor, but inconsistent with file conventions.
+
+- **[Info]** `core/fsa_loop.py:584–590` — Refactor is correct: guard now fires only when the *currently detected* skill is in `_evolution_failed_skills`, fixing the prior over-eager Level 4→5 promotion on any failure. Logic is sound.
+
+---
+
+## 2026-04-29 13:48 — `2026-04-14-build-diet` (779ee3a9)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[High] `.claude/settings.local.json`:35** — `"Bash(codex exec *)"` 와일드카드 허용은 codex를 통한 임의 명령 실행 면을 열어준다. 최소 권한 원칙 위반 — 실제 필요한 패턴으로 제한해야 한다.
+
+- **[Medium] `.claude/settings.local.json`:62,71,81,91,101** — 훅 커맨드에 `D:/hoonProJect/worktrees/agent-factory` 절대 경로 하드코딩. `settings.local.json`이라 기계 종속성은 어느 정도 허용되나, `python3`를 `python`으로 변경한 것이 다른 환경(WSL, CI)에서 깨질 수 있다.
+
+- **[Medium] `core/fsa_loop.py`:574** — `_apply_evolution_guard` 반환 타입이 `tuple`로 비제네릭. `tuple[int, str | None]`으로 명시해야 `_try_evolve_failed_skill(skill_dir=...)` 호출부의 타입 안전성이 보장된다.
+
+- **[Low] `core/fsa_loop.py`:587** — `os.path.basename(_cand_dir)` 에서 `_cand_dir`이 빈 문자열 `""`일 경우 `basename("")` → `""` → `_cand_name`이 falsy가 되어 정상 처리되나, 빈 문자열과 `None`을 구분하지 않아 의미가 불명확하다. `_detect_failed_skill_dir`가 실패 시 `None`을 명시적으로 반환하는지 확인 필요.
+
+- **[Low] `.claude/settings.local.json`:EOF** — 파일 끝 개행 없음(`\ No newline at end of file`). 일부 도구/Git diff에서 노이즈 발생.
+
+- **[Info] `core/fsa_loop.py`:314** — `skill_dir=_detected_skill_dir` 전달로 이중 `_detect_failed_skill_dir` 호출을 제거한 점은 올바른 개선.
+
+---
+
+## 2026-04-29 13:49 — `2026-04-14-build-diet` (597b0b8e)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `\"Bash(codex exec *)\"` is a broad wildcard allowlist entry. Any `codex exec <anything>` runs without a prompt. Narrow to specific subcommands actually needed.",
+    "- [High] .claude/settings.local.json:62~107 — All hook commands now embed hardcoded absolute Windows paths (`D:/hoonProJect/worktrees/agent-factory`). The original `$PWD` was portable; these break on any other machine or directory move. Store the path in an env var instead.",
+    "- [Medium] core/fsa_loop.py:572 — `_apply_evolution_guard` return type is untyped `tuple`. Should be `tuple[int, str | None]` for clarity and static-analysis correctness.",
+    "- [Medium] core/fsa_loop.py (truncated) — Diff is cut off after `if level != 4 or not self._evolution_failed_skills:`. Cannot verify the else-branch or that all code paths return a 2-tuple. Missing-return risk.",
+    "- [Medium] core/fsa_loop.py:316 — `skill_dir=_detected_skill_dir` passes `None` when level ≠ 4. Confirm `_try_evolve_failed_skill` handles `None` gracefully without silent no-ops or AttributeErrors.",
+    "- [Low] .claude/settings.local.json:125 — Trailing newline removed (`No newline at end of file`). Minor but causes noisy diffs on future edits; restore it.",
+    "- [Info] 14 of 18 changed files are data/log/cursor files (skill-usage.jsonl, session_cursor.json, eval reports, syncCompyne logs). These inflate the diff but carry no logic risk."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:50 — `2026-04-14-build-diet` (d30cfa81)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:35` — `"Bash(codex exec *)"` wildcard in allowlist permits arbitrary argument execution via codex. Scope to specific subcommands instead.
+- **[High]** `.claude/settings.local.json:62,70,81,92,103` — Hardcoded absolute path `D:/hoonProJect/worktrees/agent-factory` replaces portable `$PWD`. Breaks on any other machine or if the worktree moves.
+- **[Medium]** `core/fsa_loop.py:267` — `result` is passed as a plain `dict` to `_apply_evolution_guard`; if the execution pipeline ever returns `None` at that point, `result.get("reason", "")` raises `AttributeError`. No null guard exists.
+- **[Medium]** `core/fsa_loop.py:582-590` — Behavior change: old code escalated to Level 5 whenever **any** blocked skill existed; new code only escalates if `_detect_failed_skill_dir` matches the current cycle's skill. If detection returns `None` (name not found in reasoning text), a legitimately blocked skill silently stays at Level 4 instead of being force-escalated.
+- **[Low]** `core/fsa_loop.py:598` — `skill_dir: str | None = None` uses a union type literal requiring Python 3.10+. Other signatures in this file should be verified for consistency.
+- **[Low]** `.claude/settings.local.json` — Missing trailing newline (noted in diff). Minor but can cause noisy git diffs.
+- **[Info]** Hook commands changed from `python3` to `python`. On Windows this is usually correct, but worth confirming `python` resolves to the intended interpreter in all shell contexts.
+
+---
+
+## 2026-04-29 13:51 — `2026-04-14-build-diet` (12f56ef6)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:64,72,83,93,103` — `python3 ./ + $PWD` → `python D:/hoonProJect/...` 절대경로 하드코딩. 다른 PC/경로에서 hook 전체 무력화됨. `$PWD` 동적 변수가 Windows에서 동작하지 않는다면 환경변수 `%CD%` 또는 별도 launcher 스크립트 사용 권장.
+- **[Medium]** `.claude/settings.local.json:38` — `"Bash(codex exec *)"` 와일드카드 허용 추가. `codex exec` 인자 제한 없이 자동 승인되므로 임의 명령 실행 노출 범위가 넓음. 필요한 서브커맨드만 명시적으로 열거할 것.
+- **[Medium]** 커밋 메시지(`feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback`)와 실제 변경 범위 불일치. diff에 SKILL.md fallback 로직이 없고 hook 경로 수정 + FSA guard 리팩터가 주 내용. 내용과 다른 커밋 메시지는 bisect/추적 시 혼란 유발.
+- **[Low]** `core/fsa_loop.py:320-323` — `gate_result is not None and gate_result.passed` 분기 내에서 `evolved_skill_name`을 설정하지만, `gate_result.passed`가 False인 GateResult가 반환될 수 있는지 타입 계약이 명확하지 않음(`_try_evolve_failed_skill` docstring: "PUBLISHED → GateResult(passed=True), 그 외 → None"이라면 문제없으나 방어적 assert 또는 타입 주석 추가 권장).
+- **[Low]** `.claude/settings.local.json` 파일 끝 개행 누락 (`\ No newline at end of file`). JSON 파서 자체는 허용하나 git diff 노이즈 발생 + 일부 도구 경고.
+- **[Info]** `_apply_evolution_guard` 추출: 기존 인라인 3줄보다 정밀도 향상 (현재 사이클 탐지 스킬과 차단 목록 교차 확인). 로직 자체는 정상.
+- **[Info]** `skill_dir` 파라미터를 `_try_evolve_failed_skill`에 전달해 이중 탐색 방지한 것은 올바른 개선.
+
+---
+
+## 2026-04-29 13:51 — `2026-04-14-build-diet` (85a7d520)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- [High] `.claude/settings.local.json:38` — `"Bash(codex exec *)"` 와일드카드 허용은 임의 `codex exec` 명령 실행을 무제한 허가함. 구체적인 패턴으로 범위 제한 필요.
+- [High] `.claude/settings.local.json:62,72,82,92,102` — `$PWD` 대신 `D:/hoonProJect/worktrees/agent-factory` 하드코딩. 다른 머신/경로에서 hook 전체 무력화됨. `settings.local.json`이므로 본인 전용이라도, worktree 이동 시 즉시 고장.
+- [Medium] `core/fsa_loop.py:571` — `_apply_evolution_guard` 반환 타입이 `tuple`만 선언됨. `tuple[int, str | None]`로 명시해야 정적 분석 가능.
+- [Medium] `core/fsa_loop.py` — diff가 중간에 잘려 `_apply_evolution_guard` 본문 전체 확인 불가. 특히 `detected_skill_dir` 탐색 로직과 `_evolution_failed_skills` 변경 여부를 검증할 수 없음.
+- [Low] `.claude/settings.local.json` — 파일 끝 개행 제거(`\ No newline at end of file`). JSON 도구 호환성 문제 가능성.
+- [Info] `core/fsa_loop.py:264` — 인라인 3줄 가드를 `_apply_evolution_guard()`로 분리한 것은 테스트 가능성 측면에서 긍정적.
+
+**요약**: `codex exec *` 와일드카드 허용(보안)과 절대 경로 하드코딩(이식성)이 주요 문제. `fsa_loop.py` 리팩터링 방향은 올바르나 diff 잘림으로 전체 검증 불가.
+
+---
+
+## 2026-04-29 13:52 — `2026-04-14-build-diet` (6a7d8ff9)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json:37 — "Bash(codex exec *)" wildcard pre-approves any
+           codex exec invocation without prompting. Unconstrained code execution bypass.
+
+- [Medium] .claude/settings.local.json:61,71,82,92,103 — All hook commands hardcoded to
+           absolute path "D:/hoonProJect/worktrees/agent-factory/". Breaks on any other
+           machine or repo location. The replaced $PWD was portable; this is a regression.
+
+- [Medium] core/fsa_loop.py:589 — When level is forced to 5, _apply_evolution_guard returns
+           (5, _cand_dir). The caller's elif level==5 block calls _decompose_and_execute,
+           which never consumes _detected_skill_dir. The skill is not evolved, not logged,
+           not added to _evolution_failed_skills — silent discard with no signal to the caller.
+
+- [Low]    core/fsa_loop.py:319-323 — evolved_skill_name assigned only when gate_result is
+           non-None AND passed. If it was set by a prior cycle and gate_result is None this
+           iteration, stale value is silently carried forward. Initialize to None before the
+           elif level==4 block.
+
+- [Low]    tests/test_phase7_dep_graph_evolve.py — No test for _apply_evolution_guard (the
+           primary logic change in this PR). The refactor from inline to method is untested.
+
+- [Info]   .claude/settings.local.json: missing newline at end of file (trailing whitespace
+           diff noise in future reviews).
+```
+
+**Summary**: Two issues warrant attention before merge — the `codex exec *` wildcard (security) and the hardcoded absolute paths (portability regression). The Level 5 skill_dir silent discard is a logic clarity issue but not a crash risk. Add a `_apply_evolution_guard` unit test and initialize `evolved_skill_name = None` before the level-4 branch.
+
+---
+
+## 2026-04-29 13:53 — `2026-04-14-build-diet` (a711e40a)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[Medium] `.claude/settings.local.json`:35** — `"Bash(codex exec *)"` 와일드카드 허용은 임의 명령 실행 경로가 될 수 있음. `codex exec` 가 수락하는 인수 범위를 명시적으로 제한할 것을 권장.
+
+- **[Medium] `.claude/settings.local.json`:62,72,82,92,103** — `python3`→`python` + `$PWD`→하드코딩 절대 경로 변경. 다른 머신/워크트리에서 클론하면 hooks가 즉시 깨짐. `settings.local.json` 이므로 의도적일 수 있으나, `.gitignore` 처리가 없으면 타인 환경에서 오동작.
+
+- **[Low] `core/fsa_loop.py`:587** — `_cand_dir`이 `None`일 때 `os.path.basename(None)` 호출이 발생하지 않도록 `_cand_dir` 분기가 먼저 체크됨(정상). 단, `_cand_dir`이 빈 문자열 `""` 인 경우 `basename("")` → `""` 이고 `_cand_name`이 falsy로 처리되므로 Level 5 에스컬레이션이 누락될 수 있음. `_detect_failed_skill_dir`의 반환 계약 확인 필요.
+
+- **[Info] `core/fsa_loop.py`:574-590** — 인라인 3줄 → `_apply_evolution_guard()` 추출은 적절. `skill_dir` 반환을 `_try_evolve_failed_skill`에 전달해 이중 탐색 제거한 점 긍정적.
+
+- **[Info] `.claude/settings.local.json`:125** — EOF 개행 누락. 사소하지만 diff 노이즈 원인.
+
+---
+
+## 2026-04-29 13:53 — `2026-04-14-build-diet` (bed9147e)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:38 — `Bash(codex exec *)` 와일드카드 허용은 임의 codex 명령 실행을 전부 승인함. 최소 권한 원칙 위반; 실제 필요한 하위 명령만 명시적으로 열거해야 함.",
+    "- [Medium] .claude/settings.local.json:62,72,82,92,102 — 절대 경로 `D:/hoonProJect/worktrees/agent-factory` 하드코딩. 다른 PC/경로에서 hook 전체 무력화. `$PWD` 기반 동적 경로 또는 env var 치환 필요.",
+    "- [Medium] core/fsa_loop.py:316 — `skill_dir=_detected_skill_dir` 전달 시 `_detected_skill_dir`가 `None`일 수 있음. `_try_evolve_failed_skill` 시그니처 및 내부에서 `None` 처리 여부 확인 필요 (diff 잘려서 미확인).",
+    "- [Low] core/fsa_loop.py:572 — `_apply_evolution_guard` 반환 타입이 `tuple`로만 선언됨. `tuple[int, str | None]` 명시 권장 (Python 3.9+).",
+    "- [Info] .claude/settings.local.json — `python3` → `python` 변경은 Windows 호환성 수정으로 정상. `name` 필드 추가도 가독성 개선으로 적절."
+  ],
+  "summary": "주요 위험 2건: codex exec 와일드카드 허용(보안) + 절대 경로 하드코딩(이식성). `_detected_skill_dir=None` 전파 경로 확인 후 머지 권장."
+}
+```
+
+---
+
+## 2026-04-29 13:54 — `2026-04-14-build-diet` (176cbdcd)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "verdict": "CONDITIONAL_PASS",
+  "summary": "핵심 로직(Level 4→5 가드 정밀화)은 올바른 버그픽스. settings.local.json의 광범위 허용과 하드코딩 경로가 주요 지적 사항.",
+  "findings": [
+    {
+      "severity": "High",
+      "location": ".claude/settings.local.json",
+      "finding": "\"Bash(codex exec *)\" 와일드카드 허용 — codex exec 서브커맨드 전체를 무제한 허용. 인가된 codex 명령 패턴으로 범위를 좁혀야 한다."
+    },
+    {
+      "severity": "Medium",
+      "location": ".claude/settings.local.json:64,72,81,90,100",
+      "finding": "hook command가 D:/hoonProJect/worktrees/agent-factory 절대 경로로 하드코딩 — 다른 PC 또는 clone 경로 변경 시 전 hook이 무음 실패. settings.local.json은 .gitignore 대상이어야 하며, 템플릿 파일로 관리 권장."
+    },
+    {
+      "severity": "Low",
+      "location": "core/fsa_loop.py:582-590",
+      "finding": "_apply_evolution_guard: _evolution_failed_skills 체크 결과와 무관하게 _detect_failed_skill_dir를 항상 호출. 조건 순서를 바꿔 failed_skills 포함 시에만 탐색하면 불필요한 비용 절감 가능."
+    },
+    {
+      "severity": "Low",
+      "location": "core/fsa_loop.py:574",
+      "finding": "반환 타입 힌트가 tuple 단순형 — tuple[int, str | None]으로 명시하면 호출 지점에서 언패킹 타입 추론 개선."
+    },
+    {
+      "severity": "Info",
+      "location": "core/fsa_loop.py:265-267",
+      "finding": "Level 4→5 강제 에스컬레이션 로직 정밀화(전체 failed_skills → 현재 사이클 탐지 스킬 한정) 방향은 올바른 버그픽스. skill_dir 전달로 이중 탐색 제거도 적절."
+    },
+    {
+      "severity": "Info",
+      "location": ".claude/settings.local.json (마지막 줄)",
+      "finding": "파일 말미 개행 없음(no newline at EOF) — diff 노이즈 유발."
+    }
+  ],
+  "block_items": ["High — codex exec * 와일드카드 허용 범위 축소 필요"],
+  "pass_conditions": "High 항목(codex exec 범위 제한) 수정 후 재검토"
+}
+```
+
+---
+
+## 2026-04-29 13:55 — `2026-04-14-build-diet` (840a8857)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:62,71,82,93,104` — All hook commands replaced `$PWD` with hardcoded absolute Windows paths (`D:/hoonProJect/worktrees/agent-factory`). Breaks cross-machine and cross-OS portability; this file is tracked in git so it will break other contributors/environments.
+
+- **[Medium]** `.claude/settings.local.json:38` — `"Bash(codex exec *)"` wildcard added to the allow list. This permits any `codex exec` subcommand without restriction; should be scoped to the minimum required invocation pattern.
+
+- **[Medium]** `core/fsa_loop.py:571` — `_apply_evolution_guard` diff is truncated at the `if level != 4 or not self._evolution_failed_skills:` line — the early-return path and full tuple construction are not visible. Cannot verify the guard logic is complete or that the returned `_detected_skill_dir` is always a valid value (not `None`) before being passed downstream.
+
+- **[Low]** `core/fsa_loop.py:316` — `skill_dir=_detected_skill_dir` is a new keyword argument passed to the gate call. If the callee's signature was not updated to accept `skill_dir`, this will raise a `TypeError` at runtime on every Level 4 escalation cycle.
+
+- **[Info]** `.claude/settings.local.json` — Trailing newline removed (last line). Minor but creates noisy diffs.
+
+- **[Info]** — 13 of 18 changed files (`syncCompyne/*`, `data/*`, `projects/*`) are data/config files unrelated to the commit title `feat(T1-skill-md-fallback)`. Commit scope is much wider than the feature it describes; consider splitting.
+
+---
+
+## 2026-04-29 13:56 — `2026-04-14-build-diet` (89829ac5)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "Hook commands hardcoded to absolute Windows path `D:/hoonProJect/worktrees/agent-factory`. This breaks on any other machine or if the worktree is moved. Previous `$PWD`-relative form was portable; this regression should be reverted or replaced with a portable alternative."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": 38,
+      "finding": "`Bash(codex exec *)` wildcard added to `allow` list. Overly broad — allows arbitrary subcommands via `codex exec`. Should be scoped to specific known commands."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": 576,
+      "finding": "`_apply_evolution_guard` return type is annotated as `tuple` without generic params (`tuple[int, str | None]`). Weakens static analysis and IDE support."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": 587,
+      "finding": "If `_cand_dir` is an empty string (falsy but not None), `os.path.basename` returns `''`, so `_cand_name` is falsy and guard silently skips. Should check `if _cand_dir` explicitly before calling `basename`, which is already done — but `_detect_failed_skill_dir` returning `''` vs `None` is not guarded upstream."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py",
+      "line": 316,
+      "finding": "`skill_dir=_detected_skill_dir` is now passed to `_try_evolve_failed_skill`, which avoids double-detection — good. But the variable name `_detected_skill_dir` with a leading underscore at call-site (not inside a method) is unconventional; rename to `detected_skill_dir` for clarity."
+    },
+    {
+      "severity": "Low",
+      "file": ".claude/settings.local.json",
+      "line": 125,
+      "finding": "Missing newline at end of file (trailing `\\n` removed). Minor but can cause noisy diffs."
+    },
+    {
+      "severity": "Info",
+      "file": "core/fsa_loop.py",
+      "line": 574,
+      "finding": "Refactoring the inline Level 4→5 guard into `_apply_evolution_guard` is the right direction — logic is now testable in isolation and the double-detection elimination via returned `skill_dir` is a clean improvement."
+    }
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:56 — `2026-04-14-build-diet` (a7fc8f67)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:59,70,81,92,103 — 모든 hook command가 하드코딩된 절대 경로 (D:/hoonProJect/worktrees/agent-factory/)로 교체됨. 다른 머신/경로에서 즉시 실패. settings.local.json이 공유될 경우 이식성 0. 기존 $PWD 방식이 더 안전함.",
+    "- [High] .claude/settings.local.json:38 — 'Bash(codex exec *)' 와일드카드 허용 추가. codex exec는 임의 명령 실행 가능 — 허용 범위가 너무 광범위하여 권한 상승 경로가 됨.",
+    "- [Medium] core/fsa_loop.py:572+ — _apply_evolution_guard() diff가 중간에 잘려 early-return 분기의 반환값을 확인 불가. level != 4 또는 _evolution_failed_skills 미존재 시 (level, None) 반환인지 검증 필요.",
+    "- [Medium] core/fsa_loop.py:571 — 반환 타입이 tuple로만 선언됨 (tuple[int, str | None] 미지정). _detected_skill_dir를 None-check 없이 skill_dir=로 전달하면 _try_evolve_failed_skill 내부에서 NoneType 오류 잠재.",
+    "- [Low] .claude/settings.local.json:125 — 파일 끝 개행 누락 (No newline at end of file). JSON 파일 관례 위반."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:57 — `2026-04-14-build-diet` (da3c48d0)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "file": "core/fsa_loop.py",
+      "line": "~585",
+      "finding": "_apply_evolution_guard가 os.path.basename(_cand_dir)로 스킬명을 추출하는데, _cand_dir가 trailing slash로 끝나면 basename이 빈 문자열을 반환하여 매칭 실패. os.path.basename(os.path.normpath(_cand_dir)) 필요."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": "~316",
+      "finding": "_detected_skill_dir가 None일 때 skill_dir=None이 _try_evolve_failed_skill에 전달되면 내부에서 재탐색을 수행하므로 최적화 효과 없음. None 전달 경로가 의도적인지 명시 필요."
+    },
+    {
+      "severity": "Medium",
+      "file": ".claude/settings.local.json",
+      "line": "N/A",
+      "finding": "permissions 블록 전체(allow/deny 목록) 제거됨. 기존 deny 목록에 있던 rm/del/git-reset--hard 등 파괴적 명령 차단이 사라짐. 의도적 제거라면 다른 위치에 동일 deny 규칙이 있는지 확인 필요."
+    },
+    {
+      "severity": "Medium",
+      "file": ".claude/settings.local.json",
+      "line": "N/A",
+      "finding": "hook command가 절대 경로 D:/hoonProJect/worktrees/agent-factory로 하드코딩됨. 다른 머신 또는 경로 이동 시 즉시 브레이크. python3 → python 변경도 포함돼 Unix 계열에서 python 미설치 시 실패 가능성."
+    },
+    {
+      "severity": "Low",
+      "file": "tests/test_phase7_dep_graph_evolve.py",
+      "line": "~470",
+      "finding": "import from unittest.mock가 테스트 메서드 내부에 위치. 모듈 상단 임포트로 이동 권장(기존 패턴과 불일치)."
+    },
+    {
+      "severity": "Low",
+      "file": "syncCompyne/memory_store.py",
+      "line": "N/A",
+      "finding": "diff가 순수 CRLF→LF 또는 인코딩 변환으로 보임(내용 변경 없음). 불필요한 whitespace diff는 git blame 추적을 오염시킴."
+    },
+    {
+      "severity": "Info",
+      "file": "core/fsa_loop.py",
+      "line": "~571",
+      "finding": "커밋 메시지는 'SKILL.md description fallback'이나 diff에서 SKILL.md 읽기 로직이 보이지 않음. 해당 기능이 다른 파일(skill_*.py 등)에 있다면 변경 파일 목록에서 누락된 것."
+    }
+  ]
+}
+```
+
+---
+
+## 2026-04-29 13:58 — `2026-04-14-build-diet` (c1757c92)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": null,
+      "finding": "_apply_evolution_guard()의 반환 타입이 `tuple`로만 선언되어 있어 tuple[int, str | None]이 아닌 타입으로 역추적이 어려움. 타입 힌트를 tuple[int, str | None]으로 명시 권장."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py",
+      "line": null,
+      "finding": "_apply_evolution_guard()에서 analysis 파라미터의 타입 힌트가 누락(Any). analysis.evaluator_reasoning 접근이 런타임까지 검증되지 않음."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py",
+      "line": null,
+      "finding": "result.get('reason', '')에서 result['reason']이 None인 경우 빈 문자열 대체가 되어 _detect_failed_skill_dir에 None 대신 '' 전달 — 실제 의도와 부합하는지 확인 필요."
+    },
+    {
+      "severity": "Low",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "permissions 블록(allow/deny 목록) 전체 제거로 이전에 허용됐던 git, python, pytest 명령에 대한 자동 승인이 사라짐. 로컬 전용 파일이지만 재설정 없이 커밋되면 다른 환경에서 권한 프롬프트 폭증 가능."
+    },
+    {
+      "severity": "Low",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "hook command에 절대 경로(D:/hoonProJect/worktrees/agent-factory)가 하드코딩됨. 다른 머신/경로에서 클론 시 hook이 무음 실패함. $PWD 또는 상대 경로 사용이 이식성 면에서 더 안전."
+    },
+    {
+      "severity": "Info",
+      "file": "tests/test_phase7_dep_graph_evolve.py",
+      "line": null,
+      "finding": "신규 테스트 2개가 happy path(같은 스킬→L5)와 guard path(다른 스킬→L4)를 모두 검증함. 커버리지 양호. level != 4 분기(guard 조기 반환)에 대한 테스트는 없으나 자명한 경우라 생략 가능."
+    },
+    {
+      "severity": "Info",
+      "file": "syncCompyne/*.py",
+      "line": null,
+      "finding": "memory_store.py, project_log_cli.py, workspace_context_cli.py diff가 CRLF→LF 줄끝 변환만 발생(논리 변경 없음). 실질적 코드 변경 없음."
+    }
+  ],
+  "summary": "핵심 변경(fsa_loop.py _apply_evolution_guard 분리)은 올바른 방향이며 버그 위험 낮음. 주요 지적: 타입 힌트 미완성(Medium), settings.local.json 하드코딩 절대경로 및 permissions 전체 제거(Low 2건)."
+}
+```
+
+---
+
+## 2026-04-29 13:59 — `2026-04-14-build-diet` (027d5f39)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "finding": "permissions.deny 블록 전체 제거 — rm/del/git reset --hard/git checkout -- 등 파괴적 명령 차단이 사라짐. CLAUDE.md 'Destructive Action Guard' 정책 위반."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "finding": "Hook 경로가 절대 경로(D:/hoonProJect/worktrees/agent-factory)로 하드코딩됨. 기존 $PWD 방식이 이식성 있었는데 회귀. 다른 PC/경로에서 모든 hook이 즉시 실패."
+    },
+    {
+      "severity": "Medium",
+      "file": "skills/registry.yaml:8-9",
+      "finding": "abc 스킬의 meta_path/path가 임시 테스트 디렉터리(tests/_tmp/af-test-ba801729/)를 가리킴. 테스트 아티팩트가 registry에 커밋된 것 — 다음 테스트 실행 시 경로 불일치."
+    },
+    {
+      "severity": "Medium",
+      "file": "skills/registry.yaml, skills/new_skill/skill-promotion.json",
+      "finding": "절대 Windows 경로(D:\\hoonProJect\\...)가 레지스트리에 하드코딩됨. 프로젝트 이동 또는 다른 머신에서 동작 불가. 상대 경로 또는 런타임 해석 필요."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py:582-590",
+      "finding": "_apply_evolution_guard에서 os.path.basename()으로 스킬명 추출. _detect_failed_skill_dir가 후행 슬래시 포함 경로를 반환하면 basename이 빈 문자열이 돼 조건 미충족 — 가드가 침묵하며 실패."
+    },
+    {
+      "severity": "Info",
+      "file": "core/fsa_loop.py:574-648",
+      "finding": "_apply_evolution_guard 추출 및 skill_dir 전달로 _detect_failed_skill_dir 이중 호출 제거 — 올바른 리팩터링. 테스트 2건(per-skill guard)도 정확히 신규 동작 검증함."
+    },
+    {
+      "severity": "Info",
+      "file": "syncCompyne/memory_store.py",
+      "finding": "파일 전체 교체이지만 코드 변경 없음(CRLF→LF 줄끝 정규화로 보임). 기능 영향 없음."
+    }
+  ],
+  "summary": "핵심 버그픽스(evolution guard per-skill 정밀화)는 올바름. 그러나 settings.local.json에서 deny 퍼미션 삭제와 hook 절대경로 하드코딩이 High 수준 회귀이며, registry.yaml의 테스트 임시경로 커밋은 Medium 수준 오염임."
+}
+```
+
+---
+
+## 2026-04-29 14:00 — `2026-04-14-build-diet` (683507da)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```
+- [High] .claude/settings.local.json — 하드코딩된 절대 경로(`D:/hoonProJect/worktrees/agent-factory/`)가 모든 hook command에 박혀 있음. 다른 머신/경로에서 클론하면 hook이 즉시 무너짐. `$PWD`/상대경로 또는 별도 env var로 교체 필요.
+
+- [High] .claude/settings.local.json — `permissions.allow` 블록이 완전히 제거됨. 이전엔 허용 목록이 있었으나 지금은 `deny`만 남아 있음. 의도적인 변경이면 OK, 하지만 화이트리스트 제거는 허용 범위 전체를 묵시적 기본값에 맡기는 것이므로 검토 필요.
+
+- [High] .claude/settings.local.json — JSON 구조 누락: 마지막 `"permissions"` 블록이 닫히지 않은 채(`}` 하나 부족) 보임. Bash diff grep 결과에서 `"permissions": { "deny": [ ... ] }` 다음 최종 `}` 누락 — 파일이 유효한 JSON인지 `python -m json.tool` 로 검증 필요.
+
+- [Medium] core/fsa_loop.py `_apply_evolution_guard()` — `_detect_failed_skill_dir()`가 `None`을 반환하면 `os.path.basename(None)`이 아닌 조건부로 처리하고 있어 정상이지만, 반환 타입 어노테이션이 `tuple`(naked)이라 `tuple[int, str | None]`으로 명시하지 않으면 mypy/pyright 경고 발생.
+
+- [Medium] core/skill_metadata_adapter.py `_fill_missing_description()` — `when_to_use`가 비어있을 때 `md_desc`(body 첫 문단)를 그대로 채우는데, 이 값은 `description`과 동일한 텍스트가 됨. 의미상 중복이 발생하며 `when_to_use` 시맨틱이 퇴화됨.
+
+- [Low] skills/registry.yaml — `meta_path`/`path` 필드에 로컬 테스트 임시 경로(`tests/_tmp/af-test-ba801729/`)가 커밋됨. 이 값은 실행 환경에 종속된 ephemeral 경로이므로 registry에 보존되면 안 됨.
+
+- [Low] syncCompyne/*.py — CRLF→LF 경고가 3개 파일에서 발생. `.gitattributes`에 `* text=auto` 또는 `*.py text eol=lf`를 추가해 라인엔딩을 통일할 것.
+
+- [Info] core/fsa_loop.py — `_detected_skill_dir`를 `_apply_evolution_guard`에서 반환해 `_try_evolve_failed_skill`에 재활용하는 구조는 이중 탐색을 올바르게 방지함. 설계 의도 명확.
+```
+
+---
+
+## 2026-04-29 14:01 — `2026-04-14-build-diet` (3266a44b)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "verdict": "APPROVE_WITH_NOTES",
+  "findings": [
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "permissions.allow/deny 블록 전체 삭제됨. 이전에 명시적으로 허용된 Bash 명령(git, python, pytest 등)과 deny 가드(rm, del, git reset --hard 등)가 모두 제거되어 권한 경계가 undefined 상태가 됨. 의도적 정리인지, 글로벌 settings.json으로 이동됐는지 확인 필요."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "hook command가 $PWD 변수 → 하드코딩 경로(D:/hoonProJect/worktrees/agent-factory)로 변경. 다른 머신/경로에서 클론 시 hook이 무조건 실패함. python3 → python 변경도 Windows 전용 가정을 강화함."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": 583,
+      "finding": "_apply_evolution_guard가 tuple을 반환하지만 반환 타입 힌트가 tuple만 표기되어 있음(tuple[int, str | None] 미명시). 호출부에서 언패킹 실수 위험."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py",
+      "line": 591,
+      "finding": "_cand_dir가 None이면 os.path.basename(None)에서 TypeError 발생. 현재 코드에서 if _cand_dir 가드로 막혀 있으나, os.path.basename 호출이 _cand_dir is not None 조건 내부에 있어 안전하나, 가독성을 위해 early-return 패턴 권장."
+    },
+    {
+      "severity": "Low",
+      "file": "syncCompyne/memory_store.py",
+      "line": null,
+      "finding": "diff가 CRLF→LF 교체로 인한 전체 파일 재작성으로 표시됨. 실제 로직 변경 없음. 줄 끝 설정(.gitattributes)으로 재발 방지 권장."
+    },
+    {
+      "severity": "Info",
+      "file": "tests/test_phase7_dep_graph_evolve.py",
+      "line": 467,
+      "finding": "신규 테스트 2개(_per_skill_guard_*)가 _apply_evolution_guard의 핵심 분기를 정확히 커버함. 정상."
+    }
+  ]
+}
+```
+
+---
+
+## 2026-04-29 14:02 — `2026-04-14-build-diet` (1610db1e)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "Critical",
+      "file": ".claude/settings.local.json",
+      "finding": "전체 deny 목록 제거 — rm, del, git reset --hard, git restore 등 파괴적 명령 차단이 사라짐. 교차검증 에이전트가 제한 없이 파괴적 shell 명령 실행 가능."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "finding": "Hook 명령이 하드코딩된 절대 경로(D:/hoonProJect/worktrees/agent-factory/...)로 고정됨. 다른 머신/경로에서 checkout 시 모든 hook이 즉시 실패. $PWD 변수 또는 상대 경로로 복원 필요."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "finding": "allow 목록 전체 제거 — python, git, pytest 등 반복 실행 명령에 대해 매번 사용자 승인 프롬프트가 발생해 자동화 파이프라인이 차단됨."
+    },
+    {
+      "severity": "Medium",
+      "file": "skills/registry.yaml",
+      "finding": "abc 스킬의 meta_path/path가 임시 테스트 디렉터리(tests/_tmp/af-test-ba801729/)를 가리킴. 테스트 아티팩트가 레지스트리에 커밋됨 — 테스트 재실행 시 경로 소멸."
+    },
+    {
+      "severity": "Medium",
+      "file": "skills/registry.yaml",
+      "finding": "new_skill의 last_eval_report 경로가 하드코딩된 Windows 절대 경로. 머신 이식성 없음. 상대 경로(skills/new_skill/skill-eval-report.json)가 이미 다른 필드에 사용되는데 일관성 없음."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py:574",
+      "finding": "_apply_evolution_guard 반환 타입이 bare `tuple`로 선언됨. tuple[int, str | None]으로 좁혀야 하위 호출부에서 타입 추론이 정확해짐."
+    },
+    {
+      "severity": "Low",
+      "file": "tests/test_phase7_dep_graph_evolve.py:470,483",
+      "finding": "`from unittest.mock import patch, MagicMock`가 테스트 메서드 내부에 반복 임포트됨. 파일 상단 임포트로 이동 필요."
+    },
+    {
+      "severity": "Info",
+      "file": "core/fsa_loop.py:571-600",
+      "finding": "_apply_evolution_guard 리팩터링은 정확함. level==4이고 failed_skills가 있을 때만 탐색하며 결과를 하위로 전달해 이중 탐지를 올바르게 방지함."
+    },
+    {
+      "severity": "Info",
+      "file": "syncCompyne/*.py",
+      "finding": "CRLF → LF 줄바꿈 정규화만 발생. 로직 변경 없음."
+    }
+  ]
+}
+```
+
+---
+
+## 2026-04-29 14:03 — `2026-04-14-build-diet` (9f46cdb2)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "전체 `permissions` 블록(allow/deny 목록) 삭제 — `git reset --hard`, `rm`, `git clean` 등 파괴적 명령 차단 규칙이 사라져 보호 수준이 낮아짐. 의도적 제거라면 전역 settings.json에 deny 규칙이 존재하는지 확인 필요."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": null,
+      "finding": "hook 명령이 `python3 ./scripts/...` + `$PWD`(포터블)에서 하드코딩 절대 경로 `D:/hoonProJect/worktrees/agent-factory`로 변경 — 다른 머신/경로에서 hook이 즉시 실패함. 이식성 완전 파괴."
+    },
+    {
+      "severity": "Medium",
+      "file": "core/fsa_loop.py",
+      "line": 571,
+      "finding": "`_apply_evolution_guard`에서 `_evolution_failed_skills`가 비어 있지 않은 상태에서 `cand_name` 탐지 실패 시 Level 5 강제(`return 5, None`) — 현재 실패가 전혀 다른 원인임에도 Level 4 기회를 박탈할 수 있음. 경고 로그는 있으나 false-positive 에스컬레이션 위험 존재."
+    },
+    {
+      "severity": "Medium",
+      "file": "syncCompyne/memory_store.py",
+      "line": null,
+      "finding": "파일 내용이 동일한데 diff가 전체 라인으로 표시됨 — 줄끝 문자(CRLF↔LF) 변환으로 추정. 실질 코드 변경 없음. `.gitattributes`로 line-ending 정책 통일 권장."
+    },
+    {
+      "severity": "Low",
+      "file": "core/fsa_loop.py",
+      "line": 607,
+      "finding": "`_try_evolve_failed_skill` 시그니처에 `skill_dir: str | None = None` 추가 — `_apply_evolution_guard`에서 전달되므로 이중 탐지 방지는 의도에 맞으나, `None` 전달 시 내부에서 다시 `_detect_failed_skill_dir`를 호출하는 fallback 경로가 여전히 존재함. 두 경로 간 일관성 주의."
+    },
+    {
+      "severity": "Low",
+      "file": "tests/test_phase7_dep_graph_evolve.py",
+      "line": 498,
+      "finding": "`test_per_skill_guard_detection_failure_forces_level5`에서 탐지 실패(None)→Level 5 강제를 검증하지만, 이 경우 `_evolution_failed_skills` 내용과 무관하게 강제되는지(빈 셋이면 안 강제되는지)를 검증하는 음성 케이스가 없음."
+    },
+    {
+      "severity": "Info",
+      "file": "syncCompyne/project_log_cli.py, workspace_context_cli.py",
+      "line": null,
+      "finding": "diff 내용이 CRLF 변환 외 실질 변경 없음 — 의도적 whitespace-only 커밋이라면 commit scope에서 제외하는 것이 이력 노이즈를 줄임."
+    }
+  ]
+}
+```
+
+**요약**: 가장 시급한 건 `settings.local.json`의 두 가지 문제 — ① deny 보호 규칙 삭제(파괴적 명령 무방비), ② 하드코딩 절대 경로(이식성 파괴). `core/fsa_loop.py`의 탐지 실패 시 무조건 Level 5 강제 로직은 false-positive 리스크가 있어 추가 케이스 검토 필요.
+
+---
+
+## 2026-04-29 14:04 — `2026-04-14-build-diet` (e89c82b3)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json — permissions.deny 블록 전체 삭제됨.
+           git reset --hard, rm, del 등 파괴적 명령 차단 규칙이 사라져
+           CLAUDE.md "Destructive Action Guard" 정책 위반. deny 규칙 복원 필요.
+
+- [High]   skills/registry.yaml:1023,1028 — meta_path/path/last_eval_report에
+           절대 경로(D:\hoonProJect\...) 커밋됨. 이전 커밋에도 macOS 절대경로
+           (/Users/hoon/...) 존재 — 반복 패턴. 타 머신 실행 불가. 런타임 생성
+           또는 상대 경로로 전환해야 함.
+
+- [High]   skills/new_skill/skill-promotion.json:23 — promotion_path도 동일하게
+           Windows 절대 경로 하드코딩. 소스 컨트롤에 커밋 부적합.
+
+- [Medium] .claude/settings.local.json — hook command에 $PWD 대신 절대 경로
+           (D:/hoonProJect/worktrees/agent-factory/...) 하드코딩. 다른 머신·
+           worktree 경로 변경 시 hook 전부 무력화.
+
+- [Medium] core/fsa_loop.py:598 — _apply_evolution_guard()가 cand_dir=None
+           반환 후 _try_evolve_failed_skill(skill_dir=None)을 호출하면
+           내부에서 _detect_failed_skill_dir()를 한 번 더 실행. 이중 탐색
+           비용 발생 (결과는 동일하게 None이라 버그는 아님).
+
+- [Low]    syncCompyne/*.py 5개 파일 — 로직 변경 없이 CRLF→LF 라인 엔딩만
+           변환됨. .gitattributes로 처리해야 할 내용이 diff 노이즈로 포함.
+
+- [Info]   data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json —
+           런타임 데이터 파일이 커밋에 포함. .gitignore 대상 검토 권고.
+```
+
+**핵심 액션 아이템:**
+1. `settings.local.json`에 deny 규칙 복원 (보안 정책 준수)
+2. `registry.yaml` / `skill-promotion.json`의 절대 경로 → 상대 경로 또는 런타임 생성으로 전환
+3. hook command의 절대 경로 → `$PWD` 기반으로 되돌리기
+
+`_apply_evolution_guard()` 리팩터링 자체(Level 4→5 강제 로직 + 테스트 3건)는 정확하고 버그 없음.
+
+---
+
+## 2026-04-29 14:05 — `2026-04-14-build-diet` (cf461e01)
+
+**Context**: feat(T1-skill-md-fallback): knowledge skill SKILL.md description fallback
+
+**Changed (18)**: `.claude/settings.local.json, core/fsa_loop.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+3)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "location": ".claude/settings.local.json:24,34,44,54,64",
+      "finding": "Hook commands hardcode absolute Windows path `D:/hoonProJect/worktrees/agent-factory/` instead of using `$PWD` or a relative path. This breaks on any other machine or if the worktree is moved. The previous `$PWD`-based form was portable."
+    },
+    {
+      "severity": "High",
+      "location": ".claude/settings.local.json (PostToolUse removal)",
+      "finding": "`PostToolUse Write|Edit` hook that ran `post_edit_code_review` was removed. This disables the automatic code-review trigger on every file edit — a regression against the Review-Gate policy established in CLAUDE.md."
+    },
+    {
+      "severity": "Medium",
+      "location": "core/skill_metadata_adapter.py:465-467",
+      "finding": "In `_fill_missing_description`, when `when_to_use` is missing and the frontmatter has no `when_to_use` key, it falls back to `md_desc` (body text). This silently reuses `description` text as `when_to_use`, producing misleading registry entries."
+    },
+    {
+      "severity": "Medium",
+      "location": "core/skill_metadata_adapter.py:449",
+      "finding": "`_fill_missing_description` returns early only when both `description` AND `when_to_use` are non-empty. If one field is set but the other is empty, the SKILL.md is read. The logic is correct, but the early-return condition comment is missing — subtle invariant worth documenting."
+    },
+    {
+      "severity": "Medium",
+      "location": ".claude/settings.local.json:allow",
+      "finding": "The `allow` list was collapsed to a single pytest entry, removing previously needed permissions (`git commit`, `python`, `python3`, etc.). If these were removed intentionally (moved to global settings), this is fine — but there is no evidence of that migration, creating a risk of unexpected permission prompts blocking automation."
+    },
+    {
+      "severity": "Low",
+      "location": "core/skill_metadata_adapter.py:476-492 (auto_detect_and_convert)",
+      "finding": "`_fill_missing_description` is called after YAML/meta.yaml paths but NOT after the `SKILL.md` branch (line 490). A pure SKILL.md skill with a missing frontmatter description and a rich body will not get the body-text fallback applied."
+    },
+    {
+      "severity": "Low",
+      "location": "tests/test_phase7_dep_graph_evolve.py",
+      "finding": "Test file name suggests Phase 7 / dep-graph scope but the feature under review is T1-skill-md-fallback. No tests cover `_fill_missing_description` or `auto_detect_and_convert` with missing-description scenarios — the core new behavior has zero direct test coverage."
+    },
+    {
+      "severity": "Info",
+      "location": "syncCompyne/*.py, syncCompyne/*.md",
+      "finding": "Multiple syncCompyne files are modified but no diff is shown. Cannot verify whether these changes are related to the T1 feature or are incidental churn — scope creep risk."
+    }
+  ]
+}
+```
+
+**Summary:** Two high-severity issues — hardcoded Windows paths in hooks (portability regression) and removal of the `PostToolUse` code-review hook (policy regression). The core fallback logic in `skill_metadata_adapter.py` has a subtle `when_to_use` shadowing bug and a gap where `SKILL.md`-only skills skip the body-text fallback. No tests cover the new fallback path.
+
+---
+
+## 2026-04-29 14:06 — `2026-04-14-build-diet` (c7ad3e1c)
+
+**Context**: feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": "26-66",
+      "finding": "Hook commands hardcoded to absolute Windows path `D:/hoonProJect/worktrees/agent-factory`. 이 파일이 레포에 커밋되면 다른 머신/경로에서 hooks가 완전히 동작 불가. `$PWD` 상대 경로 또는 환경변수 사용 권장."
+    },
+    {
+      "severity": "High",
+      "file": ".claude/settings.local.json",
+      "line": "66-77",
+      "finding": "PostToolUse `Write|Edit` 훅 전체 삭제 — CLAUDE.md Review-Gate 규칙에 따르면 `.py` 수정 후 자동 코드리뷰 트리거가 필수인데, 이 훅이 그 역할을 담당하던 것으로 보임. 삭제 시 review-gate tier 1이 자동 우회됨."
+    },
+    {
+      "severity": "Medium",
+      "file": ".claude/settings.local.json",
+      "line": "8",
+      "finding": "allowlist에 특정 커밋 메시지 패턴(`feat\\(T2-per-skill-escalation\\)...`)이 하드코딩됨. 이 패턴은 해당 커밋 이후 의미가 없어지며, 이후 커밋은 매번 권한 프롬프트를 받게 됨."
+    },
+    {
+      "severity": "Medium",
+      "file": ".claude/settings.local.json",
+      "line": "1-9",
+      "finding": "allowlist가 pytest 1개 + git add/commit 2개로 극단적으로 축소됨. `git push`, `python`, `python3` 등 일상적인 작업이 모두 차단되어 운영 중 지속적인 권한 프롬프트 발생 예상."
+    },
+    {
+      "severity": "Low",
+      "file": ".claude/settings.local.json",
+      "line": "26",
+      "finding": "`python3` → `python` 변경은 Windows 환경에서는 맞지만, 이 파일이 macOS worktree에서도 사용될 경우 `python` 명령이 없을 수 있음 (macOS는 기본적으로 `python3`)."
+    },
+    {
+      "severity": "Info",
+      "file": "data/skill-usage.jsonl, skill-eval-report.json 등",
+      "line": "N/A",
+      "finding": "자동 생성 데이터/상태 파일들 — 기능 로직 변경 없음. diff 미제공으로 내용 검증 불가."
+    }
+  ],
+  "summary": "주요 위험: 절대 경로 하드코딩으로 이식성 파괴 + PostToolUse review 훅 삭제로 Review-Gate 규칙 우회. 두 High 이슈 수정 필수."
+}
+```
+
+---
+
+## 2026-04-29 14:07 — `2026-04-14-build-diet` (37177d91)
+
+**Context**: feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "[High] .claude/settings.local.json:hooks — 훅 커맨드가 하드코딩된 절대 경로(D:/hoonProJect/worktrees/agent-factory/)를 사용. 다른 PC 또는 다른 worktree에서 즉시 broken. python3 → python 변경도 macOS/Linux 호환성 손실.",
+    "[High] .claude/settings.local.json:allow — git commit 권한이 특정 커밋 메시지('feat\\(T2-per-skill-escalation\\)...')로만 허용. 이후 어떤 커밋도 차단됨. 임시 변경이 영구 잔류한 것으로 보임.",
+    "[Medium] .claude/settings.local.json:allow — 기존 git push, python3, git checkout 등 다수 권한 제거. 다음 작업 세션에서 필수 작업 권한 부재로 반복 허용 프롬프트 발생 예상.",
+    "[Medium] .claude/settings.local.json — 머신 고유 절대경로가 포함된 settings.local.json이 레포에 커밋됨. 팀 협업 시 다른 개발자 환경을 덮어쓸 위험. .gitignore에 추가 권장.",
+    "[Low] .claude/settings.local.json — PostToolUse Write|Edit 훅(post_edit_code_review) 제거. 자동 코드 리뷰 트리거가 비활성화되어 Review-Gate 파이프라인 커버리지 감소.",
+    "[Info] 나머지 변경 파일(syncCompyne/*.py, data/*.jsonl 등)은 diff가 잘려 리뷰 불가. 특히 syncCompyne/memory_store.py 변경은 데이터 손실 위험이 있으므로 별도 확인 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 14:07 — `2026-04-14-build-diet` (33000436)
+
+**Context**: feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json:hook commands — $PWD → 하드코딩된 절대경로
+           (D:/hoonProJect/worktrees/agent-factory) 로 교체되어 다른 PC/worktree에서 hook이 즉시 실패함.
+           이전 $PWD 방식이 이식성 면에서 올바른 설계였음.
+
+- [High]   .claude/settings.local.json:PostToolUse — Write|Edit 후 post_edit_code_review를
+           트리거하는 hook 전체 제거됨 (diff 마지막 부분에서 확인). CLAUDE.md Review-Gate 규칙
+           위반: .py 수정 시 자동 리뷰 트리거가 사라져 게이트가 수동 의존으로 전락함.
+
+- [High]   allow list에 특정 커밋 메시지가 그대로 노출됨:
+           "Bash(git commit -m 'feat\\(T2-per-skill-escalation\\)...*)".
+           커밋 메시지별 권한 화이트리스트는 다음 커밋부터 전부 차단되는 안티패턴.
+           "Bash(git commit *)" 패턴으로 유지해야 함.
+
+- [Medium] python3 → python 변경: Windows 환경에서는 무관하지만,
+           Mac/Linux worktree에서 재사용 시 python이 2.x를 가리킬 수 있음.
+
+- [Low]    allow list를 1개 pytest 명령 + 1개 git add + 1개 git commit으로 극단적으로
+           축소함. 일반 개발 워크플로(git push, python 실행 등)가 모두 매번 승인 요청으로
+           전환되어 생산성 저하 예상.
+
+- [Info]   syncCompyne/*.py, data/*.jsonl, *.json 변경은 상태/로그 파일로
+           로직 결함 없음. registry.yaml, skill-eval-report.json도 데이터 갱신에 해당.
+```
+
+**핵심 요약**: `$PWD` 제거로 인한 이식성 파괴(High)와 `PostToolUse` hook 삭제(High)가 즉각 수정이 필요한 항목. 커밋 메시지 하드코딩(High)도 다음 세션 시작 즉시 commit 권한이 막히므로 같이 수정 필요.
+
+---
+
+## 2026-04-29 14:08 — `2026-04-14-build-diet` (2dc7397a)
+
+**Context**: feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드
+
+**Changed (17)**: `.claude/settings.local.json, NEXT_STEPS.md, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+2)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "[High] .claude/settings.local.json — 훅 command가 D:/hoonProJect/worktrees/agent-factory 절대 경로로 하드코딩됨. 다른 머신/worktree에서 즉시 깨짐. $PWD 또는 상대 경로 사용 필요.",
+    "[High] .claude/settings.local.json — python3 → python 으로 변경됨. Windows 환경에서 python이 Python 2를 가리킬 수 있음. 명시적으로 python3 또는 full path 사용 권장.",
+    "[Medium] .claude/settings.local.json — PostToolUse Write|Edit → post_edit_code_review 훅이 제거됨. Review-Gate 자동 트리거 비활성화 — CLAUDE.md의 Review-Gate 규칙 위반 가능.",
+    "[Medium] .claude/settings.local.json — allow 목록에 'git commit -m feat\\(T2-per-skill-escalation\\)...' 단일 특정 커밋 메시지만 허용. 임시 잔여물로 보임, 정리 필요.",
+    "[Low] .claude/settings.local.json — git checkout/reset/clean/stash 등 다수 권한 일괄 제거. 향후 해당 명령 실행 시 권한 프롬프트 재발생 예상."
+  ],
+  "summary": "주요 문제: 절대 경로 하드코딩(이식성 파괴) + PostToolUse 리뷰 훅 삭제(Review-Gate 규칙 위반). 나머지 변경(syncCompyne, data, docs)은 diff 잘림으로 미검증."
+}
+```
+
+---
+
+## 2026-04-29 14:08 — `2026-04-14-build-diet` (b05bb786)
+
+**Context**: feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드
+
+**Changed (17)**: `.claude/settings.local.json, NEXT_STEPS.md, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py ... (+2)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "[High] .claude/settings.local.json:hook_commands — 절대 경로 하드코딩 (D:/hoonProJect/worktrees/agent-factory). 다른 PC/환경에서 hook 실행 즉시 실패. $PWD 또는 상대 경로로 복원 필요.",
+    "[High] .claude/settings.local.json:allow_list — PostToolUse(Write|Edit) hook 제거 확인됨(diff 말미 잘림). post-edit 코드리뷰 자동화가 비활성화되어 Review-Gate 파이프라인 단계 누락 위험.",
+    "[High] .claude/settings.local.json:allow_list — git checkout/reset/pull/stash/clean 등 대부분의 git 권한 삭제. 정상 개발 워크플로우 차단 가능성.",
+    "[Medium] .claude/settings.local.json:6 — 커밋 메시지 허용 패턴이 태스크 특정값 ('feat\\(T2-per-skill-escalation\\)…')으로 고정됨. 이 설정이 커밋에 포함되면 이후 모든 다른 커밋 메시지 거부됨.",
+    "[Low] .claude/settings.local.json:hook_commands — python3 → python 변경. python3만 PATH에 있는 환경에서 hook 실패."
+  ],
+  "summary": "settings.local.json이 특정 PC 경로와 단일 태스크 커밋 메시지에 종속됨. 하드코딩 경로와 task-specific 커밋 권한은 이 커밋에 포함되면 안 됨."
+}
+```
+
+---
+
+## 2026-04-29 14:47 — `2026-04-14-build-diet` (c530166b)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\scripts\check_design_pending.py
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-29 18:09 — `2026-04-14-build-diet` (d4d7740b)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (15)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl — `new_skill` promoted draft→candidate with contract_pass_rate=0.0, hidden_pass_rate=0.0, runtime_success_rate=0.0 across all 6 entries. Promotion gate appears to not enforce minimum pass-rate thresholds.",
+    "- [High] data/skill-usage.jsonl — hardcoded absolute Windows paths (`D:\\hoonProJect\\worktrees\\...`) baked into persisted data records. Cross-machine replay or CI will reference non-existent paths.",
+    "- [Medium] data/skill-usage.jsonl — `historical_score` is frozen at 52 across every promotion event despite `feedback_total_events` incrementing (7→11). Score not recalculated on re-evaluation; staleness risk.",
+    "- [Medium] data/skill-usage.jsonl — `reason: external_eval_passed` with zero runtime evidence (`runtime_total=0`). 'passed' label is misleading; should reflect evidence gaps.",
+    "- [Low] data/skill-usage.jsonl — diff is truncated (last line ends mid-JSON `\"reason\": \"e`). If file on disk is also truncated, downstream JSONL parsers will throw on the malformed record.",
+    "- [Info] syncCompyne/*.py / *.md — listed as changed but diff content not provided; unable to review those files."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:09 — `2026-04-14-build-diet` (b09f9571)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[Info]** `.claude/settings.local.json:47-72` — `UserPromptSubmit`에 hook 3개 등록. `check_pending_review.py` → `check_design_pending.py` → `cli_hook_bridge` 순서로 실행됨. 이전엔 `UserPromptSubmit`에 `cli_hook_bridge` 하나만 있었는데, 두 check 스크립트가 앞으로 이동한 구조. 동작은 맞으나 이름(`agent_factory_claude_userpromptsubmit`)이 3번째 hook에만 있어 앞 두 개는 디버그 시 식별 불가.
+
+- **[Medium]** `data/skill-usage.jsonl` — `report_path`/`promotion_path`에 macOS 절대경로(`/Users/hoon/workTree/...`) 하드코딩. 현재 환경(`D:/hoonProJect/...`)에서 해당 경로가 존재하지 않으므로, 경로를 참조하는 코드가 있다면 `FileNotFoundError` 발생.
+
+- **[Low]** `.claude/settings.local.json:130` — 파일 끝 개행 누락(`\ No newline at end of file`). 일부 도구에서 파싱 경고 유발 가능.
+
+- **[Info]** hook `name` 필드 추가(SessionStart/PreCompact/Stop/SessionEnd) — 디버그 가시성 향상. 긍정적 변경.
+
+- **[Info]** 나머지 파일(syncCompyne/*.py, skills/registry.yaml 등)은 diff가 제공되지 않아 검토 불가.
+
+**요약:** `skill-usage.jsonl`의 플랫폼 간 경로 불일치(Medium)가 유일한 실질적 위험. hook 재정렬은 의도대로 동작 중.
+
+---
+
+## 2026-04-29 18:10 — `2026-04-14-build-diet` (a1741403)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **Medium** `.claude/settings.local.json:48-67` — Hook commands rotated across event slots without changing the surrounding event-type keys. `check_pending_review.py` now fires on what was previously the UserPromptSubmit bridge slot, and the bridge runner now occupies what was the PreToolUse/design-pending slot. Verify the enclosing `"matcher"` / event-type keys in context to confirm correct event → script mapping after rotation.
+
+- **Low** `.claude/settings.local.json:130` — Trailing newline removed (`\ No newline at end of file`). Inconsistent with original; may cause `git diff` noise on future edits.
+
+- **Low** `data/skill-usage.jsonl` (new entries) — `report_path` and `promotion_path` values use `/Users/hoon/workTree/agent-factory/` (macOS absolute path) instead of the current `D:/hoonProJect/worktrees/agent-factory/`. Stale cross-platform paths in log records will break any tooling that resolves these paths on Windows.
+
+- **Info** `.claude/settings.local.json` — Adding `name` fields to hook entries is good practice for debuggability. No issue.
+
+- **Info** `data/skill-usage.jsonl` — `contract_pass_rate`, `hidden_pass_rate`, `runtime_success_rate` all `0.0` with `shadow_cases: 0` on a skill promoted to `candidate`. Acceptable for a placeholder/new_skill slot but worth flagging if this skill ever targets `active`.
+
+---
+
+## 2026-04-29 18:11 — `2026-04-14-build-diet` (9ef6c366)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [High] `.claude/settings.local.json`:65–72 — `hook_runner.py cli_hook_bridge` was moved from slot 2 to slot 4 within the UserPromptSubmit hooks array. If `check_pending_review.py` and `check_design_pending.py` depend on bridge state written by hook_runner, they now fire before the bridge initializes — potential state read-before-write race.
+- [Medium] `data/skill-usage.jsonl` — `report_path` and `promotion_path` contain hardcoded Mac paths (`/Users/hoon/workTree/agent-factory/...`) while the active workspace is `D:/hoonProJect/worktrees/agent-factory/`. If these paths are replayed or resolved at runtime they will silently fail on this machine.
+- [Low] `.claude/settings.local.json`:65 — `name` field added to slots 1, 4, 5, 6, 7 but **omitted** from slots 2 and 3 (`check_pending_review.py`, `check_design_pending.py`). Inconsistent — those hooks are unidentifiable in logs.
+- [Low] `.claude/settings.local.json`:130 — trailing newline removed (`-}` → `+}\ No newline at end of file`). Minor but breaks POSIX convention and may cause noisy diffs in future edits.
+- [Info] `syncCompyne/*.py` and `syncCompyne/*.md` listed as changed but **no diff is shown** — review coverage incomplete for those files.
+
+---
+
+## 2026-04-29 18:12 — `2026-04-14-build-diet` (59706480)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:19` — `Bash(git stash *)` 전역 허용. 스텁 없이 `stash pop`이 누락되면 미커밋 변경사항이 무음으로 소실됨. 범위를 최소화하거나 허용 목록에서 제거 권장.
+
+- **[Medium]** `.claude/settings.local.json:51-68` — 훅 순환 재배치로 `SessionStart`에서 `cli_hook_bridge` 제거됨. 세션 연속성 브릿지가 이제 세 번째 훅(이벤트 불명확)에서 실행 — 세션 재개 요약 생성 타이밍이 달라져 `resume_brief`가 누락될 수 있음.
+
+- **[Medium]** `data/skill-usage.jsonl` — `report_path`/`promotion_path`가 머신별 절대 경로(`/Users/hoon/`, `D:\\warkSpaces\\`)로 하드코딩. 워크트리 경로(`D:\\hoonProJect\\worktrees\\`) 와도 불일치. 상대 경로 또는 프로젝트 루트 기준 경로 사용 권장.
+
+- **[Low]** `data/skill-usage.jsonl` — `new_skill`이 `contract_pass_rate: 0.0`, `runtime_success_rate: 0.0` 상태로 반복 `candidate` 승격. 실질적 검증 없는 자동 승격이 지속되고 있음 — 최소 통과율 임계값 적용 필요.
+
+- **[Info]** `.claude/settings.local.json:18` — `Bash(git pull *)` wildcard 허용으로 원격 변경사항이 검토 없이 자동 적용 가능. `Destructive Action Guard` 정책과 충돌 소지.
+
+---
+
+## 2026-04-29 18:13 — `2026-04-14-build-diet` (25e6d26f)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:17` — `"Bash(git stash *)"` 와일드카드 허용은 `git stash drop`, `git stash clear` 등 비가역적 파괴 작업을 포함. 최소 권한 원칙 위반. `git stash` / `git stash pop`만 명시적으로 허용해야 함.
+
+- **[Medium]** `.claude/settings.local.json:67-70` — `name: "agent_factory_claude_userpromptsubmit"`가 PostToolUse 또는 다른 이벤트 블록에 붙어 있을 가능성 있음 (diff 문맥상 훅 이벤트 순서가 회전됨). 훅 이름과 실제 이벤트 타입 불일치 시 디버깅 혼란 유발.
+
+- **[Medium]** `data/skill-usage.jsonl` — `report_path`/`promotion_path`가 `/Users/hoon/workTree/...` (macOS 절대경로)로 하드코딩됨. Windows 환경(`D:/hoonProJect/...`)에서 이 경로는 무효. 상대경로 또는 환경 독립 경로로 정규화 필요.
+
+- **[Low]** `.claude/settings.local.json:132` — EOF 개행 누락. JSON 파일은 POSIX 표준상 개행으로 끝나야 함 (일부 도구 파싱 이슈).
+
+- **[Info]** 훅 체인 재배치 (SessionStart→UserPromptSubmit→PreToolUse→PostToolUse 순서): `check_pending_review.py`가 UserPromptSubmit으로, `hook_runner.py`가 PostToolUse로 이동. 의도적 재설계면 문제없으나 CLAUDE.md 훅 설명과 실제 배치가 일치하는지 확인 필요.
+
+- **[Info]** `syncCompyne/*.py` 변경분이 diff에 미포함 — Python 파일 변경 시 Review-Gate 3단계(af-test-runner → af-critic → af-cross-review) 완주 여부 확인 필요.
+
+---
+
+## 2026-04-29 18:13 — `2026-04-14-build-diet` (aebc22fc)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:17-18` — `Bash(git pull *)` · `Bash(git stash *)` 와일드카드 허용은 과도하게 넓음. `git stash drop`·`git stash clear` 같은 파괴적 하위명령도 허용됨. `Bash(git pull --rebase=false)` 등 필요한 플래그만 명시적으로 열어야 함.
+
+- **[Medium]** `.claude/settings.local.json:51-68` — `UserPromptSubmit` 훅이 `check_pending_review.py` → (다음 이벤트) `check_design_pending.py` → (또 다음) `hook_runner.py` 순으로 재배치됨. 세 번째 항목이 실제로 `UserPromptSubmit`에 바인딩된 것인지 확인 필요. 이벤트 타입 레이블이 diff에 없어 `check_pending_review`가 원래 실행되던 자리를 `hook_runner`가 잃지 않았는지 검증해야 함.
+
+- **[Medium]** `syncCompyne/memory_store.py`, `project_log_cli.py`, `workspace_context_cli.py` — Changed Files 목록에 포함됐으나 diff가 제공되지 않아 내용을 검토할 수 없음. 리뷰 범위에서 누락된 상태.
+
+- **[Low]** `.claude/settings.local.json` (마지막 줄) — `No newline at end of file`. JSON 파싱엔 무해하나 diff 노이즈를 유발하고 일부 도구에서 경고를 발생시킴.
+
+- **[Info]** `data/skill-usage.jsonl` — macOS 경로(`/Users/hoon/workTree/...`)가 하드코딩된 이벤트가 append됨. 다중 PC 환경에서 경로가 섞이면 `report_path` / `promotion_path` 역참조 시 파일 미존재 오류 발생 가능.
+
+---
+
+## 2026-04-29 18:14 — `2026-04-14-build-diet` (1204cadf)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [High] `.claude/settings.local.json:16-17` — `"Bash(git stash *)"` 와일드카드 허용은 `git stash drop`·`git stash clear` 등 파괴적 서브커맨드를 포함함. 명시적 허용 패턴으로 제한 필요 (`git stash list`, `git stash show` 등 필요한 것만).
+- [Medium] `.claude/settings.local.json:16` — `"Bash(git pull *)"` 와일드카드는 임의 remote/ref 지정을 허용. `git pull origin *` 수준으로 범위 좁힘 고려.
+- [Medium] `.claude/settings.local.json:51-68` — 훅 명령어가 이벤트 타입별로 이전보다 한 칸씩 shift됨. UserPromptSubmit이 `check_pending_review.py`를 실행하고 그 다음 블록이 `check_design_pending.py`를 실행하도록 재배치됐는데, 이벤트 타입(PreToolUse vs UserPromptSubmit)과 의도된 커맨드 매핑이 실제 JSON 키와 일치하는지 전체 파일로 검증 필요. diff만으로는 이벤트 타입 확인 불가.
+- [Low] `.claude/settings.local.json:132` — 파일 끝 개행 누락 (`No newline at end of file`). 일부 도구에서 파싱 오류 가능성.
+- [Low] `data/skill-usage.jsonl` — `report_path`/`promotion_path` 필드에 `/Users/hoon/workTree/` 절대 경로 하드코딩. 다른 환경에서 재현 불가.
+- [Info] syncCompyne 5개 파일(`.py`, `.md`) 변경 포함됐으나 diff 미제공 — 해당 파일 변경 내용은 검토 불가.
+
+---
+
+## 2026-04-29 18:14 — `2026-04-14-build-diet` (3ac2b865)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락 (POSIX 텍스트 파일 규약 위반, diff 노이즈/일부 도구 경고 유발)",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 임의 인자 수용 → `git pull origin main` 등 구체 패턴으로 좁히는 편이 안전",
+    "- [Info] .claude/settings.local.json:42-103 — UserPromptSubmit 훅 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). 병렬 아닌 순차 실행이므로 cli_hook_bridge가 마지막에 실행되어 앞 단계 출력이 누적됨; 의도된 순서인지 확인 필요",
+    "- [Info] 코드 변경 없음 — settings.json/jsonl/yaml/md 위주이며 보안/논리 결함 없음. syncCompyne/*.py diff 본문은 제공되지 않아 별도 평가 불가"
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:15 — `2026-04-14-build-diet` (2f617787)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 `git pull origin master; <cmd>` 같은 체이닝 인자를 통과시킬 위험. 정확한 인자 패턴으로 좁히는 것을 권장.
+- [Low] .claude/settings.local.json:51-71 — UserPromptSubmit 3개 훅 command 가 한 번에 시프트된 형태(① cli_hook_bridge→check_pending_review, ② check_pending_review→check_design_pending, ③ check_design_pending→cli_hook_bridge). 의도된 순서 변경이라면 OK이나, 동일 이벤트에서 cli_hook_bridge 실행이 마지막으로 밀려 `[af-review-pending]`/`[af-design-review-pending]` 마커보다 먼저 출력되지 않는지 검증 필요(파이프라인 자동 발화 트리거 순서에 영향).
+- [Low] .claude/settings.local.json:132 — EOF newline 누락(`\ No newline at end of file`). 일부 도구/CI에서 경고 발생.
+- [Info] 기타 파일들(jsonl/json/yaml/md) — 상태·로그 누적 변경이 대부분으로 코드 결함 없음.
+
+---
+
+## 2026-04-29 18:15 — `2026-04-14-build-diet` (dd90b697)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (`\\ No newline at end of file`). POSIX 규약 위반, 일부 도구가 마지막 줄 누락 처리할 수 있음.",
+    "- [Medium] .claude/settings.local.json:51-70 — UserPromptSubmit 훅 실행 순서 변경: cli_hook_bridge가 첫 번째에서 마지막으로 이동. resume_brief가 check_pending_review/check_design_pending 출력 뒤에 표시되어 사용자 컨텍스트 우선순위가 바뀜. 의도된 변경인지 확인 필요(커밋 메시지엔 'name 필드 추가'만 강조).",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` allow 추가. git stash는 작업 손실 가능성이 있어 와일드카드 자동 허용은 위험. 최소 stash push/list로 한정 권장.",
+    "- [Info] data/skill-usage.jsonl — 이벤트 append만, 리뷰 대상 아님.",
+    "- [Info] 나머지 파일 — diff 미제공으로 검토 불가(syncCompyne/*.py, registry.yaml 등). 별도 리뷰 권장."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:16 — `2026-04-14-build-diet` (17986244)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 순서가 cli_hook_bridge 선두→말미로 변경됨. resume_brief와 [af-review-pending]/[af-design-review-pending] 출력 순서가 뒤바뀌므로 CLAUDE.md의 트리거 감지 흐름이 의도대로 동작하는지 검증 필요.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 인자 전체를 통과시키므로 권한 범위가 넓다. 필요한 서브명령만 제한하는 패턴 권장.\n- [Low] .claude/settings.local.json:132 — EOF 개행 누락(\\No newline at end of file). 일관성 위해 LF 추가 권장.\n- [Info] 나머지 변경(jsonl append, syncCompyne/* 문서·CLI, registry.yaml, session_cursor 등)은 diff 발췌 범위에서 보안·로직 결함 없음."}
+
+---
+
+## 2026-04-29 18:16 — `2026-04-14-build-diet` (7c985c91)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드 허용은 임의 원격에서 pull을 자동 승인. 비파괴 정책상 인터랙티브 확인이 필요한 경우에도 무프롬프트 실행됨 — 패턴을 `git pull` 또는 `git pull origin *`로 좁히는 것 권장.",
+    "- [Medium] .claude/settings.local.json:51-70 — UserPromptSubmit 훅 순서가 [bridge, pending_review, design_pending] → [pending_review, design_pending, bridge]로 변경됨. bridge가 이제 pending 체크 이후 실행되므로 bridge가 생성하는 컨텍스트(예: resume_brief)에 의존하던 pending 체크는 stale 상태에서 동작. 의도된 변경이면 PR 본문에 명시 필요.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝에 개행 누락(`\\ No newline at end of file`). POSIX 텍스트 파일 규약 위반, 일부 도구에서 diff 노이즈 유발.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 훅에 `name` 필드 추가는 진단성 향상에 도움. PreCompact/Stop/SessionEnd에 동일 cli_hook_bridge가 동시 발화하므로 race 가능성은 hook_runner 측에서 처리 중인지 확인 필요(별도 검증 권장).",
+    "- [Info] data/skill-usage.jsonl, skills/new_skill/* — 본 diff 컨텍스트에서 보이는 부분은 append-only 이벤트 로그/리포트로 보안·버그 이슈 없음.",
+    "- [Info] syncCompyne/* 변경분은 diff 컨텍스트에 포함되지 않아 평가 보류."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:17 — `2026-04-14-build-diet` (ec7d7a83)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:132 — Missing trailing newline at end of file (\"\\ No newline at end of file\")\n- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit hook 순서 변경: cli_hook_bridge가 check_pending_review/check_design_pending 뒤로 이동. CLAUDE.md의 `[af-review-pending]`/`[af-design-review-pending]` 메시지 흐름이 cli_hook_bridge의 추가 컨텍스트와 겹칠 때 출력 순서/우선순위가 의도된 것인지 검증 필요\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용 추가. git pull은 머지/리베이스를 트리거할 수 있으므로 리스크 인지 필요(파괴적 동작은 아니지만 작업 트리 상태 변경 가능)\n- [Info] .claude/settings.local.json:43,70,81,92,103 — 각 hook에 `name` 필드 추가는 좋은 개선(텔레메트리/디버깅 용이). 단, UserPromptSubmit의 다른 두 훅(check_pending_review, check_design_pending)에는 name이 없어 일관성 부족\n- [Info] diff truncated — 16개 파일 중 settings.local.json + skill-usage.jsonl 일부만 노출되어 syncCompyne/*.py, scripts, 설계문서 변경은 리뷰 범위 외. 전체 검증을 위해서는 별도 패스 필요"}
+
+---
+
+## 2026-04-29 18:18 — `2026-04-14-build-diet` (ea00a558)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:51-70 — Hook command rotation: `cli_hook_bridge`/`check_pending_review`/`check_design_pending` 위치가 이동됨. 각 블록의 matcher(SessionStart/UserPromptSubmit/PreCompact 등)가 의도한 핸들러와 매칭되는지 확인 필요. 새 `name` 필드로 cli_hook_bridge가 UserPromptSubmit으로 옮겨진 것이 의도라면 OK이지만 회귀 가능성 있음.
+- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\ No newline at end of file`). 일부 도구·diff에서 잡음 유발.
+- [Low] .claude/settings.local.json:18-19 — `Bash(git stash *)` 광역 허용은 사용자 변경분을 무성으로 숨길 수 있음(`git stash drop` 포함 가능). 필요한 서브커맨드만(`git stash push`, `git stash pop`) 좁히는 게 안전.
+- [Info] .claude/settings.local.json:18 — `Bash(git pull *)`은 원격 fast-forward를 무인 허용. 보호 브랜치(main 등)에 대해서는 confirm을 유지하는 정책이 있다면 별도 deny 추가 권장.
+- [Info] data/skill-usage.jsonl, registry.yaml, *_eval-report.json — 데이터/스냅샷 업데이트만 보이며 별다른 보안·로직 이슈 없음. (diff 전체 미열람: syncCompyne/*.py 변경분은 본 컨텍스트에 포함되지 않아 검토 보류.)
+
+검토 범위 한계: 제공된 diff가 `.claude/settings.local.json`과 `data/skill-usage.jsonl` 일부에서 잘려 있어 `syncCompyne/memory_store.py`, `project_log_cli.py`, `workspace_context_cli.py`의 코드 변경분은 미검토. 해당 파일은 별도 리뷰 권장.
+
+---
+
+## 2026-04-29 18:18 — `2026-04-14-build-diet` (412b9d27)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"findings":[
+"- [Critical] .claude/settings.local.json:132 — 파일 끝 newline 누락(`No newline at end of file`). POSIX 텍스트 파일 규약 위반이며 일부 도구가 마지막 줄을 누락하거나 diff 오염을 유발한다.",
+"- [High] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git pull` 은 원격 변경을 자동 머지하여 로컬 작업을 덮어쓸 수 있고, `git stash` 는 작업 트리 상태를 묵시적으로 이동시키므로 무인 승인 대상에서 제외하거나 `git pull --ff-only`/특정 인수로 좁혀야 한다.",
+"- [High] .claude/settings.local.json:50-70 — UserPromptSubmit 훅 순서 재배치(체크 스크립트 → cli_hook_bridge). 훅이 순차 실행이라면 bridge 가 마지막에 동작해 pending 큐가 prompt 직전에 갱신되지 않을 수 있다. 의도와 실행 순서(특히 차단/비차단 종료 코드 처리) 검증 필요.",
+"- [Medium] .claude/settings.local.json:42-103 — 동일 훅이 SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd 5개 위치에 중복 등록되며 새로 부여한 `name` 들이 모두 다르다. 중복 실행 비용·로그 폭주를 유발할 수 있고, 한 곳에서 실패 시 식별이 어려워진다. Stop/SessionEnd 중 하나로 합치거나 재진입 가드를 확인할 것.",
+"- [Medium] data/skill-usage.jsonl — `report_path` 가 `/Users/hoon/...`(타 머신 절대경로) 그대로 기록되어 워크스페이스 이식성 깨짐. 상대경로 또는 워크스페이스 기준 정규화 필요.",
+"- [Info] 기타 변경(skills/registry.yaml, syncCompyne/*, session_cursor.json 등)은 diff 본문이 잘려 보안·로직 영향 평가 불가 — 추가 컨텍스트 없이 OK 판정 보류."
+]}
+
+---
+
+## 2026-04-29 18:19 — `2026-04-14-build-diet` (fde44e15)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (\\ No newline at end of file). POSIX 텍스트 파일 규약 위반, 일부 도구가 마지막 줄을 누락 처리할 수 있음.",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git pull origin main; rm -rf /` 같은 체이닝 시 deny 패턴 우회 가능성 검토 필요. 구체 인자(`git pull origin <branch>`)로 좁히길 권장.",
+    "- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 실행 순서 변경: 기존 [bridge → check_pending → check_design] → 변경 [check_pending → check_design → bridge]. bridge가 마지막으로 이동하면서 resume_brief 생성이 review-pending 메시지보다 늦게 출력됨. 의도된 변경인지 확인 필요(컨텍스트 노출 시점 차이).",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 각 훅에 `name` 필드 추가는 식별성 향상에 긍정적. 다른 훅(check_pending_review, check_design_pending)에는 name이 없어 일관성 부족.",
+    "- [Info] data/skill-usage.jsonl, projects/.../session_cursor.json — 자동 생성 상태 파일이 커밋에 포함됨. .gitignore 검토 권장(런타임 노이즈 누적)."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:19 — `2026-04-14-build-diet` (e188cf56)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:18-19 — `Bash(git stash *)` 와일드카드는 `git stash drop/clear` 같은 파괴적 하위 명령까지 허용. Destructive Action Guard 정책과 충돌하므로 `git stash push/list/show` 등 안전 부분집합으로 제한 권장.",
+    "- [Medium] .claude/settings.local.json:51-70 — hook 매트릭스 재배치 시 이벤트 키(SessionStart/UserPromptSubmit/PreToolUse 등)별 매핑이 diff에서 보이지 않음. 두 번째 항목이 `hook_runner.py` → `check_pending_review.py`로, 네 번째는 `check_design_pending.py` → `hook_runner.py`로 바뀌어 있어 의도된 이벤트-스크립트 짝이 어긋났을 가능성. 풀 파일에서 이벤트명 검증 필요.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝에 개행 없음(`\\ No newline at end of file`). POSIX 도구·diff 호환을 위해 trailing newline 추가.",
+    "- [Info] data/skill-usage.jsonl — append-only 이벤트 로그 추가, 검토 사항 없음.",
+    "- [Info] 그 외 변경(syncCompyne/*, projects/global_hoon_main/.../session_cursor.json, skill-eval-report.json 등) — diff 본문이 잘려 있어 이 응답에서는 평가 불가; 별도 검토 권장."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:20 — `2026-04-14-build-diet` (b0de156b)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 실행 순서가 바뀜 (기존: cli_hook_bridge → check_pending_review → check_design_pending, 변경: check_pending_review → check_design_pending → cli_hook_bridge). resume_brief가 리뷰 체크 이후 출력되도록 의도된 것이라면 OK이지만, 다른 훅이 bridge 컨텍스트(예: session_cursor)를 의존했다면 회귀 위험.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`\\ No newline at end of file`). POSIX 도구·git diff 노이즈 유발.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)` 와일드카드 허용은 임의 remote/refspec까지 인자 통과시킴. 정책상 의도라면 OK, 아니면 `Bash(git pull)` 또는 `Bash(git pull origin *)`로 좁히는 게 안전.\n- [Info] hook `name` 필드 추가(agent_factory_claude_*) — 식별/디버깅에 유용. 일관 적용됨.\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등은 런타임 산출물로 보임. 의도적 커밋이 맞는지 확인 권장 (git에서 추적 제외 후보)."}
+
+---
+
+## 2026-04-29 18:20 — `2026-04-14-build-diet` (5f6b02a9)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:132 — missing trailing newline at EOF.\n- [Info] .claude/settings.local.json:53-71 — UserPromptSubmit now has 3 hooks (check_pending_review, check_design_pending, cli_hook_bridge); confirm matcher patterns differ so all fire as intended and ordering matches design (bridge runs after pending checks).\n- [Info] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` added to allow list; benign but `git stash` can hide uncommitted work — verify this is intended for automated flows.\n- [Info] Diff truncated — syncCompyne/memory_store.py, project_log_cli.py, workspace_context_cli.py, skills/registry.yaml changes not visible in this review window; full review requires the remaining hunks."}
+
+---
+
+## 2026-04-29 18:21 — `2026-04-14-build-diet` (b7e2a6a1)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`No newline at end of file`); 일부 도구/diff에서 노이즈 유발\n- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 광범위; `git pull`, `git pull origin *` 등으로 좁히는 편이 안전\n- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 3개의 command 매핑이 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). matcher 블록과 의도된 스크립트가 일치하는지 재검증 필요(매처가 비어 있어 모두 실행되므로 순서가 결과에 영향)\n- [Low] .claude/settings.local.json:43,70,81,92,103 — 다른 훅에는 `name`을 부여했으나 SessionStart의 일부 매처에는 누락 가능; 명명 일관성 확인 권장\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json — 자동 생성 산출물 커밋. 가능하면 .gitignore 처리 또는 별도 커밋 분리 권장"}
+
+---
+
+## 2026-04-29 18:22 — `2026-04-14-build-diet` (508fd401)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:18 — `Bash(git stash *)` allows destructive `git stash drop/clear`; tighten to `Bash(git stash push*)` / `Bash(git stash pop*)`.
+- [Medium] .claude/settings.local.json:62-71 — UserPromptSubmit hook commands were reordered between matchers; verify each matcher still maps to its intended script (check_pending_review vs check_design_pending vs cli_hook_bridge) — silent mis-wiring would skip review-gate triggers.
+- [Low] .claude/settings.local.json:132 — missing trailing newline (`\ No newline at end of file`).
+- [Info] data/skill-usage.jsonl — append-only telemetry, no concerns.
+- [Info] Other 14 changed files (docs, session_cursor.json, syncCompyne/*) — diff not shown; cannot review.
+
+---
+
+## 2026-04-29 18:22 — `2026-04-14-build-diet` (afa1e997)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 임의 인자 주입 가능, 정책상 인자 범위를 더 좁히는 것이 안전\n- [High] .claude/settings.local.json:51-67 — UserPromptSubmit 슬롯 3개의 command가 회전(cli_hook_bridge↔check_pending_review↔check_design_pending). 각 hook 블록의 matcher와 의도한 스크립트가 실제로 일치하는지(설계 큐 발화 순서 포함) 재확인 필요. 잘못 매핑되면 [af-design-review-pending] 토큰이 안 뜨거나 cli_hook_bridge가 엉뚱한 이벤트에서 동작\n- [Low] .claude/settings.local.json:132 — `No newline at end of file`. JSON은 동작하나 일부 도구에서 diff 노이즈 유발\n- [Info] hook `name` 필드 추가(`agent_factory_claude_*`) — 추적성/관측 향상에 적절\n- [Info] 비-.claude/settings.local.json 변경(syncCompyne/*, skills/*, docs/*)에 대한 diff가 컨텍스트에 포함되지 않아 해당 파일에 대한 리뷰는 보류 — 주요 syncCompyne CLI/메모리스토어 변경은 별도 리뷰 권장"}
+
+---
+
+## 2026-04-29 18:23 — `2026-04-14-build-diet` (e14b9d71)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"findings":[
+"- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락(EOL). POSIX 텍스트 파일 규약 위반, 일부 도구(git diff, cat 연결)에서 경고/오작동 가능. 한 줄 추가 필요.",
+"- [Medium] .claude/settings.local.json:18-19 — 'Bash(git pull *)', 'Bash(git stash *)' 와일드카드 허용. git pull은 원격 변경을 강제 머지하여 로컬 변경 손실 가능, git stash drop/clear까지 와일드카드로 통과될 위험. 'git pull:*', 'git stash push:*' 등 서브커맨드 한정 권장.",
+"- [Low] .claude/settings.local.json:43-103 — hook name 필드를 일부 항목(SessionStart/PreCompact/Stop/SessionEnd/UserPromptSubmit)에만 추가. PreToolUse·PostToolUse 등 나머지 hook과 일관성 결여. 전 hook에 name 부여하거나 명명 규칙 문서화 필요.",
+"- [Low] .claude/settings.local.json:51-71 — UserPromptSubmit hook 순서 변경(check_pending_review → check_design_pending → cli_hook_bridge). 기존 순서 의존 로직(예: bridge가 pending 상태 소비) 회귀 가능성. 순서 변경 의도가 커밋 메시지에만 있고 코드 주석/문서화 부재.",
+"- [Info] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json — 런타임 산출물이 커밋에 포함됨. .gitignore 처리 검토 권장(반복 충돌·노이즈 유발).",
+"- [Info] syncCompyne/* — diff 내용이 본 리뷰 컨텍스트에 잘리지 않음. memory_store.py·*_cli.py 변경에 대한 보안/에러 핸들링 검토는 별도 라운드 필요.",
+"- [Info] 전반 — .py 파일 수정 없음으로 Review-Gate 자동 통과 케이스. 단 settings.local.json hook 재배치는 런타임 동작 변경이라 별도 통합 테스트(SessionStart→UserPromptSubmit 시나리오) 권장."
+],"summary":"settings.local.json hook 재구성과 권한 와일드카드 확장이 핵심 변경. 기능적 critical 이슈는 없으나 (1) git pull/stash 와일드카드 허용 범위, (2) UserPromptSubmit hook 실행 순서 변경 회귀, (3) EOL 누락 3건 확인 필요. 런타임 산출물 .gitignore 정리 권장."}
+
+---
+
+## 2026-04-29 18:23 — `2026-04-14-build-diet` (0803f346)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [Medium] .claude/settings.local.json:132 — 파일 끝 개행 누락(`No newline at end of file`). 일부 도구·diff에서 경고를 유발하므로 EOL 추가 권장.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 원격/스테이시 부수효과가 큰 명령을 무제한 허용. 인자 패턴을 좁히거나 deny와의 우선순위를 재확인 필요.\n- [Info] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서 변경(check_pending_review → check_design_pending → cli_hook_bridge). 의도된 재배치인지 NEXT_STEPS/Blueprint에 명시 권장.\n- [Info] diff 컨텍스트 — syncCompyne/*, skills/*, projects/*/_bridge_state/* 등 다수 파일이 status에는 있으나 제공된 diff에는 미포함되어 보안/버그 관점 리뷰 불가. 별도 패스로 검토 필요."}
+
+---
+
+## 2026-04-29 18:24 — `2026-04-14-build-diet` (4e95aae9)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드가 광범위함; 인자 패턴(`git pull origin *`, `git stash push *`)으로 범위 축소 권장
+- [Low] .claude/settings.local.json:132 — 파일 끝 개행 제거(`\ No newline at end of file`); JSON 편집기/diff 도구 호환성 위해 trailing newline 복원 권장
+- [Info] .claude/settings.local.json:43,70,81,92,103 — hook에 `name` 필드 추가는 진단·로그 식별성 향상에 적합
+- [Medium] .claude/settings.local.json:54-71 — UserPromptSubmit 3개 hook의 command가 3-way 재배치됨(`cli_hook_bridge`가 맨 뒤로 이동). hook 실행 순서에 의존하는 소비자(예: `[af-review-pending]` 메시지 출력 → cli_hook_bridge가 후속 처리)가 있다면 회귀 가능성. 순서 의도를 커밋 메시지/주석에 명시 필요
+- [Info] data/skill-usage.jsonl, skill-eval-report.json — append-only 운영 데이터 변경; 리뷰 대상 아님 (정책상 산출물)
+- [Info] 나머지 13개 파일(syncCompyne/*, docs/code_review/*, projects/.../session_cursor.json 등) — diff 본문이 잘려 검증 불가. 컨텍스트만으로 판단 시 보안/버그 risk 신호 없음
+
+---
+
+## 2026-04-29 18:24 — `2026-04-14-build-diet` (5bcd4e08)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(\"No newline at end of file\"). POSIX 텍스트 파일 규약 위반이며 일부 도구가 마지막 라인을 누락 처리할 수 있음.",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용 추가. `git pull` 은 임의 원격/리프 인자(`git pull <url> <ref>`)를 받아 예상치 못한 코드 인입이 가능하고, `git stash drop/clear` 같은 파괴적 서브커맨드가 동일 패턴으로 통과될 수 있음. 서브커맨드 단위(`git pull`, `git stash push`, `git stash list`)로 좁힐 것.",
+    "- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 3개의 실행 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). cli_hook_bridge가 마지막에 위치하면서 앞선 두 스크립트가 실패/지연될 경우 bridge 컨텍스트 주입이 누락될 위험. 의도된 순서라면 코멘트/문서로 근거를 남길 것.",
+    "- [Low] .claude/settings.local.json:43,70,81,92,103 — `name` 필드를 일부 훅(SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd)에만 추가. PreToolUse/PostToolUse 등 누락 훅과 일관성 부재.",
+    "- [Info] data/skill-usage.jsonl — 외부 절대경로(`/Users/hoon/workTree/...`)가 이벤트 payload에 그대로 기록됨. 다른 PC에서는 무효한 경로이므로 상대경로 또는 워크스페이스 기준 경로로 정규화 권장."
+  ],
+  "summary": "settings.local.json 의 권한 와일드카드 확대와 UserPromptSubmit 훅 순서 변경이 가장 주의할 항목. 나머지는 일관성/정리 수준."
+}
+
+---
+
+## 2026-04-29 18:25 — `2026-04-14-build-diet` (695765c1)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:54-70 — UserPromptSubmit 훅 실행 순서가 뒤집혔다. 이전: bridge→check_pending_review→check_design_pending. 변경 후: check_pending_review→check_design_pending→bridge. bridge가 마지막에 실행되면 resume_brief 컨텍스트가 review-pending/design-pending 메시지보다 뒤에 주입되어 우선순위가 달라진다. 의도된 변경인지 확인 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 문자(EOL newline) 누락. POSIX 표준 위반이며 일부 도구에서 경고 발생.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 광범위 와일드카드 허용. 의도된 범위면 OK이지만 예) `git pull origin main --force`도 통과한다. 필요 시 더 좁은 패턴 권장.\n- [Info] 16개 변경 파일 중 본 diff에는 .claude/settings.local.json + data/skill-usage.jsonl 일부만 노출됨. syncCompyne/*.py, scripts/check_design_pending.py 등 핵심 .py 변경은 diff에 포함되지 않아 보안·로직 검토 불가. 전체 diff 제공 또는 별도 커밋 분리 필요.\n- [Info] data/skill-usage.jsonl — 외부 절대 경로(`/Users/hoon/workTree/...`)가 evidence.report_path에 그대로 기록됨. 다중 머신 환경에서 경로 일관성 깨질 수 있으나 로그성 데이터라 영향 제한적."}
+
+---
+
+## 2026-04-29 18:26 — `2026-04-14-build-diet` (ed331a58)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락(`\ No newline at end of file`); POSIX 텍스트 파일 관례 위반, 일부 도구가 마지막 라인 미인식 가능.
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용. `git pull --rebase --autostash` 등은 무방하지만 `git pull origin main:main` 처럼 로컬 브랜치 강제 이동도 매칭되어 리뷰 게이트 우회 위험 있음. 가능하면 인자 패턴을 좁히는 것을 권장.
+- [Low] .claude/settings.local.json:43-72 — UserPromptSubmit 훅 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge). check_*가 stdin/표준출력으로 컨텍스트를 추가하는데 cli_hook_bridge가 마지막으로 밀려 resume_brief가 이전 훅의 출력 뒤에 오게 됨. 의도한 순서인지 확인 필요(이전엔 cli_hook_bridge가 첫 번째였음).
+- [Info] .claude/settings.local.json — `name` 필드 추가는 hook 진단/로그 식별성 향상 차원에서 적절.
+- [Info] data/skill-usage.jsonl, skills/registry.yaml, syncCompyne/* — 데이터/문서 변경만 포함되어 보안·버그 관점 영향 없음(diff 컷오프로 전체 확인 불가).
+
+추가 코드 변경이 컷오프된 부분(syncCompyne/*.py)에 대한 검토는 본 응답 범위 밖이며, 실제 Python 변경 사항이 있다면 별도 리뷰가 필요합니다.
+
+---
+
+## 2026-04-29 18:26 — `2026-04-14-build-diet` (4428bfd2)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`\ No newline at end of file`). POSIX 표준 위반이며 일부 도구가 마지막 라인을 제대로 처리하지 못할 수 있음. 파일 끝에 개행 추가 필요.
+- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 `git pull <임의-원격> <임의-브랜치>` / `git stash push -- <임의경로>` 같은 인자까지 통과시킴. 의도가 단순 `git pull` / `git stash` 라면 더 좁은 패턴 권장.
+- [Info] .claude/settings.local.json:43,70,81,92,103 — 훅에 `name` 필드 추가는 진단/로그 가독성 개선에 유효. UserPromptSubmit 훅 순서 재배치(SessionStart → check_pending_review → check_design_pending → cli_hook_bridge)도 의도와 일치하는 것으로 보임. 단, 동일 이벤트 내 훅 실행 순서가 settings 파일 순서에 의존한다는 점을 문서에 명시 권장.
+- [Info] data/skill-usage.jsonl, skills/* — 데이터/리포트 파일은 검토 대상 외(자동 생성).
+- [Info] 진단 노트 — diff에 listed된 syncCompyne/*.py(memory_store.py, project_log_cli.py, workspace_context_cli.py) 변경 내용은 제공된 diff에 포함되지 않아 직접 검토 불가. .py 변경이 실제로 있다면 Review-Gate 3-Tier 완주 여부 확인 필요.
+
+---
+
+## 2026-04-29 18:26 — `2026-04-14-build-diet` (c58c63bb)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [High] .claude/settings.local.json:64-72 — UserPromptSubmit hook 순서가 변경되어 check_pending_review.py(PostToolUse 자리)와 check_design_pending.py(UserPromptSubmit 자리)가 잘못된 이벤트에 매핑됨. 원래 PostToolUse는 hook_runner였고 UserPromptSubmit이 check_pending_review였는데, 새 배치에서 PostToolUse=check_pending_review, UserPromptSubmit이 check_design_pending+hook_runner로 묶여 큐 발화 타이밍이 어긋날 수 있음. 의도된 재배치인지 확인 필요.\n- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락(\\ No newline at end of file). POSIX 텍스트 파일 규약 위반, 일부 도구(diff/cat/git)에서 경고 발생.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용 추가. git pull은 원격 변경을 가져와 working tree에 영향, git stash는 로컬 변경을 임시 저장—권한 prompt 없이 자동 실행되면 사용자 의도와 무관한 상태 변경 가능. 명시적 승인 정책과 충돌 여부 검토 권장.\n- [Info] diff context 부족 — syncCompyne/*.py(memory_store, project_log_cli, workspace_context_cli) 변경 내용이 diff에 포함되지 않아 보안/버그 리뷰 불가. 16개 파일 중 코드 파일 변경분 미제공."}
+
+---
+
+## 2026-04-29 18:27 — `2026-04-14-build-diet` (4d9c8b6e)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 실행 순서 변경: 기존 hook_runner.py(첫번째) → check_pending_review → check_design_pending 순서가 check_pending_review → check_design_pending → hook_runner.py로 재배치됨. resume_brief 컨텍스트가 review-pending 검사 이후 주입되므로 의존성 검증 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (`\\ No newline at end of file`). POSIX 도구·일부 JSON 파서 호환성에 영향.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git stash *)` 와일드카드 허용은 `git stash drop/clear` 같은 파괴적 하위명령까지 포함. CLAUDE.md의 Destructive Action Guard 정책상 `git stash push|pop|list|show` 로 좁히는 편이 안전.\n- [Info] .claude/settings.local.json — 훅에 `name` 필드 추가는 진단·로깅 측면에서 긍정적. 단 PreCompact/Stop/SessionEnd 모두 동일 hook_runner.py 호출이라 식별값이 단계 구분에 의미 있는지 확인 권장.\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json — 런타임 산출물 변경. 코드 로직과 무관."}
+
+---
+
+## 2026-04-29 18:28 — `2026-04-14-build-diet` (26867cbc)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:19 — `Bash(git stash *)` 와일드카드 허용은 `git stash drop`/`git stash clear` 같은 파괴적 서브커맨드까지 묻지 않고 통과시킨다. `Bash(git stash push:*)`/`Bash(git stash pop:*)`로 좁힐 것.",
+    "- [Medium] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드는 `--rebase --autostash` 등 임의 인자를 허용. 안전한 형태(`Bash(git pull)` 또는 `Bash(git pull origin:*)`)로 제한 권장.",
+    "- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락(`No newline at end of file`). POSIX 도구·diff 호환성 위해 추가 필요.",
+    "- [Medium] .claude/settings.local.json UserPromptSubmit 블록 — `cli_hook_bridge`가 1번째→3번째로 이동. resume_brief 컨텍스트가 `check_pending_review`/`check_design_pending` 출력보다 뒤에 합쳐져 우선순위가 바뀔 수 있음. CLAUDE.md의 `[af-review-pending]`/`[af-design-review-pending]` 자동 트리거 동작이 동일한지 검증 필요.",
+    "- [Info] hook 항목들에 `name` 필드 추가는 좋음(추적성 향상).",
+    "- [Info] 나머지 변경 파일(syncCompyne/*, skills/registry.yaml 등)은 diff 본문에 포함되지 않아 검토 불가. 별도 diff 제공 시 재검토."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:28 — `2026-04-14-build-diet` (eeff0853)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `git pull *` / `git stash *` wildcards broaden allow scope; tighten to specific arg patterns to avoid unintended remote/stash ops.\n- [Medium] .claude/settings.local.json:51-71 — Hook commands shifted across matchers (cli_hook_bridge moved from first to third UserPromptSubmit slot, check_pending_review/check_design_pending shifted up); verify each matcher's event pattern still pairs with the intended command, otherwise design-queue and review-queue hooks may fire on the wrong events.\n- [Low] .claude/settings.local.json:132 — Missing trailing newline at EOF.\n- [Info] Other listed files (syncCompyne/*, skills/*, jsonl/json state) not shown in diff body — unable to review substantively.\nNo critical/high issues visible in provided diff."}
+
+---
+
+## 2026-04-29 18:29 — `2026-04-14-build-diet` (13dffbee)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:51-71 — 훅 명령어가 이벤트 블록 간에 회전된 것처럼 보임(이전 cli_hook_bridge → check_pending_review → check_design_pending 순이 한 칸씩 이동). matcher가 동일 이벤트(UserPromptSubmit 등)에 여러 hook을 등록한 것이라면 의도된 재배치일 수 있으나, SessionStart/UserPromptSubmit/PreCompact 매핑이 뒤바뀌면 design 큐 발화/리뷰 게이트 누락 위험. 매처별 이벤트 키를 diff 밖에서 재확인 필요.",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git pull origin main --force` 같은 비파괴 가정 위반 인자도 무프롬프트 통과. 최소한 `git pull` (인자 없음) 또는 `git pull origin *` 수준으로 좁히는 것을 권장.",
+    "- [Low] .claude/settings.local.json:132 — EOF 개행 제거(`\\ No newline at end of file`). POSIX 도구·diff 일관성 저하. 복구 권장.",
+    "- [Info] data/skill-usage.jsonl, session_cursor.json 등 — 런타임 산출물(이벤트 로그/세션 커서)이 커밋에 포함됨. 의도된 것이 아니라면 .gitignore 처리 검토."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:29 — `2026-04-14-build-diet` (d36304eb)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:132 — 파일 끝에 개행 없음(`No newline at end of file`); POSIX 도구 호환성을 위해 LF 추가 권장.
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 광역 허용. `git pull origin --rebase --autostash` 등 임의 인자 통과 가능. 가능하면 구체 패턴(`git pull origin <branch>`)으로 좁힐 것.
+- [Medium] .claude/settings.local.json (UserPromptSubmit hooks) — hook 실행 순서가 `check_pending_review.py` → `check_design_pending.py` → `cli_hook_bridge`로 재배치됨. 이전엔 bridge가 첫 번째였음. bridge가 세션 커서/컨티뉴이티 주입 역할이라면, 두 검사 스크립트가 stale state로 동작할 위험. 의도된 순서인지 확인 필요(특히 `[af-review-pending]`/`[af-design-review-pending]` 메시지 출력 타이밍).
+- [Low] .claude/settings.local.json — hook `name` 필드 추가는 좋음(중복/디버깅 용이). 다만 동일 hook이 SessionStart/PreCompact/Stop/SessionEnd에서 같은 명령을 호출 — 이벤트 종류 식별이 `name`만으로는 어렵고 명령 인자에 `--event` 같은 식별자 추가 권장.
+- [Info] syncCompyne/*, skills/*, data/skill-usage.jsonl, projects/.../session_cursor.json — 본 diff 발췌엔 내용이 보이지 않아 변경 범위/의도를 검증 불가. 커밋 메시지엔 "design 큐 훅 인프라 + Multi-Provider 설계문서"라고 명시되었지만 16개 파일이 그 범위를 넘어서는 듯 — 무관한 파일이 함께 들어왔는지 분리 커밋 검토 권장.
+- [Info] docs/code_review/code-review.md — 살아있는 단일 문서 갱신 정책 준수 여부 확인(CLAUDE.md 규칙).
+
+---
+
+## 2026-04-29 18:30 — `2026-04-14-build-diet` (f465714e)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 `git stash drop`/`git pull --rebase` 등 작업 손실 가능 변형까지 자동승인되므로 더 좁은 패턴(`git pull`, `git stash push *`) 권장.\n- [Medium] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서가 cli_hook_bridge → check_pending_review → check_design_pending에서 check_pending_review → check_design_pending → cli_hook_bridge 로 역전됨. bridge가 session_cursor를 갱신하기 전에 pending 체크가 실행되므로 의도된 변경인지(설계 큐 발화를 brige보다 먼저 보장) 커밋 메시지/문서에 명시 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 없음(`No newline at end of file`). 일부 도구가 마지막 줄을 누락 처리할 수 있음.\n- [Info] .claude/settings.local.json — 6개 훅 중 SessionStart/UserPromptSubmit(bridge)/PreCompact/Stop/SessionEnd 5개에 `name` 추가, PostToolUse 훅에는 `name` 미부여. 일관성 차원에서 PostToolUse도 명명 권장.\n- [Info] data/skill-usage.jsonl — append-only 이벤트 로그 4건 추가, 기존 라인 변경 없음. 안전."}
+
+---
+
+## 2026-04-29 18:31 — `2026-04-14-build-diet` (da4fb2d8)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:67-71 — UserPromptSubmit hook 순서 변경: 이전에는 hook_runner(cli_hook_bridge)가 먼저 실행되어 pending 상태를 기록한 뒤 check_pending_review/check_design_pending이 그 큐를 읽었는데, 새 순서는 check_* 먼저 → hook_runner 마지막. hook_runner가 큐를 적재하는 역할이라면 첫 프롬프트에서 빈 큐가 조회되는 race가 발생할 수 있음. 의도된 변경인지 확인 필요.",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 인자 전반(`--force`, `pop --index`, 원격 URL 직지정 등)을 자동승인. `git pull origin <branch>` 정도로 좁히거나 명시 deny 보강 권장.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락(`\\ No newline at end of file`). 일부 도구/diff 가독성에 영향. 한 줄 추가 권장.",
+    "- [Info] .claude/settings.local.json — SessionStart/PreCompact/Stop/SessionEnd 훅에 `name` 필드 추가는 식별성 개선이지만 UserPromptSubmit의 check_pending_review/check_design_pending 훅에는 `name`이 없어 일관성 부족. 진단 로그에서 구분이 어려워질 수 있음.",
+    "- [Info] data/skill-usage.jsonl, projects/.../session_cursor.json, skill-eval-report.json 등 — 자동 생성 로그/상태 산출물이 commit에 함께 포함됨. 로컬 PC 한정 산출물이면 .gitignore 또는 별도 동기화 경로 분리 검토."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:31 — `2026-04-14-build-diet` (c609f253)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [High] .claude/settings.local.json:132 — 파일 끝 newline 누락(`\\ No newline at end of file`). POSIX 텍스트 파일 규칙 위반 + 일부 도구 파싱 이슈 가능. 마지막 `}` 뒤에 LF 추가 필요.",
+    "- [High] .claude/settings.local.json:18 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 `git pull origin main --force`, `git stash drop` 같은 파괴적 변형도 자동 승인됨. 더 좁은 패턴(`git pull`, `git stash push *`)으로 제한 권장.",
+    "- [Medium] .claude/settings.local.json:54-70 — UserPromptSubmit hook 순서 재배치. check_pending_review → check_design_pending → cli_hook_bridge 순으로 변경됐는데, 첫 두 훅이 BLOCK exit code(2)를 반환하면 cli_hook_bridge가 실행되지 않아 session_cursor 업데이트가 누락될 수 있음. 비차단 훅을 먼저 두거나 cli_hook_bridge를 별도 SessionStart에서 처리 확인 필요.",
+    "- [Medium] data/skill-usage.jsonl:일부 — `report_path`/`promotion_path`에 `/Users/hoon/...` 절대경로 하드코딩(macOS). 현재 워크스페이스는 Windows(`D:\\hoonProJect\\...`)이므로 다른 PC에서 재현·추적 불가. 상대경로 또는 워크스페이스-루트 기준 경로로 정규화 권장.",
+    "- [Low] .claude/settings.local.json — 일부 hook block에만 `name` 필드 추가, 나머지는 누락. 일관성 위해 모든 hook에 name 부여 권장(텔레메트리·로그 식별 목적).",
+    "- [Info] 커밋 범위 — diff에 syncCompyne/*.py(memory_store.py, project_log_cli.py, workspace_context_cli.py) 코드 변경이 포함되었다고 명시되었으나 본 컨텍스트의 diff에는 settings/jsonl만 노출됨. 실제 .py 변경분은 별도 검토 필요(Review-Gate 3-Tier 통과 표기 확인됨)."
+  ]
+}
+
+---
+
+## 2026-04-29 18:32 — `2026-04-14-build-diet` (981539c6)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 임의 원격/refspec 풀(예: `git pull untrusted-remote`)을 무프롬프트로 허용. 필요 시 `git pull origin *` 처럼 원격을 좁히는 패턴 권장.",
+    "- [Low] .claude/settings.local.json:132 — 파일이 newline 없이 종료(`\\ No newline at end of file`). POSIX 텍스트 규약 위반 + 향후 diff 노이즈 유발. 마지막에 개행 추가.",
+    "- [Medium] .claude/settings.local.json:48-71 — UserPromptSubmit 훅 순서가 변경되어 `cli_hook_bridge`가 `check_pending_review` / `check_design_pending` 뒤로 밀림. CLAUDE.md 세션 연속성 규칙(resume_brief 주입)이 리뷰 게이트보다 늦게 실행되므로, 리뷰 게이트가 brief를 참조하는 경우 회귀 가능. 의도적이라면 docs에 근거 명시 필요.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 동일 명령에 `name` 필드 부여(`agent_factory_claude_*`)는 가독성 개선이므로 수용 가능. 단 모든 hook이 같은 command를 공유하므로 향후 분기 시 이름 충돌 주의.",
+    "- [Info] data/skill-usage.jsonl 등 — 메타/세션/리포트 산출물(JSONL, session_cursor.json, skill-eval-report.json)이 커밋에 포함됨. 정책상 산출물이라면 OK, 아니라면 .gitignore 검토.",
+    "- [Info] 본 diff에는 코드 로직 변경(.py)이 보이지 않아 syncCompyne/*.py, memory_store.py 등의 실제 변경 내용은 본 diff 단편에서 확인 불가. 핵심 로직 리뷰는 별도 청크 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:32 — `2026-04-14-build-diet` (9064ce80)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` 와 `Bash(git stash *)` 권한이 와일드카드로 추가됨. `git pull` 은 작업 트리를 수정하고 `git stash` 는 변경 사항을 가릴 수 있어, Destructive Action Guard 의 정신과 충돌 가능. 가능하면 인자 패턴을 좁히거나(예: `git pull --ff-only`) 명시적 승인 흐름으로 제한 권장.\n- [Medium] .claude/settings.local.json:48-72 — UserPromptSubmit 훅 실행 순서가 재배치됨 (cli_hook_bridge → check_pending_review → check_design_pending 에서 → check_pending_review → check_design_pending → cli_hook_bridge). 브리지가 마지막으로 밀리면서 pending review/design 큐 메시지가 먼저 출력되는 의도는 합리적이나, 기존 cli_hook_bridge 가 먼저 출력하던 resume_brief 컨텍스트 의존성이 있다면 회귀 가능. 후속 훅이 브리지 출력에 의존하지 않는지 확인 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (\\ No newline at end of file). 일부 도구·diff 노이즈 유발.\n- [Info] 다이프 컨텍스트 — syncCompyne/*, skills/registry.yaml, projects/.../session_cursor.json 등 다수 변경이 커밋 메시지(\"hook 인프라 + Multi-Provider 설계문서\") 범주를 벗어남. 무관 변경은 별도 커밋 분리가 리뷰·롤백 용이성 측면에서 권장. 진단 로그/세션 커서·메모리 산출물은 .gitignore 후보.\n- [Info] 진단 — 핵심 변경(.py 코드)이 diff 에 없어 'P1 설계문서' 본문 내용은 본 리뷰 범위 밖. 별도 설계 리뷰(af-critic + af-cross-review 병렬)로 검증 권장."}
+
+---
+
+## 2026-04-29 18:33 — `2026-04-14-build-diet` (03f0497e)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 권한은 `git pull origin main --force` 같은 변형도 허용해 블랙리스트(rm/reset --hard) 보호 의도를 약화시킬 수 있음. 서브커맨드 화이트리스트(`Bash(git pull)`, `Bash(git stash push:*)`)로 좁힐 것.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행(EOF newline) 누락. 일부 도구/diff에서 잡음 유발.\n- [Info] .claude/settings.local.json:43-71 — UserPromptSubmit 훅 순서 변경(bridge가 마지막으로 이동). check_pending_review/check_design_pending이 bridge 상태 업데이트 *이전*에 실행되므로, 이전 세션 기준으로 큐를 판단하는 동작이 의도된 것인지 design 문서에 명시 권장.\n- [Info] data/skill-usage.jsonl, skills/* — 외부 환경 경로(/Users/hoon/...)가 섞인 이벤트가 그대로 추가됨. 머신 간 공유 시 경로 정규화 고려.\n- [Info] 변경 파일 16개 중 핵심 코드(syncCompyne/*.py)는 diff에 노출되지 않아 본 응답에서는 보안/버그 판정 보류. 별도 리뷰 권장."}
+
+---
+
+## 2026-04-29 18:34 — `2026-04-14-build-diet` (d7593227)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드 허용은 임의 원격/리프스펙(`git pull origin main:master` 등)까지 통과시킬 수 있음. 필요한 형태로 좁히는 것을 권장.
+- [Low] .claude/settings.local.json:19 — `Bash(git stash *)` 도 `git stash drop`/`clear` 처럼 데이터 손실 명령을 포함. `Destructive Action Guard` 정책과 정합 점검 필요.
+- [Info] .claude/settings.local.json:132 — 파일 끝 개행 누락(`No newline at end of file`). 일부 도구에서 diff 노이즈를 유발.
+- [Info] .claude/settings.local.json — UserPromptSubmit 훅 3개 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). `cli_hook_bridge`가 마지막으로 이동하면서 `[af-review-pending]`/`[af-design-review-pending]` 메시지 출력 후 bridge 컨텍스트가 추가되는 흐름은 유지됨 — 의도된 변경으로 판단.
+- [Info] hook 명명(`agent_factory_claude_*`) 추가는 진단/로깅에 도움. 동일 트리거의 다중 훅에는 모두 부여하는 것이 일관됨(현재 UserPromptSubmit의 `check_pending_review`/`check_design_pending` 훅에는 name 미부여).
+- [Info] 나머지 변경 파일 (data/skill-usage.jsonl, syncCompyne/*, skills/*) — diff 절단으로 본문 미확인. 본 리뷰 범위 밖.
+
+보안·버그 측면 차단 사유 없음. 와일드카드 권한 범위만 정책 재확인 권장.
+
+---
+
+## 2026-04-29 18:34 — `2026-04-14-build-diet` (9c15b0df)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). POSIX 규약 위반, diff 노이즈 유발.\n- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 순서가 `cli_hook_bridge` → `check_pending_review` → `check_design_pending` 에서 `check_pending_review` → `check_design_pending` → `cli_hook_bridge` 로 재배치됨. 의도적이라면 OK이나, bridge가 마지막으로 밀리면서 resume_brief 출력 타이밍이 review-pending 메시지보다 뒤로 가는 점 확인 필요(사용자 지각 순서 변경).\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git stash drop/clear` 같은 파괴적 변형까지 자동 승인되므로 `git stash push *`, `git stash list` 정도로 좁히는 편이 안전.\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등 — 자동 생성 산출물. 리뷰 대상 외.\n- [Info] syncCompyne/* — 변경 본문이 diff에 포함되지 않아 검증 불가. 별도 확인 필요."}
+
+---
+
+## 2026-04-29 18:35 — `2026-04-14-build-diet` (5e47a851)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:19 — `Bash(git stash *)` 와일드카드는 `git stash drop/clear` 같은 파괴적 서브커맨드까지 자동 허용. CLAUDE.md의 Destructive Action Guard 정책과 충돌 가능 — `git stash push/pop/list`로 좁힐 것.\n- [Low] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드는 `--rebase`, 임의 remote/branch 인자까지 모두 허용. 의도적 범위인지 확인 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행(`\\n`) 누락 (\"No newline at end of file\"). POSIX 텍스트 파일 규약 위반, 일부 도구 diff/머지에서 잡음.\n- [Info] .claude/settings.local.json:51-70 — UserPromptSubmit 훅 실행 순서가 `cli_hook_bridge → check_pending_review → check_design_pending` 에서 `check_pending_review → check_design_pending → cli_hook_bridge` 로 바뀜. resume_brief 컨텍스트가 design-pending 메시지 뒤에 출력되는 순서 변경 — 의도된 변경인지(설계 큐 알림 우선 노출) PR 본문에 명시 권장.\n- [Info] 기타 변경 — data/*.jsonl, session_cursor.json, skill-eval-report.json 등은 자동 생성/append 산출물이며 코드 결함 없음."}
+
+---
+
+## 2026-04-29 18:35 — `2026-04-14-build-diet` (8b58eb32)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18 — `Bash(git stash *)` wildcard allows `git stash drop`/`clear`, which destroys uncommitted work and conflicts with the project's Destructive Action Guard; narrow to specific subcommands (push/pop/list/show/apply).",
+    "- [Low] .claude/settings.local.json:18 — `Bash(git pull *)` wildcard permits pulls from arbitrary remotes/refs (e.g., `git pull origin main --rebase --autostash`); consider restricting to known remotes if policy demands.",
+    "- [Low] .claude/settings.local.json:132 — file no longer ends with a trailing newline (`\\ No newline at end of file`); some POSIX tooling/diff tools expect a final LF — re-add it.",
+    "- [Info] .claude/settings.local.json:43-70 — UserPromptSubmit hook ordering was rearranged so cli_hook_bridge now runs last instead of first; verify downstream consumers don't depend on the bridge's [Agent Factory Continuity] context being available to check_pending_review/check_design_pending earlier in the chain.",
+    "- [Info] .claude/settings.local.json — `name` fields added only to bridge hooks, not to check_pending_review/check_design_pending; for consistent telemetry/identification, name all hook entries."
+  ],
+  "summary": "5 findings: 1 Medium (destructive `git stash *` allowlist), 2 Low (overly broad `git pull *` allowlist, missing trailing newline), 2 Info (hook reorder verification, naming consistency). No diff visible for the other 14 changed files (jsonl/yaml/md/py) — review limited to the truncated portion shown."
+}
+
+---
+
+## 2026-04-29 18:36 — `2026-04-14-build-diet` (46cd90d6)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용 범위가 과도; 인자 패턴을 명시적으로 좁힐 것\n- [Medium] .claude/settings.local.json UserPromptSubmit — bridge 훅이 첫 번째에서 마지막으로 이동. check_pending_review/check_design_pending가 bridge가 갱신한 session_cursor 상태를 기대한다면 stale 데이터로 동작할 위험. 의도된 순서 변경인지 확인 필요\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`\\ No newline at end of file`)\n- [Low] .claude/settings.local.json — 5개 훅에 `name` 필드 추가는 일관되나 PreToolUse/PostToolUse 훅(있다면)과 명명 컨벤션이 정렬되었는지 확인\n- [Info] data/skill-usage.jsonl — `/Users/hoon/workTree/...` macOS 경로 레코드와 Windows 워크스페이스 혼재; 크로스-PC 동기화 의도라면 OK이나 경로 정규화 정책 명시 권장\n- [Info] Diff에 syncCompyne/*, skills/registry.yaml, docs/code_review/code-review.md 등 언급된 16개 파일 중 본 diff 발췌에는 포함되지 않아 해당 변경은 별도 리뷰 필요\n- 보안/버그/에러 처리 측면 기타 Critical/High 이슈 없음"}
+
+---
+
+## 2026-04-29 18:36 — `2026-04-14-build-diet` (93f1ed1f)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (`No newline at end of file`); POSIX 도구·diff 노이즈 유발",
+    "- [Medium] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서 변경: cli_hook_bridge가 마지막으로 이동. check_pending_review / check_design_pending이 bridge보다 먼저 실행되며, 이전에 bridge가 주입하던 resume_brief 컨텍스트가 review-pending 판정 시점에 부재할 수 있음. 의도된 변경인지 검증 필요",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git stash *)` 화이트리스트 추가는 워크트리 변경을 숨길 수 있어 의도치 않은 작업 유실 위험. 좁은 패턴(`git stash push -m *`) 권장",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — hook `name` 필드 신규 부여는 추적성 향상 측면에서 OK. 단 SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd 5곳 모두 동일 command를 공유하므로 name 충돌·중복 모니터링 시 식별자 일관성(`agent_factory_claude_<event>`) 유지 확인",
+    "- [Info] diff truncated — syncCompyne/*, skills/registry.yaml, docs/code_review/code-review.md, memory_store.py 등 비가시 변경분에 대한 리뷰는 본 라운드에서 수행 불가. 커밋 메시지가 'design 큐 훅 인프라 + Multi-Provider 설계문서'라 했는데 .claude/settings.local.json 외 핵심 hook_runner/check_design_pending 코드 변경이 diff에 포함되지 않음 — 별도 라운드 필요"
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:37 — `2026-04-14-build-diet` (dfc082b8)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:48-71 — UserPromptSubmit 훅 순서가 변경됨(cli_hook_bridge가 첫 번째 → 세 번째). check_pending_review/check_design_pending이 bridge 상태 갱신 전에 실행되므로, 리뷰 체크가 이전 세션 커서를 참조할 가능성. 의도된 변경이면 OK이나 회귀 가능성 확인 필요.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 임의 인자(`--force`, `pop --force` 등)까지 매칭됨. 인자 범위 좁히는 것 권장.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). POSIX 도구 호환성/diff 노이즈 유발.\n- [Info] data/skill-usage.jsonl — append-only 로그, 신규 이벤트 추가만 확인됨. 이슈 없음.\n- [Info] 그 외 syncCompyne/*, docs/*, registry.yaml — diff가 잘려 본문 미확인. 별도 검토 필요."}
+
+---
+
+## 2026-04-29 18:38 — `2026-04-14-build-diet` (fa35b107)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` 와일드카드 허용은 임의 원격/브랜치 pull을 자동 승인. 워크트리 상태 오염 위험, 패턴 좁히기 권장 (예: `git pull origin <branch>`).",
+    "- [Low] .claude/settings.local.json:54-67 — UserPromptSubmit 훅 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge). cli_hook_bridge가 마지막으로 밀리면 앞 훅이 비차단 종료 시 bridge 컨텍스트 주입이 보장되는지 확인 필요. 한 훅이 실패해도 후속이 실행되는지 회귀 테스트 권장.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락(`\\ No newline at end of file`). POSIX 도구·diff 노이즈 유발, 한 줄 추가로 정리.",
+    "- [Info] data/skill-usage.jsonl:8-11 — `report_path`/`promotion_path`에 macOS 절대경로(`/Users/hoon/workTree/...`)가 잔존. 현재 워크스페이스(Windows)와 불일치하여 후속 자동화가 경로 lookup 시 실패할 수 있음.",
+    "- [Info] .claude/settings.local.json — `name` 필드 추가는 hook 식별 가능성을 높이는 좋은 변화이나, UserPromptSubmit의 두 번째·세 번째 훅(`check_pending_review`, `check_design_pending`)에는 name 미부여로 일관성 결여."
+  ],
+  "summary": "주요 결함은 없으나 `git pull *` 광범위 권한과 hook 순서 변경의 부수효과 검증이 필요. 나머지는 위생 항목."
+}
+```
+
+---
+
+## 2026-04-29 18:38 — `2026-04-14-build-diet` (b9f3819c)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` and `Bash(git stash *)` 와일드카드 허용은 임의 인자(원격/refspec) 주입 위험. `git pull origin <branch>` 형태로 좁히는 것이 안전.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(\\\"No newline at end of file\\\"). POSIX 도구·diff 가독성 저하, 일관성 위해 개행 추가 권장.\n- [Info] .claude/settings.local.json UserPromptSubmit — hook 실행 순서가 [cli_hook_bridge, check_pending_review, check_design_pending] → [check_pending_review, check_design_pending, cli_hook_bridge]로 변경됨. `[af-review-pending]`/`[af-design-review-pending]` 메시지가 cli_hook_bridge의 resume_brief 출력보다 먼저 노출되도록 의도된 변경인지 확인 필요(설계 의도와 일치하면 OK).\n- [Info] 신규 `name` 필드(agent_factory_claude_*) 추가는 hook 식별·로깅에 도움. 다른 PreCompact/Stop/SessionEnd 항목과 명명 규칙 일관(스네이크케이스) 유지 양호.\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등은 런타임 산출물 — 의도적 커밋이 아니라면 .gitignore 검토 권장(과거 정책상 dist/*.zip 제외처럼).\n- 나머지 변경(설계문서·docs/code_review·syncCompyne 문서)은 diff 컨텍스트 부족으로 본 리뷰 범위 외 — 별도 확인 필요."}
+
+---
+
+## 2026-04-29 18:39 — `2026-04-14-build-diet` (f9e38c77)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [High] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드 권한은 임의 리모트 pull을 허용. 공급망 위험. 특정 리모트/브랜치로 제한 권장 (예: `Bash(git pull origin *)`).\n- [Medium] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서 변경: cli_hook_bridge가 첫 번째에서 세 번째로 이동. check_pending_review/check_design_pending이 bridge보다 먼저 실행되어 세션 상태 동기화 전에 pending 체크가 동작할 수 있음. 의존성 검증 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (`\\ No newline at end of file`). POSIX 호환성/diff 노이즈 유발.\n- [Low] .claude/settings.local.json:19 — `Bash(git stash *)` 와일드카드는 `git stash drop/clear`로 작업 손실 가능. 의도가 pull 전 stash라면 `Bash(git stash push*)` / `Bash(git stash pop*)`로 좁히기.\n- [Info] .claude/settings.local.json — 모든 cli_hook_bridge 항목에 `name` 필드 추가 (agent_factory_claude_*). 진단/로깅 측면 개선.\n- [Info] 나머지 14개 파일 — diff 컨텍스트 미노출(상태 파일·로그·등록부 갱신). 기능 변경 검증 불가, 자동 생성물로 추정."}
+
+---
+
+## 2026-04-29 18:39 — `2026-04-14-build-diet` (d3b95d30)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"findings":[
+"- [High] .claude/settings.local.json:132 — 파일 끝 newline 누락(`}`로 끝남). POSIX 텍스트 파일 규칙 위반 + 일부 도구(diff/cat/jq 스트리밍)에서 파싱 이슈 가능.",
+"- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git stash drop/clear`(파괴적) 까지 자동 승인되어 위험. `git pull` / `git stash push *` / `git stash list`처럼 서브커맨드 단위로 좁힐 것.",
+"- [Medium] .claude/settings.local.json:54-70 — UserPromptSubmit 훅 순서 재배치 시, 기존 `check_pending_review.py` → `check_design_pending.py` → `hook_runner.py(cli_hook_bridge)` 가 직렬 실행되는데 앞 단계가 비-zero exit 시 뒤 훅 차단 여부에 대한 문서/테스트 부재. 한 훅 실패가 bridge 세션 커서 갱신을 막으면 연속성(session_cursor) 손상 위험.",
+"- [Low] .claude/settings.local.json — 동일 `command` 문자열이 5곳(SessionStart/Submit/PreCompact/Stop/SessionEnd)에 중복. `name`만 다르게 추가했지만 경로 변경 시 5곳 동시 수정 필요. 공통 변수화 또는 wrapper 스크립트 권장.",
+"- [Info] 변경 파일 16개 중 실제 코드는 .claude 설정 + syncCompyne/* 뿐. syncCompyne/memory_store.py·project_log_cli.py·workspace_context_cli.py 변경 diff가 컨텍스트에 포함되지 않아 보안/버그 리뷰 불가. 별도 리뷰 라운드 필요.",
+"- [Info] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json 등은 런타임 산출물. 커밋 정책상 .gitignore 후보인지 확인 권장(매 세션마다 diff 노이즈 발생)."
+]}
+
+---
+
+## 2026-04-29 18:40 — `2026-04-14-build-diet` (847cbc1e)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`\ No newline at end of file`).
+- [Medium] .claude/settings.local.json:44-72 — UserPromptSubmit 훅 순서 변경: `cli_hook_bridge`가 첫 번째에서 마지막으로 이동. `check_pending_review`/`check_design_pending`이 bridge 세션 커서 업데이트 이전에 실행되므로, pending 검사 시점에 최신 세션 상태가 반영되지 않을 수 있음. 의도된 변경인지 확인 필요(특히 resume_brief가 직전 세션 정보를 가리키는 현 동작과 정합).
+- [Low] .claude/settings.local.json:18-20 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용. `git pull origin main` 등은 안전하나, 신뢰할 수 없는 remote URL을 인자로 받는 형태(`git pull <url> <ref>`)는 임의 코드 실행 경로가 될 수 있음. 좁은 패턴(`Bash(git pull)`, `Bash(git pull origin *)`) 권장.
+- [Info] .claude/settings.local.json:43,67,81,92,103 — hook entry에 `name` 필드 추가는 가독성·로깅 측면에서 개선. 다른 항목들과 네이밍 컨벤션(`agent_factory_claude_<event>`) 일관성 유지됨.
+- [Info] data/skill-usage.jsonl, skills/* — 자동 생성 산출물(append-only 로그/리포트)로 보이며 리뷰 대상 외.
+- [Info] syncCompyne/* — diff 본문이 잘려 본 변경분의 핵심 로직(memory_store/*_cli.py)을 확인할 수 없음. 별도 패스 필요.
+
+핵심 우려는 UserPromptSubmit 훅 순서 역전 1건. 나머지는 경미.
+
+---
+
+## 2026-04-29 18:40 — `2026-04-14-build-diet` (f6332eb5)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락 (\"No newline at end of file\"); POSIX 도구 호환성·diff 노이즈 유발, 한 줄 추가 권장",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 글로브 allow는 임의 인자 허용. `git pull --rebase`, `git stash drop`처럼 파괴적/원격조작 변형까지 무프롬프트 통과될 수 있음. 더 좁은 패턴(예: `git pull`, `git stash push *`)으로 제한 검토",
+    "- [Low] .claude/settings.local.json UserPromptSubmit 훅 순서 — 기존 `check_pending_review.py` → `check_design_pending.py` → `cli_hook_bridge` 순서로 재배치. 의도된 변경이지만, cli_hook_bridge가 `[af-design-review-pending]` 등 큐 메시지를 출력하는 책임이라면 큐 검사 스크립트보다 먼저 실행되어야 일관성 확보 가능. 의도 명시 필요",
+    "- [Low] hook name 필드 추가 — Claude Code 훅 스펙에서 `name`이 비표준 필드일 경우 무시되거나 향후 검증으로 거부될 수 있음. 공식 스키마에 `name` 지원 여부 확인 필요",
+    "- [Info] data/skill-usage.jsonl, skill-eval-report.json 등 — 자동 생성 산출물 변경. 리뷰 대상 아님",
+    "- [Info] syncCompyne/* 변경 사항이 diff에 미포함 — 추가 검토 불가. 별도 리뷰 권장"
+  ]
+}
+
+---
+
+## 2026-04-29 18:41 — `2026-04-14-build-diet` (309ac62c)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit hook 순서 재배치(cli_hook_bridge가 1순위→3순위로 이동). check_pending_review/check_design_pending이 cli_hook_bridge가 갱신하던 상태(session_cursor 등)에 의존한다면, 이제 이전 세션 스냅샷을 읽게 되어 [af-review-pending]/[af-design-review-pending] 신호 누락 가능. 의존성 검증 필요.",
+    "- [Low] .claude/settings.local.json:132 — EOF newline 누락(`\\ No newline at end of file`). JSON 파서는 허용하나 일부 도구·diff 가독성 저하.",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git stash drop/clear` 같은 파괴적 서브커맨드까지 무프롬프트 통과 위험. `git stash push|list|show` 등으로 좁히는 것을 권장.",
+    "- [Info] hook 5곳에 `name` 필드 추가는 식별성 향상 측면에서 적절. 다만 `name` 키가 Claude Code 스펙상 인식되는지(무시되어도 무해한지) 확인 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:41 — `2026-04-14-build-diet` (6ffd474f)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18 — `Bash(git stash *)` 와일드카드는 `git stash drop/clear`까지 허용해 작업 유실 위험. `git stash push *`/`git stash list` 등으로 좁히는 편이 안전.",
+    "- [Low] .claude/settings.local.json:70 — UserPromptSubmit 훅 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge)가 의도적인지 확인. cli_hook_bridge의 [af-review-pending]/[af-design-review-pending] 컨텍스트가 이미 앞 두 훅 출력으로 전달되는 흐름과 충돌하지 않는지 점검 필요.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(\"No newline at end of file\"). POSIX 도구·diff 일관성 위해 개행 추가 권장.",
+    "- [Info] data/skill-usage.jsonl — `report_path`에 macOS 절대경로(`/Users/hoon/...`)가 그대로 기록됨. Windows 작업트리에서 생성된 이벤트라면 cross-PC 동기화 산물로 추정되며 분석 시 경로 정규화 필요.",
+    "- [Info] 변경 16개 파일 중 13개가 상태/세션 커서/리포트류로 보이며 실제 로직 변경은 .claude/settings.local.json 한 건. syncCompyne/*.py·memory_store.py 본문 diff가 컨텍스트에 포함되지 않아 해당 부분은 검증 보류."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:42 — `2026-04-14-build-diet` (e5b01369)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [High] .claude/settings.local.json:51-72 — Hook commands rotated across event blocks; verify the new command for each `matcher`/event still matches its intent (UserPromptSubmit vs SessionStart vs design-pending). Diff context hides event names, so silent mis-wiring is plausible.
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` and `Bash(git stash *)` wildcard allows arbitrary args (e.g., `git pull <attacker-remote>`); consider tightening (`git pull origin *`, `git stash push *`).
+- [Low] .claude/settings.local.json:132 — Missing trailing newline at EOF (`\ No newline at end of file`).
+- [Info] Non-code artifacts (skill-usage.jsonl, session_cursor.json, skill-eval-report.json, skill-promotion.json, syncCompyne/*) — runtime/state churn; review only intent, not content.
+- [Info] Diff truncated; could not inspect syncCompyne/*.py changes — unable to assess error handling there.
+
+---
+
+## 2026-04-29 18:43 — `2026-04-14-build-diet` (315beda7)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 순서가 바뀜: cli_hook_bridge가 첫 번째→마지막으로 이동. check_pending_review/check_design_pending이 먼저 실행되도록 한 의도는 합리적이나(리뷰 큐 메시지 우선), 커밋 메시지에 의도 명시 없음. 회귀 시 bridge 출력이 후속 훅에 가려질 가능성 있음.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 제거(`\\ No newline at end of file`). JSON 파서엔 무해하나 diff 노이즈 유발, POSIX 텍스트 규약 위반.",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git stash *)` 허용 추가. 파괴적은 아니지만 작업 은닉 가능. 의도된 권한이면 OK, 자동 승인 범위 확장임을 인지 필요.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 훅 5개에 `name` 필드 부여(agent_factory_claude_*). 진단·로깅 개선 목적으로 적절. 다만 UserPromptSubmit 훅 3개 중 cli_hook_bridge에만 name이 있고 check_pending/check_design 훅엔 없음 — 일관성 위해 모두 부여 권장.",
+    "- [Info] diff에 P1 설계문서·hook 인프라 변경이 함께 묶임 — code-review.md/skills/syncCompyne 변경 본문이 diff에 포함되지 않아 이 영역은 검증 불가."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:43 — `2026-04-14-build-diet` (8198d402)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용 범위가 넓음. `git pull --rebase --force` 또는 `git stash drop/clear` 같은 데이터 손실 명령까지 통과될 수 있어, 글롭을 좁히거나(예: `git pull`, `git pull origin *`) deny 목록에 destructive 변형을 명시하는 편이 안전.",
+    "- [Medium] .claude/settings.local.json:51-70 — UserPromptSubmit 훅 3개 순서가 재배치되어 `cli_hook_bridge`가 마지막으로 이동. 기존엔 bridge가 1번이었기 때문에 컨텍스트 주입 시점이 달라짐. `check_pending_review.py` / `check_design_pending.py`가 bridge 출력에 의존하지 않는지(또는 그 반대) 한 번 더 확인 필요.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). 일부 도구·diff에서 잡음 유발.",
+    "- [Info] .claude/settings.local.json — 각 hook에 `name` 필드를 추가한 것은 추적성에 도움. PreToolUse/PostToolUse 훅에는 name이 빠져있어 전체에 일관 적용하면 더 깔끔.",
+    "- [Info] data/skill-usage.jsonl, skills/new_skill/* — append-only 이벤트 로그/리포트 갱신만 보임. 기능적 이슈 없음.",
+    "- [Info] 노출된 diff 범위 내 syncCompyne/*, projects/global_hoon_main/_bridge_state/* 변경분은 본 발췌에 포함되지 않아 본 리뷰 대상 외."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:44 — `2026-04-14-build-diet` (b24d58fa)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 `--force`, `--rebase --autostash` 등 위험 플래그까지 통과시킨다. `git pull origin *` 등 범위 축소 권장.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝에 개행 누락(\\No newline at end of file). 일부 도구·diff 노이즈 유발.",
+    "- [Info] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). 의도된 변경이면 OK이나, cli_hook_bridge가 마지막으로 밀려 `[Agent Factory Continuity]` 컨텍스트가 design/review 큐 출력 뒤에 나오므로 큐 메시지 우선 인지 효과는 유지됨. 문서화 권장.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 훅에 `name` 필드 추가는 식별 가능성 향상. 일관되게 모든 훅에 부여된 점 양호."
+  ],
+  "summary": "차단성 결함 없음. 와일드카드 권한 1건과 EOF 개행 1건만 정리 권장."
+}
+```
+
+---
+
+## 2026-04-29 18:44 — `2026-04-14-build-diet` (b08dff8c)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [Medium] .claude/settings.local.json:19 — `Bash(git stash *)` 광범위 허용은 `git stash drop/clear` 같은 파괴적 하위 명령까지 무프롬프트 통과시킬 수 있음. `git stash push/list/show/pop`만 화이트리스트로 좁히는 것을 권장.\n- [Low] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드는 `--rebase`, 임의 remote/branch 인자도 허용. 공유 워크트리에서 의도치 않은 fast-forward/rebase 발생 가능 — `Bash(git pull)` 단일 형태로 충분한지 검토.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행이 제거됨(`\\ No newline at end of file`). POSIX 텍스트 파일 규약 위반이며 일부 도구가 마지막 라인 누락으로 처리할 수 있음 — 개행 복구 권장.\n- [Info] .claude/settings.local.json:50-71 — UserPromptSubmit 훅 순서 재배치(cli_hook_bridge가 첫 번째 → 마지막). bridge가 resume_brief 컨텍스트를 주입하는 시점이 `check_pending_review`/`check_design_pending` 이후로 밀린 것이 의도인지 확인 필요(브리프 컨텍스트 부재 상태에서 검토 큐 체크가 먼저 실행됨).\n- [Info] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json 등 — 런타임 산출물/로그 변경. 코드 영향 없음.\n- [Info] syncCompyne/* — diff 본문이 컨텍스트에 포함되지 않아 변경 내용을 검증할 수 없음. 별도 검토 필요."}
+
+---
+
+## 2026-04-29 18:45 — `2026-04-14-build-diet` (d409e515)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:18 — `Bash(git pull *)` 와일드카드 허용은 `git pull origin main --force` 같은 변형까지 통과시킬 수 있음; 의도된 범위라면 OK.
+- [Low] .claude/settings.local.json:19 — `Bash(git stash *)` 도 `git stash drop/clear` 까지 포함되어 작업 손실 가능성. `git stash push *` 정도로 좁히는 것 권장.
+- [Medium] .claude/settings.local.json (UserPromptSubmit 블록) — 훅 실행 순서가 `check_pending_review` → `check_design_pending` → `cli_hook_bridge` 로 재배치됨. 앞쪽 훅이 비제로 종료 시 bridge 미실행 위험 — Claude 훅 체인 정책(연속 실행/차단) 확인 필요. 특히 `[af-review-pending]` / `[af-design-review-pending]` 메시지 출력 후 bridge 가 자리잡혀야 세션 cursor 가 갱신됨.
+- [Info] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\ No newline at end of file`).
+- [Info] settings.local.json — 신규 `name` 필드(agent_factory_claude_*)는 진단 추적용으로 적절. 다른 훅 항목 간 중복 없음 확인 권장.
+- [Info] data/skill-usage.jsonl, session_cursor.json 등 — 자동 생성 산출물이므로 리뷰 대상 외. 의도된 커밋인지만 확인.
+
+검토된 변경 중 코드 로직(.py) 변경분은 diff 에 노출되지 않아 syncCompyne/*.py 파일 본문 검증은 수행 못함 — 별도 패치 확인 필요.
+
+---
+
+## 2026-04-29 18:46 — `2026-04-14-build-diet` (e1426223)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:132 — 파일 끝 개행(newline) 누락. POSIX 표준 위반으로 일부 도구·diff에서 경고 발생 가능.",
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 권한 추가. `git pull` 은 원격 변경 자동 병합으로 로컬 작업 유실 위험, `git stash` 는 임시 저장 후 복구 누락 시 변경사항 유실 가능. 명시적 사용자 승인 흐름 권장.",
+    "- [Low] .claude/settings.local.json:54-70 — UserPromptSubmit hook 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). hook 실행 순서가 의미를 가지면 의도 확인 필요. cli_hook_bridge 가 마지막으로 이동한 이유가 design 큐 발화 후 세션 상태 동기화 목적이면 OK.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — hook 항목에 `name` 필드 추가(agent_factory_claude_*). 식별·로깅 용이성 개선. 좋은 변경.",
+    "- [Info] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json 등 — 런타임 산출물 변경. 리뷰 대상 아님."
+  ],
+  "summary": "주요 우려는 `git pull *` / `git stash *` 와일드카드 권한과 EOF newline 누락 2건. 나머지는 hook 재정비·이름 부여로 긍정적 변경."
+}
+```
+
+---
+
+## 2026-04-29 18:46 — `2026-04-14-build-diet` (73f3f359)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` and `Bash(git stash *)` 와일드카드 허용은 임의 원격 fetch·`git stash drop` 같은 손실 동작까지 자동 승인. 더 좁은 패턴(`git pull origin`, `git stash push *`)으로 제한 권장.
+- [Low] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 순서가 `hook_bridge → check_pending_review → check_design_pending` 에서 `check_pending_review → check_design_pending → hook_bridge` 로 재배치됨. bridge가 마지막으로 밀리면서 `[af-review-pending]`/`[af-design-review-pending]` 출력이 bridge가 누적한 컨텍스트보다 먼저 노출됨 — 의도라면 OK, 무의도라면 회귀.
+- [Low] .claude/settings.local.json:132 — `\ No newline at end of file`. 일부 도구·머지 도구가 EOL 누락을 노이즈 diff로 본다. 빈 줄 1개 추가 권장.
+- [Info] 나머지 변경(diff 잘림: syncCompyne/*, skills/registry.yaml, skill-eval-report.json, session_cursor.json, code-review.md 등)은 본 컨텍스트에 노출되지 않아 이번 리뷰에서 검증 불가. 보안/버그 관점 영향 큰 파일(`syncCompyne/memory_store.py`, `*_cli.py`)은 별도 리뷰 권장.
+
+---
+
+## 2026-04-29 18:47 — `2026-04-14-build-diet` (86277b62)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json — UserPromptSubmit 훅 순서가 재배치됨(check_pending_review → check_design_pending → cli_hook_bridge). 앞 훅이 비0 종료 시 bridge가 실행되지 않을 수 있어, 세션 커서/연속성 갱신이 누락될 가능성. 의도된 변경인지 확인 필요.
+- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`No newline at end of file`). POSIX 규약 위반 및 일부 도구 diff 노이즈 유발.
+- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git stash drop/clear` 같은 파괴적 하위 명령도 무프롬프트 통과 — Destructive Action Guard와 상충 가능. 최소 `git pull origin *`, `git stash push *` 등으로 좁히는 것을 권장.
+- [Info] data/skill-usage.jsonl — append-only 이벤트 로그, 결함 없음.
+- [Info] 나머지 13개 파일(syncCompyne/*, projects/*, skills/*, docs/*) — diff 본문이 컨텍스트에 포함되지 않아 본 리뷰 범위에서 평가 불가. 별도 검토 필요.
+
+---
+
+## 2026-04-29 18:47 — `2026-04-14-build-diet` (1248e532)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (POSIX 텍스트 파일 규칙 위반, 일부 도구 경고 발생 가능)\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 임의 인자 통과 가능. `git stash drop`/`git stash clear`처럼 데이터 손실 가능 명령도 허용되므로 범위를 좁히는 것 권장\n- [Info] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge). 기존 cli_hook_bridge가 마지막으로 이동했는데, 이전 훅이 비정상 종료 시 bridge 미실행 가능성. 각 훅이 독립 실행되는지 확인 필요\n- [Info] 기타 변경(syncCompyne/*, skills/*, data/*.jsonl) — diff가 잘려있어 구조적 이슈 판단 불가. 본 리뷰 범위에서 제외", "severity_summary": {"critical": 0, "high": 0, "medium": 0, "low": 2, "info": 2}}
+
+---
+
+## 2026-04-29 18:48 — `2026-04-14-build-diet` (5975a348)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": "- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 순서 변경: 기존 cli_hook_bridge가 1번이었는데 3번(마지막)으로 밀림. check_pending_review/check_design_pending이 비0 exit 또는 표준출력으로 컨텍스트를 차지하면 bridge 실행이 영향받을 수 있음. 의도 확인 + 의존성 문서화 필요.\n- [Low] .claude/settings.local.json:`Bash(git pull *)`,`Bash(git stash *)` — 와일드카드 허용은 광범위. `git pull` 단독/특정 origin만 허용하는 패턴이 더 안전.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). JSON 파서는 무관하나 .gitattributes/lint 일관성 깨짐.\n- [Info] data/skill-usage.jsonl — append-only 이벤트 추가만 있음. 이슈 없음.\n- [Info] 나머지 파일(syncCompyne/*, skills/registry.yaml, session_cursor.json 등) diff 미표시로 검토 불가. 이 PR은 'design 큐 훅 인프라' 변경을 표방하므로 syncCompyne 변경이 동봉 적절한지 별도 확인 권장."
+}
+```
+
+---
+
+## 2026-04-29 18:48 — `2026-04-14-build-diet` (d677ebc3)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` 와 `Bash(git stash *)` 와일드카드 허용은 `git pull --rebase`/`git stash drop` 등 의도치 않은 부수효과 명령까지 통과시킴. 더 좁은 패턴(`Bash(git pull)`, `Bash(git stash push *)`) 권장.",
+    "- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 실행 순서가 [bridge, pending, design] → [pending, design, bridge]로 역전됨. bridge가 pending/design 체크보다 먼저 컨텍스트를 주입해야 정상 동작하던 흐름이라면 회귀 가능. 의도된 변경인지 확인 필요.",
+    "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). JSON 파서는 OK지만 Git/POSIX 도구 일관성 위해 개행 추가 권장.",
+    "- [Info] .claude/settings.local.json:43,70,81,92,103 — 각 훅에 `name` 필드 추가는 식별성 향상에 긍정적. 단, hook_runner.py가 동일 명령을 5개 이벤트(SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd)에서 호출 — 이벤트별 분기 로직이 hook_runner 내부에 있는지 확인 필요.",
+    "- [Info] data/skill-usage.jsonl — append-only 이벤트 로그 추가, 기존 라인 변경 없음. 정상.",
+    "- [Info] 기타 14개 파일은 diff가 잘려 표시됨 — syncCompyne/*.py 변경사항(memory_store/project_log_cli/workspace_context_cli)은 별도 검토 필요."
+  ],
+  "summary": "주요 우려: (1) git pull/stash 와일드카드 권한 과다, (2) UserPromptSubmit 훅 순서 역전이 의도된 것인지 확인 필요. 차단 수준 이슈는 없음."
+}
+
+---
+
+## 2026-04-29 18:49 — `2026-04-14-build-diet` (31047335)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 자동 허용은 워킹트리·스태시 상태를 비대화식으로 변경할 수 있어 destructive guard 경계와 충돌 가능. 최소한 `git pull --ff-only`로 좁히는 것을 권장.\n- [Low] .claude/settings.local.json:54-70 — UserPromptSubmit 훅 순서가 [bridge, check_pending_review, check_design_pending] → [check_pending_review, check_design_pending, bridge]로 바뀜. bridge가 마지막으로 이동하면 review/design pending 결과가 bridge 컨텍스트 주입 전에 출력되는데, 의도된 변경인지 커밋 메시지에 명시 필요.\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). POSIX 텍스트 규약 위반, 일부 도구가 마지막 줄 파싱 실패 가능.\n- [Info] .claude/settings.local.json:43,70,81,92,103 — 훅 객체에 `name` 필드 추가는 식별성 향상에 좋음. 단, `agent_factory_claude_userpromptsubmit`는 동일 이벤트의 3개 훅 중 1개에만 부여되어 중복 식별 시 혼란 우려.\n- [Info] diff truncated — syncCompyne/* 6개 파일 및 skills/registry.yaml 변경분 미확인. 본 리뷰는 .claude/settings.local.json 한정."}
+
+---
+
+## 2026-04-29 18:50 — `2026-04-14-build-diet` (171711a8)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Medium] .claude/settings.local.json:51-67 — 훅 명령어 재배치로 이벤트-명령 매핑이 뒤섞임. 기존: UserPromptSubmit → check_pending_review → check_design_pending → hook_runner 순이었는데 변경 후 동일 이벤트 블록 안에서 hook_runner가 마지막으로 이동. 이벤트 키와 명령 의도가 일치하는지(특히 새로 붙은 `agent_factory_claude_userpromptsubmit` name이 실제 UserPromptSubmit 블록 내부인지) 재확인 필요.
+- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락(`\ No newline at end of file`). POSIX/일부 도구가 마지막 라인 누락으로 경고.
+- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 광범위 와일드카드 허용. `git pull origin main` 등으로 좁히는 것이 안전(임의 원격 fetch/rebase 차단).
+- [Info] data/skill-usage.jsonl — `report_path`가 `/Users/hoon/...`(macOS 경로)로 기록됨. 현 워크스페이스(Win)와 혼재. 기존 데이터 append라 재현 가능.
+- [Info] diff 본문에 syncCompyne/*.py 코드 변경분이 포함되지 않아 해당 파일은 정적 리뷰 불가. 실제 .py 변경이 있다면 별도 diff 제공 요망(메모리/CLI 보안·예외 처리 점검 누락).
+
+---
+
+## 2026-04-29 18:50 — `2026-04-14-build-diet` (a562ed81)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드는 임의 인자(`--rebase`, `--force`, 원격명) 허용 → 의도치 않은 원격 풀/스태시 가능. 인자를 제한하거나 사용 패턴 좁힐 것.\n- [High] .claude/settings.local.json:51-71 — UserPromptSubmit 계열 hook의 command 값이 위치별로 이동(cli_hook_bridge ↔ check_pending_review ↔ check_design_pending). diff상 hook→event 매핑이 셔플돼 있어, 각 이벤트 키(SessionStart/UserPromptSubmit/PreCompact 등)가 의도한 스크립트를 가리키는지 전체 settings.local.json 구조에서 재확인 필요. 잘못 매핑되면 review-pending/design-pending 큐가 발화하지 않음(CLAUDE.md 교차검증 자동 실행 규칙 위배).\n- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락(`\\ No newline at end of file`). POSIX 도구·일부 머지 도구에서 경고 유발.\n- [Info] hook entry에 `name` 필드 추가(agent_factory_claude_*)는 식별/디버깅에 유용. 동일 이벤트 내 다른 entry에도 일관되게 부여 권장.\n- [Info] data/skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등은 자동 생성 산출물 — 변경 의도가 인프라가 아닌 런타임 부산물이면 .gitignore 검토 권장(반복 diff 노이즈).\n- 실제 디프 외 syncCompyne/* 및 docs/code_review/code-review.md 본문은 컨텍스트에 포함되지 않아 별도 검토 불가."}
+
+---
+
+## 2026-04-29 18:51 — `2026-04-14-build-diet` (2d630e2b)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"findings":[
+"- [High] .claude/settings.local.json:132 — 파일 끝 개행 누락(\\\"No newline at end of file\\\"). JSON 파싱은 문제 없으나 일부 도구·git diff에서 경고 유발, POSIX 텍스트 파일 규약 위반",
+"- [High] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)`를 allow 목록에 추가. `git pull`은 원격 변경을 로컬에 병합하는 비-순수 작업이며 충돌 시 working tree 상태를 변경. 사용자 확인 없이 자동 허용은 'Executing actions with care' 정책(공유 상태 영향 행위는 confirm 필요)과 충돌",
+"- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit hooks 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge). hook 실행은 배열 순서대로이므로 cli_hook_bridge가 마지막으로 밀렸는데, bridge가 출력하는 resume_brief가 review-pending 메시지보다 뒤에 와서 컨텍스트 혼선 가능. 의도된 변경인지 확인 필요",
+"- [Medium] .claude/settings.local.json — hook 항목에 `name` 필드 추가는 좋지만 PostToolUse(line 122 부근)에는 `name`이 없어 일관성 결여. 전 hook에 식별자 부여 권장",
+"- [Low] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json — 런타임 산출물(JSONL append/state)이 커밋에 포함됨. .gitignore 대상으로 검토 권장 (이전 커밋들과 동일 패턴이라 신규 결함은 아님)",
+"- [Info] syncCompyne/* 파일 16개 중 다수가 이 커밋 메시지(hook 인프라 + Multi-Provider 설계)와 직접 관련 없어 보임. 변경 범위 분리(commit hygiene) 권장 — 단, diff 본문이 잘려 syncCompyne 실제 변경 내용은 미검토"
+]}
+
+---
+
+## 2026-04-29 18:51 — `2026-04-14-build-diet` (8ff7a84c)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"findings":[
+"- [High] .claude/settings.local.json:132 — 파일 끝에 newline 없음 (\\ No newline at end of file). POSIX 텍스트 파일 규약 위반, 일부 도구가 마지막 라인 누락 처리할 수 있음.",
+"- [Medium] .claude/settings.local.json:18-19 — 'Bash(git pull *)' 및 'Bash(git stash *)' 와일드카드 허용. git pull은 원격 변경사항을 자동 머지하여 로컬 작업 손실 가능, git stash는 의도치 않은 stash drop 위험. 더 좁은 패턴(예: 'Bash(git pull)', 'Bash(git stash list)') 권장.",
+"- [Medium] .claude/settings.local.json:54,62,70 — UserPromptSubmit hook 순서 재배치(check_pending_review → check_design_pending → cli_hook_bridge). 순서 변경의 의도가 commit message에서 불명확. cli_hook_bridge가 마지막에 실행되면 앞선 두 hook 출력이 누적되어 컨텍스트 비대 위험.",
+"- [Low] .claude/settings.local.json:43,81,92,103 — 일부 hook에만 'name' 필드 추가됨. SessionStart/PreCompact/Stop/SessionEnd는 추가했으나 UserPromptSubmit의 check_pending_review/check_design_pending hook에는 name 누락. 일관성 결여로 hook 식별/디버깅 시 혼선.",
+"- [Info] data/skill-usage.jsonl, skill-eval-report.json, session_cursor.json — 자동 생성 런타임 산출물이 커밋에 포함됨. .gitignore 처리 또는 별도 커밋 분리 검토 권장.",
+"- [Info] 커밋 메시지가 'feat(hook-infra+P1-design)'로 두 가지 변경(훅 인프라 + Multi-Provider 설계문서)을 한 커밋에 포함. 그러나 diff에는 설계문서(docs/2026-04-29-*.md) 변경이 보이지 않음 — 별도 커밋이거나 누락 가능성.",
+"- [Info] syncCompyne/* 6개 파일 변경이 diff에 표시되지 않아 영향 평가 불가. 본 리뷰 범위에서 제외됨."
+]}
+
+---
+
+## 2026-04-29 18:52 — `2026-04-14-build-diet` (84c0098a)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`와 `Bash(git stash *)` 광범위 와일드카드 허용; `git pull origin main` 등으로 좁히는 것이 안전\n- [Medium] .claude/settings.local.json:51-71 — UserPromptSubmit 훅 명령이 재배치됨(check_pending_review/check_design_pending/hook_runner). 실행 순서가 의도대로인지(검토 큐 발화 → bridge 동기화) 검증 필요. bridge가 마지막이면 pending 큐를 못 보고 종료할 위험\n- [Low] .claude/settings.local.json:132 — 파일 말미 개행 누락(`No newline at end of file`); 다음 편집 시 diff 노이즈 유발\n- [Info] settings.local.json — 각 훅에 `name` 필드 부여는 추적성 향상 측면에서 좋음\n- [Info] data/skill-usage.jsonl, session_cursor.json — 자동 생성 로그/상태; 리뷰 대상 아님. 16-파일 변경 중 실제 코드 변화는 settings.local.json이 유일하게 보이며 나머지(syncCompyne/*, docs/*) diff가 잘려 검토 불가 — 전체 patch 재공급 권장"}
+
+---
+
+## 2026-04-29 18:52 — `2026-04-14-build-diet` (da79faf5)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:132 — 파일 끝 개행 누락 (`No newline at end of file`); POSIX 도구·diff 노이즈 유발 가능, 줄바꿈 추가 권장.\n- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 의도치 않은 인자(`git stash drop`, `git pull --rebase --autostash`)까지 통과시킴; 필요한 서브커맨드만 화이트리스트로 좁히길 권장.\n- [Medium] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 실행 순서가 재배치되어 `check_pending_review.py` → `check_design_pending.py` → `cli_hook_bridge` 순으로 변경됨. 기존에는 bridge가 먼저 컨텍스트를 주입했으나 이제 마지막에 동작 — 두 check 스크립트가 bridge 산출물(resume_brief 등)에 의존하지 않는지 확인 필요.\n- [Low] .claude/settings.local.json — 새로 추가된 `name` 필드(`agent_factory_claude_*`)가 일부 훅(UserPromptSubmit의 check_*) 항목에는 누락됨. 일관성 위해 모든 hook entry에 name 부여 권장(텔레메트리·디버깅 추적성).\n- [Info] data/skill-usage.jsonl, session_cursor.json 등 — 런타임 산출물이 커밋에 포함됨. 의도된 것이 아니라면 .gitignore 처리 검토.\n- [Info] 나머지 13개 파일은 diff 본문이 제공되지 않아 검증 불가 — 본 리뷰 범위 밖."}
+
+---
+
+## 2026-04-29 18:53 — `2026-04-14-build-diet` (99c9a47d)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-19 — 새로 추가된 `Bash(git pull *)`, `Bash(git stash *)` 와일드카드가 과도하게 넓다. `git pull origin main` 같은 좁은 패턴 권장 (임의 원격/refspec 허용 위험)",
+    "- [Low] .claude/settings.local.json:53-71 — UserPromptSubmit hook 순서가 `cli_hook_bridge → check_pending_review → check_design_pending` 에서 `check_pending_review → check_design_pending → cli_hook_bridge` 로 역전됨. resume_brief 생성 타이밍이 pending 검사 후로 밀리는데 의도 확인 필요",
+    "- [Low] .claude/settings.local.json:132 — EOF 개행 누락 (`\\ No newline at end of file`)",
+    "- [Info] 기타 변경 파일(skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등)은 런타임 자동 생성 상태 파일로 리뷰 대상 아님",
+    "- [Info] syncCompyne/* diff 가 본 컨텍스트에 포함되지 않아 검토 미수행"
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:53 — `2026-04-14-build-diet` (7dbe21f3)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review":"- [Medium] .claude/settings.local.json:132 — 파일 끝 newline 누락 (POSIX 텍스트 파일 규약 위반, 일부 도구가 마지막 줄을 무시할 수 있음).\n- [Medium] .claude/settings.local.json:54-71 — UserPromptSubmit 훅 순서가 변경됨: 기존 `cli_hook_bridge` → `check_pending_review` → `check_design_pending` 순서가 `check_pending_review` → `check_design_pending` → `cli_hook_bridge` 순서로 재배치됨. bridge가 마지막에 실행되도록 의도된 것인지 확인 필요 — 만약 bridge가 pending review 컨텍스트를 주입해야 한다면 순서가 뒤집혀 검증 메시지가 누락될 수 있음.\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 광범위 와일드카드 허용. `git pull --rebase=false origin main` 같은 의도치 않은 인자 조합도 자동 승인됨. 필요 시 더 좁은 패턴으로 제한 권장.\n- [Info] data/skill-usage.jsonl — 외부(macOS) 경로 `/Users/hoon/workTree/...`가 그대로 기록됨. 운영 영향은 없으나 다중 PC 동기화 시 경로 혼선 가능.\n- [Info] 변경 파일 16개 중 실제 diff 일부만 제공되어 syncCompyne/*.py, memory_store.py, project_log_cli.py, workspace_context_cli.py 등 핵심 Python 변경의 보안/버그 검토는 본 리뷰에서 다루지 못함. 별도 검토 필요."}
+
+---
+
+## 2026-04-29 18:54 — `2026-04-14-build-diet` (013d3af9)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` 와 `Bash(git stash *)` 는 와일드카드 범위가 너무 넓음; 원격/브랜치 인자를 좁히는 패턴 권장\n- [Low] .claude/settings.local.json:132 — 파일 끝 newline 누락 (`\\ No newline at end of file`)\n- [Info] .claude/settings.local.json:51-72 — UserPromptSubmit 훅 순서 변경: cli_hook_bridge 가 check_pending_review · check_design_pending 뒤로 이동. 의도된 변경인지 확인 필요 (브리지가 큐 상태 갱신 후 실행되는 것이 맞는지)\n- [Info] .claude/settings.local.json — 훅에 `name` 필드 추가는 디버깅·식별 측면에서 개선\n- [Info] data/skill-usage.jsonl, session_cursor.json 등 — 자동 생성 산출물; 리뷰 영향 없음", "summary": "주요 결함 없음. settings.local.json 의 git 와일드카드 권한과 EOF newline, UserPromptSubmit 훅 순서 변경 의도만 확인 권장."}
+
+---
+
+## 2026-04-29 18:55 — `2026-04-14-build-diet` (28d84e41)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Info] .claude/settings.local.json:18-20 — `Bash(git pull *)`/`Bash(git stash *)` 와일드카드 허용은 의도적이라면 OK이나, pull/stash 인자에 임의 원격·브랜치가 들어갈 수 있어 권한 범위가 넓다. 필요한 형태(`git pull origin *` 등)로 좁히는 것을 권장.",
+    "- [Medium] .claude/settings.local.json:51-70 — 3개 훅 command가 동일 type/위치에서 단순히 자리만 바꿨다. 각 hooks 블록이 어떤 이벤트(SessionStart/UserPromptSubmit/Stop 등)에 매핑되는지 diff에서 확인되지 않는다. 이벤트별 의도(예: design 큐는 UserPromptSubmit에서 발화)와 매핑이 일치하는지 settings.local.json 전체 컨텍스트로 재검증 필요. 매핑이 어긋나면 `[af-design-review-pending]` 자동 발화가 침묵 실패한다.",
+    "- [Low] data/skill-usage.jsonl, skills/new_skill/* — `report_path`에 `D:\\warkSpaces\\agent-factory\\...` (오타 'warkSpaces') 경로가 그대로 누적된다. 신규 행은 아니지만 회귀 추적 시 혼동 유발. 후속 정리 권장.",
+    "- [Info] syncCompyne/* — 본 diff 컨텍스트만으로는 변경 내용이 노출되지 않아 보안·버그 관점 평가 불가. 별도 리뷰 필요."
+  ],
+  "severity_summary": {"critical": 0, "high": 0, "medium": 1, "low": 1, "info": 2}
+}
+```
+
+---
+
+## 2026-04-29 18:55 — `2026-04-14-build-diet` (4a535467)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:133 — 파일 끝에 개행 없음 (`\\ No newline at end of file`); POSIX 도구 호환성 저해\n- [Medium] .claude/settings.local.json:54-72 — UserPromptSubmit hook 3개 순서가 [bridge→pending_review→design_pending] → [pending_review→design_pending→bridge]로 재배열됨. bridge가 마지막으로 이동했으므로, 리뷰 체크가 출력한 [af-review-pending]/[af-design-review-pending] 메시지가 bridge의 세션 커서/리줌 브리프 캡처보다 먼저 주입됨. 의도된 변경인지 확인 필요 (특히 SessionStart는 bridge가 먼저 실행되는데 UserPromptSubmit만 뒤로 빼면 비대칭)\n- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)` 및 `Bash(git stash *)` 와일드카드 허용 추가. `git pull origin main --force` 같은 호출까지 무프롬프트 통과 가능; 필요 시 더 좁은 패턴 권장\n- [Low] .claude/settings.local.json:21 — `mcp__codex__codex` 자동 허용 추가; codex MCP 호출이 사용자 승인 없이 실행됨. 의도 확인 필요\n- [Info] hook `name` 필드 5곳 추가 — 진단/로깅 가독성 향상, 부작용 없음\n- [Info] data/skill-usage.jsonl, session_cursor.json — 런타임 산출물; 리뷰 대상 아님 (.gitignore 검토 권장)"}
+
+---
+
+## 2026-04-29 18:56 — `2026-04-14-build-diet` (6343ff88)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{"findings":[
+"- [High] .claude/settings.local.json:133 — 파일 끝 newline 누락 (POSIX 텍스트 파일 규약 위반, 일부 도구가 마지막 줄 처리 실패 가능)",
+"- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 `git pull --rebase=interactive` 등 대화형/원격 강제 옵션까지 자동 승인. 자주 쓰는 인자만 명시적으로 좁히는 편이 안전",
+"- [Medium] .claude/settings.local.json:55-71 — UserPromptSubmit hook 순서 재배치 시 check_pending_review.py → check_design_pending.py → cli_hook_bridge 3개가 직렬 실행됨. 첫 두 스크립트가 비-zero exit 시 cli_hook_bridge가 차단되어 session_cursor 갱신이 누락될 위험. 각 스크립트가 항상 0 종료/예외 격리 보장하는지 확인 필요",
+"- [Low] .claude/settings.local.json:20 — `mcp__codex__codex` allow는 MCP 도구 전체 호출을 무조건 허용. 호출 인자/대상 제한이 없어 의도치 않은 외부 호출 가능성 — 권한 범위 검토 권장",
+"- [Info] data/skill-usage.jsonl — diff 일부가 잘려 마지막 라인 무결성(JSONL 마지막 newline) 확인 불가. append 시 trailing newline 정책 점검",
+"- [Info] 16개 변경 파일 중 syncCompyne/*, projects/global_hoon_main/* 변경분이 diff에 노출되지 않아 본 리뷰 범위 외 — 별도 검토 필요"
+]}
+```
+
+---
+
+## 2026-04-29 18:56 — `2026-04-14-build-diet` (6b7aea19)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Low] .claude/settings.local.json:133 — 파일 끝 개행 누락 (POSIX 규약 위반, 일부 도구가 마지막 줄 인식 못함)\n- [Medium] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 `git pull --rebase --autostash` 등 부수효과 큰 변형까지 무프롬프트 통과시킴; 의도된 명령만 명시 권장\n- [Info] .claude/settings.local.json:55-72 — UserPromptSubmit 훅 순서가 cli_hook_bridge→check_pending_review→check_design_pending에서 check_pending_review→check_design_pending→cli_hook_bridge로 재배치됨. bridge가 마지막에 실행되므로 앞의 두 스크립트가 stdin/stdout을 변형하면 bridge가 받는 컨텍스트가 달라질 수 있음 — 의도된 변경인지 PR 본문에서 확인 필요\n- [Info] 16개 변경 파일 중 다수(skill-usage.jsonl, session_cursor.json, skill-eval-report.json 등)가 자동 생성 산출물 — 커밋 메시지의 'design 큐 훅 인프라 + Multi-Provider 설계문서' 범위와 무관해 보이므로 .gitignore 추가 또는 별도 커밋 분리 검토\n- [Info] 변경 파일 목록에 docs/2026-04-29-*.md 설계문서 자체가 보이지 않음 — '설계문서' 변경분이 본 diff에 포함되지 않은 것으로 보여 커밋 제목과 실제 변경분 불일치 가능성"}
+
+---
+
+## 2026-04-29 18:57 — `2026-04-14-build-diet` (4412cd31)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{"review": "- [Medium] .claude/settings.local.json:133 — 파일 끝 개행 누락 (`No newline at end of file`); POSIX 도구·diff 호환성 저하\n- [Medium] .claude/settings.local.json:52-71 — UserPromptSubmit 훅 명령 재배치 시 matcher와 command 매핑 검증 필요. diff 상 같은 matcher 블록 내에서 command가 회전된 것처럼 보임 — 의도된 재배치인지(check_pending_review → check_design_pending → cli_hook_bridge 순) 별도 확인 필수\n- [Low] .claude/settings.local.json:18-20 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용은 임의 원격/브랜치 인자 허용. `git pull origin *` 등 더 좁은 패턴 권장\n- [Low] .claude/settings.local.json:20 — `mcp__codex__codex` 전체 허용; 도구별 세분화 가능하면 권장\n- [Info] data/skill-usage.jsonl, skill-eval-report.json, skills/registry.yaml — 런타임 산출물/상태 파일 다수 커밋. .gitignore 정책 재확인 권장 (이전 정책상 일부는 추적 외 대상일 수 있음)\n- [Info] syncCompyne/*, projects/global_hoon_main/.../session_cursor.json — diff 본문이 잘려 미검토. 별도 검토 필요\n- 결론: 차단 결함 없음. EOF 개행 + 훅 매처 정합성만 확인 후 머지 가능."}
+
+---
+
+## 2026-04-29 18:58 — `2026-04-14-build-diet` (7fbf1b93)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:133 — 파일 끝 개행 누락 (`No newline at end of file`)
+- [Info] .claude/settings.local.json:48-72 — UserPromptSubmit 훅 실행 순서 재배치(`cli_hook_bridge`가 마지막으로 이동). `check_pending_review.py`/`check_design_pending.py`가 먼저 실행되도록 의도된 변경인지 확인 필요. 이전엔 resume_brief 컨텍스트 주입이 먼저였음
+- [Info] .claude/settings.local.json:18 — `Bash(git pull *)`/`Bash(git stash *)` 와일드카드 권한 추가는 stash drop·pull --rebase 등 부수효과 있는 변형도 통과시킴. 좁힐 여지 있음
+- [Info] .claude/settings.local.json:20 — `mcp__codex__codex` MCP 호출 자동 허용. 외부 모델 호출 비용·로그 영향 검토 권장
+- [Info] data/skill-usage.jsonl — 윈도우 워크트리에서 `/Users/hoon/...` macOS 경로의 promotion 이벤트가 추가됨. 다른 머신에서 흘러온 동기화 데이터인지 확인(섞이면 path 추적 혼선)
+
+나머지 파일(syncCompyne/*, registry.yaml, code-review.md, session_cursor.json 등)은 diff가 잘려 본문이 보이지 않아 별도 검토하지 못했습니다.
+
+---
+
+## 2026-04-29 18:58 — `2026-04-14-build-diet` (f73c9809)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- [Low] .claude/settings.local.json:133 — 파일 끝에 newline 누락 (`\ No newline at end of file`). POSIX 규약 위반, 일부 도구에서 마지막 줄 처리 이슈 가능.
+- [Info] .claude/settings.local.json:18-20 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 권한 추가. `git pull --force` 같은 인자도 허용되므로 의도된 범위인지 확인 필요.
+- [Info] .claude/settings.local.json:55-72 — UserPromptSubmit hook 순서가 재배치됨 (cli_hook_bridge가 마지막으로 이동). 다른 hook들이 먼저 실행되어 컨텍스트를 prepend하는 동작에 의존하지 않는지 확인 필요.
+- [Info] .claude/settings.local.json — hook `name` 필드 추가는 진단/로깅 목적으로 적절. SessionStart/PreCompact/Stop/SessionEnd 5개 hook에 일관되게 부여됨.
+- [Info] data/skill-usage.jsonl, skills/new_skill/* — append-only 텔레메트리 및 평가 리포트 갱신. 코드 변경 없음.
+- [Info] projects/global_hoon_main/data/memory/*/session_cursor.json — 런타임 상태 파일. 리뷰 대상 아님.
+- [Info] syncCompyne/* 변경분은 diff에 포함되지 않아 평가 불가.
+
+---
+
+## 2026-04-29 18:59 — `2026-04-14-build-diet` (c91cf342)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:18-20 — `Bash(git pull *)` / `Bash(git stash *)` 와일드카드 허용은 임의 원격에서 pull 가능. 원격을 origin 등으로 한정 권장.",
+    "- [Medium] .claude/settings.local.json:52-71 — UserPromptSubmit 훅 실행 순서가 변경됨(cli_hook_bridge가 마지막으로 이동). check_pending_review/check_design_pending이 먼저 실행되어 brief 생성 전 큐 검사를 하게 되는데, cli_hook_bridge가 만드는 resume_brief에 의존하는 후속 훅이 없는지 확인 필요.",
+    "- [Low] .claude/settings.local.json:133 — `No newline at end of file`. POSIX 규약상 EOL 추가 권장.",
+    "- [Info] hooks에 `name` 필드 일관 추가는 식별/디버깅에 도움 — 좋음.",
+    "- [Info] diff가 일부 잘려 syncCompyne/*.py, memory_store.py, project_log_cli.py, workspace_context_cli.py 변경 내용은 확인 불가 — 별도 리뷰 필요."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 18:59 — `2026-04-14-build-diet` (2447d7bd)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] .claude/settings.local.json:55-72 — Hook 명령이 이벤트 간에 회전(rotation)되어 어떤 이벤트가 어떤 스크립트를 트리거하는지 의도와 일치하는지 검증 필요. 기존: UserPromptSubmit→cli_hook_bridge, 추가 이벤트→check_pending_review→check_design_pending. 변경 후: →check_pending_review→check_design_pending→cli_hook_bridge로 한 칸씩 밀림. 이벤트 타입 키가 diff에 가려져 있어 의도된 매핑인지 확인 필요.",
+    "- [Low] .claude/settings.local.json:130 — `\\ No newline at end of file` — 파일 끝 개행 누락. JSON 자체는 유효하나 POSIX 관례 위반, 일부 도구가 마지막 라인 처리에서 경고.",
+    "- [Low] .claude/settings.local.json:18-19 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 허용. `git pull origin main --force` 같은 위험 변형도 통과. 더 좁은 패턴(`git pull`, `git stash push -m *`) 권장.",
+    "- [Info] .claude/settings.local.json:20 — `mcp__codex__codex` MCP 호출 무조건 허용 — Codex로의 외부 LLM 호출 게이트가 사라짐. 의도된 정책이면 OK.",
+    "- [Info] data/skill-usage.jsonl, projects/.../session_cursor.json, skill-eval-report.json — 런타임 산출물(런 ID/타임스탬프)이 커밋에 포함됨. .gitignore 후보."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 19:00 — `2026-04-14-build-diet` (7342b1af)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+{
+  "review": [
+    "- [Low] .claude/settings.local.json:133 — 파일 끝 개행 누락 (\\ No newline at end of file). POSIX 텍스트 파일 규약 위반, 일부 도구가 마지막 줄을 누락 처리할 수 있음.",
+    "- [Medium] .claude/settings.local.json:18-20 — `Bash(git pull *)`, `Bash(git stash *)` 와일드카드 권한 추가. `git pull origin malicious-branch` 등 임의 인자 실행을 자동 승인하므로 권한 범위가 넓음. 필요한 형태(`git pull`, `git stash`, `git stash pop`)로 좁히는 편이 안전.",
+    "- [Medium] .claude/settings.local.json:55-72 — UserPromptSubmit 훅 순서가 [cli_hook_bridge → check_pending_review → check_design_pending] 에서 [check_pending_review → check_design_pending → cli_hook_bridge] 로 재배치됨. 기존에 cli_hook_bridge가 먼저 실행되어 세션 컨텍스트를 갱신한 뒤 review 검사를 했다면, 이번 변경으로 review 검사가 stale state를 보게 될 가능성. 의도된 재배치인지 PR 본문에 근거 명시 필요.",
+    "- [Low] .claude/settings.local.json:21 — `mcp__codex__codex` allow 추가. MCP 서버 호출이 자동 허용되므로 외부 도구 호출 권한 확대. 의도 확인 권장.",
+    "- [Info] data/skill-usage.jsonl — append-only 이벤트 로그. 변경 정합성 OK.",
+    "- [Info] 기타 상태 파일(skill-eval-report.json, session_cursor.json 등) — 자동 생성 산출물, 리뷰 대상 아님."
+  ]
+}
+
+---
+
+## 2026-04-29 19:01 — `2026-04-14-build-diet` (99f81b67)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[Medium]** `.claude/settings.local.json:~8` — `"Bash(git pull *)"` and `"Bash(git stash *)"` wildcards are overly broad; allows pulling from arbitrary remotes/refspecs, which could silently overwrite local state or inject unexpected code.
+
+- **[Medium]** `.claude/settings.local.json` hook rotation — UserPromptSubmit hook was `hook_runner.py cli_hook_bridge`, now `check_pending_review.py`; the bridge that syncs session state is pushed down to a later slot. If hook execution order matters for continuity (cursor/session state must be written before prompt handling), this reordering may cause stale-state reads.
+
+- **[Low]** `data/skill-usage.jsonl` — hardcoded Mac path `/Users/hoon/workTree/agent-factory/` in `report_path`/`promotion_path` fields. This file is committed to the repo and will produce broken references on Windows. Paths should be relative or runtime-resolved.
+
+- **[Low]** `.claude/settings.local.json` — trailing newline removed (last line). Minor, but breaks POSIX file convention and may cause diff noise in future patches.
+
+- **[Info]** `projects/.../session_cursor.json`, `skill-eval-report.json`, `skill-promotion.json`, `skills/registry.yaml` — runtime/auto-generated state files committed alongside config changes. These should ideally be in `.gitignore` or a separate data commit to keep config diffs readable.
+
+- **[Info]** `syncCompyne/*.py` and `syncCompyne/*.md` diffs not shown (truncated) — cannot review those files.
+
+---
+
+## 2026-04-29 19:02 — `2026-04-14-build-diet` (0ef3cfc3)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:52–68 — Hook 순환 교체: cli_hook_bridge(세션 연속성)가 SessionStart에서 제거되어 StopTurn으로 이동됨. 세션 시작 시 resume_brief 컨텍스트가 주입되지 않아 NEXT_STEPS 기반 작업 재개 불가.",
+    "- [High] .claude/settings.local.json:60 — UserPromptSubmit에 check_design_pending.py가 배정됐으나 SessionStart에는 check_pending_review.py가 배정됨. 두 훅의 의도된 트리거 이벤트가 뒤바뀐 상태 — 설계 큐 검사가 프롬프트 제출 시점에 실행되어야 하는데 세션 시작 시 실행됨.",
+    "- [Medium] .claude/settings.local.json:17 — 'Bash(git stash *)' 와일드카드 허용. git stash drop / git stash clear 등 비복구성 삭제 명령 포함됨. Destructive Action Guard 정책과 충돌.",
+    "- [Low] .claude/settings.local.json:19 — 'Bash(npm list *)' 추가. 읽기 전용이나 node_modules 대형 트리 출력 시 컨텍스트 낭비 가능. head 제한 없음.",
+    "- [Info] data/skill-usage.jsonl — 경로 D:\\\\warkSpaces(오타, workSpaces가 아님)는 이전 항목부터 이어진 레거시이므로 신규 항목 문제 아님. 다만 경로 정규화 미적용 상태.",
+    "- [Info] 나머지 파일(syncCompyne/*, session_cursor.json, registry.yaml)은 diff 미포함 — 평가 불가."
+  ],
+  "summary": "핵심 결함: 세션 연속성 훅(cli_hook_bridge)이 SessionStart에서 탈락하여 재개 컨텍스트 단절. git stash 와일드카드 허용은 Destructive Action Guard 위반 소지. 나머지는 낮음/정보 수준."
+}
+```
+
+---
+
+## 2026-04-29 19:02 — `2026-04-14-build-diet` (f193e1f9)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:53-72` — Hook slot rotation is suspect. The diff swaps which script occupies which event slot: `UserPromptSubmit` now runs `check_pending_review.py`, the previous `check_pending_review.py` slot becomes `check_design_pending.py`, and `hook_runner.py cli_hook_bridge` (named `agent_factory_claude_userpromptsubmit`) lands in the 4th slot. If hook-to-event binding is positional (array index per event type), `hook_runner.py` may now fire on the wrong lifecycle event, silently breaking session continuity.
+
+- **[Medium]** `.claude/settings.local.json:16-17` — `"Bash(git pull *)"` and `"Bash(git stash *)"` added to the allowlist without remote or ref constraints. These can pull from arbitrary remotes or silently discard/restore uncommitted work, expanding the blast radius of any prompt injection that crafts a git command.
+
+- **[Low]** `data/skill-usage.jsonl` — Hardcoded macOS paths (`/Users/hoon/workTree/agent-factory/skills/...`) committed from a previous machine. `report_path` / `promotion_path` values in these log entries are permanently stale and will break any downstream reader that resolves them.
+
+- **[Low]** `.claude/settings.local.json:131` — Missing newline at EOF (cosmetic but causes noisy diffs).
+
+---
+
+## 2026-04-29 19:03 — `2026-04-14-build-diet` (aed0f172)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+---
+
+- **[High]** `.claude/settings.local.json:15-18` — `Bash(git pull *)` 와일드카드 허용은 remote URL 범위를 제한하지 않아 `.git/config` 에 악의적 remote가 추가된 경우 임의 origin에서 pull 가능. `Bash(git pull origin *)` 등 특정 remote로 제한 권장.
+
+- **[Medium]** `.claude/settings.local.json:51-77` — `UserPromptSubmit` 에 hook 3개가 모두 등록됨 (`check_pending_review.py`, `check_design_pending.py`, `hook_runner.py bridge`). 브릿지가 리뷰 스크립트보다 **뒤에** 실행되므로, 리뷰 스크립트가 `[af-review-pending]` 출력 → Claude가 반응 → 브릿지 hook 아직 실행 전인 타이밍 경합 가능성. 브릿지를 첫 번째 항목으로 이동 고려.
+
+- **[Medium]** `.claude/settings.local.json:18` — `mcp__codex__codex` allow 추가 시 파라미터 범위 제한 없음. MCP 툴은 allow 패턴으로 인자 스코핑이 불가능하므로, 의도된 허용 범위를 주석이나 문서로 명시 필요.
+
+- **[Low]** `.claude/settings.local.json:18` — `Bash(npm list *)` 허용이 추가됨. 읽기 전용 목적이라면 문제없으나 `npm list` 는 `node_modules` 트리 탐색으로 느릴 수 있어 hook 내 timeout 초과 유발 가능.
+
+- **[Low]** `.claude/settings.local.json:131` — 파일 끝 개행(newline) 누락. `\ No newline at end of file` — POSIX 표준 위반, 일부 JSON 파서에서 경고 발생.
+
+- **[Info]** `.claude/settings.local.json` — 각 hook에 `name` 필드 추가는 디버그 가시성 향상에 유효. 단, `check_pending_review.py` / `check_design_pending.py` 두 hook에는 name이 없으므로 일관성을 위해 추가 권장.
+
+- **[Info]** `data/skill-usage.jsonl`, `skill-eval-report.json` — append-only 이벤트 로그, 코드 리스크 없음.
+
+---
+
+## 2026-04-29 19:04 — `2026-04-14-build-diet` (9b229000)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:16` — `"Bash(git stash *)"` allowlist은 `git stash drop *`, `git stash clear` 등 비가역적 작업을 포함. Destructive Action Guard 정책 위반 가능성.
+- **[Medium]** `.claude/settings.local.json:15` — `"Bash(git pull *)"` 와일드카드는 임의 remote URL로의 pull을 허용 (`git pull <malicious-url>`). 허용 범위 과도함.
+- **[Medium]** `.claude/settings.local.json:53-69` — UserPromptSubmit 훅 순서가 `hook_runner → check_pending → check_design` 에서 `check_pending → check_design → hook_runner` 로 역전됨. `hook_runner`가 컨텍스트 주입 역할이라면 **후행** 실행은 resume_brief가 프롬프트에 도달하지 않음.
+- **[Low]** `data/skill-usage.jsonl:11` — `report_path`/`promotion_path`에 맥OS 절대경로 `/Users/hoon/workTree/` 하드코딩. Windows 환경 `D:/hoonProJect/worktrees/`와 불일치 — 경로 의존 코드 실행 시 FileNotFound.
+- **[Low]** `.claude/settings.local.json` EOF — `\ No newline at end of file`. JSON 파서는 허용하지만 git diff 노이즈 발생.
+- **[Info]** 훅에 `name` 필드 추가는 디버그 가시성 향상으로 긍정적.
+
+**요약**: `git stash *` 허용 범위 축소(`git stash list`, `git stash show`만 허용 권장) 및 UserPromptSubmit 훅 실행 순서 의도 재확인 필요.
+
+---
+
+## 2026-04-29 19:05 — `2026-04-14-build-diet` (0ea37b41)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[Medium]** `.claude/settings.local.json:53–65` — Hook 이벤트 재배치: `check_pending_review.py`와 `check_design_pending.py`가 서로 다른 이벤트 슬롯으로 이동됨. 어떤 이벤트(UserPromptSubmit vs PostToolUse)에 연결되는지 context 없이는 파이프라인 발화 순서가 의도대로인지 확인 불가 — 실제 훅 이벤트 타입 레이블을 diff에서 확인 필요.
+
+- **[Medium]** `.claude/settings.local.json:line ~15` — `Bash(git stash *)` 와일드카드 허용: `git stash drop`·`git stash clear` 같은 파괴적 서브커맨드도 무프롬프트 허용됨. `git stash list`, `git stash push` 등 필요한 서브커맨드만 열거하는 방식으로 좁혀야 함.
+
+- **[Medium]** `.claude/settings.local.json:line ~15` — `Bash(git pull *)` 와일드카드: `git pull --force`, `git pull --rebase --force` 등도 허용범위에 포함됨. 허용 범위를 `git pull origin *` 수준으로 제한하거나 별도 deny 규칙 추가 권장.
+
+- **[Low]** `data/skill-usage.jsonl` — macOS 절대경로 `/Users/hoon/workTree/agent-factory/` 하드코딩: Windows 워크스페이스(`D:/hoonProJect/worktrees/`) 와 불일치. 다른 PC 재개 시 `report_path`·`promotion_path` 참조 실패 가능.
+
+- **[Low]** `.claude/settings.local.json:EOF` — 파일 끝 개행 누락(`\ No newline at end of file`). 일부 JSON 파서·git diff 툴에서 경고 발생.
+
+- **[Info]** 훅에 `name` 필드 추가(`agent_factory_claude_sessionstart` 등) — 디버깅 추적성 향상, 올바른 방향.
+
+---
+
+## 2026-04-29 19:05 — `2026-04-14-build-diet` (9f90a839)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:53 — PostToolUse hook now runs check_pending_review.py instead of hook_runner.py; if PostToolUse was previously the only hook_runner call for that event, session continuity bridge may silently drop for tool-use events.",
+    "- [Medium] .claude/settings.local.json:allow — 'Bash(git stash *)' is broad; wildcard allows 'git stash drop'/'git stash clear' which are destructive. Should be scoped to 'git stash push *' or 'git stash list' only.",
+    "- [Medium] .claude/settings.local.json:allow — 'mcp__codex__codex' added without scope restriction; grants full Codex MCP tool access from the allowlist. Intentional but worth confirming scope is acceptable.",
+    "- [Low] .claude/settings.local.json — Missing newline at EOF (diff shows removal of final newline). Minor but can cause noisy diffs and some JSON tooling warnings.",
+    "- [Info] .claude/settings.local.json — Hook name fields added (agent_factory_claude_*) improve traceability in logs. Positive change.",
+    "- [Info] data/skill-usage.jsonl — Append-only log entries; no structural issues. historical_score=52 with contract_pass_rate=0.0 in new entries; verify this is expected for the candidate stage.",
+    "No issues found in syncCompyne/* or session cursor JSON files from the visible diff."
+  ]
+}
+```
+
+---
+
+## 2026-04-29 19:06 — `2026-04-14-build-diet` (a9e7c8e0)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[Medium]** `.claude/settings.local.json:43-46` — `"Bash(git pull *)"` and `"Bash(git stash *)"` wildcards in the allowlist permit pulling from any remote/ref and stashing without confirmation. A buggy hook could silently overwrite local uncommitted work.
+
+- **[Medium]** `.claude/settings.local.json:53-70` — Hook execution order for `UserPromptSubmit` was reshuffled: `cli_hook_bridge` (session-state init) now fires **last** instead of first. If `check_pending_review.py` or `check_design_pending.py` depend on bridge-initialized session state, they will silently operate on stale/uninitialized context.
+
+- **[Low]** `.claude/settings.local.json:131` — File ends without a trailing newline (`-}` → `+}\ No newline at end of file`). JSON parsers tolerate this but it breaks `diff`/`patch` tooling cleanly.
+
+- **[Low]** `data/skill-usage.jsonl` — Appended entries contain hardcoded Mac paths (`/Users/hoon/workTree/...`) in `report_path` and `promotion_path` fields. On this Windows workspace those paths are unresolvable; any tooling that re-reads these fields to load artifacts will silently fail.
+
+- **[Info]** `data/skill-usage.jsonl` — `contract_pass_rate`, `hidden_pass_rate`, `runtime_success_rate` all `0.0` yet stage promoted to `candidate`. Verify the promotion threshold logic actually gates on non-zero pass rates before `active` promotion.
+
+---
+
+## 2026-04-29 19:07 — `2026-04-14-build-diet` (74f83133)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] .claude/settings.local.json:53 — Hook 순서 로테이션: UserPromptSubmit 이벤트 블록의 hook_runner.py(브리지)가 check_pending_review.py → check_design_pending.py 이후로 밀렸음. 브리지 상태가 확립되기 전에 check 스크립트가 실행되면 stale 상태로 동작하거나 KeyError로 silent-fail 가능.",
+    "- [Medium] .claude/settings.local.json:16 — 'Bash(git pull *)' 허용 추가: remote/branch 무제한 허용. 악성 remote가 등록된 환경에서 자동 pull이 코드 주입 경로가 됨. 'Bash(git pull origin main)' 등 구체적 패턴으로 제한 권장.",
+    "- [Medium] .claude/settings.local.json:18 — 'mcp__codex__codex' 를 allowlist에 추가했지만 인자 패턴 제한 없음. 임의 codex 명령 실행이 허용됨. 필요한 최소 scope로 제한할 것.",
+    "- [Low] .claude/settings.local.json:131 — 파일 끝 개행 누락(no newline at EOF). JSON 파서에 따라 문제없지만, git diff 노이즈 유발.",
+    "- [Low] data/skill-usage.jsonl — 잘린 줄(truncated line) 확인됨. append-only 로그로 보이나 파싱 시 JSONDecodeError 발생 가능. 마지막 줄 완전성 검증 로직 필요.",
+    "- [Info] .claude/settings.local.json — SessionStart·PreCompact·Stop·SessionEnd 훅에 name 필드 추가: 가시성 개선, 문제 없음."
+  ]
+}
+```
+
+**요약**: 가장 위험한 부분은 훅 실행 순서 로테이션(High)과 `git pull *` 무제한 허용(Medium) 두 가지입니다. 브리지 훅이 check 스크립트보다 먼저 실행되도록 순서를 복원하고, git pull 패턴을 구체화하는 것을 권장합니다.
+
+---
+
+## 2026-04-29 19:08 — `2026-04-14-build-diet` (23a828ef)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+```
+- [High]   .claude/settings.local.json — "Bash(git stash *)" 와일드카드 허용은 `git stash drop`·`git stash clear` 같은 파괴적 하위 명령까지 포함. 허용 범위를 `git stash list`, `git stash push` 등 개별 명령으로 좁혀야 함.
+- [Medium] .claude/settings.local.json — "Bash(git pull *)" 허용 시 임의 원격 URL 지정 가능(git pull <attacker-url> main). 허용 범위를 `git pull origin *` 또는 명시적 remote로 한정 권장.
+- [Medium] data/skill-usage.jsonl — report_path·promotion_path 값이 macOS 절대경로(/Users/hoon/workTree/...)로 하드코딩됨. 현재 작업 환경(D:\hoonProJect\worktrees\)에서는 경로 불일치로 이벤트 추적 단절 가능.
+- [Low]    .claude/settings.local.json — UserPromptSubmit 이벤트에 hook이 2개(check_pending_review.py + hook_runner.py cli_hook_bridge) 등록됨. 실행 순서·중복 트리거 의도가 주석·name 필드 없이 불명확.
+- [Low]    .claude/settings.local.json — 파일 끝 개행 제거(no newline at EOF). POSIX 표준 위반이며 git diff 노이즈 유발.
+- [Info]   .claude/settings.local.json — hook name 필드(`agent_factory_claude_*`) 추가로 디버그 가독성 향상 — 긍정적 변경.
+```
+
+---
+
+## 2026-04-29 19:08 — `2026-04-14-build-diet` (fa28acf3)
+
+**Context**: feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — 3-Tier 검증 통과
+
+**Changed (16)**: `.claude/settings.local.json, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py ... (+1)`
+
+### Findings
+
+- **[High]** `.claude/settings.local.json:16` — `"Bash(git stash *)"` added to allowlist without restriction. Automated hooks triggering `git stash` can silently discard uncommitted work; scope to a safer pattern like `Bash(git stash list)` or remove entirely.
+- **[Medium]** `.claude/settings.local.json:69–72` — Hook ordering inversion: `cli_hook_bridge` (now named `agent_factory_claude_userpromptsubmit`) moved to 4th position in the UserPromptSubmit chain, running *after* `check_pending_review.py` and `check_design_pending.py`. If the bridge emits `[af-review-pending]`/`[af-design-review-pending]` signals those scripts depend on, the ordering dependency is now broken.
+- **[Medium]** `.claude/settings.local.json:18` — `"mcp__codex__codex"` added to global allowlist with no scope qualifier. This permits unrestricted Codex MCP calls from any context; verify this is intentional and not overly permissive.
+- **[Low]** `.claude/settings.local.json:131` — Missing newline at EOF. Not functional but violates POSIX and can cause diff noise in future patches.
+- **[Info]** `data/skill-usage.jsonl` — Diff is truncated; new entries reference macOS path `/Users/hoon/workTree/...` while the primary workspace is `D:/hoonProJect/worktrees/...`. Cross-machine path inconsistency in event records may break tooling that reads `report_path`/`promotion_path` fields.
+- **[Info]** `syncCompyne/*.py` — Listed as changed but diff is not included. Cannot assess for bugs or security issues without the content.

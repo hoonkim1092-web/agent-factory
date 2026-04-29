@@ -1,0 +1,18 @@
+{
+  "key": "user corefile_iopy",
+  "value": "[user] core\\file_io.py",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:32:57.514772+00:00",
+  "updated_at": "2026-04-28T08:32:57.514772+00:00",
+  "details": {
+    "text": "[user] core\\file_io.py",
+    "event_timestamp": "2026-04-07T06:04:09.673Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/fc3e6726-dbaa-4583-9a11-16cebc683b0e.jsonl",
+    "session_line": 76,
+    "provider": "claude"
+  }
+}

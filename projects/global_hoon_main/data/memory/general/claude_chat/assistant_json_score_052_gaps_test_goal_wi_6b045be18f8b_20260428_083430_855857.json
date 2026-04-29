@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 052  gaps     원본 요청test goal이 실질적 목표가 아니므로 모든 WI가 도메인 무관한 프로젝트 관리 메타-프레임워크로 생성됨  실제 산출물과의 정렬이 불가능 ",
+  "value": "[assistant] ```json {   \"score\": 0.52,   \"gaps\": [     \"원본 요청('test goal')이 실질적 목표가 아니므로 모든 WI가 도메인 무관한 프로젝트 관리 메타-프레임워크로 생성됨 — 실제 산출물과의 정렬이 불가능\",     \"WI 간 명시적 의존성 필드 없음: WI-002가 DAG 작성을 목표로 하지만, WI 스키마 자체에 'depends_on' 또는 'blocks' 속성이 없어 실행 순서가 비공식적으로만 존재...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:34:30.856142+00:00",
+  "updated_at": "2026-04-28T08:34:30.856142+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.52,\n  \"gaps\": [\n    \"원본 요청('test goal')이 실질적 목표가 아니므로 모든 WI가 도메인 무관한 프로젝트 관리 메타-프레임워크로 생성됨 — 실제 산출물과의 정렬이 불가능\",\n    \"WI 간 명시적 의존성 필드 없음: WI-002가 DAG 작성을 목표로 하지만, WI 스키마 자체에 'depends_on' 또는 'blocks' 속성이 없어 실행 순서가 비공식적으로만 존재함\",\n    \"WI-002 DoD 부트스트랩 순환: 'af-critic이 LGTM 판정' 조건이 WI-003의 af-critic 배정보다 먼저 요구되지만 WI-002 자체가 에이전트 배정 작업임\",\n    \"WI-003 리스크가 단 1건: 리스크 레지스터를 작성하는 WI가 자체 리스크를 1건만 식별 — '리스크 관리 프로세스가 실패하는 경우' 등 추가 리스크 필요\",\n    \"WI-003 route.skill='af-code-review'는 리스크 관리 역할과 불일치 — 코드 리뷰 전용 스킬을 리스크 매니저 WI에 배정하는 것은 오용\",\n    \"project_brief.route가 빈 객체 {} — 최상위 라우팅 메타데이터 누락\",\n    \"이해관계자 승인 기록(WI-001 deliverable) 담당자 미지정 — owner 필드 없음\"\n  ],\n  \"strengths\": [\n    \"모든 WI에 deliverables·acceptance_criteria·risks·definition_of_done·estimated_effort 5개 필드가 빠짐없이 채워짐\",\n    \"WI-001·002·004의 수용 기준이 수치 기반(KPI 3개 이상, 리스크 5개 이상, 완료율 %)으로 관찰·검증 가능\",\n    \"WI-004의 DoD가 'CI에 통합되어 최소 1회 성공 실행' 조건을 포함해 자동화 검증 기준을 명시\",\n    \"WI-001·002에서 scope creep 방지(CCB)와 병목 회피(멀티 에이전트 분산)처럼 실용적 완화 전략이 구체적\",\n    \"priority 필드가 1→2→2→3으로 병렬 실행 가능 구간을 암시적으로 표현\"\n  ],\n  \"revision_instructions\": [\n    \"원본 goal을 구체적인 도메인 목표로 교체하거나, 'test goal'임을 명시하는 disclaimer를 artifact 상단에 추가하여 리뷰어가 오정렬 원인을 즉시 파악할 수 있게 할 것\",\n    \"각 WI에 'depends_on': [\\\"WI-XXX\\\"] 배열 필드를 추가하고 WI-002가 WI-001 완료 후 시작됨을, WI-003·004가 WI-001 완료 후 병렬 진행 가능함을 명시할 것\",\n    \"WI-002 DoD에서 'af-critic LGTM' 조건을 제거하거나 WI-003 완료 이후 단계로 이동시켜 부트스트랩 순환을 해소할 것\",\n    \"WI-003 risks에 '리스크 등록 프로세스 미준수로 인한 레지스터 허위 완료', '담당자 부재 시 모니터링 중단' 등 최소 2건 추가할 것\",\n    \"WI-003 route.skill을 'af-architecture' 또는 'af-doc-qa'로 교체하여 리스크 관리 역할과 스킬이 일치하도록 수정할 것\",\n    \"project_brief.route에 실제 라우팅 정보(agent, skill, priority)를 채우거나 null임을 명시할 것\",\n    \"WI-001 deliverable '이해관계자 승인 기록'에 owner 또는 responsible_role 속성을 추가할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-04-28T08:34:29.415Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory-tests--tmp-af-test-a0943993/b7ad78ae-74f2-44c6-b83a-36c09c0454c0.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

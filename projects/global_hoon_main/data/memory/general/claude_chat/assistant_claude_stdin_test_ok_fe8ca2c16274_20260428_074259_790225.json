@@ -1,0 +1,18 @@
+{
+  "key": "assistant claude stdin test OK",
+  "value": "[assistant] claude stdin test OK",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T07:42:59.790259+00:00",
+  "updated_at": "2026-04-28T07:42:59.790259+00:00",
+  "details": {
+    "text": "[assistant] claude stdin test OK",
+    "event_timestamp": "2026-04-07T05:00:31.518Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/eeb80c40-3d31-4870-ac6e-32e5a03f94c8.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

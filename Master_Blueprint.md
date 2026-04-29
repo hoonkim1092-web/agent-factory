@@ -1252,6 +1252,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-29 | v1.2.22 | chore(hook-infra+syncCompyne): 훅 name 필드 추가·순서 재정렬 및 syncCompyne CLI 갱신 — settings.local.json 훅 5개(SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd)에 name 필드 부여, UserPromptSubmit 훅을 check_pending_review→check_design_pending 순으로 재배치, git pull·stash/mcp__codex__codex/npm list 권한 추가, syncCompyne memory_store·project_log_cli·workspace_context_cli 수정 |
 | 2026-04-29 | v1.2.22 | chore(hook-infra+syncCompyne): hook name 식별자 추가 및 UserPromptSubmit 라우팅 정비 — SessionStart/PreCompact/Stop/SessionEnd hook에 name 필드 신규 추가, UserPromptSubmit을 check_pending_review.py → hook_runner.py로 교체, git pull·stash·npm list·mcp__codex__codex 허용 명령 추가, syncCompyne memory_store/project_log_cli/workspace_context_cli 업데이트 |
 | 2026-04-29 | v1.2.22 | chore(hook-config+syncCompyne): 훅 name 식별자 추가 및 UserPromptSubmit 체인 재정비 — settings.local.json 각 훅에 agent_factory_claude_* name 필드 신규 추가, UserPromptSubmit→check_pending_review·StopAsTool→check_design_pending·UserPromptSubmit2→cli_hook_bridge 순서 재배치, git pull/stash·mcp__codex__codex·npm list 권한 신규 허용, syncCompyne memory_store.py·project_log_cli.py·workspace_context_cli.py 수정 |
 | 2026-04-29 | v1.2.22 | chore(hook-infra): 훅 설정 재편 및 syncCompyne CLI 신규 추가 — UserPromptSubmit 훅을 hook_runner.py로 전환·PostToolUse를 check_design_pending.py로 이동, 각 훅에 name 필드 추가, allowlist에 git pull/stash·mcp__codex__codex·npm list 추가, syncCompyne/memory_store.py·project_log_cli.py·workspace_context_cli.py 신규 |

@@ -1,0 +1,18 @@
+{
+  "key": "assistant 이제 프로젝트 구조를 더 잘 이해하기 위해 몇 가지 더 중요한 파일들을 확인하겠습니다",
+  "value": "[assistant] 이제 프로젝트 구조를 더 잘 이해하기 위해 몇 가지 더 중요한 파일들을 확인하겠습니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-23T07:18:41.418110+00:00",
+  "updated_at": "2026-04-23T07:18:41.418110+00:00",
+  "details": {
+    "text": "[assistant] 이제 프로젝트 구조를 더 잘 이해하기 위해 몇 가지 더 중요한 파일들을 확인하겠습니다.",
+    "event_timestamp": "2026-03-26T01:15:54.880Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f74429c3-f40c-484b-8532-91e75f526deb/subagents/agent-ad5316b1a3d9ba0ba.jsonl",
+    "session_line": 59,
+    "provider": "claude"
+  }
+}

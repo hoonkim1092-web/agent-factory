@@ -1,0 +1,18 @@
+{
+  "key": "assistant ---코드 리뷰 결과- Critical af_runtimecodex_homeauthjson  id_token access_token refresh_token이 Git 히스토리에 평문 커밋됨 즉시 O",
+  "value": "[assistant] ---  **코드 리뷰 결과**  - **[Critical]** `.af_runtime/codex_home/auth.json` — `id_token`, `access_token`, `refresh_token`이 Git 히스토리에 평문 커밋됨. 즉시 OpenAI/Codex 세션 revoke 필요. `.gitignore`에 `.af_runtime/codex_home/` 추가만으론 부족 — `git filter-repo` 또는 BFG로 히스...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:29:52.628313+00:00",
+  "updated_at": "2026-04-28T08:29:52.628313+00:00",
+  "details": {
+    "text": "[assistant] ---\n\n**코드 리뷰 결과**\n\n- **[Critical]** `.af_runtime/codex_home/auth.json` — `id_token`, `access_token`, `refresh_token`이 Git 히스토리에 평문 커밋됨. 즉시 OpenAI/Codex 세션 revoke 필요. `.gitignore`에 `.af_runtime/codex_home/` 추가만으론 부족 — `git filter-repo` 또는 BFG로 히스토리 정제 필수.\n- **[Critical]** `.af_runtime/codex_home/state_5.sqlite` — SQLite DB가 Git에 추적됨. 세션 내 대화 내용·토큰 포함 가능. 히스토리 정제 + `.gitignore` 처리 필요.\n- **[High]** `.af_runtime/codex_home/cap_sid` — capability/session ID가 추적됨. 세션 재사용 공격 벡터 가능. `.gitignore` 처리 필요.\n- **[High]** `.af_runtime/codex_home/models_cache.json`, `config.toml` — 런타임 상태 파일이 Git 추적됨. PC 간 경로 충돌 및 불필요한 히스토리 오염 발생.\n- **[High]** `.gitignore` 누락 — 현재 `.gitignore`는 `projects/*/.af_runtime/` 만 제외하며 루트 `.af_runtime/` 는 제외하지 않음. `.af_runtime/` 전체를 루트 수준에서 제외해야 함.\n- **[Medium]** `.af_runtime/cli_sessions/claude_cli_claude_cli_run_events.jsonl` — 이벤트 로그에 세션 토큰·사용자 입력 스니펫 포함 가능. `.af_runtime/` gitignore 전체 적용으로 해결 가능.\n- **[Medium]** `.af_runtime/cli_sessions/codex_cli_*_shell_guard/*.cmd` — 머신별 경로 하드코딩된 셸 가드 스크립트가 추적됨. 템플릿화 또는 gitignore 처리 권장.\n- **[Low]** `NEXT_STEPS.md` 브랜치명(`feat/unified-project-pipeline-subscription`) — 현재 브랜치(`2026-04-14-build-diet`)와 불일치. 문서가 스테일 상태.\n- **[Info]** 이번 커밋에 실제 LLM 문서 생성 파이프라인 코드(`core/*.py` 등)가 포함되지 않음. 런타임 상태 파일 30개가 커밋의 대부분을 차지 — 의도한 변경 범위인지 확인 필요.\n\n**즉시 조치 필요**: `.af_runtime/codex_home/auth.json`의 토큰을 OpenAI 콘솔에서 revoke하고, `git filter-repo --path .af_runtime/codex_home/auth.json --invert-paths`로 히스토리에서 제거 후 force-push 하세요.",
+    "event_timestamp": "2026-04-23T10:26:03.118Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/ee56f139-8668-45de-ad42-e480ed4ea780.jsonl",
+    "session_line": 23,
+    "provider": "claude"
+  }
+}

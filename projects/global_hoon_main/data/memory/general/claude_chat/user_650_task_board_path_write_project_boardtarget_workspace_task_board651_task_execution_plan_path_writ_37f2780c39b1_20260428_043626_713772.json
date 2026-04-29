@@ -1,0 +1,18 @@
+{
+  "key": "user 650        task_board_path  write_project_boardtarget_workspace task_board651        task_execution_plan_path  writ",
+  "value": "[user] 650\t        task_board_path = write_project_board(target_workspace, task_board) 651\t        task_execution_plan_path = write_task_execution_plan( 652\t            target_workspace, project_brief, role_plan, task_board 653\t        ) 654\t        todo_pa...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T04:36:26.714159+00:00",
+  "updated_at": "2026-04-28T04:36:26.714159+00:00",
+  "details": {
+    "text": "[user] 650\t        task_board_path = write_project_board(target_workspace, task_board)\n651\t        task_execution_plan_path = write_task_execution_plan(\n652\t            target_workspace, project_brief, role_plan, task_board\n653\t        )\n654\t        todo_path = self._write_todo(target_workspace, role_plan, task_board)\n655\t\n656\t        # -- Work Items (★ 신규) --\n657\t        slug = slug_from_brief(project_brief)\n658\t        # target_path가 절대경로면 문서를 그 경로에 생성, 아니면 workspace 사용\n659\t        _raw_target = str(project_brief.get(\"target_path\") or \"\").strip()\n660\t        doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace\n661\t        work_item_files = generate_work_items(\n662\t            workspace=target_workspace,\n663\t            slug=slug,\n664\t            project_brief=project_brief,\n665\t            role_plan=role_plan,\n666\t            task_board=task_board,\n667\t        )\n668\t\n669\t        planning_files = [\n670\t            to_portable_path(research_evidence_path),\n671\t            to_portable_path(project_brief_path),\n672\t            to_portable_path(role_plan_path),\n673\t            to_portable_path(task_board_path),\n674\t            to_portable_path(task_execution_plan_path),\n675\t            to_portable_path(todo_path),\n676\t        ] + [to_portable_path(p) for p in work_item_files.values()]\n677\t\n678\t        return PreparedProject(\n679\t            run_id=run_id,\n680\t            workspace=target_workspace,\n681\t            work_item_slug=slug,\n682\t            project_brief=project_brief,\n683\t            role_plan=role_plan,\n684\t            task_board=task_board,\n685\t            planning_files=planning_files,\n686\t            work_item_files=work_item_files,\n687\t            project_brief_path=to_portable_path(project_brief_path),\n688\t            role_plan_path=to_portable_path(role_plan_path),\n689\t            task_board_path=to_portable_path(task_board_path),\n690\t            task_execution_plan_path=to_portable_path(task_execution_plan_path),\n691\t            todo_path=to_portable_path(todo_path),\n692\t            research_evidence=research_evidence,\n693\t            research_evidence_path=to_portable_path(research_evidence_path),\n694\t            doc_root=doc_root,\n695\t        )\n696\t\n697\t    # ------------------------------------------------------------------\n698\t    # Phase 2: execute\n699\t    # ------------------------------------------------------------------",
+    "event_timestamp": "2026-04-08T06:55:40.990Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/ff368c38-bc5d-4e4c-8714-7ebc909742fd.jsonl",
+    "session_line": 52,
+    "provider": "claude"
+  }
+}

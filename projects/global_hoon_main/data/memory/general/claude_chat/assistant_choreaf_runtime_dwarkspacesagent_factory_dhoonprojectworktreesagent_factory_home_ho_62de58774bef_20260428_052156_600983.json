@@ -1,0 +1,18 @@
+{
+  "key": "assistant choreaf_runtime 워크스페이스 경로 마이그레이션  DwarkSpacesagent-factory  DhoonProJectworktreesagent-factory 전환 사용자 HOME  HO",
+  "value": "[assistant] chore(af_runtime): 워크스페이스 경로 마이그레이션 — `D:\\warkSpaces\\agent-factory` → `D:\\hoonProJect\\worktrees\\agent-factory` 전환, 사용자 `HOME` → `HOON` 반영, claude/codex/gemini CLI 세션 상태 갱신, CLAUDE.md·NEXT_STEPS.md 업데이트",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T05:21:56.601107+00:00",
+  "updated_at": "2026-04-28T05:21:56.601107+00:00",
+  "details": {
+    "text": "[assistant] chore(af_runtime): 워크스페이스 경로 마이그레이션 — `D:\\warkSpaces\\agent-factory` → `D:\\hoonProJect\\worktrees\\agent-factory` 전환, 사용자 `HOME` → `HOON` 반영, claude/codex/gemini CLI 세션 상태 갱신, CLAUDE.md·NEXT_STEPS.md 업데이트",
+    "event_timestamp": "2026-04-23T10:17:03.242Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f130a854-5317-4b5e-8faa-2d33228eeaf0.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

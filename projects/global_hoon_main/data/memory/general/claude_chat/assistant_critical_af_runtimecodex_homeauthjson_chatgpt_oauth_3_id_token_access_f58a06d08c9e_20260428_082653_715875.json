@@ -1,0 +1,18 @@
+{
+  "key": "assistant 심각한 보안 문제가 발견되었습니다 즉각 조치가 필요합니다---- Critical af_runtimecodex_homeauthjson  ChatGPT OAuth 토큰 3종id_token access_",
+  "value": "[assistant] **심각한 보안 문제가 발견되었습니다. 즉각 조치가 필요합니다.**  ---  - **[Critical]** `.af_runtime/codex_home/auth.json` — ChatGPT OAuth 토큰 3종(`id_token`, `access_token`, `refresh_token`) 전체가 git 이력에 커밋됨. `access_token` exp=2026-04-25(현재 유효), `refresh_token` 만료 없음. **지금...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-28T08:26:53.716066+00:00",
+  "updated_at": "2026-04-28T08:26:53.716066+00:00",
+  "details": {
+    "text": "[assistant] **심각한 보안 문제가 발견되었습니다. 즉각 조치가 필요합니다.**\n\n---\n\n- **[Critical]** `.af_runtime/codex_home/auth.json` — ChatGPT OAuth 토큰 3종(`id_token`, `access_token`, `refresh_token`) 전체가 git 이력에 커밋됨. `access_token` exp=2026-04-25(현재 유효), `refresh_token` 만료 없음. **지금 즉시 OpenAI 콘솔에서 해당 세션 revoke 필요.**\n\n- **[Critical]** `.gitignore` — 루트 `.af_runtime/` 디렉토리가 제외 규칙 없음 (`projects/*/.af_runtime/`만 ignore). `auth.json`, `state_5.sqlite`, `cap_sid`, `sandbox.log` 전부 추적 대상. `.af_runtime/` 한 줄 루트에 추가 필수.\n\n- **[Critical]** 토큰에 이메일(`bsilversea82@naver.com`) 및 ChatGPT account_id, user_id 포함 — 개인정보 노출.\n\n- **[High]** `.af_runtime/codex_home/state_5.sqlite` — 세션 대화 기록 포함 SQLite DB가 git 추적 중. 대화 내용에 추가 민감 정보 존재 가능.\n\n- **[High]** `.af_runtime/cli_sessions/*.json` — 세션 상태 파일에 workspace 경로, 트랜스크립트 경로, 작업 미리보기 텍스트 포함. 런타임 상태는 git 추적 대상 아님.\n\n- **[High]** `.af_runtime/cli_sessions/claude_cli_claude_cli_run_events.jsonl` — 이벤트 스트림 전체가 커밋됨. 이력 재구성 가능.\n\n- **[Medium]** `.af_runtime/codex_home/cap_sid` — capability/session ID 파일. 의미 불명확하나 인증 관련일 가능성.\n\n- **[Info]** `CLAUDE.md`, `NEXT_STEPS.md`, `data/skill-usage.jsonl` — 기능 변경사항은 없고 경로 업데이트(`warkSpaces` → `hoonProJect/worktrees`)만 확인됨.\n\n---\n\n**즉시 조치 순서:**\n1. OpenAI 콘솔 → 해당 세션 토큰 revoke\n2. `.gitignore`에 `.af_runtime/` 추가\n3. `git filter-repo --path .af_runtime/codex_home/auth.json --invert-paths`로 이력 제거\n4. `git push --force` (이력 재작성 후)",
+    "event_timestamp": "2026-04-23T09:55:50.078Z",
+    "session_file": "C:/Users/HOON/.claude/projects/D--hoonProJect-worktrees-agent-factory/f28741b3-1e19-434a-984d-e6526d550b54.jsonl",
+    "session_line": 16,
+    "provider": "claude"
+  }
+}
