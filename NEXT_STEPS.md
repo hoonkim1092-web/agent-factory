@@ -75,6 +75,35 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ---
 
+## 후순위 작업 (Sprint 4 완료 후)
+
+### P1 — Multi-Provider Cross-Review 동적 fan-out
+
+**목적**: 3-Tier 검증 파이프라인의 Tier 3(af-cross-review)을 구독 중인 AI 프로바이더에 따라 자동으로 확장·축소.
+
+**핵심 동작**:
+- 프로바이더 1개(Claude만) → Tier 3 skip
+- 프로바이더 2개 이상 → 가용 외부 프로바이더 전부에 병렬 리뷰 요청 → 결과 합산 판정
+
+**감지 3-state**:
+| 상태 | 조건 | 동작 |
+|------|------|------|
+| `available` | CLI 설치 + ping 성공 | cross-check 포함 |
+| `auth_expired` | CLI 설치 + ping 실패 | **블로킹** — 재인증 명령어 안내 (`AF_SKIP_PROVIDER=codex`로 1회 우회 가능) |
+| `not_installed` | CLI PATH에 없음 | 조용히 skip |
+
+**변경 파일**:
+| 파일 | 작업 |
+|------|------|
+| `core/provider_detect.py` (신규) | CLI 설치·인증 감지, TTL 1h 캐시(`~/.af/provider_cache.json`) |
+| `af.spec` | `hiddenimports`에 `core.provider_detect` 추가 |
+| `.claude/agents/af-cross-review.md` | Step 0에서 감지 → 동적 fan-out (codex/gemini 병렬 호출) |
+| `CLAUDE.md` | "교차검증 자동 실행" 룰: "Codex 호출" → "가용 외부 프로바이더 모두 호출 (없으면 skip)" |
+
+**진행 순서**: 설계문서(`docs/2026-XX-XX-multi-provider-cross-review.md`) → af-critic+af-cross-review 2-agent 검증 → 구현 → 3-Tier 검증 → 커밋
+
+---
+
 ## 세션 종료 체크리스트
 
 1. 완료된 작업을 이 파일 "완료된 작업" 테이블에 추가
