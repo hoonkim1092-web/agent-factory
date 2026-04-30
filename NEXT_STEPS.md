@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-30 P1 Sprint A (provider_detect) 완료 (`3e956d7f`) → 다음은 Sprint B (af-cross-review.md fan-out) 또는 T3(exe 빌드) (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-30 P1 Sprint B (fan-out) 완료 (`74dfa3c5`) → 다음은 T3(exe 빌드) 또는 T4(watcher race 수정) (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `3e956d7f` feat(sprint-a-provider-detect): P1 Sprint A — core/provider_detect.py 신규 (20 tests) |
+| 마지막 커밋 | `74dfa3c5` feat(sprint-b-fan-out): af-cross-review.md 동적 fan-out 재작성 |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -61,6 +61,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 29 | P1 설계문서 + hook 인프라 수정: `docs/2026-04-29-multi-provider-cross-review.md` (350줄, 13섹션) + `scripts/check_design_pending.py` (design 큐 폴링, JSON timestamp debounce, fired pruning) + `core/design_review_utils.py` (날짜패턴·work-items·patterns INCLUDE/EXCLUDE) + `settings.local.json` (PostToolUse 복원, check_design_pending 등록) + `CLAUDE.md` (af-design-review-pending 룰) — 3-Tier 검증 통과 | `6566c459` | 2026-04-29 |
 | 30 | Phase 0 Proof-Carrying Review: `scripts/blast_radius.py` (결정적 Tier 분류기, path/regex, LLM 없음) + `review_gate.py` (round_started_at 토큰 모델, claim_id AF-RG format, clear 리셋, BLOCK fall-through) + `enqueue_agent_review.py` (_state_lock RMW + classify_with_content 락 밖 선계산) + `check_pending_review.py` (_state_lock RMW + cap/warn-only 1회 알림) + `af-critic.md` (BLOCK 기준 명시, 0 findings valid) + `tests/test_review_gate_phase0.py` (20 tests, 20 passed) — 모든 High 이슈 해소 | `24be4ace` | 2026-04-30 |
 | 31 | P1 Sprint A: `core/provider_detect.py` 신규 — ProviderState(3-state) + 1h 디스크 캐시 + AF_SKIP_PROVIDER 마스킹(캐시 오염 방지) + AGENT_*_CLI_COMMAND env var override + ThreadPoolExecutor 병렬 ping + CLI entry `--json --exclude-self` + `tests/test_provider_detect.py` (20 tests) + `af.spec` hiddenimport — af-critic BLOCK 2건 + af-cross-review ACCEPT 3건 모두 해소 | `3e956d7f` | 2026-04-30 |
+| 32 | P1 Sprint B: `af-cross-review.md` 동적 fan-out 재작성 — Step 0(3-gate: BLOCK/SKIP/CONTINUE) + Step 2(timeout 180s, python3 치환 macOS 호환, 오류파일 추적) + Step 3([ACCEPT★] 합의 가중치) + CLAUDE.md Tier 3 fan-out 설명 — af-critic WARN 3건 수정 완료 | `74dfa3c5` | 2026-04-30 |
 
 ---
 
@@ -106,7 +107,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 **진행 순서**: ~~설계문서(`docs/2026-04-29-multi-provider-cross-review.md`)~~ ✅ → ~~af-critic+af-cross-review 2-agent 검증~~ ✅ → ~~Sprint A: `core/provider_detect.py`~~ ✅ (커밋 `3e956d7f`) → **Sprint B** (`af-cross-review.md` fan-out)
 
-**Sprint B** (다음): `.claude/agents/af-cross-review.md` Step 0 추가 (python -m core.provider_detect --json --exclude-self claude_cli 호출) + Step 2 병렬 fan-out (bash & + wait) + Step 3 합의 가중치 dedup
+~~**Sprint B**~~ ✅ (커밋 `74dfa3c5`): `.claude/agents/af-cross-review.md` Step 0(3-gate) + Step 2(병렬 fan-out, timeout 180s, macOS 호환) + Step 3([ACCEPT★] 합의 가중치) + CLAUDE.md Tier 3 fan-out 설명 추가
 
 ---
 
