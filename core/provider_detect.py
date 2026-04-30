@@ -63,8 +63,15 @@ def _resolve_ping_cmd(provider_id: str) -> list[str] | None:
     env_var = _PING_EXEC_ENV.get(provider_id, "")
     override = os.getenv(env_var, "").strip() if env_var else ""
     if override:
-        parts = shlex.split(override, posix=(os.name != "nt"))
-        executable = parts[0] if parts else ""
+        # Windows에서 shlex posix=False는 따옴표를 제거하지 않음.
+        # 백슬래시를 2중화 후 posix=True로 파싱하면 따옴표 제거와 이스케이프 처리가 모두 동작.
+        # 예: "C:\Program Files\codex.cmd" → C:\Program Files\codex.cmd
+        _src = override.replace("\\", "\\\\") if os.name == "nt" else override
+        try:
+            parts = shlex.split(_src, posix=True)
+            executable = parts[0] if parts else ""
+        except ValueError:
+            executable = override.split()[0]
     else:
         executable = _PING_DEFAULT_EXEC.get(provider_id, provider_id)
     return [executable] + suffix
