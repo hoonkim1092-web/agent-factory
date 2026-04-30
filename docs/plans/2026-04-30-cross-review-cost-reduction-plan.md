@@ -38,30 +38,145 @@ WARN-only 결과 — BLOCK 0건. 발견 가치는 있었음(WARN-1: blast_tier �
 
 ## 단계별 진행 (Phase 1 → 4)
 
-### Phase 1 — blast_tier/verdict 분리 (correctness)
+### Phase 1 — blast_tier / verdict / routing_state 개념 분리 (correctness)
 
 **목적**: routing 신뢰 회복. 모든 후속 최적화의 전제.
 
-**현 문제**:
-- `scripts/hook_runner.py:359` `_apply_test_gap_verdict()`이 test-gap FAIL 시 `downgrade_blast_tier(workspace, 1)` 호출
-- 결과: blast_tier가 영구 1로 낮아져 다음 사이클에서 af-critic/af-cross-review가 routing에서 제외
-- WARN-1 (af-cross-review): "blast_tier 결정권은 `blast_radius.py`에 있어야 하는데 test-gap FAIL이 이를 덮어쓴다"
+#### 자기참조 검증 위험 (핵심 인식)
 
-**수정**:
-1. `scripts/hook_runner.py`: `_apply_test_gap_verdict()`에서 `downgrade_blast_tier()` 호출 제거
-2. `scripts/review_gate.py`: `downgrade_blast_tier()` 함수 자체는 보존 (다른 합법적 사용처 가능). 단 deprecation 주석 추가
-3. test-gap FAIL → af-test-runner verdict=fail 전파만으로 충분 → gate가 missing-tier-2/3로 BLOCK → 사용자 테스트 보강 → 풀 3-tier 자연 회귀
+Phase 1이 바꾸는 코드(`scripts/review_gate.py`, `scripts/hook_runner.py`)는 **3-tier 검증 시스템 자체를 구성**한다. 즉:
+- `pre_bash_review_gate` hook이 `is_gate_blocked()` 사용
+- `post_agent_record` hook이 `_apply_test_gap_verdict()`, `record_review_done()` 사용
 
-**회귀 테스트**:
-- `tests/test_hook_runner_builtins.py`:
-  - 기존 `test_apply_test_gap_verdict_downgrades_blast_tier_on_fail` → `test_apply_test_gap_verdict_does_not_modify_blast_tier_on_fail`로 변경
-  - blast_tier=3 인 상태에서 test-gap FAIL → blast_tier 그대로 3 유지 확인
-- `tests/test_review_gate_phase0.py`에 추가:
-  - test-gap FAIL 후 풀 3-tier 발화 시나리오
+이를 수정한 직후 3-tier 검증을 돌리면, **검증자가 막 수정한 코드 위에서 동작**한다. 따라서:
+- 3-tier PASS는 자기참조적이며 단독으로는 신뢰 가능한 보증이 아니다
+- 진짜 보증은 hook을 우회하는 **deterministic 테스트**에서 와야 한다
+- 3-tier는 의식(ceremony)이고, 신뢰 layer는 단위/통합/회귀/dry-run
 
-**비용 영향**: test-gap FAIL 발생 시 평균 토큰 +30K (Tier 2/3 회귀). 단, 이는 정상 동작이며 사용자가 테스트를 충분히 추가하면 다음 사이클에서 PASS.
+#### 3-tier 비용을 줄이는 진짜 방법
 
-**소요 시간**: 30~45분
+**잘못된 framing**: "3-tier를 돌릴까 말까"
+**옳은 framing**: "3-tier를 **한 번**만 돌리도록 한다"
+
+→ 사전 deterministic 검증을 두텁게 → 3-tier에서 BLOCK 발견 확률 최소화 → retry cycle 회피.
+
+#### 3-개념 분리 (Phase 1 종료 후 invariant)
+
+| 개념 | 정의 | 결정 주체 | 변경 가능성 |
+|------|------|---------|------------|
+| `blast_tier` | 변경 영향 범위 (측정값) | `blast_radius.py` + `enqueue_agent_review.py:109`의 `max(existing, new)` 머징만 | **enqueue 외 변경 금지** |
+| `verdict` | 각 agent 검증 결과 | 해당 agent | 자기 verdict만 변경 |
+| `routing_state` | 현재 필요한 tier 집합 | `_required_tiers_for(state)` 순수 함수 | derived only, 저장 X |
+
+**`enqueue_agent_review.py:109`의 max-merge가 "blast_tier 불변" invariant를 이미 지원하는 핵심**이다. 깨는 것은 `downgrade_blast_tier`만이며 이를 무력화하면 invariant이 자동 성립.
+
+#### Phase 1 acceptance criteria — 4-question test
+
+Phase 1 완료 시 코드만 보고 다음 4개에 명확히 답할 수 있어야 한다 (docstring으로 못 박음):
+
+| 질문 | 답 | 검증 위치 |
+|------|-----|-----------|
+| blast_tier는 누가 결정하는가 | `blast_radius.classify_with_content()` + `enqueue_agent_review.py:109` max-merge **만** | `_required_tiers_for()` docstring + invariant test |
+| test_gap FAIL은 어디에 기록되는가 | af-test-runner verdict + `.af_review_queue/test_gap_report.json` | `_apply_test_gap_verdict` docstring |
+| gate는 어떤 상태를 보고 block하는가 | `state.reviews[]` (verdict) + `state.blast_tier` (불변) + `state.updated_at` (stale) | `is_gate_blocked()` docstring |
+| 다음 tier 요구는 어디서 계산되는가 | `_required_tiers_for(state)` 순수 함수, 부작용 없음 | 함수명 + docstring |
+
+이 4개를 docstring으로 명문화하면 architectural enforcement가 코드 자체에서 가능.
+
+#### Scope discipline
+
+**허용**:
+- `_apply_test_gap_verdict()`에서 `downgrade_blast_tier()` 호출 제거
+- `downgrade_blast_tier()` 본문을 `raise NotImplementedError(...)` + deprecation docstring으로 교체 (함수 정의는 보존)
+- 4개 함수에 acceptance criteria docstring 명문화
+- 단위/통합/회귀/dry-run 테스트 추가
+
+**금지** (Phase 1 scope 위반):
+- smart routing 추가 (Phase 4)
+- Tier 3 skip 추가 (Phase 4)
+- bundle 추가 (Phase 2)
+- agent prompt 대규모 변경 (Phase 3)
+- `downgrade_blast_tier()` 함수 정의 자체 삭제 (별도 cleanup commit으로 분리 — Phase 1 scope 외)
+
+#### 6-Layer 검증 (3-tier 외 deterministic 검증)
+
+| Layer | 작업 | 자기참조 회피 |
+|-------|------|--------------|
+| 1. 단위 테스트 | `_apply_test_gap_verdict` 직접 호출, blast_tier 불변 검증 | hook 우회, 함수 직접 호출 |
+| 2. 통합 (정상) | af-test-runner FAIL → gate가 `verdict-block:af-test-runner` 반환 | tmp_path fixture, hook 미발화 |
+| 3. 통합 (회복) | 테스트 보강 → blast_tier 불변 → 다음 tier 풀 진행 | tmp_path fixture |
+| 4. 회귀 테스트 | 기존 pass/warn/block 판정 보존 | 기존 fixture 재사용 |
+| 5. dry-run | 실제 pending JSON fixture로 `check_pending_review.py` 동작 검증 | 실제 시스템 미터치 |
+| **6. state matrix** | `is_gate_blocked()` 4가지 상태 조합 (blast_tier × review × edit_after_review × verdict) parametrize | 순수 함수 테스트 |
+
+**Layer 6 핵심** — `is_gate_blocked()`가 모든 routing 결정의 진실의 원천이므로, 이 함수가 4가지 상태 조합에서 정확히 동작하면 hook 체인 무관하게 routing은 신뢰 가능:
+
+```python
+@pytest.mark.parametrize("scenario,expected", [
+    ({"blast_tier": 3, "all_reviews_pass": True, "edit_after_review": False},
+     (False, "no-block")),
+    ({"blast_tier": 3, "t1_verdict": "fail"},
+     (True, "verdict-block:af-test-runner")),
+    ({"blast_tier": 3, "t1_verdict": "pass", "edit_after_review": True},
+     (True, "stale-review")),
+    ({"blast_tier": 1, "t1_verdict": "pass"},
+     (False, "no-block")),
+])
+def test_gate_blocks_correctly_for_state_matrix(...):
+    ...
+```
+
+#### 안전한 실행 순서
+
+| 순서 | 작업 | 자기참조 회피 |
+|------|------|--------------|
+| 1 | `git diff HEAD` baseline + 관련 파일 grep으로 영향 범위 확인 | 변경 전 상태 |
+| 2 | 관련 테스트 baseline 실행 (`pytest tests/test_hook_runner_builtins.py tests/test_review_gate*.py -v`) | 현재 PASS 확인 |
+| 3 | **실패 테스트 작성 (Layer 1~6)** — 변경 전에 TDD | 새 invariant 명시 |
+| 4 | 최소 수정 (호출 제거 + `NotImplementedError` + 4 docstring) | 단일 concern |
+| 5 | Layer 1~6 테스트 실행 → 모두 PASS | deterministic |
+| 6 | dry-run: 실제 `pending_agent_review.json` fixture로 `check_pending_review.py` 동작 검증 | 실제 시스템 미터치 |
+| 7 | **풀 3-tier 1회 (의식)** — Layer 1~6이 다 PASS면 BLOCK 확률 < 10% 추정 | self-ref 위험 인정 |
+| 8 | 3-tier 결과를 "self-referential ceremony, primary trust from 6-layer deterministic tests"로 commit message에 명시 | 신뢰 한계 투명 |
+
+#### `downgrade_blast_tier()` 처리 — `NotImplementedError`
+
+Function definition 완전 삭제(scope creep) vs 호출만 제거(architectural intent implicit) 사이 절충:
+
+```python
+# scripts/review_gate.py
+def downgrade_blast_tier(workspace: str, tier: int) -> None:
+    """DEPRECATED (2026-04-30): blast_tier는 blast_radius.py + enqueue의
+    max-merge만 결정한다. 이 함수는 verdict가 routing을 mutate하던 잘못된
+    모델의 잔재이며, 호출되지 않는다.
+
+    이 함수가 다시 호출되면 해당 호출은 architectural invariant 위반이다.
+    향후 별도 cleanup commit에서 함수 정의 자체 삭제 예정.
+    """
+    raise NotImplementedError(
+        "downgrade_blast_tier is deprecated — blast_tier is immutable through verdict cycle. "
+        "See docs/plans/2026-04-30-cross-review-cost-reduction-plan.md Phase 1."
+    )
+```
+
+장점:
+- 향후 누군가 다시 호출하면 즉시 실패 (명시적 차단)
+- 함수 grep 가능 (architectural intent 검색 가능)
+- scope 최소 (함수 본문 ~12줄 → 4줄)
+- 별도 cleanup commit으로 차후 깔끔히 제거 가능 (그땐 변경 작아서 3-tier 비용 작음)
+
+#### 비용 영향
+
+- **Phase 1 자체 검증 비용**: 풀 3-tier 1회 ≈ 195K 토큰, ~28분 (자기참조 ceremony)
+- **Phase 1 이후 정상 운영**: test-gap FAIL 발생 시 평균 토큰 +30K (Tier 2/3 자연 회귀). 사용자가 테스트 충분히 추가하면 다음 사이클 PASS.
+- **장기 amortize**: routing 신뢰 회복으로 Phase 2~4 안정 진행 가능. 1×195K는 향후 100×commit에서 13.5M 토큰 절감의 전제.
+
+#### 소요 시간
+
+- 코드 변경: 30~45분
+- 6-layer 테스트 작성: 1~1.5시간
+- dry-run + 풀 3-tier: ~30분
+- **총**: 2~2.5시간
 
 ---
 
@@ -199,6 +314,14 @@ WARN-only 결과 — BLOCK 0건. 발견 가치는 있었음(WARN-1: blast_tier �
 - `.af_review_queue/skip_audit.jsonl`
   - 항상-Tier-3 외에서 skip된 변경의 사후 BLOCK 발견 (다음 라운드 또는 PR 리뷰)
 
+**핵심 메트릭** (Phase 4 routing 조건 fine-tune의 ground truth):
+- **T3-only accepted finding rate** = (T3에서만 발견된 accepted findings) / (전체 accepted findings)
+  - >30%: T3 고유 가치 큼 → skip 보수적
+  - 10~30%: 중간 → 위험군 외 검토
+  - <10%: T3 대체로 중복 → 공격적 skip 가능
+- **T3-only finding의 severity 분포**: Critical/High만 보면 비율 < 10%여도 skip하면 안 됨
+- **bundle hit rate**: 에이전트가 bundle 안에서 답을 찾은 비율 vs extension log 빈도
+
 **판단 기준** (1주 후):
 - Tier 3 발화/skip별 BLOCK 비율 차이 < 5% → skip 안전
 - 항상-Tier-3 리스트 외에서 BLOCK 발견 0건 → 리스트 확정
@@ -275,11 +398,11 @@ def required_tiers(state) -> list[int]:
 
 | Phase | 작업 | 우선순위 | 예상 시간 |
 |-------|------|---------|----------|
-| 1 | blast_tier/verdict 분리 (downgrade_blast_tier 호출 제거) | **즉시** | 30~45분 |
+| 1 | blast_tier/verdict/routing_state 3-개념 분리 (호출 제거 + NotImplementedError + 6-layer 검증) | **즉시** | 2~2.5시간 |
 | 2 | review_bundle.md 생성기 + bundle 자체 항상-Tier-3 등록 | 1순위 | 4~6시간 |
 | 2.5 | tool call cap (안전망) | Phase 2와 병행 | 30분 |
 | 3 | bundle-first scope + extension log enforcement | 2순위 | 1시간 |
-| 3.5 | 1주 데이터 수집 (review_metrics.jsonl) | 의무 | 1시간 + 1주 |
+| 3.5 | 1주 데이터 수집 (review_metrics.jsonl + T3-only finding rate) | 의무 | 1시간 + 1주 |
 | 4 | Smart routing + Tier 3 조건부 발화 | 3순위 (데이터 후) | 2시간 |
 
 ---
@@ -287,9 +410,14 @@ def required_tiers(state) -> list[int]:
 ## 진행 시 주의사항
 
 ### Phase 1 작업 시
-- `downgrade_blast_tier` 함수 자체는 보존 (다른 합법적 사용처 가능). 호출만 제거.
-- `Master_Blueprint.md §9` 업데이트 필요: "test-gap FAIL → blast_tier=1 다운그레이드" 설명 제거 또는 deprecated 표시.
-- 기존 메모리 `feedback_codex_reply_for_deliberation.md`와 무관 (별개 주제).
+- 자기참조 검증 위험: 3-tier가 막 수정한 코드 위에서 동작 → primary trust는 6-layer deterministic 테스트
+- `downgrade_blast_tier()` 함수 정의는 보존하되 본문을 `raise NotImplementedError(...)` + deprecation docstring으로 교체
+- 4개 함수(`_required_tiers_for`, `_apply_test_gap_verdict`, `is_gate_blocked`, `_required_tiers_for`)에 acceptance criteria docstring 명문화 (4-question 답)
+- `Master_Blueprint.md §9` 업데이트: "test-gap FAIL → blast_tier=1 다운그레이드" 제거. 대신 3-개념 분리 invariant 명시
+- 6-layer 검증 모두 PASS 후에만 풀 3-tier 발화 (의식적 1회)
+- BLOCK 발생 시: 첫 retry는 의식 통과로 간주. 2회 BLOCK 시 사용자에게 escalate (옵션 C: manual brief 후퇴)
+- 함수 정의 자체 삭제는 별도 cleanup commit (Phase 1 scope 외)
+- 기존 메모리 `feedback_codex_reply_for_deliberation.md`와 무관 (별개 주제)
 
 ### Phase 2 작업 시
 - `scripts/build_review_bundle.py`는 항상-Tier-3 리스트에 사전 등록 (Phase 4 patterns에 추가)
@@ -311,22 +439,70 @@ def required_tiers(state) -> list[int]:
 ```bash
 git pull
 python start_db.py agent-factory  # 메모리 동기화
-
-# Phase 1 시작
-# 1. scripts/hook_runner.py 의 _apply_test_gap_verdict() 에서
-#    "from scripts.review_gate import downgrade_blast_tier" 와
-#    "downgrade_blast_tier(workspace, 1)" 호출 제거
-# 2. 기존 테스트 test_apply_test_gap_verdict_downgrades_blast_tier_on_fail 를
-#    test_apply_test_gap_verdict_does_not_modify_blast_tier_on_fail 로 변경 + 검증 로직 수정
-# 3. py_compile + pytest 실행
-# 4. 풀 3-tier 검증 (단, Phase 1은 routing 영향이 크므로 항상-Tier-3 적용)
-# 5. commit + push
 ```
+
+### Phase 1 8-step 실행 순서
+
+1. **Baseline 확인**:
+   ```bash
+   git diff HEAD
+   grep -rn "downgrade_blast_tier" scripts/ tests/  # 영향 범위
+   pytest tests/test_hook_runner_builtins.py tests/test_review_gate*.py -v  # 현재 PASS
+   ```
+
+2. **6-layer 테스트 작성 (변경 전 TDD)**:
+   - Layer 1 단위: `test_apply_test_gap_verdict_does_not_modify_blast_tier`
+   - Layer 2 통합: `test_gate_blocks_when_test_gap_fail_recorded`
+   - Layer 3 통합: `test_blast_tier_preserved_through_test_recovery_cycle`
+   - Layer 4 회귀: 기존 테스트 검증 그대로 PASS
+   - Layer 5 dry-run: `test_check_pending_review_against_real_fixture`
+   - Layer 6 state matrix: `test_gate_blocks_correctly_for_state_matrix` (parametrize 4 scenarios)
+
+3. **최소 수정**:
+   - `scripts/hook_runner.py`: `_apply_test_gap_verdict()`에서 `from scripts.review_gate import downgrade_blast_tier` + `downgrade_blast_tier(workspace, 1)` 제거
+   - `scripts/review_gate.py`: `downgrade_blast_tier()` 본문을 `raise NotImplementedError(...)` + deprecation docstring 교체
+   - 4개 함수(`_required_tiers_for`, `_apply_test_gap_verdict`, `is_gate_blocked`, `_required_tiers_for`)에 acceptance criteria docstring 명문화
+
+4. **6-layer 테스트 실행 → 모두 PASS 확인**
+
+5. **dry-run**:
+   ```bash
+   # 실제 fixture로 check_pending_review.py 동작 검증
+   cp <real_pending.json> tests/fixtures/pending_t3_with_test_gap_fail.json
+   python scripts/check_pending_review.py --workspace tests/fixtures
+   ```
+
+6. **`Master_Blueprint.md §9` 업데이트**: "test-gap FAIL → blast_tier=1 다운그레이드" 제거. 3-개념 분리 invariant 명시.
+
+7. **풀 3-tier 발화 (의식)**:
+   - af-test-runner → af-critic → af-cross-review
+   - 6-layer가 다 PASS이므로 BLOCK 확률 < 10% 추정
+   - BLOCK 시 1회 retry. 2회 BLOCK 시 사용자에게 escalate.
+
+8. **Commit message에 self-ref 한계 명시**:
+   ```
+   feat(phase1): blast_tier/verdict/routing_state 3-concept separation
+
+   Primary trust: 6-layer deterministic tests (unit/integration/regression/dry-run/state-matrix)
+   3-tier verification: self-referential ceremony, secondary trust only
+   ```
+
+9. **Push + memory sync**:
+   ```bash
+   git push
+   python end_db.py agent-factory
+   ```
 
 ---
 
 ## 변경 이력
 
-- 2026-04-30: 초안 작성. 사용자 + Claude(Sonnet→Opus) deliberation 합의.
-- 핵심 reordering: B2-1(routing 신뢰) → B1(bundle) → A1수정(scope) → A3(cap) → smart routing
-- 4가지 운영 보강: bundle 무효화, 크기 cap, extension log enforcement, 1주 데이터 수집
+- 2026-04-30 초안: 사용자 + Claude(Sonnet 4.6→Opus 4.7) deliberation 합의.
+  - 핵심 reordering: B2-1(routing 신뢰) → B1(bundle) → A1수정(scope) → A3(cap) → smart routing
+  - 4가지 운영 보강: bundle 무효화, 크기 cap, extension log enforcement, 1주 데이터 수집
+- 2026-04-30 정정: Phase 1을 자기참조 검증 framing으로 재정의.
+  - "downgrade_blast_tier 호출 제거"에서 "blast_tier/verdict/routing_state 3-개념 분리"로 확장
+  - 6-layer deterministic 검증을 primary trust로, 3-tier를 secondary ceremony로 명문화
+  - Phase 1 acceptance criteria 4-question test 추가
+  - 함수 처리 정정: 완전 삭제 → `NotImplementedError` + deprecation
+  - T3-only accepted finding rate를 Phase 3.5 핵심 메트릭으로 명시

@@ -82,20 +82,22 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 | Phase | 작업 | 상태 | 시간 |
 |-------|------|------|------|
-| **1** | blast_tier/verdict 분리 (downgrade_blast_tier 호출 제거) | **🔥 다음** | 30~45분 |
+| **1** | blast_tier/verdict/routing_state **3-개념 분리** (자기참조 검증 위험 인식 + 6-layer deterministic 검증) | **🔥 다음** | 2~2.5시간 |
 | 2 | review_bundle.md 생성기 + bundle 자체 항상-Tier-3 등록 | 대기 | 4~6시간 |
 | 2.5 | tool call cap (af-critic:20, af-cross-review:30) | Phase 2 병행 | 30분 |
 | 3 | bundle-first scope + extension log enforcement | 대기 | 1시간 |
-| 3.5 | 1주 데이터 수집 (review_metrics.jsonl) | 의무 | 1주 |
+| 3.5 | 1주 데이터 수집 (T3-only accepted finding rate 핵심 메트릭) | 의무 | 1주 |
 | 4 | Smart routing + Tier 3 조건부 발화 | 대기 | 2시간 |
 
 **예상 효과**: 토큰 195K → 60K, 시간 28분 → 6~10분.
+
+**Phase 1 핵심 인식**: 자기참조 검증 — 3-tier가 막 수정한 코드(`scripts/review_gate.py`, `scripts/hook_runner.py`) 위에서 동작하므로 단독 신뢰 가능한 보증이 아님. **Primary trust는 hook을 우회하는 6-layer deterministic 테스트**, 3-tier는 secondary ceremony.
 
 **Phase 1 즉시 진입 명령** (집 Mac에서):
 ```bash
 git pull
 python start_db.py agent-factory
-# Phase 1 시작 — 자세한 단계는 docs/plans/2026-04-30-cross-review-cost-reduction-plan.md 참고
+# 자세한 8-step 실행 순서: docs/plans/2026-04-30-cross-review-cost-reduction-plan.md "다른 PC에서 재개 시 첫 단계"
 ```
 
 ---
