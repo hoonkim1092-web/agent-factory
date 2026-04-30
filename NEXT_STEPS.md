@@ -67,7 +67,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ## 미완료 작업 (우선순위순)
 
-> **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). 남은 작업: T3(exe 빌드) 1건.
+> **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). BLOCK-prep 완료 (`630942c7`). 남은 작업: T3(exe 빌드) 1건.
 
 ### Sprint 4 — 다음 작업 (우선순위순)
 
@@ -108,6 +108,51 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 **진행 순서**: ~~설계문서(`docs/2026-04-29-multi-provider-cross-review.md`)~~ ✅ → ~~af-critic+af-cross-review 2-agent 검증~~ ✅ → ~~Sprint A: `core/provider_detect.py`~~ ✅ (커밋 `3e956d7f`) → **Sprint B** (`af-cross-review.md` fan-out)
 
 ~~**Sprint B**~~ ✅ (커밋 `74dfa3c5`): `.claude/agents/af-cross-review.md` Step 0(3-gate) + Step 2(병렬 fan-out, timeout 180s, macOS 호환) + Step 3([ACCEPT★] 합의 가중치) + CLAUDE.md Tier 3 fan-out 설명 추가
+
+---
+
+### P2 — Cross-Review 정확도·범용성 개선 (2026-04-30 합의)
+
+**배경**: P1 Sprint B로 동적 fan-out 인프라 완성. 그 위에서 ① 외부 LLM 입력 quality, ② Tier 3 출력 표준화, ③ provider-agnostic 일반화 3개 축으로 5단계 로드맵.
+
+**진행 순서**: BLOCK-prep → 1a → (1b dry-run) → 1a 운영 1주 관찰 → 2 → 3 → β2 (수요 신호 시)
+
+- [x] **BLOCK-prep** ✅ `630942c7` — `core/provider_detect.py` ThreadPool race condition 수정
+      수정: `_probe_one(provider_id, installed: frozenset)` 시그니처 변경, installed_set을 ThreadPool 전 main thread 1회 계산 후 전달
+      추가: `registry.py` double-checked locking + `tests/test_provider_detect.py` T12/T13/T14 — 22/22 PASS
+      af-critic WARN (BLOCK 없음), af-cross-review PASS
+
+- [ ] **Phase 1a** — 프롬프트 텍스트 개선 (위험: 낮음, 설계 검증 1라운드 통과)
+      추가 항목: diff 컨텍스트 임베드 / "No BLOCK-level findings" 명시 허용 / file:line 인용 자기검증 / 모델 가족 sycophancy 메타지시 / **PRIMARY/BONUS 카테고리 분리 (c+ 채택)**
+      산출물: `docs/2026-04-30-cross-review-prompt-improvement.md` (✅ BLOCK 4건 반영 완료) + `.claude/agents/af-cross-review.md` Step 1+2+3 갱신 (대기)
+      검증 1라운드 결과: af-critic 9건(BLOCK 3, WARN 4, INFO 2) + af-cross-review 6건(BLOCK 2, WARN 2, HOLD 2) → BLOCK 4건 모두 설계문서에 반영, WARN/HOLD는 advisory로 보류
+      결정 사항 (확정): 메타 워딩 §5.4 그대로 / diff 50KB 임계 / "No BLOCK-level findings" 영문 / 자기검증 출력 직전 / B3=c+ / gemini 재인증은 1b 시점
+      의존: ~~BLOCK-prep 완료 후~~ ✅ → 지금 진행 가능
+
+- [ ] **Phase 1b** — `codex review` 빌트인 통합 (위험: 中)
+      목적: Codex 0.125.0의 `codex review` 전용 빌트인이 `codex exec` 대비 결함 탐지율이 좋은지 데이터 검증
+      산출물: dry-run 보고서 → 긍정 시 codex 호출 라인 교체
+      **선행 조건**: `gemini auth login` 실행 (현재 AUTH_EXPIRED 상태) — gemini 합의★ 가중치 회복 필요
+      결정 대기: 측정 시점, known-bug 샘플 출처(`docs/code_review/code-review.md` 활용 검토)
+      의존: Phase 1a 완료 후
+
+- [ ] **Phase 2** — 최종 판정 라벨 명시화 BLOCK/WARN/PASS (위험: 中)
+      목적: CLAUDE.md 정책 3개(BLOCK 정책, WARN-only no-fire, max_rounds=2)가 의지하는 라벨 안정화
+      산출물: 매핑 규칙 + Step 4 출력 블록 갱신 + (필요시) `review_gate.py` 파서 갱신
+      결정 대기: 단독 [ACCEPT] Critical 처리(BLOCK vs WARN), [HOLD] 처리, Medium 임계
+      의존: Phase 1a 1주일 운영 데이터 관찰 후
+
+- [ ] **Phase 3** — Peer verification (외부 CLI 상호 fact-check) (위험: 中~高)
+      목적: dedup 한계 보완 (다른 표현의 같은 결함, 한쪽만 본 거짓 양성)
+      산출물: Step 2.5 신설 + 비용 측정 보고서
+      결정 대기: 비용 2배 수용, 외부 LLM 형식 강제 가능성, fan_out=1 폴백 로직
+      의존: Phase 1a + Phase 2 완료 후
+
+- [ ] **β2** — Provider-agnostic orchestrator (위험: 高)
+      목적: Claude lock-in 해제, SaaS 전략(`project_saas_strategy_position.md`) 정합
+      산출물: `core/cross_review_runner.py` + 판정 프롬프트 3종(Claude/Codex/Gemini) + thin wrapper
+      결정 대기: 외부 사용자 수요 검증(현재 0건), Codex plugin marketplace 진입점, 판정 quality 차이 감수
+      의존: Phase 1a + 1b + 2 완료, 외부 사용자 수요 ≥ 1건
 
 ---
 

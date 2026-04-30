@@ -1253,6 +1253,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-30 | v1.2.22 | chore(settings): Windows hook 경로 일원화 및 중복 훅 제거 — SessionStart·UserPromptSubmit·PreCompact·Stop 훅에 name 필드 추가, macOS 절대경로 중복 훅 삭제, check_pending_review·check_design_pending을 hookpy.sh 크로스플랫폼 런처로 교체, 신규 Read/Bash 권한 9건 추가, skills/registry.yaml 및 new_skill 평가·승격 결과 업데이트 |
 | 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 경로·권한 정비 — macOS 절대경로→Windows 절대경로 마이그레이션, 중복 hook 엔트리 병합 및 name 필드 추가, hookpy.sh 래퍼로 check_pending_review·check_design_pending 실행, codex·gemini·git 신규 권한 허용 확장 |
 | 2026-04-30 | v1.2.22 | `chore(config): settings.local.json Mac→Windows hook 경로 마이그레이션 및 정리 — 중복 hook 항목 제거·hook name 필드 신규 추가, hookpy.sh cross-platform launcher 전환, gemini/codex 허용 명령어 추가, episode_matcher.py 수정, skills/registry.yaml 갱신` |
 | 2026-04-30 | v1.2.22 | chore(settings): Windows 경로로 hook 일괄 마이그레이션 — macOS 절대경로→Windows 경로 전환, 중복 hook 항목 제거, hook name 필드 추가(sessionstart/userpromptsubmit/precompact/stop), gemini·codex·git Bash 권한 허용 추가 |
