@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-30 Phase 0 Proof-Carrying Review 구현 완료 (`24be4ace`) → 다음 PC에서 T3(exe 빌드) 또는 P1 Sprint A 진행 (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-30 P1 Sprint A (provider_detect) 완료 (`3e956d7f`) → 다음은 Sprint B (af-cross-review.md fan-out) 또는 T3(exe 빌드) (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `24be4ace` feat(phase0-proof-carrying-review): Phase 0 — Blast Radius + 라운드 모델 + claim ID |
+| 마지막 커밋 | `3e956d7f` feat(sprint-a-provider-detect): P1 Sprint A — core/provider_detect.py 신규 (20 tests) |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -60,12 +60,13 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 26 | Sprint 3 WARN 클리어 (9-라운드 3-Tier): fsa_loop DEFERRED/ERROR/REJECTED→None+_evolution_failed_skills 차단, Level 4 apply_pivot 조건 정리, gate_result is None 단순화, Level 4→5 강제에스컬레이션, run_mission 초기화, skill_quality_gate knowledge skill auto_register+_register_knowledge_skill, skill_creator update_skill knowledge type 보존(setdefault), skill_evolution_safety DEPRECATED 마커, fixture 모듈 속성 복원, 테스트 4종 신규 추가 — 81 테스트 통과 | `875d5081` | 2026-04-29 |
 | 29 | P1 설계문서 + hook 인프라 수정: `docs/2026-04-29-multi-provider-cross-review.md` (350줄, 13섹션) + `scripts/check_design_pending.py` (design 큐 폴링, JSON timestamp debounce, fired pruning) + `core/design_review_utils.py` (날짜패턴·work-items·patterns INCLUDE/EXCLUDE) + `settings.local.json` (PostToolUse 복원, check_design_pending 등록) + `CLAUDE.md` (af-design-review-pending 룰) — 3-Tier 검증 통과 | `6566c459` | 2026-04-29 |
 | 30 | Phase 0 Proof-Carrying Review: `scripts/blast_radius.py` (결정적 Tier 분류기, path/regex, LLM 없음) + `review_gate.py` (round_started_at 토큰 모델, claim_id AF-RG format, clear 리셋, BLOCK fall-through) + `enqueue_agent_review.py` (_state_lock RMW + classify_with_content 락 밖 선계산) + `check_pending_review.py` (_state_lock RMW + cap/warn-only 1회 알림) + `af-critic.md` (BLOCK 기준 명시, 0 findings valid) + `tests/test_review_gate_phase0.py` (20 tests, 20 passed) — 모든 High 이슈 해소 | `24be4ace` | 2026-04-30 |
+| 31 | P1 Sprint A: `core/provider_detect.py` 신규 — ProviderState(3-state) + 1h 디스크 캐시 + AF_SKIP_PROVIDER 마스킹(캐시 오염 방지) + AGENT_*_CLI_COMMAND env var override + ThreadPoolExecutor 병렬 ping + CLI entry `--json --exclude-self` + `tests/test_provider_detect.py` (20 tests) + `af.spec` hiddenimport — af-critic BLOCK 2건 + af-cross-review ACCEPT 3건 모두 해소 | `3e956d7f` | 2026-04-30 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-> **2026-04-30 정리**: Phase 0 Proof-Carrying Review 완료 (20 tests). Sprint 4 기술부채 2건 + Release 대기 중.
+> **2026-04-30 정리**: Phase 0 Proof-Carrying Review 완료 → P1 Sprint A (provider_detect) 완료 (20 tests). Sprint B(fan-out) + T3(exe 빌드) 대기 중.
 
 ### Sprint 4 — 다음 작업 (우선순위순)
 
@@ -103,10 +104,9 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | `.claude/agents/af-cross-review.md` | Step 0에서 감지 → 동적 fan-out (codex/gemini 병렬 호출) |
 | `CLAUDE.md` | "교차검증 자동 실행" 룰: "Codex 호출" → "가용 외부 프로바이더 모두 호출 (없으면 skip)" |
 
-**진행 순서**: ~~설계문서(`docs/2026-04-29-multi-provider-cross-review.md`)~~ ✅ → ~~af-critic+af-cross-review 2-agent 검증~~ ✅ → **구현 시작** (Sprint A: `core/provider_detect.py`) → 3-Tier 검증 → Sprint B (`af-cross-review.md` fan-out)
+**진행 순서**: ~~설계문서(`docs/2026-04-29-multi-provider-cross-review.md`)~~ ✅ → ~~af-critic+af-cross-review 2-agent 검증~~ ✅ → ~~Sprint A: `core/provider_detect.py`~~ ✅ (커밋 `3e956d7f`) → **Sprint B** (`af-cross-review.md` fan-out)
 
-**Sprint A** (다음): `core/provider_detect.py` 신규 — `detect(name) → ProviderState`, TTL 1h 캐시(`~/.af/provider_cache.json`), `AF_SKIP_PROVIDER` env var 우회
-**Sprint B**: `.claude/agents/af-cross-review.md` Step 0에서 detect() 호출 → 가용 프로바이더 병렬 fan-out
+**Sprint B** (다음): `.claude/agents/af-cross-review.md` Step 0 추가 (python -m core.provider_detect --json --exclude-self claude_cli 호출) + Step 2 병렬 fan-out (bash & + wait) + Step 3 합의 가중치 dedup
 
 ---
 
