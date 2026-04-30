@@ -101,6 +101,19 @@ git diff --name-only
 
 변경된 파일 목록을 `CHANGED_FILES`에 저장한다.
 
+diff를 추출해 임시파일에 저장한다 (Step 2 DIFF_CONTENT_PLACEHOLDER 치환에서 사용):
+```bash
+DIFF_CONTENT=$(git diff HEAD~1 -- $CHANGED_FILES 2>/dev/null || git diff -- $CHANGED_FILES)
+printf '%s' "$DIFF_CONTENT" > /tmp/af-diff-content.txt
+
+# 50KB 초과 시 본문 생략, --stat만 임베드 (토큰 한도 보호)
+if [ $(wc -c < /tmp/af-diff-content.txt) -gt 51200 ]; then
+  git diff HEAD~1 --stat -- $CHANGED_FILES > /tmp/af-diff-content.txt 2>/dev/null \
+    || git diff --stat -- $CHANGED_FILES > /tmp/af-diff-content.txt
+  echo "(본문 생략 — 50KB 초과로 --stat만 임베드됨)" >> /tmp/af-diff-content.txt
+fi
+```
+
 ---
 
 ### Step 2: 병렬 fan-out — 가용 프로바이더 모두에게 리뷰 요청
@@ -117,29 +130,58 @@ REVIEW_DOC=$(ls -t docs/code_review/*.md 2>/dev/null | head -1)
 cat > /tmp/af-review-prompt.txt << 'PROMPT_EOF'
 이 프로젝트는 Agent Factory (AI 에이전트 팩토리)이다.
 
+[메타 인식]
+이 코드는 다른 AI 모델이 작성했다. 자연스러워 보이는 패턴이라도 의심해라.
+"AI가 흔히 쓰는 관용구라서 OK"는 근거가 아니다. 실제 동작·경계·예외 처리를 확인해라.
+
+[변경 diff]
+DIFF_CONTENT_PLACEHOLDER
+
 [지시사항]
 1. 먼저 REVIEW_DOC_PLACEHOLDER 를 읽어라. 프로젝트 전체 구조, 파일별 역할, 알려진 문제점이 정리되어 있다.
-2. 다음 변경된 파일들을 직접 읽어라: CHANGED_FILES_PLACEHOLDER
-3. 각 변경 파일의 호출자/피호출자도 찾아서 읽어라.
-4. 코드 리뷰 문서의 기존 지적 사항과 비교하여, 이번 변경이:
+2. 검토 대상 카테고리 분리:
+   [PRIMARY] (BLOCK/WARN 판정 영향 O)
+     (i)  diff에 나타난 변경 심볼 자체의 결함
+     (ii) 그 변경이 호출자/피호출자에 미치는 직접 영향
+          (시그니처/타입/예외 호환성, 호출자 가정 위반,
+           상수·플래그 의미 변경, 캐시 무효화 누락 등)
+   [BONUS] (advisory only, BLOCK/WARN 판정 제외)
+     (iii) 호출자/피호출자에서 발견된 변경 무관 결함 — Critical/High만 보고
+           ("변경 무관" 라벨 필수, 모호하면 BONUS에 둔다)
+3. 다음 변경된 파일들을 직접 읽어라: CHANGED_FILES_PLACEHOLDER
+4. 각 변경 파일의 호출자/피호출자도 읽어라 — 목적 (i) 변경 의도 파악,
+   (ii) 변경의 영향 범위 검증, (iii) 명백한 무관 결함(BONUS) 식별
+5. 코드 리뷰 문서의 기존 지적 사항과 비교하여, 이번 변경이:
    - 기존 문제를 악화시키는지
    - 새로운 문제를 도입하는지
    - 기존 문제를 올바르게 해결했는지
-5. 아래 관점에서 리뷰해라:
+6. 아래 관점에서 리뷰해라:
    - 버그 (로직 오류, 예외 처리 누락, 경계 조건)
    - 안전성 (보안 취약점, 입력 검증)
    - 성능 (불필요한 반복, 메모리 누수)
    - 설계 결함 (의존성 방향, 책임 분리)
    - 누락된 엣지 케이스
-6. 각 항목에 심각도(Critical/High/Medium/Low), 파일명:라인번호, 코드 인용을 포함해라.
-7. 일반적인 조언은 하지 마. 이 프로젝트 코드에 특화된 지적만 해라.
+7. 각 항목에 심각도(Critical/High/Medium/Low), 파일명:라인번호, 코드 인용을 포함해라.
+8. 일반적인 조언은 하지 마. 이 프로젝트 코드에 특화된 지적만 해라.
+9. [PRIMARY] 카테고리에 Critical/High 결함이 없으면 "No BLOCK-level findings"
+   라고 명시해라. 채우려고 Medium/Low를 부풀리지 마라. (BONUS는 별도 집계)
+10. 출력 직전 자기 검증: 각 file:line 인용에 대해 해당 라인을 다시 읽고,
+    인용한 코드 단편이 실제 그 라인에 있는지 확인해라. 일치하지 않으면 항목 제거.
+
+[출력 형식]
+## [PRIMARY]
+- ... (변경 영향 결함들)
+
+## [BONUS] — 변경 무관 (advisory only)
+- [변경 무관] ... (Critical/High만)
 PROMPT_EOF
 
-# REVIEW_DOC, CHANGED_FILES 실제 값으로 치환 (macOS/Linux 호환 python3 사용)
+# REVIEW_DOC, CHANGED_FILES, DIFF_CONTENT 실제 값으로 치환 (macOS/Linux 호환 python3 사용)
 python3 - << PYEOF
 txt = open('/tmp/af-review-prompt.txt').read()
 txt = txt.replace('REVIEW_DOC_PLACEHOLDER', '${REVIEW_DOC}')
 txt = txt.replace('CHANGED_FILES_PLACEHOLDER', '${CHANGED_FILES}')
+txt = txt.replace('DIFF_CONTENT_PLACEHOLDER', open('/tmp/af-diff-content.txt').read())
 open('/tmp/af-review-prompt.txt', 'w').write(txt)
 PYEOF
 
@@ -189,7 +231,12 @@ fi
 
 각 프로바이더의 결과 파일을 읽고 항목을 추출한다.
 
-**중복 dedup 규칙**:
+**카테고리 분리 처리**:
+- `## [PRIMARY]` 섹션 항목만 dedup·합의★ 로직 적용 (BLOCK/WARN 판정에 반영)
+- `## [BONUS]` 섹션 항목은 dedup·합의★ 미적용, advisory로만 표시 (판정에서 제외)
+- "No BLOCK-level findings" 문구가 있으면 해당 provider의 PRIMARY에 BLOCK 항목 없음으로 기록 (판정 항목으로 처리하지 않음)
+
+**중복 dedup 규칙** (PRIMARY 항목에만 적용):
 - 동일 파일:라인 + 동일 심각도 + 키워드 유사 항목 → 1개로 합치되 출처를 `(codex_cli, gemini_cli 합의)`로 표기
 - 합의 항목은 ACCEPT 우선순위 상향 → `[ACCEPT★]`로 표기
 
