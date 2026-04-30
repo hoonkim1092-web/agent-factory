@@ -1,9 +1,8 @@
 {
   "_comment": [
     "settings.local.json is machine-local and gitignored.",
-    "Copy this file to settings.local.json and adjust PYTHON below:",
-    "  Mac/Linux : python3  (default)",
-    "  Windows   : replace python3 with python"
+    "Copy this file to settings.local.json — no OS-specific changes needed.",
+    "hooks use 'sh scripts/hookpy.sh' which auto-detects python3 or python."
   ],
   "permissions": {
     "allow": [
@@ -25,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -35,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       },
@@ -43,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_pending_review.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_pending_review.py"
           }
         ]
       },
@@ -51,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_design_pending.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_design_pending.py"
           }
         ]
       }
@@ -61,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -71,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -81,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -92,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_code_review",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_code_review",
             "timeout": 30
           }
         ]
@@ -102,7 +101,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_design_review",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
             "timeout": 10
           }
         ]
