@@ -41,6 +41,7 @@
 - **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-critic + af-cross-review 2개를 병렬 실행**한다 (2026-04-21 확정)
 - **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-critic + af-cross-review **3개를 병렬 실행**한다
 - 교차검증 결과에서 **BLOCK 판정 시에만** 발견 사항을 수정한다. **WARN은 advisory** — 자동 수정 의무 없음 (Phase 0 정책, 2026-04-30: 무한루프 방지)
+- **Tier 3(af-cross-review)는 가용 외부 CLI 프로바이더 전부에 병렬 fan-out한다.** 외부 프로바이더 0개면 자동 SKIP(통과 간주), 1개 이상 인증 만료가 있으면 BLOCK + 재인증 안내. (`core/provider_detect.py` Step 0 감지)
 
 ### Review-Gate 규칙 (Phase 0 갱신 2026-04-30)
 - `.py` 파일 수정 후 `git commit` 전 필수 tier 완주:
