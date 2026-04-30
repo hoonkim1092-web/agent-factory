@@ -122,12 +122,9 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
       추가: `registry.py` double-checked locking + `tests/test_provider_detect.py` T12/T13/T14 — 22/22 PASS
       af-critic WARN (BLOCK 없음), af-cross-review PASS
 
-- [ ] **Phase 1a** — 프롬프트 텍스트 개선 (위험: 낮음, 설계 검증 1라운드 통과)
-      추가 항목: diff 컨텍스트 임베드 / "No BLOCK-level findings" 명시 허용 / file:line 인용 자기검증 / 모델 가족 sycophancy 메타지시 / **PRIMARY/BONUS 카테고리 분리 (c+ 채택)**
-      산출물: `docs/2026-04-30-cross-review-prompt-improvement.md` (✅ BLOCK 4건 반영 완료) + `.claude/agents/af-cross-review.md` Step 1+2+3 갱신 (대기)
-      검증 1라운드 결과: af-critic 9건(BLOCK 3, WARN 4, INFO 2) + af-cross-review 6건(BLOCK 2, WARN 2, HOLD 2) → BLOCK 4건 모두 설계문서에 반영, WARN/HOLD는 advisory로 보류
-      결정 사항 (확정): 메타 워딩 §5.4 그대로 / diff 50KB 임계 / "No BLOCK-level findings" 영문 / 자기검증 출력 직전 / B3=c+ / gemini 재인증은 1b 시점
-      의존: ~~BLOCK-prep 완료 후~~ ✅ → 지금 진행 가능
+- [x] **Phase 1a** ✅ `a8025d25` — `.claude/agents/af-cross-review.md` Step 1+2+3 프롬프트 개선
+      Step 1: diff 추출 + 50KB 폴백 / Step 2: PRIMARY/BONUS 분리 + 메타 인식 + No-BLOCK 명시 + 자기검증 + [출력 형식] / Step 3: BONUS 분리 처리 + No-BLOCK 무시
+      다음: dry-run 1회 (§10.2) — 별도 세션에서 실제 커밋에 cross-review 적용 후 측정
 
 - [ ] **Phase 1b** — `codex review` 빌트인 통합 (위험: 中)
       목적: Codex 0.125.0의 `codex review` 전용 빌트인이 `codex exec` 대비 결함 탐지율이 좋은지 데이터 검증
