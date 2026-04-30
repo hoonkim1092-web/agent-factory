@@ -88,6 +88,8 @@ PENDING_CODE_DIR = os.path.join(QUEUE_DIR, "pending", "code")
 PENDING_DIR = os.path.join(QUEUE_DIR, "pending")
 NOTIFICATIONS_DIR = os.path.join(QUEUE_DIR, "notifications")
 PID_FILE = os.path.join(QUEUE_DIR, ".watcher.pid")
+SPAWN_LOCK_FILE = os.path.join(QUEUE_DIR, ".watcher.spawn.lock")
+SPAWN_LOCK_TTL = 10  # seconds — spawn은 즉시 완료되므로 10s 초과면 stale
 CODE_REVIEW_COUNT_FILE = os.path.join(QUEUE_DIR, ".code_review_count")
 
 
@@ -321,10 +323,41 @@ def _start_watcher(workspace: str) -> None:
         pass
 
 
+def _try_acquire_spawn_lock(workspace: str) -> bool:
+    """O_CREAT|O_EXCL 기반 spawn 락 원자적 취득. 성공 시 True."""
+    lock_path = os.path.join(workspace, SPAWN_LOCK_FILE)
+    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    try:
+        if os.path.exists(lock_path) and time.time() - os.path.getmtime(lock_path) > SPAWN_LOCK_TTL:
+            os.remove(lock_path)
+    except OSError:
+        pass
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+        return True
+    except (FileExistsError, OSError):
+        return False
+
+
+def _release_spawn_lock(workspace: str) -> None:
+    try:
+        os.remove(os.path.join(workspace, SPAWN_LOCK_FILE))
+    except OSError:
+        pass
+
+
 def ensure_watcher(workspace: str) -> None:
-    """watcher가 없으면 시작."""
-    if not _is_watcher_alive(workspace):
-        _start_watcher(workspace)
+    """watcher가 없으면 시작. O_CREAT|O_EXCL spawn 락으로 TOCTOU 제거."""
+    if _is_watcher_alive(workspace):
+        return
+    if not _try_acquire_spawn_lock(workspace):
+        return  # 다른 프로세스가 동시 스폰 중
+    try:
+        if not _is_watcher_alive(workspace):  # 락 취득 후 재확인
+            _start_watcher(workspace)
+    finally:
+        _release_spawn_lock(workspace)
 
 
 # ── 상태 조회 ─────────────────────────────────────────────────────────────────
