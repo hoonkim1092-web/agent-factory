@@ -57,6 +57,7 @@ a = Analysis(
         'core.evolution_ledger',
         'core.executor',
         'core.failure_classifier',
+        'core.provider_detect',
         'core.external_skill_candidate_importer',
         'core.external_skill_source_ids',
         'core.external_skill_sources',

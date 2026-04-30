@@ -92,6 +92,7 @@
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
 | `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지 | `prepare_cli_session()`, `handle_hook_event()` |
+| `core/provider_detect.py` | 3-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리 | `ProviderState`, `ProviderProbeResult`, `detect_provider_states()`, `invalidate_cache()`, `_resolve_ping_cmd()` |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()` |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
 | `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) | `HimariResearchAgent`, `_collect_web_references()`, `_collect_notebook_summary()` |
@@ -1252,6 +1253,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-30 | v1.2.22 | feat(provider-detect): Multi-Provider Cross-Review Sprint A — `core/provider_detect.py` 신규 (3-state 감지 AVAILABLE/AUTH_EXPIRED/NOT_INSTALLED, 1h 디스크 캐시 원자 write, AF_SKIP_PROVIDER 마스킹, AGENT_*_CLI_COMMAND env var override 반영, ThreadPoolExecutor 병렬 ping, CLI entry `--json --exclude-self`), `tests/test_provider_detect.py` 20 tests, `af.spec` hiddenimport 추가 |
 | 2026-04-29 | v1.2.22 | chore(hook-infra+syncCompyne): 훅 name 필드 추가·순서 재정렬 및 syncCompyne CLI 갱신 — settings.local.json 훅 5개(SessionStart/UserPromptSubmit/PreCompact/Stop/SessionEnd)에 name 필드 부여, UserPromptSubmit 훅을 check_pending_review→check_design_pending 순으로 재배치, git pull·stash/mcp__codex__codex/npm list 권한 추가, syncCompyne memory_store·project_log_cli·workspace_context_cli 수정 |
 | 2026-04-29 | v1.2.22 | chore(hook-infra+syncCompyne): hook name 식별자 추가 및 UserPromptSubmit 라우팅 정비 — SessionStart/PreCompact/Stop/SessionEnd hook에 name 필드 신규 추가, UserPromptSubmit을 check_pending_review.py → hook_runner.py로 교체, git pull·stash·npm list·mcp__codex__codex 허용 명령 추가, syncCompyne memory_store/project_log_cli/workspace_context_cli 업데이트 |
 | 2026-04-29 | v1.2.22 | chore(hook-config+syncCompyne): 훅 name 식별자 추가 및 UserPromptSubmit 체인 재정비 — settings.local.json 각 훅에 agent_factory_claude_* name 필드 신규 추가, UserPromptSubmit→check_pending_review·StopAsTool→check_design_pending·UserPromptSubmit2→cli_hook_bridge 순서 재배치, git pull/stash·mcp__codex__codex·npm list 권한 신규 허용, syncCompyne memory_store.py·project_log_cli.py·workspace_context_cli.py 수정 |
