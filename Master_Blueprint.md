@@ -1267,6 +1267,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-30 | v1.2.22 | chore(settings): Windows hook 경로 통일 및 이벤트 확장 — Stop·SessionEnd·PreToolUse 신규 훅 추가, hook name 필드 명시, macOS 경로 제거 및 D:/hoonProJect 절대경로 통일, gemini·codex 허용 명령 추가 |
 | 2026-04-30 | v1.2.22 | ```json |
 | 2026-04-30 | v1.2.22 | chore(settings.local): Windows 환경 hook 경로 마이그레이션 및 중복 제거 — macOS→Windows 경로 전환(`/Users/hoon/` → `D:/hoonProJect/`), 이중 hook 블록 통합+name 필드 추가(agent_factory_claude_sessionstart 외 3종), check_pending_review 호출을 hookpy.sh 래퍼로 변경, gemini·codex·git 허용 규칙 신규 추가 |
 | 2026-04-30 | v1.2.22 | `chore(settings+hooks): macOS→Windows hook 경로 마이그레이션 — 중복 hook 항목 제거 및 name 필드 추가(agent_factory_claude_*), sh hookpy.sh 래퍼 적용(UserPromptSubmit/DesignPending), gemini·codex·git 허용 권한 신규 추가, skills registry 프로모션 반영` |

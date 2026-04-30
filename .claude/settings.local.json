@@ -48,7 +48,16 @@
       "Bash(printf 'foo\\\\n')",
       "Bash(sed -i '' 's/foo/bar/g' /tmp/sed_test2.txt)",
       "Bash(echo \"exit: $?\")",
-      "Bash(bash --version)"
+      "Bash(bash --version)",
+      "Read(//Users/hoon/.claude/**)",
+      "Read(//c/Users/HOON/.claude/**)",
+      "Bash(codex plugin *)",
+      "Bash(codex review *)",
+      "Bash(git -C D:/hoonProJect/worktrees/agent-factory diff HEAD~1 -- .claude/agents/af-cross-review.md)",
+      "Bash(where gemini *)",
+      "Bash(gemini --version)",
+      "Bash(git *)",
+      "Bash(gemini -p ok)"
     ],
     "deny": [
       "Bash(rm:*)",
@@ -71,15 +80,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "name": "agent_factory_claude_sessionstart",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -89,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_pending_review.py"
           }
         ]
       },
@@ -97,7 +99,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_pending_review.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_design_pending.py"
           }
         ]
       },
@@ -105,15 +107,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_design_pending.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "name": "agent_factory_claude_userpromptsubmit",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -123,15 +118,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "name": "agent_factory_claude_precompact",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -141,15 +129,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "name": "agent_factory_claude_stop",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
       }
@@ -159,26 +140,76 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "name": "agent_factory_claude_sessionend",
+            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
           }
         ]
-      },
+      }
+    ],
+    "PreToolUse": [
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
+            "name": "agent_factory_claude_pre_bash_review_gate",
+            "command": "sh scripts/hookpy.sh scripts/run.py pre_bash_review_gate",
+            "timeout": 10
           }
         ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "agent_factory_claude_post_agent_record",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_agent_record",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "agent_factory_claude_post_commit_clear",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_commit_clear",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_code_review",
+            "name": "agent_factory_claude_post_edit_enqueue",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_enqueue",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "agent_factory_claude_post_edit_py_compile",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_py_compile",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_code_review",
             "timeout": 30
           }
         ]
@@ -188,7 +219,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_design_review",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
             "timeout": 10
           }
         ]
