@@ -209,6 +209,7 @@
         "hooks": [
           {
             "type": "command",
+            "name": "agent_factory_claude_post_edit_code_review",
             "command": "sh scripts/hookpy.sh scripts/run.py post_edit_code_review",
             "timeout": 30
           }
@@ -219,6 +220,7 @@
         "hooks": [
           {
             "type": "command",
+            "name": "agent_factory_claude_post_edit_design_review",
             "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
             "timeout": 10
           }
