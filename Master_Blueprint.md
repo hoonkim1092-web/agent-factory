@@ -1253,6 +1253,12 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-30 | v1.2.22 | feat(hook-runner): diff 기반 테스트 갭 게이트 + hook_runner 통합 — settings.local.json Windows 경로·hook명 정리 및 중복 제거, hook_runner.py 테스트갭 분석기 연동, review_gate.py max_rounds=2 캡 적용, skills/registry.yaml 스킬 등록 갱신, tests/test_stage4_7_knowledge_pipeline.py 갭 검증 케이스 추가 |
+| 2026-04-30 | v1.2.22 | chore(settings): macOS→Windows hook 경로 마이그레이션 및 중복 훅 통합 — SessionStart·UserPromptSubmit·PreCompact·Stop 훅 python3+상대경로→python+절대경로(D:/hoonProJect) 변환, 중복 hook 엔트리 제거 및 name 속성 추가, check_pending_review·check_design_pending sh 래퍼 전환, gemini·codex·git 신규 권한 추가 |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 경로 마이그레이션 및 중복 hook 제거 — macOS 절대경로→Windows D:/hoonProJect 경로 통일, hook에 name 필드 신규 추가(agent_factory_claude_*), check_pending_review/check_design_pending을 hookpy.sh 래퍼로 교체, gemini·codex·git Bash 권한 신규 허용 |
+| 2026-04-30 | v1.2.22 | chore(settings): macOS→Windows 경로 마이그레이션 및 hook 정리 — settings.local.json hook 중복 항목 제거·name 필드 추가, check_pending/check_design 훅을 hookpy.sh 래퍼로 전환, gemini·codex·git 퍼미션 신규 추가, skills/registry.yaml 스킬 등록 업데이트 |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 경로 마이그레이션 및 권한 확장 — macOS→Windows 절대경로 전환(agent-factory hook 4종), 중복 hook 엔트리 제거 및 name 필드 추가, gemini/codex/git Bash 권한 신규, UserPromptSubmit hook을 hookpy.sh 래퍼 방식으로 전환, episode_matcher·knowledge_pipeline 테스트 연동 |
 | 2026-04-30 | v1.2.22 | You've hit your limit · resets 4:50pm (Asia/Seoul) |
 | 2026-04-30 | v1.2.22 | chore(af-critic,settings): af-critic 컨텍스트 예산 규칙 신규 + Windows 훅 경로 마이그레이션 — code-review.md 풀리드 금지 등 5개 규칙 추가, Mac→Windows 훅 절대경로 전환, hook name 필드 도입, hookpy.sh 기반 실행 방식 변경, codex·gemini·git 권한 항목 추가 |
 | 2026-04-30 | v1.2.22 | chore(settings/critic): Windows 환경 hook 경로 마이그레이션 및 af-critic 컨텍스트 예산 규칙 추가 — settings.local.json Mac→Windows 경로 전환·python3→python·hookpy.sh 래퍼 도입·af-critic.md Context Budget Rules 신규(code-review.md 전체 읽기 금지·타겟 검색 우선)·Bash/Read 허용 권한 확장 |

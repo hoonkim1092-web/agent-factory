@@ -332,6 +332,9 @@ def _post_agent_record(payload: dict) -> int:
     except Exception:
         verdict = "pass"
 
+    if subagent_type == "af-test-runner":
+        verdict = _apply_test_gap_verdict(workspace, verdict)
+
     try:
         from scripts.review_gate import record_review_done  # type: ignore[import]
         # M1: files_snapshot=None → record_review_done이 락 내부에서 직접 읽음 (TOCTOU 해소)
@@ -340,6 +343,56 @@ def _post_agent_record(payload: dict) -> int:
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
     return 0
+
+
+def _apply_test_gap_verdict(workspace: str, verdict: str) -> str:
+    """Force af-test-runner verdict to fail when the test-gap analyzer fails."""
+    try:
+        from scripts import test_gap_analyzer as tga  # type: ignore[import]
+
+        changed = tga.changed_files_from_pending(workspace) or tga.changed_files_from_git(workspace)
+        diff_text = tga.git_diff(workspace, changed)
+        report = tga.analyze_diff(
+            workspace=workspace,
+            changed_files=changed,
+            diff_text=diff_text,
+        )
+        if report.verdict == "FAIL":
+            _write_test_gap_report(workspace, report)
+            gap_ids = ",".join(g.risk_id for g in report.gaps[:5])
+            _log_hook_event("test_gap_analyzer", "af-test-runner", 1, error=f"forced-fail:{gap_ids}")
+            return "fail"
+        _clear_test_gap_report(workspace)
+        _log_hook_event("test_gap_analyzer", "af-test-runner", 0)
+    except Exception as exc:
+        _log_hook_event("test_gap_analyzer", "af-test-runner", 0, error=f"skipped:{exc}")
+    return verdict
+
+
+def _test_gap_report_path(workspace: str) -> str:
+    return os.path.join(workspace, ".af_review_queue", "test_gap_report.json")
+
+
+def _write_test_gap_report(workspace: str, report: object) -> None:
+    try:
+        path = _test_gap_report_path(workspace)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp_path = f"{path}.tmp"
+        payload = report.to_dict() if hasattr(report, "to_dict") else {"verdict": "FAIL"}
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
+    except Exception as exc:
+        _log_hook_event("test_gap_analyzer", "af-test-runner", 0, error=f"report-write-skipped:{exc}")
+
+
+def _clear_test_gap_report(workspace: str) -> None:
+    try:
+        os.unlink(_test_gap_report_path(workspace))
+    except FileNotFoundError:
+        pass
+    except Exception as exc:
+        _log_hook_event("test_gap_analyzer", "af-test-runner", 0, error=f"report-clear-skipped:{exc}")
 
 
 def _post_commit_clear(payload: dict) -> int:

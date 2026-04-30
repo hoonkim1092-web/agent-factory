@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 
 
 def _runner():
@@ -82,10 +83,21 @@ def test_py_compile_valid_file(tmp_path):
     assert m._post_edit_py_compile({"tool_input": {"file_path": str(f)}}) == 0
 
 
-def test_py_compile_syntax_error(tmp_path, capsys):
+def test_py_compile_syntax_error(tmp_path, capsys, monkeypatch):
     m = _runner()
     f = tmp_path / "bad.py"
     f.write_text("def (:\n")
+
+    import subprocess as sp
+
+    def fake_run(args, **kwargs):
+        assert args[:3] == [sys.executable, "-m", "py_compile"]
+        class R:
+            returncode = 1
+            stderr = "SyntaxError: invalid syntax"
+        return R()
+
+    monkeypatch.setattr(sp, "run", fake_run)
     m._post_edit_py_compile({"tool_input": {"file_path": str(f)}})
     captured = capsys.readouterr()
     assert "[af-hook] syntax error" in captured.err
@@ -181,3 +193,103 @@ def test_log_hook_event_silently_swallows_errors(monkeypatch):
     m = _runner()
     monkeypatch.setattr(m, "_project_root", lambda: "/nonexistent/path/xyz")
     m._log_hook_event("post_edit_enqueue", "core/x.py", 1, error="boom")
+
+
+def test_post_agent_record_forces_fail_when_test_gap_analyzer_fails(monkeypatch, tmp_path):
+    m = _runner()
+    recorded = []
+
+    monkeypatch.setattr(m, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+
+    import scripts.review_gate as rg
+    import scripts.test_gap_analyzer as tga
+
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/providers/cli.py"])
+    monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
+    monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "diff --git a/core/providers/cli.py b/core/providers/cli.py\n+shlex.split(raw)\n")
+
+    def fake_analyze_diff(*, workspace, changed_files, diff_text):
+        return tga.TestGapReport(
+            verdict="FAIL",
+            gaps=[
+                tga.TestGap(
+                    risk_id="cross_platform_quoted_path_subprocess",
+                    severity="FAIL",
+                    changed_file="core/providers/cli.py",
+                    reason="missing representative test",
+                    expected_test_evidence="add cross-platform quoted path cases",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(tga, "analyze_diff", fake_analyze_diff)
+
+    payload = {
+        "tool_input": {"subagent_type": "af-test-runner"},
+        "tool_response": {"content": "Verdict: PASS\nall tests passed"},
+    }
+
+    assert m._post_agent_record(payload) == 0
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "fail")]
+    report_path = Path(tmp_path) / ".af_review_queue" / "test_gap_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["verdict"] == "FAIL"
+    assert report["gaps"][0]["risk_id"] == "cross_platform_quoted_path_subprocess"
+
+
+def test_post_agent_record_keeps_verdict_when_test_gap_analyzer_passes(monkeypatch, tmp_path):
+    m = _runner()
+    recorded = []
+
+    monkeypatch.setattr(m, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+
+    import scripts.review_gate as rg
+    import scripts.test_gap_analyzer as tga
+
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/a.py"])
+    monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
+    monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "")
+    monkeypatch.setattr(tga, "analyze_diff", lambda *, workspace, changed_files, diff_text: tga.TestGapReport(verdict="PASS"))
+
+    payload = {
+        "tool_input": {"subagent_type": "af-test-runner"},
+        "tool_response": {"content": "Verdict: PASS\nall tests passed"},
+    }
+
+    assert m._post_agent_record(payload) == 0
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass")]
+
+
+def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(monkeypatch, tmp_path):
+    m = _runner()
+    recorded = []
+
+    stale_dir = Path(tmp_path) / ".af_review_queue"
+    stale_dir.mkdir()
+    stale_report = stale_dir / "test_gap_report.json"
+    stale_report.write_text('{"verdict":"FAIL"}', encoding="utf-8")
+
+    monkeypatch.setattr(m, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+
+    import scripts.review_gate as rg
+    import scripts.test_gap_analyzer as tga
+
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/a.py"])
+    monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
+    monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "")
+    monkeypatch.setattr(tga, "analyze_diff", lambda *, workspace, changed_files, diff_text: tga.TestGapReport(verdict="PASS"))
+
+    payload = {
+        "tool_input": {"subagent_type": "af-test-runner"},
+        "tool_response": {"content": "Verdict: PASS\nall tests passed"},
+    }
+
+    assert m._post_agent_record(payload) == 0
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass")]
+    assert not stale_report.exists()
