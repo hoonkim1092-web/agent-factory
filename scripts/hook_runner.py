@@ -359,6 +359,11 @@ def _apply_test_gap_verdict(workspace: str, verdict: str) -> str:
         )
         if report.verdict == "FAIL":
             _write_test_gap_report(workspace, report)
+            try:
+                from scripts.review_gate import downgrade_blast_tier  # type: ignore[import]
+                downgrade_blast_tier(workspace, 1)
+            except Exception:
+                pass
             gap_ids = ",".join(g.risk_id for g in report.gaps[:5])
             _log_hook_event("test_gap_analyzer", "af-test-runner", 1, error=f"forced-fail:{gap_ids}")
             return "fail"

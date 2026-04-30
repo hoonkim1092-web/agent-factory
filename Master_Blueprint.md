@@ -938,9 +938,23 @@ git commit → .githooks/pre-commit
 **비활성화:** `AF_PRE_COMMIT_REVIEW=0` 또는 `git commit --no-verify`
 
 ### 3-Tier Review-Gate (§9)
-<!-- last_updated: 2026-04-20 -->
+<!-- last_updated: 2026-04-30 -->
 
 `.py` 파일을 포함한 커밋은 **af-test-runner → af-critic → af-cross-review** 순서로 3단계 교차검증을 완료해야 한다.
+
+**test-gap gate (af-test-runner 전처리):**
+- `scripts/test_gap_analyzer.py`: diff에서 subprocess/shlex/sys.platform 위험 패턴 탐지. 관련 테스트에 cross-platform quoted-path 케이스 없으면 `verdict=FAIL`.
+- `hook_runner.py _apply_test_gap_verdict()`: FAIL 시 review_gate에 강제 fail 기록 + `blast_tier=1` 다운그레이드 (Tier 1 전용 재실행 경로).
+- FAIL 원인: `.af_review_queue/test_gap_report.json` 확인.
+- 신규 API: `review_gate.downgrade_blast_tier(workspace, tier)`.
+
+**af-cross-review 4-Round Deliberation (2026-04-30 업그레이드):**
+- Round 1 (Discovery): `mcp__codex__codex` 호출. threadId → `.af_review_queue/cr_thread.json` 저장.
+- Round 2 (Challenge): Claude가 High/Critical 항목만 실제 코드 직접 확인 후 도전 질문 작성.
+- Round 3 (Defense): `mcp__codex__codex-reply` 동일 threadId. `[보강]`/`[철회]` 마커로 응답.
+- Round 4 (Verdict): `ACCEPT★`(방어 성공) / `REJECTED`(철회) / `ACCEPT`(verified).
+- CLI fallback (gemini 등): 단일 라운드 유지.
+- **다라운드 deliberation은 반드시 `codex-reply`로 thread 이어가기** — 신규 `codex` 호출 금지.
 
 **아키텍처:**
 ```
@@ -1253,6 +1267,32 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-04-30 | v1.2.22 | ```json |
+| 2026-04-30 | v1.2.22 | chore(settings.local): Windows 환경 hook 경로 마이그레이션 및 중복 제거 — macOS→Windows 경로 전환(`/Users/hoon/` → `D:/hoonProJect/`), 이중 hook 블록 통합+name 필드 추가(agent_factory_claude_sessionstart 외 3종), check_pending_review 호출을 hookpy.sh 래퍼로 변경, gemini·codex·git 허용 규칙 신규 추가 |
+| 2026-04-30 | v1.2.22 | `chore(settings+hooks): macOS→Windows hook 경로 마이그레이션 — 중복 hook 항목 제거 및 name 필드 추가(agent_factory_claude_*), sh hookpy.sh 래퍼 적용(UserPromptSubmit/DesignPending), gemini·codex·git 허용 권한 신규 추가, skills registry 프로모션 반영` |
+| 2026-04-30 | v1.2.22 | chore(settings+hooks): Windows 환경 적응 및 hook 중복 통합 — macOS→Windows 경로 마이그레이션(`/Users/hoon/workTree/`→`D:/hoonProJect/worktrees/`), 이벤트별 중복 hook 2개→named hook 1개로 통합, gemini·codex·git 허용 명령어 추가, `skills/registry.yaml` 및 `episode_matcher.py` 갱신 |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 경로 마이그레이션 — Mac `/Users/hoon` → Windows `D:/hoonProJect/worktrees` 전경로 일괄 교체, 중복 hook 항목 통합 및 `name` 필드 신규 추가, `check_pending_review.py`/`check_design_pending.py` 실행을 `sh scripts/hookpy.sh` 래퍼로 변경, gemini·codex·git Bash 허용 패턴 추가 |
+| 2026-04-30 | v1.2.22 | chore(settings+skills): Windows hook 경로 통합 및 신규 스킬 평가 반영 — hook 명령어 Mac→Windows 경로 일원화·중복 제거, SessionStart/UserPromptSubmit/PreCompact/Stop에 name 필드 추가, gemini·codex 실행 권한 신규 허용, skills/registry.yaml 업데이트 및 new_skill 평가·승격 완료 |
+| 2026-04-30 | v1.2.22 | chore(settings+skills): Windows 환경 hook 명령어 마이그레이션 및 권한 정비 — macOS 절대 경로 → Windows 절대 경로 일괄 교체, 중복 hook 블록 제거 및 name 필드 신규 추가, gemini·codex·git Bash 권한 추가, skills/registry.yaml·episode_matcher.py 업데이트 |
+| 2026-04-30 | v1.2.22 | ```json |
+| 2026-04-30 | v1.2.22 | chore(settings+hooks): Windows PC 환경 이전 및 훅 중복 정리 — Mac 경로(`python3 /Users/hoon/`) → Windows 경로(`python D:/hoonProJect/`) 전면 교체, SessionStart·UserPromptSubmit·PreCompact·Stop 훅에 `name` 필드 추가, gemini·codex·git Bash 권한 허용 목록 신규 추가, 중복 훅 항목 제거 |
+| 2026-04-30 | v1.2.22 | chore(settings): Mac→Windows 경로 마이그레이션 및 훅 통합 정리 — settings.local.json 경로 일괄 교체(`/Users/hoon` → `D:/hoonProJect`), 중복 훅 항목 제거 후 name 필드 신규 추가(`agent_factory_claude_*`), hookpy.sh 래퍼로 check_pending_review·check_design_pending 훅 전환, gemini·codex·git Bash 권한 허용 목록 추가 |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | chore(settings+skills): Windows hook 경로 마이그레이션 및 중복 제거 — settings.local.json hook 4개에 name 필드 추가·macOS→Windows 절대경로 전환, pending 체크 hookpy.sh 래퍼로 일원화, gemini/codex/git 권한 신규 추가, skills/registry.yaml 및 new_skill 프로모션 갱신 |
+| 2026-04-30 | v1.2.22 | `chore(settings): Windows 환경 hook 설정 마이그레이션 및 통합 — Mac→Windows 절대경로 전환(D:/hoonProJect), 중복 hook 항목 name 필드로 단일화, gemini·codex 명령 권한 신규 추가, hookpy.sh 래퍼 적용(check_pending_review·check_design_pending), episode_matcher·knowledge_pipeline 테스트 갱신` |
+| 2026-04-30 | v1.2.22 | `chore(settings): hook 경로 macOS→Windows 전환 및 중복 항목 정리 — SessionStart·UserPromptSubmit·PreCompact·Stop hook을 Windows 절대경로·named hook으로 통합, hookpy.sh 래퍼로 check_pending/check_design 스크립트 호출 변경, gemini·codex CLI 권한 신규 추가, skill registry·episode_matcher·테스트 파이프라인 동기 업데이트` |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 경로 마이그레이션 및 설정 정리 — macOS→Windows 경로 전환(python3→python, /Users/hoon→D:/hoonProJect), hook name 필드 추가(SessionStart·UserPromptSubmit·PreCompact·Stop 4개), 중복 hook 항목 제거, gemini/codex/git 허용 목록 확장, skills/registry.yaml 신규 스킬 등록 |
+| 2026-04-30 | v1.2.22 | `chore(settings): Mac→Windows hook 경로 마이그레이션 및 권한 정비 — 중복 hook 항목 제거·name 필드 추가(4개), gemini/codex CLI 권한 신규 허용, pending 체크 스크립트 hookpy.sh 래퍼로 전환, episode_matcher.py 수정, skill registry/eval 업데이트` |
+| 2026-04-30 | v1.2.22 | chore(settings+skills): Windows 환경 hook 경로 이전 및 권한 정비 — settings.local.json macOS→Windows 경로 전환(D:/hoonProJect), hook에 name 필드 추가(agent_factory_claude_*), 중복 hook 제거 후 hookpy.sh 래퍼로 통합, gemini/codex/git 신규 권한 추가, skills/registry.yaml 및 new_skill 평가 결과 갱신 |
+| 2026-04-30 | v1.2.22 | chore(settings): Mac→Windows hook 경로 마이그레이션 + 중복 hook 정리 — settings.local.json SessionStart/UserPromptSubmit/PreCompact/Stop hook을 `/Users/hoon` → `D:/hoonProJect` Windows 경로로 통일, 각 이벤트 중복 hook 2개→1개 통합, hook `name` 필드 신규 추가(`agent_factory_claude_*`), gemini/codex Bash 권한 추가 |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | feat(test-gap-gate+P1+cross-review): diff-based test gap gate + blast_tier downgrade + af-cross-review 4-round deliberation — scripts/test_gap_analyzer.py(신규), review_gate.downgrade_blast_tier() API 추가, hook_runner._apply_test_gap_verdict() FAIL 시 blast_tier=1 다운그레이드, af-cross-review.md mcp__codex__codex/codex-reply 4-라운드 구조 전면 재작성, 33 tests PASS |
+| 2026-04-30 | v1.2.22 | ``` |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 환경 hook 설정 마이그레이션 — Mac→Windows 절대경로 일원화(`/Users/hoon/workTree`→`D:/hoonProJect/worktrees`), hook `name` 필드 신규 추가(SessionStart/UserPromptSubmit/PreCompact/Stop), gemini·codex 명령 권한 신규 추가, skills registry·eval-report 업데이트, episode_matcher 수정 |
+| 2026-04-30 | v1.2.22 | chore(settings): Windows 경로 마이그레이션 + 훅 중복 제거 — hook_runner.py 경로 Mac→Windows 전환(`python3`→`python`), 훅에 `agent_factory_claude_*` 이름 부여, `check_pending_review`·`check_design_pending` hookpy.sh 래퍼로 교체, codex·git·gemini Bash 권한 신규 추가, skills/registry.yaml + episode_matcher.py 갱신 |
+| 2026-04-30 | v1.2.22 | `feat(hook_runner): diff 기반 테스트 갭 분석기 통합 + Windows hook 경로 마이그레이션 — hook name 필드 신규 추가, hookpy.sh 래퍼 도입으로 check_pending_review/check_design_pending 실행, 중복 hook 항목 제거, codex/gemini/git 허용 권한 확장` |
 | 2026-04-30 | v1.2.22 | feat(hook-runner): diff 기반 테스트 갭 게이트 + hook_runner 통합 — settings.local.json Windows 경로·hook명 정리 및 중복 제거, hook_runner.py 테스트갭 분석기 연동, review_gate.py max_rounds=2 캡 적용, skills/registry.yaml 스킬 등록 갱신, tests/test_stage4_7_knowledge_pipeline.py 갭 검증 케이스 추가 |
 | 2026-04-30 | v1.2.22 | chore(settings): macOS→Windows hook 경로 마이그레이션 및 중복 훅 통합 — SessionStart·UserPromptSubmit·PreCompact·Stop 훅 python3+상대경로→python+절대경로(D:/hoonProJect) 변환, 중복 hook 엔트리 제거 및 name 속성 추가, check_pending_review·check_design_pending sh 래퍼 전환, gemini·codex·git 신규 권한 추가 |
 | 2026-04-30 | v1.2.22 | ``` |

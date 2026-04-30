@@ -293,3 +293,45 @@ def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(mon
     assert m._post_agent_record(payload) == 0
     assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass")]
     assert not stale_report.exists()
+
+
+def test_apply_test_gap_verdict_downgrades_blast_tier_on_fail(monkeypatch, tmp_path):
+    """test-gap analyzer FAIL → blast_tier를 1로 낮춰 af-test-runner 단독 라우팅 보장."""
+    m = _runner()
+
+    queue_dir = tmp_path / ".af_review_queue"
+    queue_dir.mkdir()
+    pending = queue_dir / "pending_agent_review.json"
+    pending.write_text(
+        json.dumps({"files": ["core/foo.py"], "blast_tier": 3, "reviews": {}}),
+        encoding="utf-8",
+    )
+
+    import scripts.review_gate as rg
+    import scripts.test_gap_analyzer as tga
+
+    monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/foo.py"])
+    monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
+    monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "diff ...\n+shlex.split(x)\n")
+
+    def fake_analyze(*, workspace, changed_files, diff_text):
+        return tga.TestGapReport(
+            verdict="FAIL",
+            gaps=[tga.TestGap(
+                risk_id="cross_platform_quoted_path_subprocess",
+                severity="FAIL",
+                changed_file="core/foo.py",
+                reason="test",
+                expected_test_evidence="add",
+            )],
+        )
+
+    monkeypatch.setattr(tga, "analyze_diff", fake_analyze)
+    monkeypatch.setattr(m, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+
+    result = m._apply_test_gap_verdict(str(tmp_path), "pass")
+    assert result == "fail"
+
+    state = json.loads(pending.read_text(encoding="utf-8"))
+    assert state["blast_tier"] == 1

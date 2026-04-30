@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-30 P1 Sprint B (fan-out) 완료 (`74dfa3c5`) → 다음은 T3(exe 빌드) 또는 T4(watcher race 수정) (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-30 test-gap-gate + blast_tier downgrade(P1) + af-cross-review 4-round deliberation 완료 → 다음은 T3(exe 빌드) (브랜치: `2026-04-14-build-diet`)
 
 ---
 
@@ -20,7 +20,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 항목 | 상태 |
 |------|------|
 | 브랜치 | `2026-04-14-build-diet` |
-| 마지막 커밋 | `74dfa3c5` feat(sprint-b-fan-out): af-cross-review.md 동적 fan-out 재작성 |
+| 마지막 커밋 | `5f24283e` feat(P1+cross-review): blast_tier downgrade + 4-round deliberation upgrade |
 | origin 푸시 | ✅ 완료 (origin/2026-04-14-build-diet 동기화됨) |
 | Review-Gate | 활성화 (`.githooks/pre-commit`) |
 
@@ -62,12 +62,15 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 30 | Phase 0 Proof-Carrying Review: `scripts/blast_radius.py` (결정적 Tier 분류기, path/regex, LLM 없음) + `review_gate.py` (round_started_at 토큰 모델, claim_id AF-RG format, clear 리셋, BLOCK fall-through) + `enqueue_agent_review.py` (_state_lock RMW + classify_with_content 락 밖 선계산) + `check_pending_review.py` (_state_lock RMW + cap/warn-only 1회 알림) + `af-critic.md` (BLOCK 기준 명시, 0 findings valid) + `tests/test_review_gate_phase0.py` (20 tests, 20 passed) — 모든 High 이슈 해소 | `24be4ace` | 2026-04-30 |
 | 31 | P1 Sprint A: `core/provider_detect.py` 신규 — ProviderState(3-state) + 1h 디스크 캐시 + AF_SKIP_PROVIDER 마스킹(캐시 오염 방지) + AGENT_*_CLI_COMMAND env var override + ThreadPoolExecutor 병렬 ping + CLI entry `--json --exclude-self` + `tests/test_provider_detect.py` (20 tests) + `af.spec` hiddenimport — af-critic BLOCK 2건 + af-cross-review ACCEPT 3건 모두 해소 | `3e956d7f` | 2026-04-30 |
 | 32 | P1 Sprint B: `af-cross-review.md` 동적 fan-out 재작성 — Step 0(3-gate: BLOCK/SKIP/CONTINUE) + Step 2(timeout 180s, python3 치환 macOS 호환, 오류파일 추적) + Step 3([ACCEPT★] 합의 가중치) + CLAUDE.md Tier 3 fan-out 설명 — af-critic WARN 3건 수정 완료 | `74dfa3c5` | 2026-04-30 |
+| 33 | test-gap gate: `scripts/test_gap_analyzer.py`(신규) + `hook_runner._apply_test_gap_verdict()` + `.claude/agents/af-test-runner.md` Step 2.5 + `tests/test_test_gap_analyzer.py` (11 tests) + `tests/test_hook_runner_builtins.py` (21 tests) + 설계문서 | `3612cc11` | 2026-04-30 |
+| 34 | P1 blast_tier downgrade: `review_gate.downgrade_blast_tier()` API + `hook_runner._apply_test_gap_verdict()` FAIL 시 blast_tier=1 다운그레이드 + blast_tier 검증 테스트 (33 tests) | `5f24283e` | 2026-04-30 |
+| 35 | af-cross-review 4-round deliberation 전면 재작성: Round1 Discovery(`mcp__codex__codex`+threadId 저장) → Round2 Challenge(Claude 직접 코드 확인) → Round3 Defense(`mcp__codex__codex-reply` 동일 thread+`[보강]`/`[철회]` 마커) → Round4 Verdict(ACCEPT★/REJECTED/ACCEPT) | `5f24283e` | 2026-04-30 |
 
 ---
 
 ## 미완료 작업 (우선순위순)
 
-> **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). BLOCK-prep 완료 (`630942c7`). 남은 작업: T3(exe 빌드) 1건.
+> **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). BLOCK-prep 완료 (`630942c7`). test-gap-gate + P1 blast_tier downgrade + af-cross-review 4-round deliberation 완료 (`3612cc11`, `5f24283e`). 남은 작업: T3(exe 빌드) 1건.
 
 ### Sprint 4 — 다음 작업 (우선순위순)
 
@@ -125,6 +128,11 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 - [x] **Phase 1a** ✅ `a8025d25` — `.claude/agents/af-cross-review.md` Step 1+2+3 프롬프트 개선
       Step 1: diff 추출 + 50KB 폴백 / Step 2: PRIMARY/BONUS 분리 + 메타 인식 + No-BLOCK 명시 + 자기검증 + [출력 형식] / Step 3: BONUS 분리 처리 + No-BLOCK 무시
       다음: dry-run 1회 (§10.2) — 별도 세션에서 실제 커밋에 cross-review 적용 후 측정
+
+- [x] **af-critic BLOCK 픽스** ✅ `b0f74ad9` + `610c1aa3` — `core/provider_detect.py` Windows shell=True 안전성
+      BLOCK1(`b0f74ad9`): `shutil`/`shlex` top import, `list2cmdline` 명시 변환, `stdin=DEVNULL`, timeout 5→30
+      BLOCK2(`610c1aa3`): `_resolve_ping_cmd()` backslash 2중화 후 `shlex.split(posix=True)` — 따옴표 포함 경로 완전 파싱
+      af-critic 최종 판정: **PASS** (WARN 2건 — 잘못된 env var 입력 시만 발생, advisory)
 
 - [ ] **Phase 1b** — `codex review` 빌트인 통합 (위험: 中)
       목적: Codex 0.125.0의 `codex review` 전용 빌트인이 `codex exec` 대비 결함 탐지율이 좋은지 데이터 검증

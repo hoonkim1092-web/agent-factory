@@ -275,6 +275,24 @@ def _make_claim_id(agent: str, round_num: int, now: float) -> str:
     return f"AF-RG-{ts}-R{round_num}-{short}"
 
 
+def downgrade_blast_tier(workspace: str, tier: int) -> None:
+    """현재 blast_tier가 tier보다 높을 때만 낮춘다.
+
+    test-gap analyzer FAIL 시 blast_tier=1로 내려 af-test-runner 단독 재실행 경로로 라우팅.
+    """
+    try:
+        with _state_lock(workspace):
+            state = _load_state(workspace)
+            if not state:
+                return
+            if int(state.get("blast_tier", 2)) > tier:
+                state["blast_tier"] = tier
+                _save_state(workspace, state)
+                _log_event(workspace, f"[blast-tier-downgraded] to={tier}")
+    except Exception as exc:
+        print(f"[review_gate] downgrade_blast_tier 실패: {exc}", file=sys.stderr)
+
+
 def clear_committed_files(workspace: str, committed_files: list[str]) -> None:
     """커밋 성공 후 staged 파일만 선택적으로 files/reviews snapshot에서 제거.
 
