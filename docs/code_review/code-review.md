@@ -3877,3 +3877,23 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (9)**: `.claude/settings.local.json, .gitignore, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_41bfa7a6eaa6_20260409_054107_412648.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_41bfa7a6eaa6_20260422_045634_746431.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_e93551d557d5_20260409_054107_343939.json, projects/global_hoon_main/data/memory/general/claude_chat/user_you_are_an_independent_design_document_critic_for_the_agent_factory_projectyour_job_is_to_find_problems_before_impl_e93551d557d5_20260422_045634_692606.json, projects/global_hoon_main/data/memory/general/claude_chat/user_your_task_is_to_create_a_detailed_summary_of_the_conversation_so_far_paying_close_attention_to_the_users_explicit_r_dfef392e9ae6_20260409_054107_281213.json, projects/global_hoon_main/data/memory/general/claude_chat/user_your_task_is_to_create_a_detailed_summary_of_the_conversation_so_far_paying_close_attention_to_the_users_explicit_r_dfef392e9ae6_20260422_045634_633539.json, scripts/cli_hook_bridge.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-30 08:09 — `2026-04-14-build-diet` (6566c459)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/scripts/blast_radius.py
+
+**Changed (2)**: `.claude/settings.local.json, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-04-30 08:51 — `2026-04-14-build-diet` (bee4f070)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/provider_detect.py
+
+**Changed (3)**: `.claude/settings.local.json, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json`
+
+_Review skipped (--no-llm or LLM unavailable)_

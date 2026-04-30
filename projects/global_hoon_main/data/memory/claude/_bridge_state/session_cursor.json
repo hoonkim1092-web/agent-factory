@@ -1,9 +1,9 @@
 {
-  "last_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-79be5679/96862d20-8dd6-49cb-969e-f6aa4558e134.jsonl",
-  "last_line": 18,
-  "updated_at": "2026-04-29T14:56:09.802022+00:00",
+  "last_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/ffac1a76-eb82-456f-88bb-d6f5c905c810.jsonl",
+  "last_line": 12,
+  "updated_at": "2026-04-30T00:54:00.836509+00:00",
   "user_key": "hoon_main",
-  "sessions_root": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-79be5679",
+  "sessions_root": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory",
   "provider": "claude",
-  "written_last_run": 6
+  "written_last_run": 0
 }
