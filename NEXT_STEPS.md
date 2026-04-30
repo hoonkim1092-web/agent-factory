@@ -72,6 +72,16 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 > **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). BLOCK-prep 완료 (`630942c7`). test-gap-gate + P1 blast_tier downgrade + af-cross-review 4-round deliberation 완료 (`3612cc11`, `5f24283e`). 남은 작업: T3(exe 빌드) 1건.
 
+### P1-후속 — af-cross-review WARN-1 (다음 스프린트)
+
+| 항목 | 내용 |
+|------|------|
+| 발견 | `downgrade_blast_tier(workspace, 1)` 호출이 test-gap FAIL 후 blast_tier를 영구 1로 낮춰 af-critic/af-cross-review를 우회하는 경로 생성 |
+| 제안 | `downgrade_blast_tier` 호출 제거. blast_tier 결정은 `blast_radius.py`에만 위임. test-gap FAIL은 verdict="fail" 전파만으로 충분 |
+| 우선순위 | Medium (WARN, 즉각 BLOCK 아님) |
+
+---
+
 ### Sprint 4 — 다음 작업 (우선순위순)
 
 | 우선순위 | 작업 | 파일 | 상세 |
