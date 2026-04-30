@@ -67,7 +67,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ## 미완료 작업 (우선순위순)
 
-> **2026-04-30 정리**: Phase 0 Proof-Carrying Review 완료 → P1 Sprint A (provider_detect) 완료 (20 tests). Sprint B(fan-out) + T3(exe 빌드) 대기 중.
+> **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). 남은 작업: T3(exe 빌드) 1건.
 
 ### Sprint 4 — 다음 작업 (우선순위순)
 
@@ -76,7 +76,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | ~~**T1**~~ ✅ | ~~knowledge skill SKILL.md fallback~~ | ~~`core/skill_metadata_adapter.py`~~ | 완료 `cf461e01` — _fill_missing_description + frontmatter 우선, 5개 테스트 |
 | ~~**T2**~~ ✅ | ~~`_evolution_failed_skills` per-skill 조건 좁히기~~ | ~~`core/fsa_loop.py`~~ | 완료 `33000436` — _apply_evolution_guard 메서드, 탐지 실패 Level 5 강제, 26개 테스트 |
 | **T3** (다음) | exe 빌드 + GitHub Release | `build_exe.py`, `af.spec` | `python build_exe.py` → `dist/af-1.2.22.zip`, `gh release create af-fsa_v1.2.22`. macOS 빌드 환경 확인 필요. |
-| **T4** | ensure_watcher() 동시 스폰 race 수정 | `core/design_review_utils.py` | PostToolUse 병렬 호출 시 watcher 프로세스 중복 spawn 방지 — advisory lock 또는 atomic mkdir 패턴. check: _is_watcher_alive() + _start_watcher() 사이 TOCTOU 제거. |
+| ~~**T4**~~ ✅ | ~~ensure_watcher() 동시 스폰 race 수정~~ | ~~`core/design_review_utils.py`~~ | 완료 `b76a6652` — O_CREAT\|O_EXCL spawn lock + double-check 패턴. 3-Tier PASS |
 
 ---
 
