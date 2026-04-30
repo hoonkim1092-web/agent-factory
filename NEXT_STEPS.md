@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-30 test-gap-gate + blast_tier downgrade(P1) + af-cross-review 4-round deliberation 완료 → 다음은 T3(exe 빌드) (브랜치: `2026-04-14-build-diet`)
+> 마지막 업데이트: 2026-04-30 review-gate hook 5개 복원 + 3-tier PASS 검증 완료. **다음 작업: 3-tier 비용 감축 플랜 Phase 1** (`docs/plans/2026-04-30-cross-review-cost-reduction-plan.md`) — 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -72,13 +72,31 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 > **2026-04-30 정리**: T4(ensure_watcher TOCTOU) 완료 (`b76a6652`). BLOCK-prep 완료 (`630942c7`). test-gap-gate + P1 blast_tier downgrade + af-cross-review 4-round deliberation 완료 (`3612cc11`, `5f24283e`). 남은 작업: T3(exe 빌드) 1건.
 
-### P1-후속 — af-cross-review WARN-1 (다음 스프린트)
+### 🔥 다음 작업 — 3-Tier 비용 감축 플랜 (Phase 1부터)
 
-| 항목 | 내용 |
-|------|------|
-| 발견 | `downgrade_blast_tier(workspace, 1)` 호출이 test-gap FAIL 후 blast_tier를 영구 1로 낮춰 af-critic/af-cross-review를 우회하는 경로 생성 |
-| 제안 | `downgrade_blast_tier` 호출 제거. blast_tier 결정은 `blast_radius.py`에만 위임. test-gap FAIL은 verdict="fail" 전파만으로 충분 |
-| 우선순위 | Medium (WARN, 즉각 BLOCK 아님) |
+**전체 플랜**: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` (사용자+Claude Opus 4.7 합의)
+
+**배경**: 이번 commit 검증 비용 195K 토큰 / 28분 — WARN-only인데 과도. af-critic 46 tool call의 대부분이 반복 탐색.
+
+**진행 순서** (Phase 1~4):
+
+| Phase | 작업 | 상태 | 시간 |
+|-------|------|------|------|
+| **1** | blast_tier/verdict 분리 (downgrade_blast_tier 호출 제거) | **🔥 다음** | 30~45분 |
+| 2 | review_bundle.md 생성기 + bundle 자체 항상-Tier-3 등록 | 대기 | 4~6시간 |
+| 2.5 | tool call cap (af-critic:20, af-cross-review:30) | Phase 2 병행 | 30분 |
+| 3 | bundle-first scope + extension log enforcement | 대기 | 1시간 |
+| 3.5 | 1주 데이터 수집 (review_metrics.jsonl) | 의무 | 1주 |
+| 4 | Smart routing + Tier 3 조건부 발화 | 대기 | 2시간 |
+
+**예상 효과**: 토큰 195K → 60K, 시간 28분 → 6~10분.
+
+**Phase 1 즉시 진입 명령** (집 Mac에서):
+```bash
+git pull
+python start_db.py agent-factory
+# Phase 1 시작 — 자세한 단계는 docs/plans/2026-04-30-cross-review-cost-reduction-plan.md 참고
+```
 
 ---
 

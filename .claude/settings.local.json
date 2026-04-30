@@ -81,7 +81,7 @@
           {
             "type": "command",
             "name": "agent_factory_claude_sessionstart",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -108,7 +108,7 @@
           {
             "type": "command",
             "name": "agent_factory_claude_userpromptsubmit",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -119,7 +119,7 @@
           {
             "type": "command",
             "name": "agent_factory_claude_precompact",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -130,7 +130,7 @@
           {
             "type": "command",
             "name": "agent_factory_claude_stop",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -141,7 +141,7 @@
           {
             "type": "command",
             "name": "agent_factory_claude_sessionend",
-            "command": "python D:/hoonProJect/worktrees/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace D:/hoonProJect/worktrees/agent-factory --run-id claude_cli_run --repo-root D:/hoonProJect/worktrees/agent-factory"
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
