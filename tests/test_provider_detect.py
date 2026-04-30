@@ -370,23 +370,24 @@ def test_t12_concurrent_cache_writes(monkeypatch):
     errors: list[Exception] = []
     results_list: list[dict] = []
 
-    def worker():
-        try:
-            with patch("subprocess.run", return_value=mock_proc):
+    # patch는 메인 스레드에서 1회만 적용해야 한다 (worker 안에서 적용하면 스레드 간 경쟁 발생).
+    with patch("subprocess.run", return_value=mock_proc):
+        def worker():
+            try:
                 r = detect_provider_states(
                     providers=["codex_cli"],
                     use_cache=True,
                     force_refresh=True,
                 )
-            results_list.append(r)
-        except Exception as exc:  # noqa: BLE001
-            errors.append(exc)
+                results_list.append(r)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
 
-    threads = [threading.Thread(target=worker) for _ in range(2)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join(timeout=10)
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
 
     assert not errors, f"Thread errors: {errors}"
     assert len(results_list) == 2
@@ -468,3 +469,101 @@ def test_cli_skip_gives_empty_fan_out(monkeypatch, capsys):
     assert data["fan_out"] == []
     assert data["blocked"] == []
     mock_run.assert_not_called()
+
+
+# ──────────────────────────────────────────
+# T13: installed_set이 ThreadPool 전에 1회만 계산됨을 검증
+# ──────────────────────────────────────────
+
+def test_t13_installed_set_computed_once_before_threadpool(monkeypatch):
+    """detect_installed_cli_providers()는 ThreadPool 시작 전 main thread에서 1회만 호출된다.
+
+    이것이 BLOCK-prep 버그의 핵심 수정: 이전에는 각 worker thread가
+    전역 캐시를 직접 호출해서 race condition이 발생했다.
+    """
+    # Lock으로 카운터 보호 — 버그 재현 시 worker thread에서 동시에 += 1이 발생하면
+    # GIL 비의존 환경이나 read-modify-write 경합으로 count가 낮게 집계될 수 있다.
+    call_lock = threading.Lock()
+    call_count = {"n": 0}
+
+    def counting_detect():
+        with call_lock:
+            call_count["n"] += 1
+            n = call_count["n"]
+        # 두 번째 이후 호출(worker thread 내부)이 있었다면 빈 목록 반환해서 버그 재현
+        if n == 1:
+            return ["claude_cli", "codex_cli", "gemini_cli"]
+        return []
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", counting_detect)
+
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.stderr = ""
+
+    with patch("subprocess.run", return_value=mock_proc):
+        results = detect_provider_states(
+            providers=["claude_cli", "codex_cli", "gemini_cli"],
+            use_cache=False,
+        )
+
+    # 수정 후: 1회 호출만 발생해야 한다 (pre-computed installed_set)
+    assert call_count["n"] == 1, (
+        f"detect_installed_cli_providers()가 {call_count['n']}회 호출됨 — "
+        "ThreadPool worker 내부에서 재호출되는 race condition이 있다"
+    )
+    # 모든 provider가 AVAILABLE이어야 한다 (installed_set이 올바르게 전달됨)
+    for pid in ["claude_cli", "codex_cli", "gemini_cli"]:
+        assert results[pid].state == ProviderState.AVAILABLE, (
+            f"{pid}가 AVAILABLE이어야 하지만 {results[pid].state} — "
+            "installed_set race condition으로 NOT_INSTALLED 오탐 발생"
+        )
+
+
+# ──────────────────────────────────────────
+# T14: 멀티스레드 concurrent detect_provider_states — 결과 일관성 검증
+# ──────────────────────────────────────────
+
+def test_t14_concurrent_detect_provider_states(monkeypatch):
+    """여러 스레드가 동시에 detect_provider_states()를 호출해도 결과가 일관된다."""
+    monkeypatch.setattr(
+        pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"]
+    )
+
+    def fake_run(cmd, **kwargs):
+        m = MagicMock()
+        if "codex" in cmd[0]:
+            m.returncode = 0
+            m.stderr = ""
+        else:  # gemini
+            m.returncode = 1
+            m.stderr = "Error: auth expired"
+        return m
+
+    errors: list[Exception] = []
+    results_list: list[dict] = []
+
+    # patch는 메인 스레드에서 한 번만 적용해야 한다.
+    # 각 worker 안에서 patch하면 스레드 간 패치가 경쟁해서 race condition 발생.
+    with patch("subprocess.run", side_effect=fake_run):
+        def worker():
+            try:
+                r = detect_provider_states(
+                    providers=["codex_cli", "gemini_cli"],
+                    use_cache=False,
+                )
+                results_list.append(r)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(6)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+
+    assert not errors, f"Thread errors: {errors}"
+    assert len(results_list) == 6
+    for r in results_list:
+        assert r["codex_cli"].state == ProviderState.AVAILABLE
+        assert r["gemini_cli"].state == ProviderState.AUTH_EXPIRED

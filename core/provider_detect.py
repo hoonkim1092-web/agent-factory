@@ -232,11 +232,15 @@ def _ping_one(provider_id: str) -> ProviderProbeResult:
         )
 
 
-def _probe_one(provider_id: str) -> ProviderProbeResult:
-    """설치 확인 → auth ping. skip 판단은 호출 측이 담당."""
+def _probe_one(provider_id: str, installed: frozenset[str]) -> ProviderProbeResult:
+    """설치 확인 → auth ping. skip 판단은 호출 측이 담당.
+
+    installed는 ThreadPool 시작 전 main thread에서 1회 계산된 frozenset을 받는다.
+    ThreadPool worker 안에서 전역 캐시(detect_installed_cli_providers)를 재호출하지 않으므로 race-free.
+    """
     checked_at = _now_iso()
 
-    if provider_id not in detect_installed_cli_providers():
+    if provider_id not in installed:
         return ProviderProbeResult(
             provider_id=provider_id,
             state=ProviderState.NOT_INSTALLED,
@@ -301,9 +305,14 @@ def detect_provider_states(
         real_probe = [pid for pid in to_probe if pid not in skip]
         skip_probe = [pid for pid in to_probe if pid in skip]
 
+        # 설치된 provider 목록을 ThreadPool 시작 전 main thread에서 1회 계산.
+        # worker 안에서 전역 캐시를 재호출하면 race condition 가능성이 있으므로
+        # immutable frozenset으로 만들어 각 worker에 전달한다.
+        installed_set = frozenset(detect_installed_cli_providers())
+
         probed_real: dict[str, ProviderProbeResult] = {}
         with ThreadPoolExecutor(max_workers=3) as pool:
-            futures = {pool.submit(_probe_one, pid): pid for pid in real_probe}
+            futures = {pool.submit(_probe_one, pid, installed_set): pid for pid in real_probe}
             for fut in as_completed(futures):
                 pid = futures[fut]
                 try:
