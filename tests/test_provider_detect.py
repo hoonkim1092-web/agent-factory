@@ -412,7 +412,9 @@ def test_cli_json_output_fan_out_blocked(monkeypatch, capsys):
 
     def fake_run(cmd, **kwargs):
         m = MagicMock()
-        if "codex" in cmd[0]:
+        # shell=True 시 cmd는 string, 아니면 list — 양쪽 모두 처리
+        cmd_str = cmd if isinstance(cmd, str) else cmd[0]
+        if "codex" in cmd_str:
             m.returncode = 0
             m.stderr = ""
         else:
@@ -532,7 +534,9 @@ def test_t14_concurrent_detect_provider_states(monkeypatch):
 
     def fake_run(cmd, **kwargs):
         m = MagicMock()
-        if "codex" in cmd[0]:
+        # shell=True 시 cmd는 string, 아니면 list — 양쪽 모두 처리
+        cmd_str = cmd if isinstance(cmd, str) else cmd[0]
+        if "codex" in cmd_str:
             m.returncode = 0
             m.stderr = ""
         else:  # gemini

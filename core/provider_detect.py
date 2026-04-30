@@ -7,6 +7,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -21,7 +23,7 @@ from core.providers.registry import CLI_PROVIDER_IDS, detect_installed_cli_provi
 log = logging.getLogger(__name__)
 
 _DEFAULT_TTL_SEC = 3600   # 1 hour
-_PING_TIMEOUT_SEC = 5
+_PING_TIMEOUT_SEC = 30    # codex/gemini는 LLM API 호출이 5~15초 소요
 _CACHE_VERSION = 1
 
 # Provider alias → canonical ID
@@ -61,8 +63,8 @@ def _resolve_ping_cmd(provider_id: str) -> list[str] | None:
     env_var = _PING_EXEC_ENV.get(provider_id, "")
     override = os.getenv(env_var, "").strip() if env_var else ""
     if override:
-        # override가 단일 실행파일이면 그것을, 아니면 첫 토큰만 사용
-        executable = override.split()[0]
+        parts = shlex.split(override, posix=(os.name != "nt"))
+        executable = parts[0] if parts else ""
     else:
         executable = _PING_DEFAULT_EXEC.get(provider_id, provider_id)
     return [executable] + suffix
@@ -195,13 +197,21 @@ def _ping_one(provider_id: str) -> ProviderProbeResult:
             state=ProviderState.NOT_INSTALLED,
             checked_at=checked_at,
         )
+    # Windows에서 npm 글로벌 실행파일은 .cmd 배치 스크립트이므로 shell=True 필요.
+    # shell=True 시 list 전달은 cmd.exe /c 경유 시 인자 손실 위험 → list2cmdline으로 명시 변환.
+    # stdin=DEVNULL: 일부 CLI가 추가 입력을 기다리며 hang하는 것을 방지.
+    _resolved = shutil.which(cmd[0]) or ""
+    _shell = os.name == "nt" and _resolved.lower().endswith((".cmd", ".bat", ".com"))
+    _run_cmd: list[str] | str = subprocess.list2cmdline(cmd) if _shell else cmd
     t0 = time.monotonic()
     try:
         proc = subprocess.run(
-            cmd,
+            _run_cmd,
             capture_output=True,
             text=True,
             timeout=_PING_TIMEOUT_SEC,
+            stdin=subprocess.DEVNULL,
+            shell=_shell,
         )
         rtt_ms = int((time.monotonic() - t0) * 1000)
         if proc.returncode == 0:
