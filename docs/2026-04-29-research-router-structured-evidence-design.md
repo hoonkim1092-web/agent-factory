@@ -172,30 +172,39 @@ User Request
 
 ### 4.2 모드 판정 기준
 
-`ResearchRouter`는 다음 신호를 점수화한다.
+`ResearchRouter`는 다음 신호를 점수화한다. 한/영 신호 모두 포함하며 §10 예제(8인 포커, 로또)의 핵심 토큰이 최소 1개씩 매칭되도록 v1.3에서 한국어 보강.
 
 ```text
 freshness_score:
-  latest, current, 2026, 최신, 버전, 릴리스, 가격, 보안
+  latest, current, 2026, release, version, price, security
+  최신, 버전, 릴리스, 가격, 보안, 매주, 회차
 
 external_stack_score:
-  websocket, sdk, api, framework, redis, deployment, browser, mobile
+  websocket, sdk, api, framework, redis, deployment, browser, mobile, server, client
+  네트워크, 멀티플레이어, 서버, 클라이언트, 모바일, 웹앱, 풀네트워크
 
 operational_risk_score:
-  realtime, multiplayer, network, scheduler, payment, auth, scaling, migration
+  realtime, multiplayer, network, scheduler, payment, auth, scaling, migration, concurrent
+  실시간, 결제, 인증, 멀티플레이어, 동시접속, 풀네트워크, 스케줄러
 
 data_pipeline_score:
-  수집, 누적, 통계, 분석, 주기적 업데이트, 데이터베이스
+  collection, aggregate, statistics, analytics, periodic, database, recommendation, pattern
+  수집, 누적, 통계, 분석, 주기적, 업데이트, 데이터베이스, 추천, 패턴, 회차
 
 live_project_score:
+  refactor, regression, impact, maintenance, current project
   현재 프로젝트, 유지보수, 리팩터링, 영향 범위, 회귀 테스트
 
 deep_decision_score:
-  비교, trade-off, architecture, 기술스택 선택, 고위험 결정
+  compare, trade-off, architecture, decision, high-risk
+  비교, 트레이드오프, 아키텍처, 기술스택 선택, 고위험 결정
 
 archive_score:
-  기존 자료, 내 노트북, archive, 과거 설계, 회사 문서
+  archive, my notes, prior design, company doc
+  기존 자료, 내 노트북, 과거 설계, 회사 문서
 ```
+
+**토큰화 규칙**: 단순 lowercase substring 매칭 (boolean OR). 동일 token이 다중 카테고리에 등록될 수 있음 (예: `풀네트워크` → external_stack + operational_risk 양쪽 +1). 가중치 시스템은 도입하지 않는다 (§4.2.1 알고리즘 단순성 유지). 키워드는 §12.5 fixture로만 calibration.
 
 예시 판정:
 
@@ -257,7 +266,7 @@ def _select_mode(scores) -> ResearchPlan:
 | `external_stack_score` | >= 2 | secondary fresh_lookup 부착 (primary=fast일 때만) |
 | `data_pipeline_score` | >= 1 | secondary data_pipeline 부착 |
 
-§12.5 Phase 1a fixture (15~20건)에서 expected_mode 정확도 ≥ 80% 미달 시 위 임계를 fixture 기반으로 재calibration. 코드 직접 튜닝 금지 — 항상 fixture 라벨 추가/수정 후 측정.
+§12.5 Phase 1a fixture (15~20건)에서 `expected_initial_mode` / `expected_final_mode` 두 라벨 모두 정확도 ≥ 80% 미달 시 위 임계를 fixture 기반으로 재calibration. 코드 직접 튜닝 금지 — 항상 fixture 라벨 추가/수정 후 측정.
 
 ### 4.3 Phase별 Deep capability level (v1.1 추가)
 
@@ -296,7 +305,7 @@ deep-tier gap → deep_source_research (Phase 1a에서는 deep-lite)
   - HIGH_RISK_CAPABILITY_MISSING
   - MULTI_CLIENT_MISSING
 
-quality-tier gap → unclassified (mode jump 없음, Phase 1b verifier 내부 retry)
+quality-tier gap → no-op (mode jump 없음, Phase 1b verifier 내부 retry)
   - CITATION_VALIDITY_LOW
   - CLAIM_SOURCE_RATIO_LOW
   - SOURCE_PACK_TOO_SHALLOW
@@ -304,13 +313,19 @@ quality-tier gap → unclassified (mode jump 없음, Phase 1b verifier 내부 re
 
 매핑은 `core/research_router.py`에 둔다 (verifier 아님). enum 추가 시 본 표도 함께 갱신 (§6.5 규칙).
 
+**용어 분리 (v1.3)**:
+- **`no-op`**: §4.4.2 표에 명시 매핑된 quality-tier 라벨. router는 mode jump을 하지 않고 verifier 내부 retry로 처리.
+- **`unmapped`**: 본 표에 등록되지 않은 신규 enum (Phase 1b 이후 추가될 수 있음). §4.4.3 1-step 인접 fallback이 적용되는 대상은 이쪽.
+
 #### 4.4.3 Precedence
 
 ```
-deep > fresh > unclassified
+deep > fresh > no-op
 ```
 
-다중 gap 동시 emit 시 deep-tier 하나라도 있으면 deep로 직진. fresh-tier만 있으면 fresh로. 매핑 안 되는 gap은 1-step 인접 fallback.
+다중 gap 동시 emit 시 deep-tier 하나라도 있으면 deep로 직진. fresh-tier만 있으면 fresh로. quality-tier만 있으면 no-op (mode jump 없이 verifier 내부 retry).
+
+§4.4.2 표에 매핑이 없는 신규 enum (`unmapped`)은 1-step 인접 fallback — 새 enum이 의미상 가장 가까운 tier(fresh/deep/quality) 중 하나로 분류되도록 PR 리뷰 시 명시 라벨링하고 본 표를 갱신하는 것이 원칙. fallback은 임시 안전망.
 
 #### 4.4.4 Deep gap emission threshold
 
@@ -333,7 +348,7 @@ deep > fresh > unclassified
 
 #### 4.4.5 Detector 정책 분리
 
-router의 `plan()`과 detector의 `detect_complexity_gaps()`는 동일 signal을 공유하되 정책은 다르다.
+router의 `plan()`과 detector의 `detect_complexity_gaps()`는 동일 signal을 공유하되 정책은 다르다. v1.4에서 §4.4.4 prose와 임계를 일치시킴 — 세 OR 분기 모두 코드에 명시.
 
 ```python
 # router.plan(): signal -> mode
@@ -345,14 +360,30 @@ def plan(request):
 def detect_complexity_gaps(request, evidence, final_mode):
     scores = self._compute_signal_scores(request)
     gaps = []
-    if (scores["operational_risk_score"] >= 3
-        and final_mode in ("fast_synthesis", "fresh_lookup")  # §4.4.4 본문과 일치
-        and not evidence.get("web_refs")):
+
+    # §4.4.4 임계 OR 통합 — operational_risk OR deep_decision OR external_stack
+    deep_signal = (
+        scores["operational_risk_score"] >= 3
+        or scores["deep_decision_score"] >= 2
+        or scores["external_stack_score"] >= 3
+    )
+    is_pre_deep = final_mode in ("fast_synthesis", "fresh_lookup")
+
+    if deep_signal and is_pre_deep and not evidence.get("source_pack"):
+        # §4.4.2 deep-tier gap 두 종을 동시 emit — final mode를 deep로 escalation
         gaps.append(ResearchGap.MULTI_CLIENT_MISSING)
+        gaps.append(ResearchGap.HIGH_RISK_CAPABILITY_MISSING)
+
     return gaps
 ```
 
-이렇게 해야 "router 자기 반복"이 아니라 "수집 결과와 complexity obligation의 불일치 감지"가 된다.
+근거:
+- `deep_signal`은 §4.4.4 1번 조건 (3개 OR)을 그대로 코드화.
+- `not evidence.get("source_pack")`은 §4.4.4 3번 조건의 대표 obligation. Phase 1a `fresh_lookup` 1차 plan은 web_refs를 포함할 수 있으나 source_pack(deep tier 산출)은 미수집이므로 deep escalation 트리거 신호로 적합.
+- 두 gap을 동시 emit하면 §4.4.2 deep-tier precedence가 적용돼 mode가 `deep_source_research`로 escalation. §10.1 final mode에 정확히 도달.
+- "router 자기 반복"이 아니라 "수집 결과와 complexity obligation의 불일치 감지"가 되도록 evidence 의존을 유지.
+
+`ARCHITECTURE_COVERAGE_LOW`는 Phase 1b verifier가 source_pack quality를 직접 측정한 후 emit하는 별도 gap (Phase 1a detector는 emit 안 함).
 
 ## 5. Mode별 흐름
 
@@ -677,16 +708,17 @@ class ResearchGap(str, Enum):
   (mode_distance 데이터 연속성, fixture 라벨 호환성 보장).
 - enum에 새 gap 추가는 가능. 단, 추가 시:
   1. §4.4.2 gap-to-mode 매핑 표를 같은 PR에서 갱신해야 한다.
-  2. 추가 gap의 tier(fresh/deep/quality/unclassified)를 §4.4.3 precedence에
-     명시해야 한다 (precedence 미정의 gap은 1-step 인접 fallback 처리).
+  2. 추가 gap의 tier(fresh / deep / quality / unmapped)를 §4.4.3 precedence에
+     명시해야 한다. quality-tier는 `no-op`(mode jump 없음), 표 미등록 신규 enum은
+     `unmapped` (1-step 인접 fallback 처리, v1.3 용어 분리 참조).
 - Phase 1b verifier는 새 gap 이름을 만들지 말고 위 enum의 quality-tier 3종
   (CITATION_VALIDITY_LOW / CLAIM_SOURCE_RATIO_LOW / SOURCE_PACK_TOO_SHALLOW)을 사용한다.
 ```
 
-**Quality-tier gap의 §4.4.2 매핑** (v1.2 등록):
+**Quality-tier gap의 §4.4.2 매핑** (v1.2 등록, v1.4 라벨 정합):
 
 ```
-quality-tier gap → unclassified (mode jump 없음, verifier가 자체 retry로 처리)
+quality-tier gap → no-op (mode jump 없음, verifier가 자체 retry로 처리)
   - CITATION_VALIDITY_LOW
   - CLAIM_SOURCE_RATIO_LOW
   - SOURCE_PACK_TOO_SHALLOW
@@ -861,6 +893,15 @@ deep-tier gap 3종 (`ARCHITECTURE_COVERAGE_LOW`, `HIGH_RISK_CAPABILITY_MISSING`,
 
 ## 10. 예시 시나리오
 
+> **v1.3 명시화**: 본 절의 모드 표시는 **final mode** — §4.4 escalation 적용 후의 결과다. `router.plan()`이 1차 호출에서 곧바로 final mode를 반환한다는 보장은 없다. fixture(§12.5) 라벨은 두 단계 모두 검증한다.
+>
+> | 단계 | 라벨 키 |
+> |------|--------|
+> | 1차 plan (router.plan() 직후) | `expected_initial_mode` |
+> | escalation 후 final mode | `expected_final_mode` |
+>
+> 8인 포커처럼 한국어 키워드 매칭만으로 deep direct trigger 임계가 미달일 수 있는 케이스는 1차 plan이 fast_synthesis로 분류돼도 §4.4.5 detector가 evidence 수집 결과 기반으로 deep-tier gap을 emit해 deep로 escalation되는 흐름을 의도한다. fixture 라벨링 시 `expected_initial_mode`와 `expected_final_mode`를 모두 명시할 것.
+
 ### 10.1 8인 네트워크 포커 웹앱
 
 요청:
@@ -870,7 +911,38 @@ deep-tier gap 3종 (`ARCHITECTURE_COVERAGE_LOW`, `HIGH_RISK_CAPABILITY_MISSING`,
 로직은 서버에서 돌리고 클라이언트는 뷰어 역할만 할거야.
 ```
 
-모드:
+1차 plan (router.plan() 직후 — §4.2 token-level boolean OR 채점 결과):
+
+```text
+freshness_score:        0
+external_stack_score:   6 (네트워크 / 서버 / 클라이언트 / 모바일 / 웹앱 / 풀네트워크)
+operational_risk_score: 1 (풀네트워크)
+data_pipeline_score:    0
+live_project_score:     0
+deep_decision_score:    0
+archive_score:          0
+```
+
+§4.2.1 `_select_mode` precedence 적용:
+- archive(0)≥2 ✗ → live(0)≥2 ✗ → deep(0)≥2 OR op(1)≥3 ✗ → fresh(0)≥2 ✗ → **`primary = "fast_synthesis"`**
+- secondary: data(0)≥1 ✗ / `external_stack(6)≥2 AND primary == fast_synthesis` ✓ → `["fresh_lookup"]`
+
+```json
+{
+  "mode": "fast_synthesis",
+  "secondary_modes": ["fresh_lookup"],
+  "scores": {
+    "freshness_score": 0,
+    "external_stack_score": 6,
+    "operational_risk_score": 1,
+    "deep_decision_score": 0
+  }
+}
+```
+
+Final mode (§4.4 escalation 후):
+
+§4.4.5 detector가 1차 plan 후 evidence 수집을 보고 `external_stack_score(6) >= 3 AND final_mode in (fast_synthesis, fresh_lookup) AND not source_pack` 분기로 `MULTI_CLIENT_MISSING` + `HIGH_RISK_CAPABILITY_MISSING` 두 gap을 emit한다 (§4.4.5 코드 갱신 후). §4.4.2 deep-tier 매핑에 의해 mode를 `deep_source_research`로 escalation. retry는 1회로 종료.
 
 ```json
 {
@@ -919,15 +991,31 @@ project_brief에는 "포커 게임"이 아니라 "server-authoritative realtime 
 1등 당첨 번호를 추천해주는 PC, 모바일 웹앱을 만들어줘.
 ```
 
-모드:
+1차 plan (router.plan() 직후):
 
 ```json
 {
   "mode": "fresh_lookup",
-  "secondary_modes": ["data_pipeline", "statistical_analysis", "scheduled_maintenance", "skill_evolution"],
+  "secondary_modes": ["data_pipeline"],
+  "scores": {
+    "freshness_score": ">=2 (최신/매주/회차)",
+    "data_pipeline_score": ">=4 (수집/누적/통계/패턴/추천/회차)",
+    "external_stack_score": ">=2 (모바일/웹앱)"
+  }
+}
+```
+
+Final mode (§4.4 escalation 후 기준 — gap 추가 emit 없음, primary 유지):
+
+```json
+{
+  "mode": "fresh_lookup",
+  "secondary_modes": ["data_pipeline", "skill_evolution"],
   "risk_level": "high"
 }
 ```
+
+**v1.3 정정**: 이전 버전은 `statistical_analysis`/`scheduled_maintenance`를 secondary로 두었으나 §4.1/§4.2.1 어디에도 정의가 없어 dead vocabulary였다. v1.3에서 제거하고 `data_pipeline` 한 모드로 흡수 — 통계 분석(`lottery_statistics_engine`)과 주기 스케줄(`weekly_scheduler`)은 `data_pipeline_score` 신호 키워드(누적/통계/주기적/매주/회차)로 이미 커버된다. secondary mode vocabulary 확장은 §4.1 표 갱신을 우선해야 한다.
 
 핵심 capability:
 
@@ -1014,7 +1102,8 @@ NotebookLM 사용:
 7. **Eval fixture 신규**
    - `tests/test_research_router_modes.py` (또는 `tests/fixtures/research_router_cases.json`)
    - 한국어/영어/혼합 15~20건
-   - 라벨: `expected_mode`, `expected_secondary_modes`, `expected_capabilities`, `expected_requires_web`, `expected_requires_notebooklm`
+   - 라벨: `expected_initial_mode`, `expected_final_mode`, `expected_secondary_modes`, `expected_capabilities`, `expected_requires_web`, `expected_requires_notebooklm`
+   - 두 mode 라벨 분리 이유: §10 plan vs final mode 구분(v1.3 신설). 1차 plan 검증과 §4.4 escalation 후 final mode 검증을 모두 수행해야 §4.4.5 detector 회귀 자동 감지.
    - **§4.2.1 임계값 calibration은 fixture 라벨로만 수행** — 코드 임계 직접 튜닝 금지.
 
 8. **Diagnostics 저장**
@@ -1106,17 +1195,25 @@ deep_source_research:
 | `mode_distance ≥ 2` 비율 | ≥ 10% | router 카테고리 재설계 (signal score 임계 조정) |
 | deep gap emission 빈도 | Phase 3 진입 전 재측정 | NotebookLM 비용 폭발 방지 위해 threshold 보수화 |
 
-### 12.5 Phase 1a Eval fixture 통과 기준 (v1.1 추가)
+### 12.5 Phase 1a Eval fixture 통과 기준 (v1.1 추가, v1.3 라벨 분리)
 
 `tests/test_research_router_modes.py` (또는 fixture json)의 15~20건 케이스에서:
 
 ```text
-- expected_mode 정확도 >= 80%
+- expected_initial_mode 정확도   >= 80%   # router.plan() 1차 결과
+- expected_final_mode 정확도     >= 80%   # §4.4 escalation 후 결과
 - expected_secondary_modes 부분 일치 >= 60%
 - requires_web / requires_notebooklm 정확도 >= 90%
 ```
 
-미달 시 Phase 1a 머지 차단. router signal weight를 fixture 기반으로 calibration.
+미달 시 Phase 1a 머지 차단. router signal keyword/임계는 fixture 기반으로 calibration (코드 직접 튜닝 금지).
+
+**라벨 가이드 (v1.4.1 정합)**:
+- 8인 포커 같은 케이스: `expected_initial_mode = "fast_synthesis"`, `expected_final_mode = "deep_source_research"` — 1차 plan은 deep direct trigger 임계 미달이지만 §4.4.5 detector가 `external_stack >= 3` 신호로 deep-tier gap 두 종을 emit해 deep로 escalation되는 흐름 검증. (§10.1 token-trace와 일치)
+- 로또 케이스: `expected_initial_mode = "fresh_lookup"`, `expected_final_mode = "fresh_lookup"` — escalation 없음. (§10.2 token-trace와 일치)
+- 단순 CRUD: 두 라벨 모두 `"fast_synthesis"`.
+
+라벨이 두 단계로 다를 경우 fixture는 router.plan() 결과만 비교하지 않고 §4.4 escalation 한 사이클까지 시뮬레이션 후 검증한다.
 
 ## 13. 최종 판단
 
@@ -1146,6 +1243,51 @@ better project_brief
 ```
 
 ## 14. 변경 이력
+
+### v1.4.1 (2026-05-02) — af-cross-review 4라운드 BLOCK 1건 반영 (정합 누락)
+
+v1.4 → v1.4.1: 4라운드 cross-review에서 자기참조 검증은 §10.1/§10.2 두 시나리오 모두 token-trace로 통과(핵심 spec 정합 ✓)했으나, v1.4 변경 #1의 후속 정합 작업이 §12.5 라벨 가이드에서 누락된 부분을 정정.
+
+| 위치 | 결함 | 처리 |
+|------|------|------|
+| §12.5 라벨 가이드 (이전 line 1212) | 8인 포커 `expected_initial_mode = "fresh_lookup"` 표기가 §10.1 line 932 token-trace 정정 결과 `fast_synthesis`와 자기모순. fixture 작성자가 §12.5를 따르면 80% 임계 미달 가능 | `expected_initial_mode = "fast_synthesis"`로 정정 + escalation 흐름 검증 의도 명시 |
+
+핵심: 자기참조 검증은 §4.2 keyword set + §4.2.1 precedence + §4.4.5 detector 코드 trace로 두 시나리오 모두 통과. 본 v1.4.1는 §12.5의 단일 라인 정합 누락만 정정.
+
+### v1.4 (2026-05-02) — af-cross-review 3라운드 BLOCK 4건 반영 (자기참조 검증)
+
+v1.3 → v1.4: af-cross-review 3라운드 수동 발화에서 잔존 R2-1·R2-2 일부 + 신규 BLOCK 2건이 발견됨. 사용자가 옵션 A(v1.4 작성 → 4라운드 검증)를 선택. v1.3은 changelog 표는 갱신했으나 §10.1 1차 plan blob, §6.5 mapping table, §11 fixture schema 본문이 v1.2 그대로 유지된 부분 위장 갱신이 있었다.
+
+| BLOCK ID | 항목 | 반영 위치 |
+|----------|------|-----------|
+| **#1** | §10.1 line 901-908 1차 plan blob이 §4.2/§4.2.1로 도달 불가 (R2-1 잔존). 실제 token-level trace는 `fast_synthesis`인데 doc claim은 `fresh_lookup`. score 주석에 본문에 없는 토큰("멀티플레이어") 인플레이션 | §10.1 1차 plan blob을 token-trace 기반 사실로 정정 — `fast_synthesis` + `["fresh_lookup"]` secondary, `external_stack=6 / op=1 / deep=0 / fresh=0` 실측치 명시. precedence 통과 추적도 본문 추가 |
+| **#2** | §4.4.5 예시 코드(`op>=3` 한 분기)와 §4.4.4 prose(`op>=3 OR deep>=2 OR external_stack>=3` 세 OR) 임계 불일치. §10.1 final mode `MULTI_CLIENT_MISSING + HIGH_RISK_CAPABILITY_MISSING` 동시 emit 분기 코드 부재 | §4.4.5 detector 코드를 §4.4.4 prose와 OR 통합 일치 + `external_stack >= 3` 분기 추가 + 두 deep-tier gap 동시 emit + obligation을 `source_pack`(deep tier 산출)으로 명시 + `ARCHITECTURE_COVERAGE_LOW`는 Phase 1b verifier 책임으로 분리 |
+| **#3** | §6.5 line 695, 704에 `unclassified` 옛 용어 잔존 (R2-2 일부 잔존). §4.4.2/§4.4.3 갱신했지만 §6.5 mapping table은 v1.2 그대로 → 직접 충돌 | §6.5 line 711의 tier 표기 `quality/unclassified` → `quality/unmapped`(미등록 enum 의미) + line 720 `quality-tier gap → no-op` (v1.4 라벨 정합) |
+| **#4** | §11 line 1105 fixture schema 단일 `expected_mode` vs §12.5 두 라벨(`expected_initial_mode`/`expected_final_mode`) 자기모순. §4.2.1 line 269도 단일 라벨 | §11 라벨에 두 mode 라벨 분리 + 분리 이유 명시(§4.4.5 detector 회귀 자동 감지) + §4.2.1 line 269 fixture 통과 기준도 두 라벨로 갱신 |
+
+핵심 변경 요약:
+
+1. **자기참조 검증 강화**: §10.1 1차 plan blob을 token-level boolean OR 채점 결과 그대로 기재. 직관 기반 score 주석 금지. 향후 §10 예제는 token-level trace 옆에 함께 두는 것이 원칙.
+2. **Detector code-prose 일치**: §4.4.4 prose와 §4.4.5 예시 코드의 임계가 분리되어 있어 Phase 1a 구현자가 둘 중 무엇을 따를지 모호했던 결함 해소. v1.4 코드는 prose의 모든 OR 분기를 직접 구현.
+3. **`unclassified` 용어 완전 제거**: §6.5까지 일관되게 `no-op`(quality-tier 매핑) / `unmapped`(표 미등록) 두 라벨만 사용.
+4. **fixture schema 단일 통제점**: `expected_initial_mode` + `expected_final_mode` 두 라벨이 §4.2.1 / §10 / §11 / §12.5 4곳에서 일관 표기.
+
+### v1.3 (2026-05-02) — af-cross-review 2라운드 BLOCK 3건 반영
+
+v1.2 → v1.3: af-cross-review 2라운드에서 잔존한 BLOCK 3건을 반영. WARN 3건은 advisory 정책으로 미반영. 사용자 결정으로 옵션 b(전부 v1.3에서 처리 후 수동 3라운드)를 선택.
+
+| BLOCK ID | 항목 | 반영 위치 |
+|----------|------|-----------|
+| **R2-1** | §4.2 키워드 set 영어 중심 — §10 예제(8인 포커, 로또) token-level 매칭 시 fast_synthesis로 분류돼 fixture 80% 자동 fail | §4.2 keyword set에 한국어 토큰 보강(네트워크/실시간/멀티플레이어/모바일/서버/풀네트워크/매주/회차/추천/패턴 등) + §10에 "초기 plan vs final mode" 구분 명시(`expected_initial_mode` / `expected_final_mode` 라벨 분리) |
+| **R2-2** | §4.4.2 quality-tier `unclassified`(no-op) vs §4.4.3 unclassified("1-step 인접 fallback") 의미 충돌 | §4.4.2 quality-tier 라벨을 `no-op`으로 변경 + §4.4.3에 "용어 분리" 블록 신설 — `no-op`(매핑된 quality-tier)과 `unmapped`(표 미등록 신규 enum)를 구분 |
+| **R2-3** | §10.2의 `statistical_analysis`/`scheduled_maintenance`가 §4.1/§4.2.1 어디에도 정의 없음 (dead vocabulary) | §10.2 secondary_modes에서 두 모드 제거 → `data_pipeline` 한 모드로 흡수. 정정 사유를 §10.2 본문에 명시 |
+
+핵심 변경 요약:
+
+1. **Keyword 한국어 보강**: §10 예제 핵심 토큰이 7개 점수 카테고리 중 최소 1개씩 매칭되도록 보강. token-level boolean OR 매칭 단순성 유지(가중치 미도입). 임계 calibration은 §12.5 fixture로만.
+2. **Plan vs Final mode 분리**: §10 예제는 final mode 기준임을 §10 서두에 명시. fixture 라벨 키 두 단계(`expected_initial_mode` / `expected_final_mode`) 분리. 8인 포커처럼 1차 plan→escalation 흐름이 의도된 케이스 명확화.
+3. **Vocabulary 정합성 강화**: §4.1/§4.2.1에 정의 없는 secondary mode 사용 금지 원칙. dead vocabulary 도입 시점을 잡기 위한 §10.2 정정.
+4. **`unclassified` 충돌 해소**: `no-op` (quality-tier 매핑) vs `unmapped` (표 미등록) 용어 분리.
 
 ### v1.2 (2026-05-02) — af-cross-review BLOCK 4건 반영
 

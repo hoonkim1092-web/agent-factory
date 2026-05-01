@@ -1,46 +1,43 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 — Research Router 설계 v1.2 갱신 완료 + 2라운드 cross-review에서 BLOCK 3건 잔존. **다음 작업: BLOCK 처리 결정 (옵션 a/b/c 컨펌 후 진행)** — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 — Research Router 설계 v1.4.1 갱신 완료, 5라운드 cross-review **PASS** ✅. **다음 작업: Phase 1a 코드 진입** — 브랜치: `2026-04-14-build-diet`
 
 ---
 
-## 🔥 현재 진행 중 — Research Router 설계 (Phase 1a 코드 진입 직전)
+## 🔥 현재 진행 중 — Research Router Phase 1a 코드 진입 직전
 
-**대상 문서**: `docs/2026-04-29-research-router-structured-evidence-design.md` (v1.2, 1202줄)
+**대상 문서**: `docs/2026-04-29-research-router-structured-evidence-design.md` (v1.4.1, ~1349줄, 5라운드 PASS)
 
 ### 진행 흐름 (최근 → 과거)
 1. v1.0 (2026-04-29) — 최초 설계
 2. v1.1 (2026-05-01) — 7라운드 deliberation 합의 반영
-3. v1.2 (2026-05-02) — af-cross-review 1라운드 BLOCK 4건 반영 ✅
-4. **v1.2 2라운드 cross-review → BLOCK 3건 잔존** ← 현재 위치
-5. v1.3 갱신 또는 Phase 1a 코드 진입 ← **사용자 결정 대기**
+3. v1.2 (2026-05-02) — 1라운드 BLOCK 4건 반영
+4. v1.2 2라운드 → BLOCK 3건 잔존 (이전 세션)
+5. v1.3 (2026-05-02) — 2라운드 BLOCK 3건 (R2-1/R2-2/R2-3) 반영
+6. v1.3 3라운드 → BLOCK 4건 발견 (자기참조 실패 + 정합 누락)
+7. v1.4 (2026-05-02) — 3라운드 BLOCK 4건 모두 처리 (token-trace 기반 §10.1 정정 + §4.4.5 코드 분기 통합 + §6.5 unclassified 제거 + §11/§4.2.1 fixture schema 두 라벨)
+8. v1.4 4라운드 → BLOCK 1건 (§12.5 라벨 가이드 후속 정합 누락)
+9. v1.4.1 (2026-05-02) — 4라운드 BLOCK 1건 정정 (§12.5 라벨 가이드 단일 라인)
+10. **v1.4.1 5라운드 → PASS ✅** ← 현재 위치
+11. Phase 1a 코드 진입 ← **다음**
 
-### 2라운드 BLOCK 잔존 3건
-| ID | 항목 | 비고 |
-|----|------|------|
-| **R2-1** | §4.2 키워드 set이 영어 중심 — `네트워크/실시간/멀티플레이어/모바일/서버` 등 한국어 신호 부재. §10 예제(8인 포커, 로또) token-level 매칭 시 모두 fast_synthesis로 분류됨. §12.5 fixture 80% 자동 fail. | fixture 작성과 강결합 |
-| **R2-2** | §4.4.2 quality-tier `unclassified` (no-op) vs §4.4.3 unclassified ("1-step 인접 fallback") 의미 충돌 | 1줄 도큐 수정 |
-| **R2-3** | §10.2의 `statistical_analysis`/`scheduled_maintenance`가 §4.1/§4.2.1 어디에도 정의 없음. `data_pipeline` primary 가드는 dead guard. v1.2가 §4.2.1 추가하면서 도입된 신규 결함. | secondary mode vocabulary 미정의 |
+### 5라운드 검증 통과 사실
+- 자기참조 검증 4종 모두 token-trace 정합:
+  - 8인 포커: `fast_synthesis` → §4.4.5 detector emit → `deep_source_research` ✓
+  - 로또: `fresh_lookup` → escalation 없음 → `fresh_lookup` ✓
+  - 단순 CRUD: `fast_synthesis` → escalation 없음 ✓
+  - fixture schema 라벨 키 4곳 일관 (§4.2.1 / §10 / §11 / §12.5) ✓
+- 핵심 spec(§4.2/§4.2.1/§4.4.5) 정합 확정.
 
-WARN 3건 advisory (skip).
-
-### 미결정 — 사용자 컨펌 대기
-**(a) 하이브리드 (Claude 추천)**: R2-2만 v1.3 빠른 갱신 (~5분, 1줄), R2-1/R2-3은 Phase 1a 코드 PR과 흡수. fixture 라벨 정의 단계에서 keyword normalization + secondary vocabulary 자연스럽게 정합화.
-**(b) 옵션 A**: v1.3에서 BLOCK 3건 모두 처리 후 수동 3라운드 cross-review (자동 발화 OFF, max_rounds=2 캡 도달). 도큐 정합 우선.
-**(c) 옵션 C**: 우회. 비권장 — R2-1이 fixture 80% 목표 자체를 깨뜨려 calibration 무한루프 위험.
-
-### Phase 1a 진입 시 액션 (BLOCK 처리 후)
+### Phase 1a 진입 시 액션
 1. `/model claude-sonnet-4-6` 전환 (설계=Opus, 구현=Sonnet 정책)
-2. `core/research_router.py` 신규 작성 (§4.2.1 알고리즘, §6.5 enum 9종)
+2. `core/research_router.py` 신규 작성 (§4.2.1 알고리즘, §6.5 enum 9종, §4.4.5 detect_complexity_gaps)
 3. `core/researcher.py` 시그니처 확장 (`research_plan`/`hint_gaps`/`**_kwargs`)
 4. `core/project_pipeline.py` `_evidence_fn(**kwargs)` 변경 (B1 통합 통로)
 5. `core/research_verifier.py` `max_retries=1` + fallback deprecation
 6. `af.spec` `hiddenimports`에 `core.research_router` 등록
-7. `tests/test_research_router_modes.py` fixture 15~20건 (한/영/혼합)
-
-### 미커밋 변경
-- `docs/2026-04-29-research-router-structured-evidence-design.md` v1.2 갱신 (1089→1202줄). 단독 커밋 가능 (Tier 1 — `.py` 없음).
+7. `tests/test_research_router_modes.py` fixture 15~20건 (한/영/혼합) — **`expected_initial_mode` + `expected_final_mode` 두 라벨 모두 정확도 ≥ 80%** 통과 기준
 
 ---
 
