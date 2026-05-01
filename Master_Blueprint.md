@@ -938,15 +938,20 @@ git commit → .githooks/pre-commit
 **비활성화:** `AF_PRE_COMMIT_REVIEW=0` 또는 `git commit --no-verify`
 
 ### 3-Tier Review-Gate (§9)
-<!-- last_updated: 2026-04-30 -->
+<!-- last_updated: 2026-05-01 -->
 
 `.py` 파일을 포함한 커밋은 **af-test-runner → af-critic → af-cross-review** 순서로 3단계 교차검증을 완료해야 한다.
 
+**Phase 1 blast_tier/verdict/routing_state 3-개념 분리 (2026-05-01):**
+- `blast_tier` — 변경 영향 범위. 결정 주체: `blast_radius.py` + `enqueue_agent_review.py:109` max-merge만. **enqueue 이후 불변**.
+- `verdict` — 각 agent 검증 결과. 결정 주체: 해당 agent. `reviews[agent]`에 기록.
+- `routing_state` — 현재 필요한 tier 집합. `_required_tiers_for(state)` 순수 함수가 derived-only로 계산. 저장 안 함.
+- `review_gate.downgrade_blast_tier()` — DEPRECATED (NotImplementedError). 호출 금지.
+
 **test-gap gate (af-test-runner 전처리):**
 - `scripts/test_gap_analyzer.py`: diff에서 subprocess/shlex/sys.platform 위험 패턴 탐지. 관련 테스트에 cross-platform quoted-path 케이스 없으면 `verdict=FAIL`.
-- `hook_runner.py _apply_test_gap_verdict()`: FAIL 시 review_gate에 강제 fail 기록 + `blast_tier=1` 다운그레이드 (Tier 1 전용 재실행 경로).
+- `hook_runner.py _apply_test_gap_verdict()`: FAIL 시 review_gate에 강제 fail 기록. **blast_tier 변경 없음** (Phase 1 invariant).
 - FAIL 원인: `.af_review_queue/test_gap_report.json` 확인.
-- 신규 API: `review_gate.downgrade_blast_tier(workspace, tier)`.
 
 **af-cross-review 4-Round Deliberation (2026-04-30 업그레이드):**
 - Round 1 (Discovery): `mcp__codex__codex` 호출. threadId → `.af_review_queue/cr_thread.json` 저장.
@@ -1535,6 +1540,7 @@ model_utils.py (독립 모듈)
 | 2026-04-28 | v1.2.22 | chore(settings): Claude hook 절대경로·이름 적용 및 Stage-1 gitignore 추가 — hook_runner.py 5개 훅 명령을 `$PWD` 상대경로→Windows 절대경로로 고정, 각 훅에 `name` 필드 추가, git log/status/codex exec 등 Bash 허용 항목 확장, `.gitignore`에 Stage-1 진화 런타임 산출물(`/candidates/` `/data/evolution/`) 제외 규칙 신규 추가 |
 | 2026-04-28 | v1.2.22 | chore(settings): Claude hook 절대경로 고정 및 allowlist 확장 — hook 명령 `python3 ./` → `python D:/hoonProJect/...` 절대경로 변경 + name 필드 신규 추가, bash allowlist에 git·codex exec 패턴 추가, `.gitignore` Stage-1 진화 파이프라인 산출물(`/candidates/`, `/data/evolution/`) 제외 규칙 추가, `syncCompyne/memory_store.py` 수정, `skills/registry.yaml` 업데이트 |
 | 2026-04-28 | v1.2.22 | chore(settings): Windows 절대경로 hook 마이그레이션 및 Stage-1 gitignore 추가 — hook 명령 `python3`+`$PWD` → `python`+절대경로 전환, `codex exec`·`git log/status/rev-list` Bash 권한 신규 추가, `.gitignore`에 `/candidates/`·`/data/evolution/` Stage-1 런타임 경로 추가, `skills/registry.yaml` 및 스킬 평가 리포트 갱신 |
+| 2026-05-01 | (unreleased) | feat(phase1-blast-tier-invariant): blast_tier/verdict/routing_state 3-개념 분리 — `hook_runner._apply_test_gap_verdict()`: `downgrade_blast_tier()` 호출 제거 + Phase 1 invariant docstring. `review_gate.downgrade_blast_tier()`: 본문을 `raise NotImplementedError(...)` + DEPRECATED docstring으로 교체(함수 정의 보존). `_required_tiers_for()` / `is_gate_blocked()` / `record_review_done()` / `_apply_test_gap_verdict()` acceptance criteria docstring 명문화. `tests/test_phase1_blast_tier_invariant.py` 신규(9 tests, L1~L6). `tests/test_hook_runner_builtins.py` 기존 downgrade 검증 테스트 → 불변 검증으로 업데이트. `Master_Blueprint.md §9` 3-개념 분리 invariant 반영. 51 tests PASS. |
 | 2026-04-30 | (unreleased) | fix(T4-watcher-race): ensure_watcher TOCTOU 제거 — `core/design_review_utils.py`: `SPAWN_LOCK_FILE`/`SPAWN_LOCK_TTL`(10s) 상수 추가, `_try_acquire_spawn_lock()` O_CREAT|O_EXCL 원자적 lock 취득+stale 자동 제거, `_release_spawn_lock()` finally 보장, `ensure_watcher()` 1차 alive→spawn lock→2차 alive(double-check)→start 패턴으로 변경. PostToolUse 병렬 호출 시 watcher 중복 spawn 방지. §0 `design_review_utils` 행 신규 public API 반영. 3-Tier 검증: Tier1 PASS / Tier2 WARN(advisory) / Tier3 PASS. |
 | 2026-04-29 | (unreleased) | feat(hook-infra+P1-design): design 큐 훅 인프라 + Multi-Provider 설계문서 — `scripts/check_design_pending.py` 신규(design 큐 폴링, JSON timestamp debounce 90s, fired pruning, `_coerce_float` OverflowError/nan/inf 방어, exit 0 contract). `core/design_review_utils.py`: INCLUDE에 날짜패턴(`docs/**/20??-??-??-*.md` + flat), EXCLUDE에 `docs/work-items/**`+`docs/patterns/**` 추가. `.claude/settings.local.json`: PostToolUse 복원(post_edit_code_review+design_review), UserPromptSubmit에 check_pending_review+check_design_pending 추가. `CLAUDE.md`: af-design-review-pending 룰 추가. `docs/2026-04-29-multi-provider-cross-review.md` 신규(P1 설계문서, 350줄, 13섹션). §0 core/ 테이블에 `design_review_utils` 행 추가. 3-Tier 검증 통과(af-test-runner PASS / af-critic WARN→PASS / af-cross-review PASS). |
 | 2026-04-29 | (unreleased) | feat(T2-per-skill-escalation): fsa_loop per-skill 에스컬레이션 가드 — `_apply_evolution_guard(level, result, analysis) -> tuple[int, str|None]` 신규: 탐지 실패(_cand_name=None) → logger.warning + Level 5 강제(무한 루프 방지), 차단 스킬 일치 → Level 5, 그 외 → level 유지+cand_dir 반환(이중 탐색 방지). `_try_evolve_failed_skill`에 `skill_dir=None` 선택 파라미터 추가. 반환 타입 `tuple[int, str|None]` 구체화. `test_phase7_dep_graph_evolve.py` 3개 신규 테스트(_apply_evolution_guard 직접 호출, 탐지 실패 케이스 포함). 26 테스트 통과. af-critic WARN 3건(이중 호출·None 가드·테스트 복사) + af-cross-review ACCEPT 2건(탐지 실패 Level 5 복원·경고 로그) 반영. |

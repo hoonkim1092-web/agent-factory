@@ -33,6 +33,11 @@ WARN-only 결과 — BLOCK 0건. 발견 가치는 있었음(WARN-1: blast_tier �
 3. **에이전트 독립성 유지**: af-critic + af-cross-review 통합은 reframing 가치 손실. bundle만 공유, 판단은 독립.
 4. **Tier 3 발화 조건은 "위험군" 기준**: finding-count는 cross-review의 가치를 정량 환원하는 실수.
 5. **Phase 4 진입 전 1주 데이터 수집**: 추정 기반 routing 변경 금지.
+6. **배포 빌드 동등성** (1급 design constraint): 모든 신규 모듈/도구는 dev hook(Claude Code) + 배포 빌드(`af.exe` self-evolution) 양쪽에서 동작해야 한다. 우리가 dev에서 만드는 건 결국 배포 빌드 안에서 돌아갈 서비스 컴포넌트다. dev에서만 돌면 dead asset.
+   - 의존성 명시 (`requirements.txt`, `pyproject.toml`)
+   - PyInstaller `af.spec` hiddenimports + native extension binaries 등록
+   - frozen build 경로 처리 (`sys._MEIPASS` 분기) 검증
+   - dev hook + 배포 self-evolution 양쪽에서 호출 가능한 thin wrapper API
 
 ---
 
@@ -180,14 +185,84 @@ def downgrade_blast_tier(workspace: str, tier: int) -> None:
 
 ---
 
-### Phase 2 — review_bundle.md 생성기 (탐색 비용 제거 핵심)
+### Phase 2-prep — ASTEngine 활성화 + 배포 빌드 호환 (Phase 2 진입 전 prep)
 
-**목적**: 각 에이전트가 같은 파일을 반복 탐색하지 않도록 사전 번들 생성.
+**배경**: Phase 2 review_bundle은 changed symbols + caller 추출에 `core/ast_engine.py`(ast-grep-py 래퍼) 사용. 그러나 현재:
+- `core.ast_engine`은 `af.spec:38`에 hiddenimports 등록만 되어 있고 **어디서도 import되지 않음** (dead code)
+- `ast-grep-py` 의존성이 `requirements.txt` / `pyproject.toml`에 없음
+- 현재 dev 환경(Mac)에 ast-grep-py 미설치 (`ModuleNotFoundError`)
+- ast-grep-py는 **Rust native extension** — PyInstaller가 .so/.dylib를 자동 collect 못 할 가능성 큼
+
+배포 빌드에서도 동작해야 하므로(설계 원칙 §6) Phase 2 본체 진입 전에 인프라 prep work 필요.
 
 **산출물**:
-- `scripts/build_review_bundle.py` (신규)
+- `requirements.txt` + `pyproject.toml`: `ast-grep-py>=X.Y` 추가
+- `pyinstaller_hooks/hook-ast_grep_py.py` (신규): native extension binaries collect
+- `af.spec`: `binaries=[]`에 ast-grep-py shared library 명시 (hook으로 자동화)
+- `core/review_bundle.py` (신규 thin wrapper): dev hook + 배포 self-evolution 양쪽 호출 진입점
+- `tests/test_ast_engine_smoke.py` (신규): import + search 1회 + replace dry-run 검증
+- 빌드 검증: `python build_exe.py` → `dist/af-1.2.22.zip` → frozen 환경에서 ASTEngine 호출 통과
+
+**Phase 2-prep A — 의존성 명시** (15분):
+- `requirements.txt`: `ast-grep-py>=0.30` 추가 (또는 현재 PyPI stable 버전)
+- `pyproject.toml`: `[tool.poetry.dependencies]` (또는 해당 섹션) 동일 추가
+- `pip install -r requirements.txt`로 dev 환경 설치 + smoke test (`test_ast_engine_smoke.py`)
+
+**Phase 2-prep B — PyInstaller native extension hook** (1시간):
+- `pyinstaller_hooks/hook-ast_grep_py.py` 작성:
+  ```python
+  from PyInstaller.utils.hooks import collect_dynamic_libs, collect_data_files
+  binaries = collect_dynamic_libs("ast_grep_py")
+  datas = collect_data_files("ast_grep_py")
+  ```
+- `af.spec`: `Analysis(...)` 호출에 `hookspath=[ROOT / "pyinstaller_hooks"]` 추가
+- `python build_exe.py`로 1회 빌드 → `dist/af-*` 안에 ast-grep-py native lib 포함 확인
+
+**Phase 2-prep C — 빌드 검증** (Sprint 4 T3과 통합, 30분):
+- 기존 Sprint 4 T3(exe 빌드 + GitHub Release `af-fsa_v1.2.22`)에 ASTEngine smoke test 흡수
+- `dist/af-1.2.22/af.exe` (또는 mac 등가물)에서 `--ast-smoke` 옵션 임시 추가 → ASTEngine 호출 통과 확인
+- 통과 후 GitHub Release 진행
+
+**Phase 2-prep D — review_bundle 진입점 설계** (30분):
+- `core/review_bundle.py` 신규 thin wrapper:
+  ```python
+  def build(workspace: str, pending_files: list[str]) -> dict:
+      """dev hook + 배포 self-evolution 공통 진입점.
+
+      Returns: {"bundle_md": str, "source_hash": str, "generated_at": str}
+      """
+  ```
+- dev hook(`scripts/build_review_bundle.py`)은 이 wrapper를 호출
+- 배포 self-evolution(`SkillEvolutionController`)도 동일 wrapper 호출 가능
+- `af.spec` hiddenimports에 `core.review_bundle` 추가
+
+**소요 시간**: 2~2.5시간 (prep A 15분 + B 1시간 + C 30분 + D 30분, 통합 빌드 포함)
+
+**Phase 2-prep 검증 게이트**: 4개 모두 PASS 후에만 Phase 2 본체 진입.
+
+| 게이트 | 검증 방법 |
+|--------|----------|
+| A: 의존성 | `pip install ast-grep-py` 성공 + `python -c "from core.ast_engine import search; search('print($A)', 'print(1)')"` 출력 |
+| B: PyInstaller hook | `python build_exe.py` 성공 + `dist/af-*/_internal/ast_grep_py/` 또는 `_MEIPASS/ast_grep_py/`에 native lib 존재 |
+| C: 배포 빌드 동작 | frozen `af` 실행 → `--ast-smoke` 또는 등가 path에서 ASTEngine 호출 성공 |
+| D: thin wrapper API | `core.review_bundle.build()` 호출 시 dev/frozen 양쪽에서 동일 dict 반환 (smoke test) |
+
+---
+
+### Phase 2 — review_bundle.md 생성기 (탐색 비용 제거 핵심)
+
+**목적**: 각 에이전트가 같은 파일을 반복 탐색하지 않도록 사전 번들 생성. **Phase 2-prep 완료 후 ASTEngine으로 changed symbols + caller 추출**.
+
+**산출물**:
+- `scripts/build_review_bundle.py` (신규, dev hook용 entry point)
+- `core/review_bundle.py` (Phase 2-prep D에서 신규 작성, 공용 wrapper)
 - `tests/test_build_review_bundle.py` (신규)
 - `.af_review_queue/review_bundle.md` (자동 생성)
+
+**ASTEngine 사용처** (Phase 2-prep 완료 후):
+- §4 Related Tests: `search_dir(pattern="def test_$NAME(...)", directory="tests/")` — 변경 함수명 기반 테스트 매칭
+- §5 Direct Callers: `search_dir(pattern=changed_function_name, directory="core/")` — caller 추출 (caveat: structural matcher 한계 — false positive 가능, 동적 dispatch 미탐. v1은 ast-grep + grep fallback 조합)
+- §6 Risk Flags: `_TIER3_REGEX` 매칭 + ast-grep 패턴 (`subprocess.$M(...)`, `shell=True` 등)
 
 **bundle 내용** (사전 합의):
 ```
@@ -399,11 +474,12 @@ def required_tiers(state) -> list[int]:
 | Phase | 작업 | 우선순위 | 예상 시간 |
 |-------|------|---------|----------|
 | 1 | blast_tier/verdict/routing_state 3-개념 분리 (호출 제거 + NotImplementedError + 6-layer 검증) | **즉시** | 2~2.5시간 |
-| 2 | review_bundle.md 생성기 + bundle 자체 항상-Tier-3 등록 | 1순위 | 4~6시간 |
+| 2-prep | ASTEngine 활성화 + 배포 빌드 호환 (의존성/PyInstaller hook/wrapper API/빌드 검증) | Phase 2 진입 전 필수 | 2~2.5시간 |
+| 2 | review_bundle.md 생성기 (ASTEngine 기반) + bundle 자체 항상-Tier-3 등록 | 1순위 | 4~6시간 |
 | 2.5 | tool call cap (안전망) | Phase 2와 병행 | 30분 |
 | 3 | bundle-first scope + extension log enforcement | 2순위 | 1시간 |
 | 3.5 | 1주 데이터 수집 (review_metrics.jsonl + T3-only finding rate) | 의무 | 1시간 + 1주 |
-| 4 | Smart routing + Tier 3 조건부 발화 | 3순위 (데이터 후) | 2시간 |
+| 4 | Smart routing + Tier 3 조건부 발화 (`runtime_self_repair_covered` 분류 축 포함) | 3순위 (데이터 후) | 2시간 |
 
 ---
 
@@ -419,10 +495,20 @@ def required_tiers(state) -> list[int]:
 - 함수 정의 자체 삭제는 별도 cleanup commit (Phase 1 scope 외)
 - 기존 메모리 `feedback_codex_reply_for_deliberation.md`와 무관 (별개 주제)
 
+### Phase 2-prep 작업 시
+- **dead code activation은 별도 work**: ast_engine.py는 4개월간 import되지 않은 상태. 활성화 자체가 위험 작업이므로 prep work를 Phase 2 본체와 분리
+- ast-grep-py는 Rust native — Mac arm64 / Windows x64 wheels 모두 PyPI에 존재 확인 필요
+- PyInstaller hook 작성 후 반드시 frozen 환경에서 호출 검증 (dev에서만 PASS는 의미 없음)
+- Sprint 4 T3(exe 빌드 + Release)와 자연스럽게 합쳐짐 — T3을 Phase 2-prep C로 흡수
+- review_bundle thin wrapper(`core/review_bundle.py`)는 `af.spec` hiddenimports에 추가
+- Phase 2-prep 4개 게이트 모두 PASS 후에만 Phase 2 본체 진입
+
 ### Phase 2 작업 시
-- `scripts/build_review_bundle.py`는 항상-Tier-3 리스트에 사전 등록 (Phase 4 patterns에 추가)
+- `scripts/build_review_bundle.py` + `core/review_bundle.py`는 항상-Tier-3 리스트에 사전 등록 (Phase 4 patterns에 추가)
 - bundle 무효화 hook은 `post_edit_enqueue` 다음 단계에 추가 (자동 재생성)
 - 50KB diff cap은 기존 `af-cross-review.md` Step 1 로직과 정합성 유지
+- ASTEngine caller 추출 한계 (structural matcher, 동적 dispatch 미탐)를 인식하고 grep fallback 병행: ast-grep으로 잡힌 caller가 0건이면 grep `\b<symbol>\b`로 후속 검색
+- bundle.md 헤더에 ASTEngine 사용 여부 명시 (`generator_engine: ast_grep_py / grep_fallback`)
 
 ### Phase 3 작업 시
 - extension log 형식은 ML 후처리 가능하도록 일관 유지 (`### Extension #N` 헤더 고정)
@@ -506,3 +592,11 @@ python start_db.py agent-factory  # 메모리 동기화
   - Phase 1 acceptance criteria 4-question test 추가
   - 함수 처리 정정: 완전 삭제 → `NotImplementedError` + deprecation
   - T3-only accepted finding rate를 Phase 3.5 핵심 메트릭으로 명시
+- 2026-05-01 추가: Codex 의견 수용 + 배포 빌드 동등성 1급 design constraint 격상.
+  - 설계 원칙 §6 신설: dev hook + 배포 빌드(`af.exe`) 양쪽 동작 의무
+  - **Phase 2-prep 신설** (Phase 1과 Phase 2 본체 사이): ASTEngine 활성화 + ast-grep-py 의존성 + PyInstaller native hook + review_bundle thin wrapper. 4개 게이트 PASS 필수
+  - Phase 2 본체에 ASTEngine 사용 명시 (Related Tests / Direct Callers / Risk Flags 추출)
+  - ASTEngine 한계(structural matcher, 동적 dispatch 미탐) → grep fallback 병행 명시
+  - Phase 4에 `runtime_self_repair_covered` 분류 축 추가 (Codex 제안)
+  - Sprint 4 T3(exe 빌드 + Release)을 Phase 2-prep C로 흡수
+  - 코드 검증 사실: `core.ast_engine`은 `af.spec:38`에 등록되었으나 4개월간 어디서도 import되지 않은 dead code. ast-grep-py도 requirements.txt/pyproject.toml에 미명시

@@ -295,8 +295,11 @@ def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(mon
     assert not stale_report.exists()
 
 
-def test_apply_test_gap_verdict_downgrades_blast_tier_on_fail(monkeypatch, tmp_path):
-    """test-gap analyzer FAIL → blast_tier를 1로 낮춰 af-test-runner 단독 라우팅 보장."""
+def test_apply_test_gap_verdict_does_not_modify_blast_tier_on_fail(monkeypatch, tmp_path):
+    """test-gap analyzer FAIL → verdict=fail 강제, blast_tier는 변경하지 않는다 (Phase 1).
+
+    blast_tier는 blast_radius.py + enqueue max-merge만 결정한다.
+    """
     m = _runner()
 
     queue_dir = tmp_path / ".af_review_queue"
@@ -307,7 +310,6 @@ def test_apply_test_gap_verdict_downgrades_blast_tier_on_fail(monkeypatch, tmp_p
         encoding="utf-8",
     )
 
-    import scripts.review_gate as rg
     import scripts.test_gap_analyzer as tga
 
     monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/foo.py"])
@@ -334,4 +336,4 @@ def test_apply_test_gap_verdict_downgrades_blast_tier_on_fail(monkeypatch, tmp_p
     assert result == "fail"
 
     state = json.loads(pending.read_text(encoding="utf-8"))
-    assert state["blast_tier"] == 1
+    assert state["blast_tier"] == 3  # Phase 1: blast_tier must be unchanged

@@ -123,13 +123,25 @@ def _required_tiers_for(state: dict) -> list[int]:
 
     Tier 1: [1]               — af-test-runner만
     Tier 2~3: [1, 2, 3]       — 정상 3-tier
+
+    [Phase 1 invariant] 다음 tier 요구는 여기서만 계산된다.
+    - 이 함수는 순수 함수 (부작용 없음, state 변경 없음).
+    - blast_tier는 결정 주체(blast_radius.py + enqueue max-merge)가 이미 확정한 값.
+    - 이 함수가 blast_tier를 변경하거나 다른 곳에서 override하는 것은 금지된다.
     """
     blast = int(state.get("blast_tier", 2))
     return [1] if blast == 1 else [1, 2, 3]
 
 
 def is_gate_blocked(workspace: str) -> tuple[bool, str]:
-    """BLOCK 여부 + reason 반환. 게이트 자체 오류는 fail-open (PASS + stderr 경고)."""
+    """BLOCK 여부 + reason 반환. 게이트 자체 오류는 fail-open (PASS + stderr 경고).
+
+    [Phase 1 invariant] 이 함수가 보는 상태는 다음 3가지다:
+    - state.reviews[]      : 각 agent의 verdict (결정 주체: 해당 agent)
+    - state.blast_tier     : 불변값 (결정 주체: blast_radius.py + enqueue max-merge만)
+    - state.updated_at     : 마지막 파일 편집 시각 (stale 감지용)
+    blast_tier를 이 함수 내부에서 변경하는 것은 invariant 위반.
+    """
     # 1. 환경변수 우회
     if os.environ.get("AF_SKIP_REVIEW_GATE") == "1":
         _log_event(workspace, "[gate-skipped-env]")
@@ -206,6 +218,9 @@ def record_review_done(
     - enqueue가 새 라운드 시작 시 round_started_at 설정 (또는 1차 enqueue가 누락 시 첫 record가 보정)
     - 모든 required 에이전트의 completed_at >= round_started_at 일 때만 round_count++
     - 종료 후 round_started_at = None → 다음 enqueue가 새 라운드 토큰 부여
+
+    [Phase 1 invariant] test-gap FAIL 기록은 verdict=fail로 reviews에 남긴다.
+    blast_tier는 이 함수도 수정하지 않는다.
     """
     now = time.time()
     try:
@@ -276,21 +291,19 @@ def _make_claim_id(agent: str, round_num: int, now: float) -> str:
 
 
 def downgrade_blast_tier(workspace: str, tier: int) -> None:
-    """현재 blast_tier가 tier보다 높을 때만 낮춘다.
+    """DEPRECATED (2026-05-01, Phase 1): blast_tier 수동 변경은 금지된다.
 
-    test-gap analyzer FAIL 시 blast_tier=1로 내려 af-test-runner 단독 재실행 경로로 라우팅.
+    blast_tier는 blast_radius.py + enqueue_agent_review.py:109 max-merge만 결정한다.
+    이 함수를 호출하면 routing 신뢰 invariant가 깨진다.
+
+    Phase 1에서 _apply_test_gap_verdict()의 호출이 제거됐다.
+    함수 정의는 기존 call site가 조용히 실패하도록 보존하되 본문은 NotImplementedError.
+    삭제는 별도 cleanup commit (Phase 1 scope 외).
     """
-    try:
-        with _state_lock(workspace):
-            state = _load_state(workspace)
-            if not state:
-                return
-            if int(state.get("blast_tier", 2)) > tier:
-                state["blast_tier"] = tier
-                _save_state(workspace, state)
-                _log_event(workspace, f"[blast-tier-downgraded] to={tier}")
-    except Exception as exc:
-        print(f"[review_gate] downgrade_blast_tier 실패: {exc}", file=sys.stderr)
+    raise NotImplementedError(
+        "downgrade_blast_tier() is deprecated (Phase 1, 2026-05-01). "
+        "blast_tier is immutable after enqueue — only blast_radius.py + max-merge may set it."
+    )
 
 
 def clear_committed_files(workspace: str, committed_files: list[str]) -> None:

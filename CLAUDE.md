@@ -37,9 +37,9 @@
 
 ### 교차검증 자동 실행
 - UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
-- UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review **2개를 병렬 실행**한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)
-- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-critic + af-cross-review 2개를 병렬 실행**한다 (2026-04-21 확정)
-- **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-critic + af-cross-review **3개를 병렬 실행**한다
+- UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-cross-review **1개만** 실행한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)
+- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-cross-review만** 실행한다 (2026-05-01 변경: af-critic은 설계문서에서 소스 중복 탐색 비용만 발생, 효과 없음)
+- **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-cross-review **2개를 병렬 실행**한다
 - 교차검증 결과에서 **BLOCK 판정 시에만** 발견 사항을 수정한다. **WARN은 advisory** — 자동 수정 의무 없음 (Phase 0 정책, 2026-04-30: 무한루프 방지)
 - **Tier 3(af-cross-review)는 가용 외부 CLI 프로바이더 전부에 병렬 fan-out한다.** 외부 프로바이더 0개면 자동 SKIP(통과 간주), 1개 이상 인증 만료가 있으면 BLOCK + 재인증 안내. (`core/provider_detect.py` Step 0 감지)
 

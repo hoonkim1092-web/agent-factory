@@ -115,6 +115,19 @@ python start_db.py agent-factory
 
 ## 후순위 작업 (Sprint 4 완료 후)
 
+### P0 — 설계문서 리뷰 정책 배포 에이전트 동기화
+
+**배경**: 2026-05-01 CLAUDE.md 변경 — 단일 설계문서 리뷰를 `af-critic + af-cross-review` → `af-cross-review만`으로 변경. Work-item 세트도 `af-doc-qa + af-critic + af-cross-review` → `af-doc-qa + af-cross-review`로 축소.
+
+**배포 빌드 동기화 필요 항목**:
+- `scripts/check_design_pending.py`: 현재 주석/로그에 "af-critic + af-cross-review" 언급이 있으면 제거
+- 배포된 Agent Factory 내부에서 설계문서 리뷰를 트리거하는 경로가 있다면 동일 정책 적용
+- `docs/code-review.md` 정책 섹션 갱신 (있다면)
+
+**소요 시간**: 30분 내외
+
+---
+
 ### P1 — Multi-Provider Cross-Review 동적 fan-out
 
 **목적**: 3-Tier 검증 파이프라인의 Tier 3(af-cross-review)을 구독 중인 AI 프로바이더에 따라 자동으로 확장·축소.
