@@ -144,6 +144,18 @@ def _post_edit_enqueue(payload: dict) -> int:
         _log_hook_event("post_edit_enqueue", fp, 0)
     except Exception as exc:
         _log_hook_event("post_edit_enqueue", fp, 1, error=str(exc))
+
+    # Phase 2: enqueue 직후 review_bundle.md 갱신 (AST + grep fallback)
+    bundle_script = os.path.join(root, "scripts", "build_review_bundle.py")
+    if os.path.isfile(bundle_script):
+        try:
+            subprocess.run(
+                [sys.executable, bundle_script, root],
+                timeout=10, cwd=root, capture_output=True,
+            )
+        except Exception:
+            pass
+
     return 0
 
 
