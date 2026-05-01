@@ -82,8 +82,12 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 | Phase | 작업 | 상태 | 시간 |
 |-------|------|------|------|
-| **1** | blast_tier/verdict/routing_state **3-개념 분리** (자기참조 검증 위험 인식 + 6-layer deterministic 검증) | **🔥 다음** | 2~2.5시간 |
-| 2 | review_bundle.md 생성기 + bundle 자체 항상-Tier-3 등록 | 대기 | 4~6시간 |
+| **1** | blast_tier/verdict/routing_state **3-개념 분리** (자기참조 검증 위험 인식 + 6-layer deterministic 검증) | ✅ 완료 (commit fa41575d, 2026-05-01) | — |
+| **2-prep A** | `ast-grep-py>=0.35.0` → requirements.txt | ✅ 완료 (commit 23be1886, 2026-05-01) | — |
+| **2-prep B** | `pyinstaller_hooks/hook-ast_grep_py.py` + af.spec hookspath 활성화 | ✅ 완료 (commit 23be1886, 2026-05-01) | — |
+| **2-prep C** | exe 빌드 검증 (ast-grep-py pip install → build_exe.py → smoke test) | **🔥 다음** | 30~60분 |
+| **2-prep D** | `core/review_bundle.py` thin wrapper (build/save/load) | ✅ 완료 (commit 23be1886, 2026-05-01) | — |
+| 2 | `scripts/build_review_bundle.py` + `.af_review_queue/review_bundle.md` 연동 | 대기 | 3~4시간 |
 | 2.5 | tool call cap (af-critic:20, af-cross-review:30) | Phase 2 병행 | 30분 |
 | 3 | bundle-first scope + extension log enforcement | 대기 | 1시간 |
 | 3.5 | 1주 데이터 수집 (T3-only accepted finding rate 핵심 메트릭) | 의무 | 1주 |
