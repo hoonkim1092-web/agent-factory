@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-04-30 review-gate hook 5개 복원 + 3-tier PASS 검증 완료. **다음 작업: 3-tier 비용 감축 플랜 Phase 1** (`docs/plans/2026-04-30-cross-review-cost-reduction-plan.md`) — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-01 Phase 3.5 완료 — review_metrics.jsonl 수집 인프라 + T3-only finding rate 측정 구현. **다음 작업: 1주 데이터 축적 후 Phase 4 진입 판단** (`docs/plans/2026-04-30-cross-review-cost-reduction-plan.md`) — 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -65,6 +65,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 33 | test-gap gate: `scripts/test_gap_analyzer.py`(신규) + `hook_runner._apply_test_gap_verdict()` + `.claude/agents/af-test-runner.md` Step 2.5 + `tests/test_test_gap_analyzer.py` (11 tests) + `tests/test_hook_runner_builtins.py` (21 tests) + 설계문서 | `3612cc11` | 2026-04-30 |
 | 34 | P1 blast_tier downgrade: `review_gate.downgrade_blast_tier()` API + `hook_runner._apply_test_gap_verdict()` FAIL 시 blast_tier=1 다운그레이드 + blast_tier 검증 테스트 (33 tests) | `5f24283e` | 2026-04-30 |
 | 35 | af-cross-review 4-round deliberation 전면 재작성: Round1 Discovery(`mcp__codex__codex`+threadId 저장) → Round2 Challenge(Claude 직접 코드 확인) → Round3 Defense(`mcp__codex__codex-reply` 동일 thread+`[보강]`/`[철회]` 마커) → Round4 Verdict(ACCEPT★/REJECTED/ACCEPT) | `5f24283e` | 2026-04-30 |
+| 36 | Phase 3.5 메트릭 수집 인프라: `scripts/review_metrics_logger.py`(신규 — append_metric/parse_findings_count/parse_extension_log_count/compute_report) + `scripts/review_metrics_report.py`(CLI) + `hook_runner._post_agent_record` Phase 3.5 연동 + `tests/test_review_metrics_logger.py` (28 tests) | (커밋) | 2026-05-01 |
 
 ---
 
@@ -90,7 +91,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | **2** | `scripts/build_review_bundle.py` + `hook_runner._post_edit_enqueue` 연동 | ✅ 완료 (2026-05-01) | — |
 | **2.5** | tool call cap (af-test-runner:10 / af-critic:20 / af-cross-review:30) | ✅ 완료 (commit adf32175, 2026-05-01) | — |
 | 3 | bundle-first scope + extension log enforcement | ✅ 완료 (2026-05-01) | — |
-| 3.5 | 1주 데이터 수집 (T3-only accepted finding rate 핵심 메트릭) | 의무 | 1주 |
+| 3.5 | 1주 데이터 수집 (T3-only accepted finding rate 핵심 메트릭) | ✅ 완료 (2026-05-01) | — |
 | 4 | Smart routing + Tier 3 조건부 발화 | 대기 | 2시간 |
 
 **예상 효과**: 토큰 195K → 60K, 시간 28분 → 6~10분.

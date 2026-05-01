@@ -313,7 +313,7 @@ def _pre_bash_review_gate(payload: dict) -> int:
 
 
 def _post_agent_record(payload: dict) -> int:
-    """PostToolUse(Task/Agent): af-* 에이전트 완료 시 tier 기록."""
+    """PostToolUse(Task/Agent): af-* 에이전트 완료 시 tier 기록 + Phase 3.5 메트릭 수집."""
     ti = payload.get("tool_input") or {}
     subagent_type = ti.get("subagent_type", "")
     if subagent_type not in _AGENT_TIER_MAP:
@@ -354,6 +354,25 @@ def _post_agent_record(payload: dict) -> int:
         _log_hook_event("post_agent_record", subagent_type, 0)
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
+
+    # Phase 3.5: 메트릭 수집 (best-effort — 실패해도 review flow 미영향)
+    try:
+        from scripts.review_metrics_logger import (  # type: ignore[import]
+            append_metric,
+            parse_findings_count,
+            parse_extension_log_count,
+        )
+        append_metric(
+            workspace=workspace,
+            agent=subagent_type,
+            tier=tier,
+            verdict=verdict,
+            findings_count=parse_findings_count(content),
+            extension_log_count=parse_extension_log_count(content),
+        )
+    except Exception:
+        pass  # metrics collection is best-effort
+
     return 0
 
 
