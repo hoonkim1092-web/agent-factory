@@ -7,3 +7,6 @@ langsmith>=0.3.0
 notebooklm-cli>=0.1.12,<0.2      # NotebookLM CLI (import name: nlm)
 tavily-python                    # Tavily 웹 검색 클라이언트
 filelock>=3.0                    # 크로스플랫폼 파일락 (.af_setup_state.json 동시성 보호)
+
+# ── Phase 2-prep A (2026-05-01: review_bundle AST 분석) ──
+ast-grep-py>=0.35.0              # Rust native AST 분석 (core/ast_engine.py wrapper)
