@@ -321,3 +321,12 @@ Medium/Low Advisory 항목은 사용자 판단에 따라 수정하세요.
 4. **도전 없이 기각하지 않는다.** High/Critical을 기각하려면 Challenge → Defense 과정을 거쳐야 한다.
 5. **보류는 성실한 판정이다.** 불확실하면 HOLD가 올바른 답이다.
 6. **CLI fallback은 단일 라운드다.** gemini 등 MCP 없는 provider는 deliberation 없이 Step 5 직행.
+
+## Tool Call 상한 (Phase 2.5)
+
+- 본 에이전트의 tool call 상한은 **30회**다.
+- 24회(80%) 소진 시 다음 사항을 응답에 명시하고 종결한다:
+  1. 지금까지 확인한 파일 목록
+  2. 확인하지 못한 리스크 가설
+  3. 추가 검증이 필요한지 여부
+- "추가 검증 필요"로 종결한 경우 verdict 라인에 `[INCOMPLETE]` 마커를 추가한다.
