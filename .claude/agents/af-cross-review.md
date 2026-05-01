@@ -313,6 +313,35 @@ Medium/Low Advisory 항목은 사용자 판단에 따라 수정하세요.
 
 ---
 
+## 입력 정책 (Phase 3)
+
+진입 시 bundle 상태를 먼저 확인하고 탐색 범위를 결정한다.
+
+```bash
+BUNDLE=".af_review_queue/review_bundle.md"
+PENDING=".af_review_queue/pending_agent_review.json"
+if [ -f "$BUNDLE" ] && [ -f "$PENDING" ] && [ "$PENDING" -nt "$BUNDLE" ]; then
+  echo "bundle-stale: pending이 bundle보다 새것"
+fi
+```
+
+**bundle 존재 시** (`.af_review_queue/review_bundle.md`가 있고 stale하지 않음):
+1. bundle을 먼저 읽는다. bundle에 나열된 파일은 자유롭게 Read한다.
+2. **bundle 밖 추가 Read**는 사전에 extension log에 기록한다:
+   ```
+   ### Extension #N
+   - target: <file>:<line>
+   - hypothesis: <왜 필요한가, 어떤 risk 검증>
+   - result: <verified | rejected | hold>
+   ```
+3. 최종 응답 마지막에 extension log 전체를 출력한다. (0건이면 `Extension Log: 없음`)
+4. extension log 항목이 5개를 초과하면 verdict 라인에 `[scope-creep]` 마커를 추가한다.
+5. **bundle stale** 감지 시 즉시 종결: `Tier 3 판정: PASS (bundle-stale — 재생성 필요)`
+
+**bundle 미존재 시**: 전통적 탐색 모드로 진행한다. 응답 첫 줄에 `(bundle: absent)` 표기.
+
+---
+
 ## 판정 원칙
 
 1. **코드를 직접 읽고 판정한다.** 외부 AI 피드백만 보고 판단하지 않는다.
@@ -322,10 +351,10 @@ Medium/Low Advisory 항목은 사용자 판단에 따라 수정하세요.
 5. **보류는 성실한 판정이다.** 불확실하면 HOLD가 올바른 답이다.
 6. **CLI fallback은 단일 라운드다.** gemini 등 MCP 없는 provider는 deliberation 없이 Step 5 직행.
 
-## Tool Call 상한 (Phase 2.5)
+## Tool Call 상한 (Phase 3)
 
-- 본 에이전트의 tool call 상한은 **30회**다.
-- 24회(80%) 소진 시 다음 사항을 응답에 명시하고 종결한다:
+- 본 에이전트의 tool call 상한은 **25회**다.
+- 20회(80%) 소진 시 다음 사항을 응답에 명시하고 종결한다:
   1. 지금까지 확인한 파일 목록
   2. 확인하지 못한 리스크 가설
   3. 추가 검증이 필요한지 여부

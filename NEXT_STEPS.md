@@ -89,7 +89,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | **2-prep D** | `core/review_bundle.py` thin wrapper (build/save/load) | ✅ 완료 (commit 23be1886, 2026-05-01) | — |
 | **2** | `scripts/build_review_bundle.py` + `hook_runner._post_edit_enqueue` 연동 | ✅ 완료 (2026-05-01) | — |
 | **2.5** | tool call cap (af-test-runner:10 / af-critic:20 / af-cross-review:30) | ✅ 완료 (commit adf32175, 2026-05-01) | — |
-| 3 | bundle-first scope + extension log enforcement | 대기 | 1시간 |
+| 3 | bundle-first scope + extension log enforcement | ✅ 완료 (2026-05-01) | — |
 | 3.5 | 1주 데이터 수집 (T3-only accepted finding rate 핵심 메트릭) | 의무 | 1주 |
 | 4 | Smart routing + Tier 3 조건부 발화 | 대기 | 2시간 |
 
