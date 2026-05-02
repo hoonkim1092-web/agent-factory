@@ -103,6 +103,12 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 34 | P1 blast_tier downgrade: `review_gate.downgrade_blast_tier()` API + `hook_runner._apply_test_gap_verdict()` FAIL 시 blast_tier=1 다운그레이드 + blast_tier 검증 테스트 (33 tests) | `5f24283e` | 2026-04-30 |
 | 35 | af-cross-review 4-round deliberation 전면 재작성: Round1 Discovery(`mcp__codex__codex`+threadId 저장) → Round2 Challenge(Claude 직접 코드 확인) → Round3 Defense(`mcp__codex__codex-reply` 동일 thread+`[보강]`/`[철회]` 마커) → Round4 Verdict(ACCEPT★/REJECTED/ACCEPT) | `5f24283e` | 2026-04-30 |
 | 36 | Phase 3.5 메트릭 수집 인프라: `scripts/review_metrics_logger.py`(신규 — append_metric/parse_findings_count/parse_extension_log_count/compute_report) + `scripts/review_metrics_report.py`(CLI) + `hook_runner._post_agent_record` Phase 3.5 연동 + `tests/test_review_metrics_logger.py` (28 tests) | (커밋) | 2026-05-01 |
+| 37 | Research Router Phase 1a 구현 — `core/research_router.py`(신규, ResearchGap 9종 enum + ResearchPlan + ResearchRouter.plan/detect_complexity_gaps + gap_to_mode) + `core/researcher.py` 시그니처 확장(research_plan/hint_gaps + mode-aware gating + auto escalation max retry=1) + `core/project_pipeline.py` `_evidence_fn(**kwargs)` + `core/research_verifier.py` max_retries=2→1 + DeprecationWarning + tests/test_research_router_modes.py (101 tests) — 3-Tier 검증 통과 | `8654ce2a` | 2026-05-02 |
+| 38 | hotfix(test): `tests/test_review_metrics_logger.py` sys.modules 오염 수정 — `sys.modules[X]=Y` 3곳 → `monkeypatch.setitem(sys.modules,X,Y)`. test_phase1_blast_tier_invariant.py 9건 flaky FAIL 해결, 자기참조 검증 primary trust 회복. test-only 변경, 게이트 우회. | `5a4491f9` | 2026-05-02 |
+
+### 🔍 검증 중 발견 (별도 트랙)
+
+- **pytest 전체 실행 hang** — `pytest tests/ -q` 6분+ 멈춤. 어제 작업과 직접 관계 없을 가능성. 원인 파일 격리 필요 (langsmith/anyio/langgraph 의존성 의심).
 
 ---
 
