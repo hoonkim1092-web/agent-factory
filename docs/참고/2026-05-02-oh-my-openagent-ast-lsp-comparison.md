@@ -128,18 +128,18 @@ _(no risks detected)_  ← risks 0개일 때만
 **`{line}` 인덱스 계약 차이 (schema bug)**:
 - grep fallback (`core/review_bundle.py:55`): `text[: m.start()].count("\n") + 1` → **1-based**
 - AST (`core/ast_engine.py:91`): `rng.start.line` 그대로 (ast-grep-py / Tree-sitter 표준 → **0-based**)
-- 같은 `L{line}` 출력 토큰이 engine에 따라 1-based vs 0-based로 갈림. plan에서 single contract 고정 권고 (예: `core/ast_engine.py.search()` 반환 1-based 정규화 또는 `review_bundle.save()` 직전 +1 보정 + `tests/test_review_bundle.py`에 동일 line 계약 테스트).
+- 같은 `L{line}` 출력 토큰이 engine에 따라 1-based vs 0-based로 갈림 — plan 진입 시 single contract 고정 필요 (예: `core/ast_engine.py.search()` 반환 1-based 정규화 또는 `review_bundle.save()` 직전 +1 보정 + `tests/test_review_bundle.py`에 동일 line 계약 테스트).
 
 **`{file_path}` 절대/상대 모호성 (schema bug)**:
 - `scripts/build_review_bundle.py:47-56` `_resolve_paths()`가 `Path(workspace) / f`로 **절대경로 변환** 후 `core/review_bundle.py:build()`에 전달.
 - `core/review_bundle.py:save()`는 받은 경로를 그대로 `## {file_path}` 헤더로 출력 → bundle은 절대경로 수록.
-- reviewer prompt(`.claude/agents/af-critic.md:33`)와 queue state(`pending_agent_review.json`)는 workspace-relative 가정 — schema 계약 모호. plan에서 workspace-relative로 고정 권고 (필요 시 `abs_path` sidecar 분리).
+- reviewer prompt(`.claude/agents/af-critic.md:33`)와 queue state(`pending_agent_review.json`)는 workspace-relative 가정 — schema 계약 모호 (plan 진입 시 workspace-relative 고정 또는 `abs_path` sidecar 분리 결정 필요).
 
 "§1~§7 섹션 구조"는 **존재하지 않음** (이전 분석 시도에서 가정했던 부분).
 
 ### 5.3 Hook 배선 실측 (`.claude/settings.local.json`)
 
-PostToolUse Write|Edit matcher에 등록된 hook은 (line 191-212 `PostToolUse` 블록):
+PostToolUse Write|Edit matcher에 등록된 hook은 (line 204-226 `PostToolUse` 블록):
 - `sh scripts/hookpy.sh scripts/run.py post_edit_code_review`
 - `sh scripts/hookpy.sh scripts/run.py post_edit_design_review`
 
@@ -175,7 +175,7 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 | test_gap_analyzer (skipped) | 0 |
 | test_gap_analyzer (success) | 0 |
 
-코드는 `scripts/hook_runner.py:387` builtin dispatch에 있으나 본 sink 범위에서 호출 0건. 단, `af-test-runner` subagent가 `.claude/agents/af-test-runner.md:41-43`에서 직접 `python scripts/test_gap_analyzer.py --workspace .`를 실행하는 **manual 경로는 hook_events.log에 기록되지 않으며 본 측정 범위 외**다. manual 경로 호출 횟수는 별도 sink (Claude Code transcript, Bash tool log) 필요 — 본 분석 범위에서 미측정.
+코드는 `scripts/hook_runner.py:387` builtin dispatch에 있으나 본 sink 범위에서 호출 0건. 단, `af-test-runner` subagent가 `.claude/agents/af-test-runner.md:46`에서 직접 `python scripts/test_gap_analyzer.py --workspace .`를 실행하는 **manual 경로는 hook_events.log에 기록되지 않으며 본 측정 범위 외**다. manual 경로 호출 횟수는 별도 sink (Claude Code transcript, Bash tool log) 필요 — 본 분석 범위에서 미측정.
 
 #### Q-C: post_edit_enqueue 시계열
 
@@ -184,7 +184,7 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 - 총 552건
 - 가장 최근 2건은 `core/foo.py` — **테스트 fixture 경로**. `tests/test_hook_runner_builtins.py`가 만든 fake event 포함 가능성 (정확 비율은 §7.2 #1 spike에서 측정 예정 — 현 시점 분리 미확보)
 
-본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. **현재 `.claude/settings.local.json` PostToolUse 블록 (line 191-212)에는 `post_edit_code_review` / `post_edit_design_review`만 등록되어 있고 `post_edit_enqueue`는 직접 등록 안 됨**. 552건은 "과거 어느 시점의 호출 누적 + 테스트 fake event"이며 **현재 배선의 효과 증거가 아님**. fake/effective 분리 측정은 다음 세션 spike에서 수행.
+본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. **현재 `.claude/settings.local.json` PostToolUse 블록 (line 204-226)에는 `post_edit_code_review` / `post_edit_design_review`만 등록되어 있고 `post_edit_enqueue`는 직접 등록 안 됨**. 552건은 "과거 어느 시점의 호출 누적 + 테스트 fake event"이며 **현재 배선의 효과 증거가 아님**. fake/effective 분리 측정은 다음 세션 spike에서 수행.
 
 #### Q-D: 3-tier verdict 분포 (`hook_events.log` review-recorded sink 한정 — 별도 sink와 분리 측정 필요)
 
@@ -196,7 +196,7 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 총 51 PASS / 1 BLOCK.
 
-> ⚠️ **표본 편향 caveat**: 이 수치는 `hook_events.log`의 `review-recorded` 라인 52건만 카운트한 결과이며, **별도 sink인 `docs/reviews/*.md` Verdict 헤더 분포 (실측: 16 BLOCK + 25 WARN)와 통합되지 않는다**. `post_agent_record`가 `scripts/hook_runner.py:347-348`에서 호출되지만 모든 review 작성 경로에서 발화하지 않아 hook log는 부분 sink로 동작한다. "98% PASS" 같은 비율은 본 sink 외 분포를 누락하므로 §6 비교 매트릭스에서 직접 인용 금지.
+> ⚠️ **표본 편향 caveat**: 이 수치는 `hook_events.log`의 `review-recorded` 라인 52건만 카운트한 결과이며, **별도 sink인 `docs/reviews/*.md` Verdict 헤더 분포 (실측: 16 BLOCK + 25 WARN)와 통합되지 않는다**. `post_agent_record`가 `scripts/hook_runner.py:483` builtin dispatch로 등록되어 있고 `:354` 이벤트 로그에 기록되지만, 모든 review 작성 경로에서 발화하지 않아 hook log는 부분 sink로 동작한다. "98% PASS" 같은 비율은 본 sink 외 분포를 누락하므로 §6 비교 매트릭스에서 직접 인용 금지.
 
 #### Q-E: LSPCheckHook 호출 흔적 (`hook_events.log` sink 한정)
 
@@ -213,8 +213,8 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 - `find . -name "review_metrics.jsonl"` 결과: **파일 부재**
 
 → 0건 원인 후보 (실측 분리는 §7.2 spike, 본 문서는 후보 나열만):
-- (a) `_post_agent_record()` 호출 경로 미배선 — settings.local.json:191-212 PostToolUse에 직접 등록 부재
-- (b) 호출되지만 `scripts/hook_runner.py:347-365`의 try/except로 silent failure (예외 삼킴)
+- (a) `_post_agent_record()` 호출 경로 미배선 — settings.local.json:204-226 PostToolUse에 직접 등록 부재
+- (b) 호출되지만 `scripts/hook_runner.py:362-374`의 try/except로 silent failure (예외 삼킴)
 - (c) workspace path mismatch로 다른 위치에 작성됨 — 본 분석 범위에서 다른 path 탐색 미수행
 
 ---
