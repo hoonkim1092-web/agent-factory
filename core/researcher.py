@@ -510,7 +510,25 @@ Rules:
         workspace: str | None = None,
         risk_level: str = "normal",
         comparison_mode: bool = False,
+        research_plan=None,
+        hint_gaps=None,
+        **_kwargs,
     ) -> dict:
+        from core.research_router import ResearchRouter, ResearchPlan, gap_to_mode
+
+        # -- Research plan 결정 --
+        if hint_gaps:
+            # escalation: gap → mode override (§4.4.1 direct-jump)
+            escalated_mode = gap_to_mode(hint_gaps)
+            if escalated_mode and (research_plan is None or research_plan.mode != escalated_mode):
+                # for_mode()으로 모든 파생 필드를 atomic하게 재계산 (partial mutation 방지)
+                research_plan = ResearchPlan.for_mode(escalated_mode)
+
+        if research_plan is None:
+            research_plan = ResearchRouter().plan(task_input)
+
+        mode = research_plan.mode
+
         target_workspace = os.path.abspath(workspace or os.getenv("AGENT_PROJECT_ROOT") or os.getcwd())
 
         workspace_notes = self._workspace_notes(target_workspace)
@@ -519,10 +537,20 @@ Rules:
         # -- Sufficiency Gate --
         sufficient = self._is_sufficient(local_refs, task_input)
 
-        # -- 웹 또는 LLM fallback --
+        # -- 웹 또는 LLM fallback (mode-aware gating) --
         web_refs: list[dict] = []
         llm_prior_refs: list[dict] = []
-        if not sufficient:
+        if mode == "fast_synthesis":
+            # fast_synthesis: Tavily OFF, LLM fallback OFF
+            pass
+        elif research_plan.requires_web:
+            # fresh_lookup/deep/live: Tavily ON (sufficiency gate 무시)
+            if os.getenv("TAVILY_API_KEY"):
+                web_refs = self._collect_web_references(task_input)
+            else:
+                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+        elif not sufficient:
+            # archive_research 또는 기타: 기존 sufficiency gate 유지
             if os.getenv("TAVILY_API_KEY"):
                 web_refs = self._collect_web_references(task_input)
             else:
@@ -559,10 +587,16 @@ Rules:
             except Exception:
                 pass
 
-        # -- NotebookLM: normal 이상이면 시도 (notebooklm_tools 없으면 자동 스킵) --
-        should_query_notebooklm = (
-            risk_level.lower() not in ("low", "skip") or comparison_mode
-        )
+        # -- NotebookLM: mode-aware gating (Phase 1a: source injection 미적용) --
+        if mode == "fast_synthesis":
+            should_query_notebooklm = False
+        elif research_plan.requires_notebooklm:
+            should_query_notebooklm = True
+        else:
+            # 기존 risk_level 기반 fallback (하위 호환)
+            should_query_notebooklm = (
+                risk_level.lower() not in ("low", "skip") or comparison_mode
+            )
         notebook_summary = (
             self._collect_notebook_summary(task_input, local_refs, web_refs)
             if should_query_notebooklm
@@ -576,7 +610,7 @@ Rules:
             notebook_summary,
             llm_prior_refs,
         )
-        return {
+        initial_evidence = {
             "workspace_notes": workspace_notes,
             "local_references": local_refs,
             "web_references": web_refs,
@@ -584,7 +618,24 @@ Rules:
             "notebook_summary": notebook_summary,
             "evidence_summary": evidence_summary,
             "sufficiency_gate_passed": sufficient,
+            "research_plan": research_plan.to_dict(),
         }
+
+        # §4.4.5 router gap detection — hint_gaps is None = first call only (max 1 retry)
+        if hint_gaps is None:
+            router_gaps = ResearchRouter().detect_complexity_gaps(
+                task_input, initial_evidence, mode
+            )
+            if router_gaps:
+                return self.collect_project_evidence(
+                    task_input,
+                    workspace=workspace,
+                    risk_level=risk_level,
+                    comparison_mode=comparison_mode,
+                    hint_gaps=router_gaps,
+                )
+
+        return initial_evidence
 
     def _merge_project_brief_evidence(self, brief: dict, task_input: str, evidence_bundle: dict | None) -> dict:
         data = dict(brief or {})

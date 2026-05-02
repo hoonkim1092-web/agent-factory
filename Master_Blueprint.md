@@ -97,7 +97,8 @@
 | `core/provider_detect.py` | 3-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. ThreadPool race condition 수정: installed_set을 ThreadPool 전 1회 계산 후 각 worker에 frozenset 전달 | `ProviderState`, `ProviderProbeResult`, `detect_provider_states()`, `invalidate_cache()`, `_resolve_ping_cmd()`, `_probe_one(provider_id, installed)` |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()`, `_installed_cli_cache_lock` |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
-| `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) | `HimariResearchAgent`, `_collect_web_references()`, `_collect_notebook_summary()` |
+| `core/research_router.py` | Phase 1a: project research mode 분류 + complexity gap 탐지 (신규) | `ResearchRouter.plan()`, `ResearchRouter.detect_complexity_gaps()`, `ResearchPlan`, `ResearchGap` (9종 enum), `gap_to_mode()`, `ResearchPlan.for_mode()` |
+| `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) — Phase 1a: mode-aware gating + router escalation 연결 | `HimariResearchAgent`, `collect_project_evidence(research_plan, hint_gaps, **_kwargs)`, `_collect_web_references()`, `_collect_notebook_summary()` |
 | `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
 | `core/setup_wizard.py` | 외부 리서치 도구(TAVILY/NotebookLM) 점검·복구 단일 진입점 | `ensure_external_research_capabilities()`, `_find_or_create_archive_notebook()` |
 | `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
@@ -1274,6 +1275,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-02 | (unreleased) | feat(phase1a-research-router): Research Router Phase 1a — `core/research_router.py` 신규(ResearchGap 9종 enum, ResearchPlan dataclass + `for_mode()` factory, ResearchRouter.plan()/detect_complexity_gaps(), gap_to_mode() §4.4.3 precedence). `core/researcher.py`: `collect_project_evidence()` 시그니처 확장(`research_plan`, `hint_gaps`, `**_kwargs`) + mode-aware Tavily/NotebookLM gating + router gap detection 후 자동 escalation self-call(max 1 retry). `core/project_pipeline.py`: `_evidence_fn(**kwargs)` 확장(dict merge `|` 연산자) + TypeError 분리(hint_gaps 미지원 old-style collector 분기). `core/research_verifier.py`: `max_retries=2→1`, TypeError fallback `DeprecationWarning`, gap emit을 §6.5 enum 값(`no_external_evidence`/`freshness_required_missing`/`official_source_missing`)으로 교체. `af.spec`: `core.research_router`/`core.researcher`/`core.research_verifier`/`core.retrieval_router` hiddenimports 신규 등록. `tests/test_research_router_modes.py` 신규 107 tests PASS. §0 `core/research_router` 행 신규 + `core/researcher` 행 갱신. af-test-runner PASS / af-critic BLOCK 1건 수정 / af-cross-review BLOCK 1건 수정. |
 | 2026-04-30 | v1.2.22 | chore(settings): Windows hook 경로 통일 및 이벤트 확장 — Stop·SessionEnd·PreToolUse 신규 훅 추가, hook name 필드 명시, macOS 경로 제거 및 D:/hoonProJect 절대경로 통일, gemini·codex 허용 명령 추가 |
 | 2026-04-30 | v1.2.22 | ```json |
 | 2026-04-30 | v1.2.22 | chore(settings.local): Windows 환경 hook 경로 마이그레이션 및 중복 제거 — macOS→Windows 경로 전환(`/Users/hoon/` → `D:/hoonProJect/`), 이중 hook 블록 통합+name 필드 추가(agent_factory_claude_sessionstart 외 3종), check_pending_review 호출을 hookpy.sh 래퍼로 변경, gemini·codex·git 허용 규칙 신규 추가 |

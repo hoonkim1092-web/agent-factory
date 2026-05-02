@@ -650,13 +650,21 @@ class ProjectPipeline:
                 _ce_params = _inspect.signature(collect_evidence).parameters
                 _supports_risk = "risk_level" in _ce_params
 
-                def _evidence_fn():
-                    kw = dict(_collect_kwargs)
+                def _evidence_fn(**kwargs):
+                    kw = dict(_collect_kwargs) | kwargs
                     if not _supports_risk:
                         kw.pop("risk_level", None)
                         kw.pop("comparison_mode", None)
                     try:
                         return collect_evidence(task_input, **kw) or {}
+                    except TypeError:
+                        # old-style collector (e.g. test mock) doesn't accept hint_gaps
+                        kw.pop("hint_gaps", None)
+                        try:
+                            return collect_evidence(task_input, **kw) or {}
+                        except Exception as exc2:
+                            print(f"[ProjectPipeline] collect_project_evidence failed: {exc2}")
+                            return {}
                     except Exception as exc:
                         print(f"[ProjectPipeline] collect_project_evidence failed: {exc}")
                         return {}

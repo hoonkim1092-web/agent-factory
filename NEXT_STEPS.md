@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 — Research Router 설계 v1.4.1 갱신 완료, 5라운드 cross-review **PASS** ✅. **다음 작업: Phase 1a 코드 진입** — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 — Research Router **Phase 1a 구현 완료** ✅. af-test-runner 107/107 PASS, af-critic BLOCK 1건 수정 완료, af-cross-review BLOCK 1건 수정 완료. **다음 작업: T3 exe 빌드 + GitHub Release** — 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -30,14 +30,13 @@
   - fixture schema 라벨 키 4곳 일관 (§4.2.1 / §10 / §11 / §12.5) ✓
 - 핵심 spec(§4.2/§4.2.1/§4.4.5) 정합 확정.
 
-### Phase 1a 진입 시 액션
-1. `/model claude-sonnet-4-6` 전환 (설계=Opus, 구현=Sonnet 정책)
-2. `core/research_router.py` 신규 작성 (§4.2.1 알고리즘, §6.5 enum 9종, §4.4.5 detect_complexity_gaps)
-3. `core/researcher.py` 시그니처 확장 (`research_plan`/`hint_gaps`/`**_kwargs`)
-4. `core/project_pipeline.py` `_evidence_fn(**kwargs)` 변경 (B1 통합 통로)
-5. `core/research_verifier.py` `max_retries=1` + fallback deprecation
-6. `af.spec` `hiddenimports`에 `core.research_router` 등록
-7. `tests/test_research_router_modes.py` fixture 15~20건 (한/영/혼합) — **`expected_initial_mode` + `expected_final_mode` 두 라벨 모두 정확도 ≥ 80%** 통과 기준
+### Phase 1a 완료 ✅ (2026-05-02)
+1. `core/research_router.py` 신규 (ResearchGap 9종, ResearchPlan, ResearchRouter.plan/detect_complexity_gaps, gap_to_mode)
+2. `core/researcher.py` 시그니처 확장 (research_plan/hint_gaps/**_kwargs, mode-aware gating, router escalation 연결)
+3. `core/project_pipeline.py` `_evidence_fn(**kwargs)` + TypeError 분리
+4. `core/research_verifier.py` max_retries=1, gap emit enum 값 교체, DeprecationWarning
+5. `af.spec` core.research_router 외 3개 hiddenimports 추가
+6. `tests/test_research_router_modes.py` 18케이스 107 tests PASS (initial/final mode 각 100%)
 
 ---
 

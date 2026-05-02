@@ -25,6 +25,11 @@ import hashlib
 from dataclasses import dataclass, field
 from typing import Callable
 
+# §9.3 Phase 1a verifier가 emit하는 gap 이름은 §6.5 enum 값을 사용
+_GAP_NO_EXTERNAL = "no_external_evidence"
+_GAP_FRESHNESS_MISSING = "freshness_required_missing"
+_GAP_OFFICIAL_MISSING = "official_source_missing"
+
 
 @dataclass
 class VerificationResult:
@@ -81,11 +86,16 @@ class ResearchVerifier:
         else:
             gaps.append(f"local_avg_score_low ({avg_score:.2f} < 0.25)")
 
-        # 신호 3: 외부 근거(웹 또는 LLM prior) 존재
+        # 신호 3: 외부 근거(웹 또는 LLM prior) 존재 — §9.3 enum 값으로 emit
         if web_refs or llm_prior_refs:
             score += self._WEIGHTS["external_present"]
         else:
-            gaps.append("no_external_evidence (web or llm_prior)")
+            gaps.append(_GAP_NO_EXTERNAL)
+            # §9.3 FRESHNESS_REQUIRED_MISSING: freshness 키워드 있는데 web_refs 없음
+            _freshness_kws = ("latest", "current", "release", "version", "security",
+                              "최신", "버전", "릴리스", "보안", "가격")
+            if any(kw in task_input.lower() for kw in _freshness_kws):
+                gaps.append(_GAP_FRESHNESS_MISSING)
 
         # 신호 4: NotebookLM 요약 존재
         if notebook_summary:
@@ -132,12 +142,12 @@ class ResearchVerifier:
             else:
                 gaps.append(f"relevance_mean_low ({rel_mean:.2f} < 0.6)")
 
-            # 신호 9: primary 권위 소스 존재
+            # 신호 9: primary 권위 소스 존재 — §9.3 OFFICIAL_SOURCE_MISSING enum 값
             has_primary = any(r.get("authority_level") == "primary" for r in all_refs)
             if has_primary:
                 score += self._WEIGHTS["authority_check"]
             else:
-                gaps.append("no_primary_authority_source")
+                gaps.append(_GAP_OFFICIAL_MISSING)
 
         # metadata가 없으면 base signal 합계가 0.85가 상한.
         # 0~0.85 범위를 0~1.0으로 정규화해 임계값(0.6/0.4) 일관성 유지.
@@ -221,14 +231,14 @@ class ResearchVerifier:
         self,
         evidence_fn: Callable[..., dict],
         task_input: str,
-        max_retries: int = 2,
+        max_retries: int = 1,
     ) -> tuple[dict, VerificationResult]:
         """evidence_fn을 호출하고 품질이 부족하면 재시도.
 
         Args:
             evidence_fn: collect_project_evidence에 해당하는 callable.
             task_input:  원본 사용자 요청.
-            max_retries: 최대 재시도 횟수 (기본 2).
+            max_retries: 최대 재시도 횟수 (기본 1, §4.4.1 router escalation과 일치).
 
         Returns:
             (최종 evidence_bundle, 최종 VerificationResult)
@@ -241,10 +251,18 @@ class ResearchVerifier:
             attempt += 1
             try:
                 # hint_gaps를 전달해 targeted retry 유도.
-                # evidence_fn이 hint_gaps를 지원하지 않으면 kwargs 없이 재시도.
+                # evidence_fn이 hint_gaps를 지원하지 않으면 kwargs 없이 재시도 (deprecated).
                 try:
                     evidence = evidence_fn(hint_gaps=result.gaps)
                 except TypeError:
+                    import warnings
+                    warnings.warn(
+                        "evidence_fn does not accept hint_gaps — "
+                        "update to collect_project_evidence(**kwargs) signature. "
+                        "This fallback will be removed after Phase 1a merge.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
                     evidence = evidence_fn()
             except Exception:
                 break
