@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 — **다음 세션 계획 확정: A → B → C** (WARN 6건 정정 → Spike 1+2 측정 → Research Router Phase 1a 코드). 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-03 — **Static Evidence Injection v1 완료** (`f66c5353`, 3-Tier PASS). 다음: Research Router Phase 1b+(P2) dry-run 또는 v1 KPI 측정 대기. 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -151,6 +151,9 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 37 | Research Router Phase 1a 구현 — `core/research_router.py`(신규, ResearchGap 9종 enum + ResearchPlan + ResearchRouter.plan/detect_complexity_gaps + gap_to_mode) + `core/researcher.py` 시그니처 확장(research_plan/hint_gaps + mode-aware gating + auto escalation max retry=1) + `core/project_pipeline.py` `_evidence_fn(**kwargs)` + `core/research_verifier.py` max_retries=2→1 + DeprecationWarning + tests/test_research_router_modes.py (101 tests) — 3-Tier 검증 통과 | `8654ce2a` | 2026-05-02 |
 | 38 | hotfix(test): `tests/test_review_metrics_logger.py` sys.modules 오염 수정 — `sys.modules[X]=Y` 3곳 → `monkeypatch.setitem(sys.modules,X,Y)`. test_phase1_blast_tier_invariant.py 9건 flaky FAIL 해결, 자기참조 검증 primary trust 회복. test-only 변경, 게이트 우회. | `5a4491f9` | 2026-05-02 |
 | 39 | docs(참고): OpenCode LSP 아키텍처 분석 1차 작성 — 단, cross-review BLOCK 3회 후 §5.1·§5.3 내부 모순 잔존 상태로 종료. 다음 세션에서 처음부터 재분석 필요. | `042d0386` | 2026-05-02 |
+| 40 | docs: oh-my-openagent 분석문서 WARN 6건 정정 (M1/M2 권고어 교체, M3/L1/L2/L3 라인범위 수정) | `e71a24cf` | 2026-05-03 |
+| 41 | docs(plan): Static Evidence Injection v1 플랜 작성 + 2라운드 cross-review PASS (BLOCK 2건 수정) | `aac4a784` | 2026-05-03 |
+| 42 | feat(v1): Static Evidence Injection v1 구현 — 배선 복구(PostToolUse Agent 매처) + review_bundle 형식 개선(_RISK_DESC) + review_metrics schema 확장(evidence_present/items/cited) + evidence_cited 측정 — 3-Tier PASS, review_metrics.jsonl 기록 확인 | `f66c5353` | 2026-05-03 |
 
 ### 🔍 검증 중 발견 (별도 트랙)
 
