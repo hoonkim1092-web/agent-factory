@@ -1,7 +1,41 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (밤) — **oh-my-openagent 분석 문서 v2 정정 commit (cross-review WARN 13건 반영)**. 다음 작업은 변동 없음: Spike 2건(subagent tool trace / metrics silent failure) → v1 plan 작성. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (23:27) — **oh-my-openagent v2 정정 commit `9d25956c` 후 23:25 cross-review BLOCK 12건 받음. 6건은 timing race로 거짓 BLOCK, 6건은 진짜 추가 작업.** 다음 세션 시작 시 §"23:25 BLOCK 인계" 먼저 읽기. 브랜치: `2026-04-14-build-diet`
+
+---
+
+## 🚨 23:25 BLOCK 인계 (다음 세션 첫 작업)
+
+**review 파일**: `docs/reviews/2026-05-02-232500-2026-05-02-oh-my-openagent-ast-lsp-comparison-design-review.md`
+
+### Timeline
+- 23:24:22 — v2 정정 commit `9d25956c` (정정 13건 모두 반영)
+- 23:25:00 — cross-review 2라운드 trigger → BLOCK 12건 verdict 작성 시작
+
+### BLOCK 12건 분류 (실측 검증 완료)
+
+**거짓 BLOCK 6건** (cross-review가 정정 전 파일을 본 것 — timing race / cache):
+- #1 §10 changelog over-promises — 검증: §9.4 line 307 ✓, line 167 부근 188-208 잔존 X ✓
+- #2 Q-D 98% PASS caveat 부재 — 검증: 제목에 sink 한정 + 본문에 caveat 박스 ✓
+- #3 §9.4 reproducibility commands missing — 검증: line 307~ Q-A~Q-F grep 명령 ✓
+- #5 §5.3 line-range contradiction (188-208 잔존) — 검증: 잔존 안 함 ✓
+- #6 §5.2 1-based vs 0-based missing — 검증: 본문에 명시 ✓
+- #7 §5.2 file_path absolute missing — 검증: 본문에 명시 ✓
+
+→ 다음 세션: cross-review가 본 파일이 stale인지 재검증. cross-review 재실행 시 같은 결과면 prompt/cache issue 별도 조사.
+
+**진짜 추가 작업 6건** (다음 세션 정정):
+- #4 [High] §9.1 URL을 `/dev/` → commit SHA permalink로 직접 교체 (현 정정안은 SHA pin **안내**만 추가, URL 교체는 안 함 — cross-review 요구는 URL 자체 교체)
+- #8 [Medium] §2.3 line 49 "분리된 것으로 보이지만 단정 불가" → "본 fetch 범위 내에서 미확인"으로 톤다운 (§1 "추정 사용 없음" 원칙과 모순)
+- #9 [Medium] §7.3/§8 AST tool language scope 명시 (`build_review_bundle.py:53` `.py` 필터, `ast_engine.py:29,53` 미지원 lang은 python default — v1 Python-only 명시 또는 lang enum)
+- #10 [Medium] §7.3 rename-safe gap 정정 — `lsp_check.py:103`은 pyright shell-out, JSON-RPC 클라이언트 없음 → LSPCheckHook 활성화로 rename-safe 불가 명시
+- #11 [Medium] `core/hooks/lsp_check.py:29` `_WRITE_TOOLS` hardcoded — `apply_edit` / `apply_block_edit` 누락 (`skills/hash_edit/skill.py:23`, `skills/hashline_edit/skill.py:20`). §5.1 / §8 footnote
+- #12 [Medium] §8 #4/#5 "비용" 차원 사용 시 sizing 또는 event 이름 정의 (`lsp_check_skipped`, `lsp_check_result`, `ast_tool_search`) 추가
+
+→ 6건 모두 분석 문서 baseline 신뢰도와 v1 plan 입력에 영향. Spike 1+2 진입 전 정정 권장.
+
+---
 
 ---
 
