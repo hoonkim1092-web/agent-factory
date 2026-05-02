@@ -104,7 +104,7 @@
 
 | 시스템 | 위치 | 상태 |
 |--------|------|------|
-| `core/review_bundle.py` | risk_id 7종 추출, `.af_review_queue/review_bundle.md` 저장 | 코드 OK, 형식은 단순 헤더+per-file 블록 |
+| `core/review_bundle.py` | risk_id 최대 7종 추출(engine별 차이, §5.2 참고), `.af_review_queue/review_bundle.md` 저장 | 코드 OK, 형식은 단순 헤더+per-file 블록 |
 | `scripts/test_gap_analyzer.py` | diff에서 risky pattern + 관련 테스트 부재 검출 | 코드 OK |
 | `core/hooks/lsp_check.py` | `LSPCheckHook(ContinuationHook)` — pyright 실행 | `core/agent_runner.py:972-973`에서 self-hosted agent의 hook bus에만 등록 |
 
@@ -247,9 +247,9 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 ### 7.3 architectural gap (oh-my-openagent 모델 대비)
 
-- AF는 ast-grep 기반 분석을 가지고 있으나 AI tool로 노출하지 않음 (파일 매개만; **Python-only** — `scripts/build_review_bundle.py:53` `.py` 확장자 필터, `core/ast_engine.py:29` 미지원 확장자 → python default)
+- AF는 ast-grep 기반 분석을 가지고 있으나 AI tool로 노출하지 않음 (파일 매개만; **Python-only** — `scripts/build_review_bundle.py:51` `.py` 확장자 필터, `core/ast_engine.py:56` `detect_lang()` 미지원 확장자 → python default)
 - AF는 LSP를 가지고 있으나 메인 self-hosted agent에만 등록 + 휴면
-- AF는 rename safe workflow 같은 pre-hoc validation 메커니즘 없음 — post-hoc 3-tier review만 (`LSPCheckHook` 활성화해도 rename-safe 불가: `core/hooks/lsp_check.py:103`은 pyright shell-out이며 JSON-RPC LSP 클라이언트 없음)
+- AF는 rename safe workflow 같은 pre-hoc validation 메커니즘 없음 — post-hoc 3-tier review만 (`LSPCheckHook` 활성화해도 rename-safe 불가: `core/hooks/lsp_check.py:103`은 pyright shell-out이며, `core/lsp_bridge.py`의 JSON-RPC `LSPBridge`가 존재하나 `lsp_check.py`에 미연결)
 
 본 갭들은 **분석 결과**이며 권고가 아니다. 비용/효과 정량화 후 plan에서 별도 결정.
 
@@ -271,13 +271,13 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 4. **AST tool AI 노출 가능성 평가** (oh-my-openagent 모델)
    - 우리는 `core/ast_engine.py`에 search/replace/search_dir/replace_file 이미 존재
-   - 현재 pipeline 진입 언어: **Python-only** (`scripts/build_review_bundle.py:53` `.py` 필터; `core/ast_engine.py:29` 미지원 확장자 → python default)
+   - 현재 pipeline 진입 언어: **Python-only** (`scripts/build_review_bundle.py:51` `.py` 필터; `core/ast_engine.py:56` `detect_lang()` 미지원 확장자 → python default)
    - AI tool wrapper 신설 시 비용(event 이름 제안: `ast_tool_search`) + 효과(subagent reasoning 인용률 측정, Q-A 기준) 가설
 
 5. **LSPCheckHook 활성화/유지/제거 후보**
    - 결정 입력 후보: pyright 동봉 비용 (frozen build) vs subagent 전파 경로 신설 비용
-   - 비용 측정: `lsp_check_skipped` / `lsp_check_result` event를 `core/hooks/lsp_check.py`에 추가 후 1주 수집 (현재 print() 전용 sink, Q-E 참고)
-   - ⚠️ `_WRITE_TOOLS` 하드코딩 갭: 활성화해도 `apply_edit`/`apply_block_edit` 편집 시 발화 안 함 (`core/hooks/lsp_check.py:29`) — 활성화 전 선행 수정 필요
+   - 비용 측정 후보: `lsp_check_skipped` / `lsp_check_result` event 추가 시 1주 수집 가능 (현재 print() 전용 sink, Q-E 참고)
+   - ⚠️ `_WRITE_TOOLS` 하드코딩 갭: 활성화 시 `apply_edit`/`apply_block_edit` 편집 시 발화 안 함이 전제 조건 (`core/hooks/lsp_check.py:29`)
    - 결정 시점은 plan 단계. 입력 자료로 #1, #2 결과 + 1주 메트릭 수집 결과를 사용 가능
 
 6. **Rename safe workflow 도입 가능성 평가**
@@ -367,3 +367,8 @@ grep -cE 'append_metric|review_metrics' .af_review_queue/hook_events.log
   - §7.3 rename-safe: `LSPCheckHook` 활성화해도 불가 이유 명시 (pyright shell-out, JSON-RPC 없음) (#10)
   - §5.1 `_WRITE_TOOLS` 하드코딩 갭 footnote 추가 (`apply_edit`/`apply_block_edit` 누락) (#11)
   - §8 #5 `_WRITE_TOOLS` 갭 footnote + `lsp_check_skipped`/`lsp_check_result` event 이름 추가 (#11/#12)
+- 2026-05-02 v4: 3라운드 cross-review BLOCK 2건(High) + 정정 2건(Medium/Low) 반영. 정정 범위:
+  - §7.3 "JSON-RPC LSP 클라이언트 없음" → `core/lsp_bridge.py` 존재 명시 + lsp_check.py 미연결 사실 기술로 교체 (High)
+  - §8 #5 "활성화 전 선행 수정 필요" / "추가 후 1주 수집" → 조건·가능성 기술로 톤다운 (High, 분석 문서 원칙 적용)
+  - §7.3/§8 라인 번호 정정: build_review_bundle.py:51 (←53), ast_engine.py:56 (←29) (Medium)
+  - §5.1 표 "7종 추출" → "최대 7종(engine별 차이, §5.2 참고)" (Low)
