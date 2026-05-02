@@ -1,11 +1,22 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (세션 재개) — **oh-my-openagent v3 정정 완료** (진짜 BLOCK 6건 #4 #8 #9 #10 #11 #12 모두 반영). 다음: cross-review 3라운드 → PASS 시 Spike 1+2 (§7.2 측정 미완료 2건) → Research Router Phase 1a 코드 진입. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (세션 재개) — **oh-my-openagent v4 PASS** (4라운드 완료). WARN 6건 잔존 (Medium 3 / Low 3, advisory). 다음: WARN 수정 여부 결정 → Spike 1+2 → Research Router Phase 1a 코드 진입. 브랜치: `2026-04-14-build-diet`
 
 ---
 
-## ✅ 23:25 BLOCK 인계 — 완료 (진짜 6건 v3 반영)
+## ✅ 23:25 BLOCK 인계 — 완료 (v4 PASS)
+
+### WARN 6건 잔존 (advisory, 수정 의무 없음)
+**Medium (3건)**:
+- §5.2 line 131: "plan에서 single contract 고정 **권고**" — 분석 문서 원칙 위반 잔존 (v2 이후 미수정)
+- §5.2 line 136: "plan에서 workspace-relative로 고정 **권고**" — 동일 원칙 위반
+- §5.4 Q-F line 217: `hook_runner.py:347-365` silent failure → 실제는 `:362-374` (metrics try/except)
+
+**Low (3건)**:
+- §5.3 line 142: settings.local.json PostToolUse `line 191-212` → 실제는 `line 204-226`
+- §5.4 Q-D line 199: `hook_runner.py:347-348` post_agent_record → 실제는 `:483` 등록 / `:354` 이벤트 로그
+- §7.2 line 178: `af-test-runner.md:41-43` test_gap_analyzer → 실제는 `:46`
 
 **review 파일**: `docs/reviews/2026-05-02-232500-2026-05-02-oh-my-openagent-ast-lsp-comparison-design-review.md`
 
