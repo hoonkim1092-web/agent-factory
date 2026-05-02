@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (세션 재개) — **oh-my-openagent v4 PASS** (4라운드 완료). WARN 6건 잔존 (Medium 3 / Low 3, advisory). 다음: WARN 수정 여부 결정 → Spike 1+2 → Research Router Phase 1a 코드 진입. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 — **다음 세션 계획 확정: A → B → C** (WARN 6건 정정 → Spike 1+2 측정 → Research Router Phase 1a 코드). 브랜치: `2026-04-14-build-diet`
 
 ---
 
