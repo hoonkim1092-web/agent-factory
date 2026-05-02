@@ -4,7 +4,7 @@
 작성자: Claude (Agent Factory 세션)
 대상: `code-yeongyu/oh-my-openagent` (이전 명: `oh-my-opencode`, 별명: `omo`)
 범위: AST-Grep + LSP 통합 동작 + Agent Factory 현재 정적 진단 인프라와의 비교
-방법: GitHub raw fetch + 우리 저장소 코드/로그 실측. 추정 없음.
+방법: GitHub raw fetch + 우리 저장소 코드/로그 실측. **확인 범위 내에서 추정 사용 없음**. fetch가 닿지 않은 코드/문서는 §2.3·§3.3·§4에 "본 fetch 범위 내에서 미확인"으로 별도 표기.
 
 문서 성격: **분석 전용**. 권고/plan은 별도 문서.
 
@@ -56,10 +56,12 @@
 
 ### 3.1 노출 tool 목록
 
-| Tool | tool-descriptions.ts 직접 인용 |
-|------|-----------------------------|
-| `AST_GREP_SEARCH` | "Search code by AST structure (25 languages). This is NOT regex." |
-| `AST_GREP_REPLACE` | "Rewrite code by AST pattern (25 languages). Dry-run by default." |
+| AI-facing tool 이름 | tool-descriptions.ts 직접 인용 |
+|--------------------|-----------------------------|
+| `ast_grep_search` | "Search code by AST structure (25 languages). This is NOT regex." |
+| `ast_grep_replace` | "Rewrite code by AST pattern (25 languages). Dry-run by default." |
+
+(코드 내부 상수 식별자는 SCREAMING_SNAKE 형식 — `AST_GREP_SEARCH` / `AST_GREP_REPLACE`. AI agent에 노출되는 tool 이름은 lowercase snake.)
 
 파라미터:
 - pattern: "AST pattern - valid, parseable code using $VAR (one node) and $$$ (many nodes)"
@@ -162,7 +164,7 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 - 총 552건
 - 가장 최근 2건은 `core/foo.py` — **테스트 fixture 경로**. tests/test_hook_runner_builtins.py가 만든 fake event 비중 높음 (본 분석 범위에서 정확 비율은 분리 안 됨)
 
-본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. 분리 측정 미완료.
+본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. **현재 `.claude/settings.local.json` PostToolUse는 `post_edit_code_review` / `post_edit_design_review`만 등록되어 있고 `post_edit_enqueue`는 직접 등록 안 됨** (settings.local.json:188-208). 552건은 "과거 어느 시점의 호출 누적 + 테스트 fake event"이며 **현재 배선의 효과 증거가 아님**. fake/effective 분리 측정은 다음 세션 spike에서 수행.
 
 #### Q-D: 3-tier verdict 분포 (review-recorded 누적)
 

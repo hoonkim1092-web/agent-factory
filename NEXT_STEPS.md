@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (저녁) — **oh-my-openagent AST/LSP 비교 분석 commit**. cross-review verdict=WARN (advisory, BLOCK 없음). WARN 사항 4건은 다음 세션 인계 (§5.4 측정 재현가능성 보강). **다음 작업: 배선 검증 + 측정 정확도 향상 → plan 진입** — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (저녁) — **oh-my-openagent AST/LSP 비교 분석 + WARN 정정 + 두-plane 합의 인계**. Capability Plane / Assurance Plane 분리 합의, v1 = Static Evidence Injection, v2~v5 후보 로드맵. **다음 작업: Spike 2건(subagent tool trace / metrics silent failure) → v1 plan 작성** — 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -137,10 +137,72 @@ cross-review WARN 사항 (advisory):
 - **데이터 소스 / 추출 명령 명시**: 각 Q-A~Q-F에 사용한 grep/awk 명령 인라인으로 박아 재현가능성 확보
 - **post_edit_enqueue 552건 fake event 비중 분리 측정**
 
-### 다음 행동 (다음 세션)
-1. 분석 문서 §5.4 정정 commit (WARN 해소)
-2. 배선 검증 측정 (post_edit_enqueue 호출자 / post_agent_record 호출자 / metrics silent failure 원인)
-3. 측정 결과 위에서 plan 작성 (별도 docs/plans/ 파일)
+### ✅ 본 세션 추가 — 합의 사항 (2026-05-02 저녁, deliberation 결과)
+
+**아키텍처 두 plane 분리 합의** (Codex + Claude Opus 4.7 합의):
+
+1. **Capability Plane** — agent가 직접 쓰는 도구 (AST search/replace, LSP diagnostics/rename 등)
+2. **Assurance Plane** — 산출물 검증/품질 게이트 (review_bundle, test_gap, cross-review, metrics, commit gate)
+
+→ 두 plane은 분리 설계, 각자 KPI로 측정. 핵심 원칙: **"도구 사용 흔적이 반드시 검증 루프에 들어가야"** closed loop 성립.
+
+### 📋 Phase 로드맵 — v1만 plan, v2~v5는 후보
+
+| Phase | 작업 | 상태 |
+|-------|------|------|
+| **v1** | **Static Evidence Injection v1** — 배선 복구 + review_bundle 형식 변경 + test_gap_analyzer gate + review_metrics.jsonl schema 확장 | plan 작성 대기 (spike 선행) |
+| v2 | Read-only `ast_search` tool (Capability Plane 진입) | 후보, v1 KPI 측정 후 |
+| v3 | `lsp_diagnostics` optional tool | 후보 |
+| v4 | `ast_replace` dry-run | 후보 |
+| v5 | safe rename / apply (LSP 의존) | **optional/conditional** — pyright 동봉 비용 vs 사용 빈도 검증 후 |
+
+### 🔬 다음 세션 — Spike 2건 (v1 plan 작성 전 필수)
+
+**Spike 1**: subagent 내부 tool trace 가능성
+- Claude Code Task로 호출되는 subagent(af-critic, af-cross-review)의 tool 사용을 메인이 추적 가능한지
+- 불가능하면 v1 KPI는 final output self-report 기반으로 한정 (subagent reasoning 텍스트 + verdict)
+- 결론: v1 plan은 내부 tool trace에 의존하지 않도록 확정
+
+**Spike 2**: `review_metrics.jsonl` silent failure 원인 분리
+- 후보 (a): `post_agent_record` hook 미배선 (settings.local.json:188-208에 직접 등록 부재 확인됨)
+- 후보 (b): `_post_agent_record()` 호출되지만 `append_metric()`이 try/except: pass로 삼킴
+- 후보 (c): workspace path가 달라 다른 위치에 작성됨
+- 부산물: post_edit_enqueue 552건 fake/effective 비중 분리도 자연 도출
+
+### 🎯 v1 Scope (Spike 후 plan 확정)
+
+**IN**:
+- 배선 복구 (Spike 결과 반영)
+- review_bundle 형식 변경: raw risk_id → "file:line + 위험 설명 + 왜 review해야 하는지 + 확인할 테스트/호출자"
+- review_metrics.jsonl schema 확장: `evidence_present`, `evidence_items`, `evidence_risk_ids`, `evidence_cited`, `findings_count`
+- `evidence_cited` 측정 메커니즘: **(b) `file:line` grep baseline** + 옵션 (c) prompt 강제 인용 검토
+- test_gap_analyzer 실제 gate 호출 복구
+
+**OUT (v2 이후)**:
+- AST tool AI 노출 (read/write 모두)
+- LSPCheckHook 활성화
+- Rename safe workflow
+
+**KPI** (v1 효과 검증):
+- 인용률 (현재 ~2% → 목표 30%+)
+- test_gap_analyzer 호출률 (현재 0% → 목표 100%)
+- review_metrics.jsonl 작성 성공률 (현재 0 → 100%)
+- 정적 진단 기반 BLOCK 발생률 (baseline 측정 후 결정)
+
+### 매개체 운영 합의
+
+| 파일 | 역할 |
+|------|------|
+| `review_bundle.md` | evidence snapshot |
+| `review_metrics.jsonl` | 소비/효과 메트릭 (스키마 확장) |
+| `hook_events.log` | 저수준 hook debug |
+| ~~static_evidence.jsonl~~ | **신규 생성 X** (운영 매개체 추가 비용 회피) |
+
+### 다음 행동 순서 (다음 세션)
+1. Spike 1 + Spike 2 수행 (병렬 가능)
+2. Spike 결과 위에서 v1 plan 작성 (`docs/plans/2026-05-XX-static-evidence-injection-v1.md`)
+3. cross-review (af-cross-review만, design 큐 자동 발화)
+4. PASS 시 v1 구현 진입
 
 ---
 
