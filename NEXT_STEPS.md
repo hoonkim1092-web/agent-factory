@@ -105,10 +105,64 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 36 | Phase 3.5 메트릭 수집 인프라: `scripts/review_metrics_logger.py`(신규 — append_metric/parse_findings_count/parse_extension_log_count/compute_report) + `scripts/review_metrics_report.py`(CLI) + `hook_runner._post_agent_record` Phase 3.5 연동 + `tests/test_review_metrics_logger.py` (28 tests) | (커밋) | 2026-05-01 |
 | 37 | Research Router Phase 1a 구현 — `core/research_router.py`(신규, ResearchGap 9종 enum + ResearchPlan + ResearchRouter.plan/detect_complexity_gaps + gap_to_mode) + `core/researcher.py` 시그니처 확장(research_plan/hint_gaps + mode-aware gating + auto escalation max retry=1) + `core/project_pipeline.py` `_evidence_fn(**kwargs)` + `core/research_verifier.py` max_retries=2→1 + DeprecationWarning + tests/test_research_router_modes.py (101 tests) — 3-Tier 검증 통과 | `8654ce2a` | 2026-05-02 |
 | 38 | hotfix(test): `tests/test_review_metrics_logger.py` sys.modules 오염 수정 — `sys.modules[X]=Y` 3곳 → `monkeypatch.setitem(sys.modules,X,Y)`. test_phase1_blast_tier_invariant.py 9건 flaky FAIL 해결, 자기참조 검증 primary trust 회복. test-only 변경, 게이트 우회. | `5a4491f9` | 2026-05-02 |
+| 39 | docs(참고): OpenCode LSP 아키텍처 분석 1차 작성 — 단, cross-review BLOCK 3회 후 §5.1·§5.3 내부 모순 잔존 상태로 종료. 다음 세션에서 처음부터 재분석 필요. | `042d0386` | 2026-05-02 |
 
 ### 🔍 검증 중 발견 (별도 트랙)
 
 - **pytest 전체 실행 hang** — `pytest tests/ -q` 6분+ 멈춤. 어제 작업과 직접 관계 없을 가능성. 원인 파일 격리 필요 (langsmith/anyio/langgraph 의존성 의심).
+
+---
+
+## 🔄 다음 세션 — AST/LSP 인벤토리 재분석 (Fresh start)
+
+**왜 새로 시작하는가**: 본 세션의 OpenCode 분석 시도가 cross-review BLOCK 3회 받음. baseline 가정이 실제 코드와 계속 어긋나서 finding이 동형으로 재발생. 부분 수정으로 메우려 했으나 §5.1·§5.3 내부 모순까지 추가됨. **분석 자체를 처음부터 다시** 하는 것이 깔끔.
+
+### 다음 세션 시작 시 — 분석 전에 반드시 먼저 읽을 파일 (가정 금지, 실측만)
+
+```bash
+# 1. AST/구조 분석 경로
+cat core/review_bundle.py            # 실제 build/save 출력 형식 (headers + per-file ## + risk lines)
+cat core/ast_engine.py               # ast-grep-py wrapper
+cat scripts/build_review_bundle.py   # hook 진입점
+
+# 2. 진단 분석 경로 (휴면 가능성 있음)
+cat core/hooks/lsp_check.py          # OpenCode 모드 A 등가, AGENT_LSP_CHECK 게이트
+grep -n "LSPCheckHook\|lsp_check" core/hooks/event_bus.py core/agent_runner.py scripts/hook_runner.py
+grep -rn "AGENT_LSP_CHECK" .claude/ .env 2>/dev/null
+
+# 3. test gap (별도 경로)
+cat scripts/test_gap_analyzer.py
+grep -n "test_gap_analyzer" scripts/hook_runner.py core/review_bundle.py
+```
+
+### 답해야 할 질문 (가정 검증 후 답)
+
+1. `core/review_bundle.py`의 실제 출력 schema는 정확히 무엇인가? `.af_review_queue/review_bundle.md` 샘플 파일을 직접 읽어서 확인.
+2. `core/hooks/lsp_check.py`가 hook bus에 등록되어 있는가? 실제 호출되는 경로가 있는가?
+3. `AGENT_LSP_CHECK` 환경변수가 어디서 설정되는가? 현재 활성/비활성?
+4. `pyright`가 PATH에 있는가? `which pyright` 또는 `pyright --version` 결과는?
+5. reviewer subagent (af-critic, af-cross-review)가 메인 에이전트의 `lsp_diagnostics` 결과를 받는가? (post_tool_call hook이 subagent까지 전파되는가?)
+6. `scripts/test_gap_analyzer.py`는 어디서 호출되는가? `core/review_bundle.py`와 연결되어 있는가? (cross-review에 따르면 호출되지 않음 — 검증 필요)
+
+### 절대 하지 말 것 (이번 세션의 BLOCK 사유)
+
+1. ❌ "review_bundle.md에 §1~§7 섹션이 있다고 가정" — 실제로 헤더+per-file 블록만 있음
+2. ❌ "LSPCheckHook을 모르고 신규 §8 추가 제안" — 이미 OpenCode 모드 A 등가 구현 존재
+3. ❌ "pyright frozen build 폐기 권고와 동시에 pyright 채택" — 자기 모순
+4. ❌ "OpenCode와 본질적으로 같은 패턴" 단정 — 실행 모델(메인 AI 단일 turn vs 2-stage hook+subagent) 다름
+5. ❌ 분석문서에 운영 파라미터(timeout, source_hash, 임계값) 동시에 넣기 — 분석/권고 분리
+
+### 권장 분석 흐름
+
+1. **인벤토리 단계** (1~2시간): 위 6개 질문 답을 코드/설정/실행 결과로 수집. 가정 0개. 실측만.
+2. **갭 식별 단계** (30분): OpenCode 코어와 우리 코어를 같은 좌표계(누가/언제/무엇을/어디로)로 정렬. 진짜 갭 1~2개만 추림.
+3. **plan 작성 단계** (별도 세션): docs/plans/YYYY-MM-DD-*.md로 운영 파라미터 포함 plan. 분석 문서와 분리.
+
+### 참고 자료
+
+- `docs/참고/2026-05-02-opencode-lsp-architecture-analysis.md` — 본 세션 결과물 (정정 1회 후 commit, 그러나 §5에 잔존 결함 있음). **다음 세션은 이 문서를 reset 시점으로 두고 처음부터.**
+- 본 세션 cross-review BLOCK 로그: `.af_review_queue/notifications/` 또는 hook_events.log
+- OpenCode 실제 코드: `https://github.com/sst/opencode/tree/dev/packages/opencode/src/lsp` 및 `tool/lsp.ts`
 
 ---
 
