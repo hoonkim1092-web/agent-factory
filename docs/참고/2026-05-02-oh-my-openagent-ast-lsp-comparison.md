@@ -118,12 +118,26 @@
 _(no risks detected)_  ← risks 0개일 때만
 ```
 
-risk_id 7종: `subprocess_usage`, `shell_true`, `shlex_split`, `os_system`, `eval_usage`, `exec_usage`, `dynamic_import`(grep only).
+**risk_id (engine별 차이)**:
+- `engine=grep`: 7종 — `subprocess_usage`, `shell_true`, `shlex_split`, `os_system`, `eval_usage`, `exec_usage`, `dynamic_import` (`core/review_bundle.py:36-44` `_RISK_PATTERNS`)
+- `engine=ast`: 6종 — `dynamic_import` 제외 (`core/review_bundle.py:66-73` `_ast_risks` 패턴 누락. ast-grep-py 설치 시 grep fallback보다 검출 종류가 *적다*)
+- production engine은 `core/review_bundle.py:_ast_available()` 결과에 따라 결정 — 즉 ast-grep-py 설치 환경에서는 `dynamic_import` 검출 안 됨.
+
+**`{line}` 인덱스 계약 차이 (schema bug)**:
+- grep fallback (`core/review_bundle.py:55`): `text[: m.start()].count("\n") + 1` → **1-based**
+- AST (`core/ast_engine.py:91`): `rng.start.line` 그대로 (ast-grep-py / Tree-sitter 표준 → **0-based**)
+- 같은 `L{line}` 출력 토큰이 engine에 따라 1-based vs 0-based로 갈림. plan에서 single contract 고정 권고 (예: `core/ast_engine.py.search()` 반환 1-based 정규화 또는 `review_bundle.save()` 직전 +1 보정 + `tests/test_review_bundle.py`에 동일 line 계약 테스트).
+
+**`{file_path}` 절대/상대 모호성 (schema bug)**:
+- `scripts/build_review_bundle.py:47-56` `_resolve_paths()`가 `Path(workspace) / f`로 **절대경로 변환** 후 `core/review_bundle.py:build()`에 전달.
+- `core/review_bundle.py:save()`는 받은 경로를 그대로 `## {file_path}` 헤더로 출력 → bundle은 절대경로 수록.
+- reviewer prompt(`.claude/agents/af-critic.md:33`)와 queue state(`pending_agent_review.json`)는 workspace-relative 가정 — schema 계약 모호. plan에서 workspace-relative로 고정 권고 (필요 시 `abs_path` sidecar 분리).
+
 "§1~§7 섹션 구조"는 **존재하지 않음** (이전 분석 시도에서 가정했던 부분).
 
 ### 5.3 Hook 배선 실측 (`.claude/settings.local.json`)
 
-PostToolUse Write|Edit matcher에 등록된 hook은:
+PostToolUse Write|Edit matcher에 등록된 hook은 (line 191-212 `PostToolUse` 블록):
 - `sh scripts/hookpy.sh scripts/run.py post_edit_code_review`
 - `sh scripts/hookpy.sh scripts/run.py post_edit_design_review`
 
@@ -133,7 +147,11 @@ PostToolUse Write|Edit matcher에 등록된 hook은:
 
 ### 5.4 효과 측정 (누적 데이터)
 
-#### Q-A: review_bundle risk_id 인용 (docs/reviews/ 46개 review 기준)
+> 추출 명령은 §9.4 참고. 모든 측정은 명시된 sink 한정 — 다른 sink(stdout, chat trace, manual subagent 경로)는 별도 표기.
+
+#### Q-A: review_bundle risk_id 인용 (`docs/reviews/*.md` 46개 review 기준 / engine별 risk_id 정의는 §5.2)
+
+> 참고: 표의 인용 1건은 메타 리뷰. 메타 제외 시 7종 모두 0/46.
 
 | risk_id | 인용 review 수 |
 |---------|-------------|
@@ -143,11 +161,11 @@ PostToolUse Write|Edit matcher에 등록된 hook은:
 | os_system | 0 |
 | eval_usage | 0 |
 | exec_usage | 0 |
-| dynamic_import | 1 |
+| dynamic_import | 1 (메타: `2026-05-01-113842-review_bundle-code-review.md` — review_bundle.py 자체 리뷰) |
 
-review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 review_bundle 관련 코드/plan/분석 문서 자체에 대한 메타 review. 일반 코드 리뷰에서 review_bundle을 evidence로 인용한 흔적은 본 분석 범위에서 0건.
+review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 review_bundle 관련 코드/plan/분석 문서 자체에 대한 메타 review. 일반 코드 리뷰에서 review_bundle을 evidence로 인용한 흔적은 본 분석 범위에서 0건. 또한 `dynamic_import`는 grep fallback에서만 검출되므로 production engine이 ast 모드일 때 인용률은 7종 모두 0.
 
-#### Q-B: test_gap_analyzer 호출 (`.af_review_queue/hook_events.log`)
+#### Q-B: hook-enforced test_gap_analyzer 호출 (`.af_review_queue/hook_events.log` sink 한정)
 
 | event | count |
 |-------|-------|
@@ -155,18 +173,18 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 | test_gap_analyzer (skipped) | 0 |
 | test_gap_analyzer (success) | 0 |
 
-코드는 hook_runner.py:387에 있으나 본 로그 범위에서 호출 0건.
+코드는 `scripts/hook_runner.py:387` builtin dispatch에 있으나 본 sink 범위에서 호출 0건. 단, `af-test-runner` subagent가 `.claude/agents/af-test-runner.md:41-43`에서 직접 `python scripts/test_gap_analyzer.py --workspace .`를 실행하는 **manual 경로는 hook_events.log에 기록되지 않으며 본 측정 범위 외**다. manual 경로 호출 횟수는 별도 sink (Claude Code transcript, Bash tool log) 필요 — 본 분석 범위에서 미측정.
 
 #### Q-C: post_edit_enqueue 시계열
 
 - 시작: 2026-04-17T22:30
 - 최후: 2026-05-02T14:25
 - 총 552건
-- 가장 최근 2건은 `core/foo.py` — **테스트 fixture 경로**. tests/test_hook_runner_builtins.py가 만든 fake event 비중 높음 (본 분석 범위에서 정확 비율은 분리 안 됨)
+- 가장 최근 2건은 `core/foo.py` — **테스트 fixture 경로**. `tests/test_hook_runner_builtins.py`가 만든 fake event 포함 가능성 (정확 비율은 §7.2 #1 spike에서 측정 예정 — 현 시점 분리 미확보)
 
-본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. **현재 `.claude/settings.local.json` PostToolUse는 `post_edit_code_review` / `post_edit_design_review`만 등록되어 있고 `post_edit_enqueue`는 직접 등록 안 됨** (settings.local.json:188-208). 552건은 "과거 어느 시점의 호출 누적 + 테스트 fake event"이며 **현재 배선의 효과 증거가 아님**. fake/effective 분리 측정은 다음 세션 spike에서 수행.
+본 552건 카운트는 "현재 hook 배선의 실제 effective 호출 수"로 직접 환산 불가. **현재 `.claude/settings.local.json` PostToolUse 블록 (line 191-212)에는 `post_edit_code_review` / `post_edit_design_review`만 등록되어 있고 `post_edit_enqueue`는 직접 등록 안 됨**. 552건은 "과거 어느 시점의 호출 누적 + 테스트 fake event"이며 **현재 배선의 효과 증거가 아님**. fake/effective 분리 측정은 다음 세션 spike에서 수행.
 
-#### Q-D: 3-tier verdict 분포 (review-recorded 누적)
+#### Q-D: 3-tier verdict 분포 (`hook_events.log` review-recorded sink 한정 — 별도 sink와 분리 측정 필요)
 
 | agent | pass | block |
 |-------|------|-------|
@@ -174,19 +192,28 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 | af-critic | 21 | 1 |
 | af-cross-review | 16 | 0 |
 
-총 51 PASS / 1 BLOCK ≈ 98% PASS.
+총 51 PASS / 1 BLOCK.
 
-#### Q-E: LSPCheckHook 호출 흔적
+> ⚠️ **표본 편향 caveat**: 이 수치는 `hook_events.log`의 `review-recorded` 라인 52건만 카운트한 결과이며, **별도 sink인 `docs/reviews/*.md` Verdict 헤더 분포 (실측: 16 BLOCK + 25 WARN)와 통합되지 않는다**. `post_agent_record`가 `scripts/hook_runner.py:347-348`에서 호출되지만 모든 review 작성 경로에서 발화하지 않아 hook log는 부분 sink로 동작한다. "98% PASS" 같은 비율은 본 sink 외 분포를 누락하므로 §6 비교 매트릭스에서 직접 인용 금지.
+
+#### Q-E: LSPCheckHook 호출 흔적 (`hook_events.log` sink 한정)
 
 `grep "LSPCheckHook\|\[LSP\]" .af_review_queue/hook_events.log` 결과 0건.
-원인 후보 (실측): pyright 미설치 (`which pyright` → not found) + `AGENT_LSP_CHECK` 환경변수 미설정 (settings.local.json / .env / *.cmd / *.ps1 / *.sh 모두에서 미발견).
 
-#### Q-F: Phase 3.5 메트릭
+> ⚠️ **측정 sink 한계**: `core/hooks/lsp_check.py:205-206`은 `print(f"[LSPCheckHook] ...")`만 호출하고 `_log_hook_event()`를 호출하지 않는다. 따라서 hook_events.log 0건은 **"호출 0회"가 아니라 "log sink 부재"** 의미. 실제 호출 여부는 별도 sink (Claude Code chat transcript / stdout 캡처 / 신규 lsp_check event 추가) 중 하나 필요 — 본 분석 범위에서 분리 미수행.
+
+원인 후보 (휴면 상태 자체에 대한 실측): pyright 미설치 (`which pyright` → not found) + `AGENT_LSP_CHECK` 환경변수 미설정 (settings.local.json / .env / *.cmd / *.ps1 / *.sh 모두에서 미발견).
+
+#### Q-F: Phase 3.5 메트릭 — `review_metrics.jsonl` 부재
 
 `scripts/review_metrics_logger.py`가 작성하는 `review_metrics.jsonl`:
 - 위치 정의: `_queue_dir(workspace)/review_metrics.jsonl`
 - `find . -name "review_metrics.jsonl"` 결과: **파일 부재**
-- → 데이터 수집 자체가 거의 발생하지 않음
+
+→ 0건 원인 후보 (실측 분리는 §7.2 spike, 본 문서는 후보 나열만):
+- (a) `_post_agent_record()` 호출 경로 미배선 — settings.local.json:191-212 PostToolUse에 직접 등록 부재
+- (b) 호출되지만 `scripts/hook_runner.py:347-365`의 try/except로 silent failure (예외 삼킴)
+- (c) workspace path mismatch로 다른 위치에 작성됨 — 본 분석 범위에서 다른 path 탐색 미수행
 
 ---
 
@@ -195,9 +222,9 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 | 측면 | SST OpenCode | oh-my-openagent | Agent Factory (실측) |
 |------|--------------|-----------------|---------------------|
 | AST-Grep 노출 | 본체 없음 | AI tool 2개 (search/replace, pull) | review_bundle.md 파일 매개 (push, 1회성) |
-| LSP 노출 | 9개 AI tool + edit 자동 push | 6개 AI tool (pull) | LSPCheckHook (push, AgentRunner self-hosted bus만, 휴면) |
+| LSP 노출 | 9개 AI tool + edit 자동 push (확인됨; `docs/참고/2026-05-02-opencode-lsp-architecture-analysis.md` 기준, §5 잔존 모순은 별도 인계) | 6개 AI tool (pull) | LSPCheckHook (push, AgentRunner self-hosted bus만, 휴면) |
 | Rename safe | ❌ 직접 노출 X | ✅ prepare → apply 2단계 | ❌ |
-| 정적 진단 효과 측정 | 본 문서 범위 외 | 본 문서 범위 외 | risk_id 인용 ~2%, test_gap 호출 0건, LSPCheckHook 호출 0건 |
+| 정적 진단 효과 측정 | 본 문서 범위 외 | 본 문서 범위 외 | risk_id 인용 ~2% (Q-A, 메타 리뷰 제외 시 0/46), hook-enforced test_gap 호출 0건 (Q-B, manual subagent 경로 제외), LSPCheckHook hook_events.log 0건 (Q-E, sink 한정) |
 | Subagent 컨텍스트 통합 | 메인 AI 단일 | 메인 AI + specialized agent (Sisyphus 등) | 메인 AI + Claude Code subagent (af-critic 등) — 메인의 LSPCheckHook 결과는 subagent로 자동 전파 안 됨 |
 
 ---
@@ -244,20 +271,21 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
    - 우리는 `core/ast_engine.py`에 search/replace/search_dir/replace_file 이미 존재
    - AI tool wrapper 신설 시 비용 + 효과 가설
 
-5. **LSPCheckHook 활성화/유지/제거 결정**
-   - pyright 동봉 비용 (frozen build) vs subagent 전파 경로 신설 비용
-   - 본 결정은 #1, #2 결과 + 1주 메트릭 수집 후
+5. **LSPCheckHook 활성화/유지/제거 후보**
+   - 결정 입력 후보: pyright 동봉 비용 (frozen build) vs subagent 전파 경로 신설 비용
+   - 결정 시점은 plan 단계. 입력 자료로 #1, #2 결과 + 1주 메트릭 수집 결과를 사용 가능
 
 6. **Rename safe workflow 도입 가능성 평가**
    - LSP 서버 전제. 비용 큼. AF use case에 정당화되는지 별도 분석
 
-위 6개는 **후보**. 본 문서는 결정 권한을 주장하지 않는다.
+위 6개는 **후보**. 본 문서는 결정 권한을 주장하지 않으며 우선순위·일정·실행 결정은 별도 plan에서 다룬다.
 
 ---
 
 ## 9. 데이터 출처
 
-### 9.1 oh-my-openagent (raw GitHub fetch)
+### 9.1 oh-my-openagent (raw GitHub fetch — `dev` branch 시점, 본 분석은 fetch 시점 코드 기준)
+- fetch 시점: 2026-05-02. branch `dev` HEAD는 fetch 이후 변경 가능 — 동일 결과 재현은 같은 commit SHA pin이 필요. (본 fetch 시점 SHA는 raw URL에 노출되지 않아 GitHub API 별도 조회 필요. 후속 plan 작성 시 `https://api.github.com/repos/code-yeongyu/oh-my-openagent/commits/dev`로 SHA 캡처 권고.)
 - `https://github.com/code-yeongyu/oh-my-openagent/blob/dev/README.md`
 - `https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/overview.md`
 - `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/src/tools/lsp/AGENTS.md`
@@ -276,8 +304,53 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 - `.claude/settings.local.json`, `.claude/agents/af-{critic,cross-review,test-runner}.md`
 - `.af_review_queue/hook_events.log`, `docs/reviews/*.md`
 
+### 9.4 추출 명령 (재현 가능성)
+
+본 세션 측정에 사용한 명령. 다음 세션에서 동일 수치 재현 시 이 명령을 그대로 실행.
+
+```bash
+# Q-A: review_bundle risk_id 인용 (docs/reviews/ 46개 review)
+ls docs/reviews/*.md | wc -l                                       # 표본 크기
+for risk in subprocess_usage shell_true shlex_split os_system eval_usage exec_usage dynamic_import; do
+  c=$(grep -lE "\b${risk}\b" docs/reviews/*.md 2>/dev/null | wc -l)
+  echo "${risk} | ${c}"
+done
+
+# Q-B: hook-enforced test_gap_analyzer 호출 (hook_events.log 한정 — manual subagent 경로 제외)
+grep -cE 'test_gap_analyzer.*forced-fail' .af_review_queue/hook_events.log
+grep -cE 'test_gap_analyzer.*skipped'     .af_review_queue/hook_events.log
+grep -cE 'test_gap_analyzer.*[^-]rc=0'    .af_review_queue/hook_events.log
+
+# Q-C: post_edit_enqueue 시계열
+grep -E 'post_edit_enqueue' .af_review_queue/hook_events.log | head -1   # 시작
+grep -E 'post_edit_enqueue' .af_review_queue/hook_events.log | tail -1   # 최후
+grep -cE 'post_edit_enqueue' .af_review_queue/hook_events.log            # 총 건수
+
+# Q-D: 3-tier verdict 분포 (review-recorded sink 한정)
+grep -cE 'review-recorded' .af_review_queue/hook_events.log
+grep 'review-recorded' .af_review_queue/hook_events.log | grep -oE 'verdict=[a-z]+' | sort | uniq -c
+# (별도 sink) docs/reviews/*.md Verdict 헤더 분포:
+grep -hE '^### Verdict:' docs/reviews/*.md | sort | uniq -c
+
+# Q-E: LSPCheckHook 호출 흔적 (hook_events.log sink 한정 — print() 직접 출력은 미포함)
+grep -cE 'LSPCheckHook|\[LSP\]' .af_review_queue/hook_events.log
+which pyright 2>/dev/null || echo "pyright not found"
+grep -rE 'AGENT_LSP_CHECK' .claude/ .env 2>/dev/null
+
+# Q-F: review_metrics.jsonl 부재 확인
+find . -name "review_metrics.jsonl" 2>/dev/null
+grep -cE 'append_metric|review_metrics' .af_review_queue/hook_events.log
+```
+
 ---
 
 ## 10. 변경 이력
 
 - 2026-05-02 초안: 본 세션 인벤토리 + 효과 측정 + oh-my-openagent raw fetch 결과 통합 작성. 권고 0개 (분석/권고 분리 원칙).
+- 2026-05-02 v2: 23:07 cross-review 13건(자가-reject 1건 제외 ACCEPT 11건 + 재분석 추가 발견 1건 + Low #10 실측 정정 1건) 반영. 정정 범위:
+  - §5.2 schema 계약 명시 (line 1-based 정규화 권고, file_path 절대/상대 모호성, engine별 6종/7종 차이)
+  - §5.3 PostToolUse 블록 라인 범위 정정 (188-208 → 191-212)
+  - §5.4 Q-A~Q-F 측정 범위·표본 편향·silent failure 후보 정정
+  - §6 SST OpenCode "확인됨" 권원 표시
+  - §8 #5 plan-tone 톤다운 ("결정" → "결정 입력 후보")
+  - §9.4 신설: Q-A~Q-F 추출 명령 + §9.1 oh-my-openagent commit SHA pin

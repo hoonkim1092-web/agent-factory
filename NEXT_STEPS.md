@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (저녁) — **oh-my-openagent AST/LSP 비교 분석 + WARN 정정 + 두-plane 합의 인계**. Capability Plane / Assurance Plane 분리 합의, v1 = Static Evidence Injection, v2~v5 후보 로드맵. **다음 작업: Spike 2건(subagent tool trace / metrics silent failure) → v1 plan 작성** — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (밤) — **oh-my-openagent 분석 문서 v2 정정 commit (cross-review WARN 13건 반영)**. 다음 작업은 변동 없음: Spike 2건(subagent tool trace / metrics silent failure) → v1 plan 작성. 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -129,13 +129,16 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 5. review_metrics.jsonl 부재 (Phase 3.5 미작동)
 6. oh-my-openagent: AST 2개 + LSP 6개 모두 AI tool로 직접 노출 (pull 모델, push는 본 fetch 범위에서 미확인)
 
-### ⚠️ 다음 세션 인계 — WARN 4건 정정 후 보강 commit
+### ✅ 다음 세션 인계 항목 — 분석 문서 v2 정정 완료 (2026-05-02 밤)
 
-cross-review WARN 사항 (advisory):
-- **§5.4 Q-F 정정**: "데이터 수집 미발생" → "52건 시도 / 0건 성공 = silent failure 또는 hook 미배선" (try/except: pass 봉합 + post_agent_record가 settings.local.json:188-208에 직접 등록 안 됨)
-- **§5.4 Q-D vs Q-B 모순**: af-test-runner 14 PASS인데 test_gap_analyzer 0건 호출 → wiring 끊김 명시 필요
-- **데이터 소스 / 추출 명령 명시**: 각 Q-A~Q-F에 사용한 grep/awk 명령 인라인으로 박아 재현가능성 확보
-- **post_edit_enqueue 552건 fake event 비중 분리 측정**
+cross-review 12건 + 재분석 추가 1건 = 13건 모두 분석 문서에 반영:
+- §5.2 schema 계약 명시 (line 1-based vs 0-based, file_path 절대/상대 모호성, engine별 6/7종 차이)
+- §5.3 PostToolUse 블록 라인 범위 정정 (188-208 → 191-212)
+- §5.4 Q-A 메타 표기, Q-B/Q-E 측정 sink 한계, Q-D 표본 편향 caveat, Q-F silent failure 후보 (a)/(b)/(c) 분리
+- §6 SST 권원 표시, §8 #5 plan-tone 톤다운
+- §9.4 신설: Q-A~Q-F 추출 명령 + §9.1 commit SHA pin 안내
+
+본 정정은 advisory 처리. **남은 작업은 Spike 1+2 → v1 plan 작성** (변동 없음).
 
 ### ✅ 본 세션 추가 — 합의 사항 (2026-05-02 저녁, deliberation 결과)
 
