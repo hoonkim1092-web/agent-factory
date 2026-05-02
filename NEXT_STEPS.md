@@ -1,11 +1,11 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 (23:27) — **oh-my-openagent v2 정정 commit `9d25956c` 후 23:25 cross-review BLOCK 12건 받음. 6건은 timing race로 거짓 BLOCK, 6건은 진짜 추가 작업.** 다음 세션 시작 시 §"23:25 BLOCK 인계" 먼저 읽기. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (세션 재개) — **oh-my-openagent v3 정정 완료** (진짜 BLOCK 6건 #4 #8 #9 #10 #11 #12 모두 반영). 다음: cross-review 3라운드 → PASS 시 Spike 1+2 (§7.2 측정 미완료 2건) → Research Router Phase 1a 코드 진입. 브랜치: `2026-04-14-build-diet`
 
 ---
 
-## 🚨 23:25 BLOCK 인계 (다음 세션 첫 작업)
+## ✅ 23:25 BLOCK 인계 — 완료 (진짜 6건 v3 반영)
 
 **review 파일**: `docs/reviews/2026-05-02-232500-2026-05-02-oh-my-openagent-ast-lsp-comparison-design-review.md`
 

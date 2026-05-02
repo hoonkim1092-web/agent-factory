@@ -46,7 +46,7 @@
 
 ### 2.3 모델 구분
 
-6개 tool 모두 **AI agent가 명시 호출하는 pull 모델**. 본 문서가 fetch한 범위 내에서 "edit tool 후 자동 진단 push"에 해당하는 코드/문서는 확인되지 않았다 (SST OpenCode의 `tool/edit.ts` 패턴은 oh-my-openagent에서 별도 노출 tool로 분리된 것으로 보이지만, 본 fetch 범위에서 단정 불가 — 추가 확인 필요 항목).
+6개 tool 모두 **AI agent가 명시 호출하는 pull 모델**. 본 문서가 fetch한 범위 내에서 "edit tool 후 자동 진단 push"에 해당하는 코드/문서는 확인되지 않았다 (SST OpenCode의 `tool/edit.ts` 패턴이 oh-my-openagent에서 별도 노출 tool로 분리되는지 본 fetch 범위 내에서 미확인).
 
 ---
 
@@ -107,6 +107,8 @@
 | `core/review_bundle.py` | risk_id 7종 추출, `.af_review_queue/review_bundle.md` 저장 | 코드 OK, 형식은 단순 헤더+per-file 블록 |
 | `scripts/test_gap_analyzer.py` | diff에서 risky pattern + 관련 테스트 부재 검출 | 코드 OK |
 | `core/hooks/lsp_check.py` | `LSPCheckHook(ContinuationHook)` — pyright 실행 | `core/agent_runner.py:972-973`에서 self-hosted agent의 hook bus에만 등록 |
+
+> ⚠️ **`_WRITE_TOOLS` 하드코딩 갭**: `core/hooks/lsp_check.py:29` `_WRITE_TOOLS`에는 `write_file`·`edit_file` 등 7종만 포함. `apply_edit`(`skills/hash_edit/skill.py:23`)·`apply_block_edit`(`skills/hash_edit/skill.py:43`) 누락 — 이 두 tool로 파일 편집 시 LSPCheckHook 발화 안 함.
 
 ### 5.2 review_bundle.py 실제 출력 schema (`core/review_bundle.py:107-115`)
 
@@ -245,9 +247,9 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 ### 7.3 architectural gap (oh-my-openagent 모델 대비)
 
-- AF는 ast-grep 기반 분석을 가지고 있으나 AI tool로 노출하지 않음 (파일 매개만)
+- AF는 ast-grep 기반 분석을 가지고 있으나 AI tool로 노출하지 않음 (파일 매개만; **Python-only** — `scripts/build_review_bundle.py:53` `.py` 확장자 필터, `core/ast_engine.py:29` 미지원 확장자 → python default)
 - AF는 LSP를 가지고 있으나 메인 self-hosted agent에만 등록 + 휴면
-- AF는 rename safe workflow 같은 pre-hoc validation 메커니즘 없음 — post-hoc 3-tier review만
+- AF는 rename safe workflow 같은 pre-hoc validation 메커니즘 없음 — post-hoc 3-tier review만 (`LSPCheckHook` 활성화해도 rename-safe 불가: `core/hooks/lsp_check.py:103`은 pyright shell-out이며 JSON-RPC LSP 클라이언트 없음)
 
 본 갭들은 **분석 결과**이며 권고가 아니다. 비용/효과 정량화 후 plan에서 별도 결정.
 
@@ -269,10 +271,13 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 4. **AST tool AI 노출 가능성 평가** (oh-my-openagent 모델)
    - 우리는 `core/ast_engine.py`에 search/replace/search_dir/replace_file 이미 존재
-   - AI tool wrapper 신설 시 비용 + 효과 가설
+   - 현재 pipeline 진입 언어: **Python-only** (`scripts/build_review_bundle.py:53` `.py` 필터; `core/ast_engine.py:29` 미지원 확장자 → python default)
+   - AI tool wrapper 신설 시 비용(event 이름 제안: `ast_tool_search`) + 효과(subagent reasoning 인용률 측정, Q-A 기준) 가설
 
 5. **LSPCheckHook 활성화/유지/제거 후보**
    - 결정 입력 후보: pyright 동봉 비용 (frozen build) vs subagent 전파 경로 신설 비용
+   - 비용 측정: `lsp_check_skipped` / `lsp_check_result` event를 `core/hooks/lsp_check.py`에 추가 후 1주 수집 (현재 print() 전용 sink, Q-E 참고)
+   - ⚠️ `_WRITE_TOOLS` 하드코딩 갭: 활성화해도 `apply_edit`/`apply_block_edit` 편집 시 발화 안 함 (`core/hooks/lsp_check.py:29`) — 활성화 전 선행 수정 필요
    - 결정 시점은 plan 단계. 입력 자료로 #1, #2 결과 + 1주 메트릭 수집 결과를 사용 가능
 
 6. **Rename safe workflow 도입 가능성 평가**
@@ -284,14 +289,14 @@ review_bundle을 언급한 7개 review를 별도 분류한 결과: 7건 모두 r
 
 ## 9. 데이터 출처
 
-### 9.1 oh-my-openagent (raw GitHub fetch — `dev` branch 시점, 본 분석은 fetch 시점 코드 기준)
-- fetch 시점: 2026-05-02. branch `dev` HEAD는 fetch 이후 변경 가능 — 동일 결과 재현은 같은 commit SHA pin이 필요. (본 fetch 시점 SHA는 raw URL에 노출되지 않아 GitHub API 별도 조회 필요. 후속 plan 작성 시 `https://api.github.com/repos/code-yeongyu/oh-my-openagent/commits/dev`로 SHA 캡처 권고.)
-- `https://github.com/code-yeongyu/oh-my-openagent/blob/dev/README.md`
-- `https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/overview.md`
-- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/src/tools/lsp/AGENTS.md`
-- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/src/tools/lsp/tools.ts`
-- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/src/tools/ast-grep/tool-descriptions.ts`
-- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/src/tools/ast-grep/cli.ts`
+### 9.1 oh-my-openagent (raw GitHub fetch — commit SHA 고정, 본 분석은 해당 SHA 코드 기준)
+- fetch 시점: 2026-05-02. 고정 SHA: `e17850cbab3e3a609444c1a0cec26afb244c3fc5` (GitHub API `GET /repos/code-yeongyu/oh-my-openagent/commits/dev` 응답, 2026-05-02 조회)
+- `https://github.com/code-yeongyu/oh-my-openagent/blob/e17850cbab3e3a609444c1a0cec26afb244c3fc5/README.md`
+- `https://github.com/code-yeongyu/oh-my-openagent/blob/e17850cbab3e3a609444c1a0cec26afb244c3fc5/docs/guide/overview.md`
+- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/e17850cbab3e3a609444c1a0cec26afb244c3fc5/src/tools/lsp/AGENTS.md`
+- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/e17850cbab3e3a609444c1a0cec26afb244c3fc5/src/tools/lsp/tools.ts`
+- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/e17850cbab3e3a609444c1a0cec26afb244c3fc5/src/tools/ast-grep/tool-descriptions.ts`
+- `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/e17850cbab3e3a609444c1a0cec26afb244c3fc5/src/tools/ast-grep/cli.ts`
 - `https://ohmyopenagent.com/`
 - 관련 fork: `https://github.com/opensoft/oh-my-opencode`
 
@@ -354,3 +359,11 @@ grep -cE 'append_metric|review_metrics' .af_review_queue/hook_events.log
   - §6 SST OpenCode "확인됨" 권원 표시
   - §8 #5 plan-tone 톤다운 ("결정" → "결정 입력 후보")
   - §9.4 신설: Q-A~Q-F 추출 명령 + §9.1 oh-my-openagent commit SHA pin
+- 2026-05-02 v3: 2라운드 cross-review BLOCK 6건(진짜) 반영. 정정 범위:
+  - §9.1 `/dev/` URL → commit SHA `e17850cbab3e3a609444c1a0cec26afb244c3fc5` permalink 직접 교체 (#4)
+  - §2.3 "분리된 것으로 보이지만 단정 불가" → "본 fetch 범위 내에서 미확인" 톤다운 (#8)
+  - §7.3 AST tool Python-only 언어 scope 명시 (`build_review_bundle.py:53` 필터, `ast_engine.py:29` default) (#9)
+  - §8 #4 동일 언어 scope + `ast_tool_search` event 이름 추가 (#9/#12)
+  - §7.3 rename-safe: `LSPCheckHook` 활성화해도 불가 이유 명시 (pyright shell-out, JSON-RPC 없음) (#10)
+  - §5.1 `_WRITE_TOOLS` 하드코딩 갭 footnote 추가 (`apply_edit`/`apply_block_edit` 누락) (#11)
+  - §8 #5 `_WRITE_TOOLS` 갭 footnote + `lsp_check_skipped`/`lsp_check_result` event 이름 추가 (#11/#12)
