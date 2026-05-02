@@ -26,6 +26,7 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 
 def _project_root() -> str:
@@ -362,6 +363,20 @@ def _post_agent_record(payload: dict) -> int:
             parse_findings_count,
             parse_extension_log_count,
         )
+
+        # v1: evidence 수집 — review_bundle.md 존재 여부 + 인용 측정
+        evidence_present = False
+        evidence_items = 0
+        evidence_cited = 0
+        bundle_path = Path(workspace) / ".af_review_queue" / "review_bundle.md"
+        if bundle_path.exists():
+            evidence_present = True
+            bundle_text = bundle_path.read_text(encoding="utf-8")
+            evidence_items = len(re.findall(r"- L\d+ `[^`]+`", bundle_text))
+            # reviewer output에서 "file.py:숫자" 패턴 grep
+            # absolute path leading `/`는 word boundary 제거됨 — 상대경로 대부분이므로 허용
+            evidence_cited = len(re.findall(r"\b\w[\w/.-]+\.py:\d+", content))
+
         append_metric(
             workspace=workspace,
             agent=subagent_type,
@@ -369,6 +384,9 @@ def _post_agent_record(payload: dict) -> int:
             verdict=verdict,
             findings_count=parse_findings_count(content),
             extension_log_count=parse_extension_log_count(content),
+            evidence_present=evidence_present,
+            evidence_items=evidence_items,
+            evidence_cited=evidence_cited,
         )
     except Exception:
         pass  # metrics collection is best-effort

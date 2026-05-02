@@ -127,8 +127,30 @@ def test_append_metric_required_fields(metrics_mod, ws):
     path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
     record = json.loads(Path(path).read_text().strip())
     for field in ["ts", "commit_sha", "tier", "agent", "verdict",
-                  "findings_count", "extension_log_count", "duration_ms", "tokens", "tool_calls"]:
+                  "findings_count", "extension_log_count", "duration_ms", "tokens", "tool_calls",
+                  "evidence_present", "evidence_items", "evidence_cited"]:
         assert field in record, f"missing field: {field}"
+
+
+def test_append_metric_evidence_defaults(metrics_mod, ws):
+    metrics_mod.append_metric(ws, "af-test-runner", 1, "pass")
+    path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    record = json.loads(Path(path).read_text().strip())
+    assert record["evidence_present"] is False
+    assert record["evidence_items"] == 0
+    assert record["evidence_cited"] == 0
+
+
+def test_append_metric_evidence_values(metrics_mod, ws):
+    metrics_mod.append_metric(
+        ws, "af-critic", 2, "warn",
+        evidence_present=True, evidence_items=3, evidence_cited=2,
+    )
+    path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    record = json.loads(Path(path).read_text().strip())
+    assert record["evidence_present"] is True
+    assert record["evidence_items"] == 3
+    assert record["evidence_cited"] == 2
 
 
 def test_append_metric_extension_log(metrics_mod, ws):

@@ -151,6 +151,9 @@ def append_metric(
     duration_ms: int | None = None,
     tokens: int | None = None,
     tool_calls: int | None = None,
+    evidence_present: bool = False,
+    evidence_items: int = 0,
+    evidence_cited: int = 0,
 ) -> None:
     """Record a completed review agent event to review_metrics.jsonl."""
     record: dict[str, Any] = {
@@ -164,6 +167,9 @@ def append_metric(
         "duration_ms": duration_ms,
         "tokens": tokens,
         "tool_calls": tool_calls,
+        "evidence_present": evidence_present,
+        "evidence_items": evidence_items,
+        "evidence_cited": evidence_cited,
     }
     _append_jsonl(_metrics_path(workspace), record)
 

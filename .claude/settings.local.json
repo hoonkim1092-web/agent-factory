@@ -55,7 +55,37 @@
       "Bash(pip index *)",
       "Bash(pip install *)",
       "Bash(/Users/hoon/.npm-global/bin/codex --help)",
-      "Bash(/Users/hoon/.npm-global/bin/codex exec *)"
+      "Bash(/Users/hoon/.npm-global/bin/codex exec *)",
+      "Bash(git config *)",
+      "Bash(awk -F'|' '{print $2}' .af_review_queue/hook_events.log)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ohmyopenagent.com)",
+      "Bash(gh api *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(jobs -l)",
+      "Bash(awk '{print $1}')",
+      "Bash(awk 'NR>=190 && NR<=215 {print NR\": \"$0}' .claude/settings.local.json)",
+      "Bash(sed -n '287,297p' \"docs/참고/2026-05-02-oh-my-openagent-ast-lsp-comparison.md\")",
+      "Bash(awk 'NR>=160 && NR<=180' \"docs/참고/2026-05-02-oh-my-openagent-ast-lsp-comparison.md\")",
+      "Bash(awk '{print $9, $6, $7, $8}')",
+      "Bash(awk '/^#### Q-D:/,/^####/' \"docs/참고/2026-05-02-oh-my-openagent-ast-lsp-comparison.md\")",
+      "Bash(sed -n '47,57p' /Users/hoon/workTree/agent-factory/scripts/build_review_bundle.py)",
+      "Bash(sed -n '53,58p' /Users/hoon/workTree/agent-factory/core/ast_engine.py)",
+      "Bash(sed -n '36,44p' /Users/hoon/workTree/agent-factory/core/review_bundle.py)",
+      "Bash(sed -n '60,82p' /Users/hoon/workTree/agent-factory/core/review_bundle.py)",
+      "Bash(sed -n '102,117p' /Users/hoon/workTree/agent-factory/core/review_bundle.py)",
+      "Bash(sed -n '53,57p' /Users/hoon/workTree/agent-factory/core/review_bundle.py)",
+      "Bash(sed -n '87,96p' /Users/hoon/workTree/agent-factory/core/ast_engine.py)",
+      "Bash(sed -n '28,38p' /Users/hoon/workTree/agent-factory/core/hooks/lsp_check.py)",
+      "Bash(sed -n '100,115p' /Users/hoon/workTree/agent-factory/core/hooks/lsp_check.py)",
+      "Bash(echo \"PID=$!\")",
+      "Bash(git -C /Users/hoon/workTree/agent-factory log --oneline --follow .claude/settings.local.json)",
+      "Bash(git -C /Users/hoon/workTree/agent-factory show 3173f9b9:.claude/settings.local.json)",
+      "Bash(git -C /Users/hoon/workTree/agent-factory log --oneline --before=2026-04-22 --after=2026-04-20 .claude/settings.local.json)",
+      "Bash(git -C /Users/hoon/workTree/agent-factory log --oneline --before=2026-04-22 --after=2026-04-20)",
+      "Bash(sed -n '230,240p' /Users/hoon/workTree/agent-factory/docs/2026-04-19-review-gate-enforcement.md)",
+      "Bash(sed -n '570,580p' /Users/hoon/workTree/agent-factory/docs/2026-04-19-review-gate-enforcement.md)"
     ],
     "deny": [
       "Bash(rm:*)",
@@ -67,7 +97,6 @@
       "Bash(pwsh -Command Remove-Item:*)",
       "Bash(git clean:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git checkout --:*)",
       "Bash(git restore --worktree:*)",
       "Bash(git restore --staged:*)"
     ]
@@ -86,7 +115,6 @@
         "hooks": [
           {
             "type": "command",
-            "name": "agent_factory_claude_sessionstart",
             "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
           }
         ]
@@ -121,7 +149,6 @@
         "hooks": [
           {
             "type": "command",
-            "name": "agent_factory_claude_userpromptsubmit",
             "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
           }
         ]
@@ -140,7 +167,6 @@
         "hooks": [
           {
             "type": "command",
-            "name": "agent_factory_claude_precompact",
             "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
           }
         ]
@@ -159,7 +185,6 @@
         "hooks": [
           {
             "type": "command",
-            "name": "agent_factory_claude_stop",
             "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
           }
         ]
@@ -178,7 +203,6 @@
         "hooks": [
           {
             "type": "command",
-            "name": "agent_factory_claude_sessionend",
             "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py cli_hook_bridge --provider claude --workspace /Users/hoon/workTree/agent-factory --run-id claude_cli_run --repo-root /Users/hoon/workTree/agent-factory"
           }
         ]
@@ -202,6 +226,16 @@
             "type": "command",
             "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/hoon/workTree/agent-factory/scripts/hook_runner.py post_agent_record",
+            "timeout": 60
           }
         ]
       }

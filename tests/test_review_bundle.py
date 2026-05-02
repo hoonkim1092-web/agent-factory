@@ -97,6 +97,51 @@ def test_save_includes_risk(tmp_path):
     assert "subprocess_usage" in out.read_text(encoding="utf-8")
 
 
+def test_save_new_format_contains_desc(tmp_path):
+    m = _bundle()
+    bundle = {
+        "engine": "grep",
+        "files": [{"path": "core/x.py", "risks": [{"risk_id": "shell_true", "line": 3, "text": "shell=True"}]}],
+    }
+    text = m.save(bundle, str(tmp_path)).read_text(encoding="utf-8")
+    # new format: "- L3 `shell_true` — shell=True — ..."
+    assert "- L3 `shell_true` —" in text
+    assert "코드:" in text
+
+
+def test_save_dynamic_import_desc(tmp_path):
+    m = _bundle()
+    bundle = {
+        "engine": "grep",
+        "files": [{"path": "x.py", "risks": [{"risk_id": "dynamic_import", "line": 1, "text": "__import__"}]}],
+    }
+    text = m.save(bundle, str(tmp_path)).read_text(encoding="utf-8")
+    assert "dynamic_import" in text
+    assert "동적 import" in text
+
+
+def test_grep_risks_dynamic_import():
+    m = _bundle()
+    import tempfile, pathlib
+    with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+        f.write("mod = __import__('os')\n")
+        fname = f.name
+    hits = m._grep_risks(fname)
+    pathlib.Path(fname).unlink()
+    assert any(h["risk_id"] == "dynamic_import" for h in hits)
+
+
+def test_grep_risks_with_windows_style_path(tmp_path):
+    # _grep_risks는 subprocess 호출 없이 pathlib.read_text를 사용하므로
+    # 경로에 공백이 있어도 (Windows: "C:\Program Files\tool.cmd") 문제없이 동작.
+    # POSIX: "/Applications/My Tool/run" 도 동일.
+    m = _bundle()
+    py_file = tmp_path / "my module.py"
+    py_file.write_text("result = eval(user_input)\n", encoding="utf-8")
+    hits = m._grep_risks(str(py_file))
+    assert any(h["risk_id"] == "eval_usage" for h in hits)
+
+
 def test_load_returns_none_when_missing(tmp_path):
     m = _bundle()
     assert m.load(str(tmp_path)) is None

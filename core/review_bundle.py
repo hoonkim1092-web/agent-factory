@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -70,6 +69,7 @@ def _ast_risks(file_path: str) -> list[dict]:
         ("os.system($A)", "os_system"),
         ("eval($A)", "eval_usage"),
         ("exec($A)", "exec_usage"),
+        ("__import__($A)", "dynamic_import"),
     ]
     hits: list[dict] = []
     try:
@@ -99,6 +99,17 @@ def build(changed_files: list[str], workspace: str | None = None) -> dict:
     return bundle
 
 
+_RISK_DESC: dict[str, str] = {
+    "subprocess_usage": "subprocess 호출 — 사용자 입력이 args에 직접 전달되면 command injection 위험",
+    "shell_true": "shell=True — 문자열 명령어 조립 시 injection 가능, list 형태로 교체 권장",
+    "shlex_split": "shlex.split — 신뢰 불가 입력에 사용 시 토큰 분리 오동작 가능",
+    "os_system": "os.system — subprocess.run 으로 교체 권장, 반환값 무시됨",
+    "eval_usage": "eval() — 임의 코드 실행 위험, 사용 맥락 필수 검토",
+    "exec_usage": "exec() — 임의 코드 실행 위험, 사용 맥락 필수 검토",
+    "dynamic_import": "동적 import — 외부 입력 경로 주입 시 모듈 실행 위험",
+}
+
+
 def save(bundle: dict, workspace: str) -> Path:
     """bundle을 .af_review_queue/review_bundle.md 에 저장 후 경로 반환."""
     queue_dir = Path(workspace) / ".af_review_queue"
@@ -112,7 +123,11 @@ def save(bundle: dict, workspace: str) -> Path:
             lines.append("_(no risks detected)_\n")
         else:
             for r in risks:
-                lines.append(f"- L{r['line']} `{r['risk_id']}`: `{r['text']}`\n")
+                desc = _RISK_DESC.get(r["risk_id"], r["risk_id"])
+                lines.append(
+                    f"- L{r['line']} `{r['risk_id']}` — {desc}. "
+                    f"코드: `{r['text'].strip()[:120]}`\n"
+                )
     out.write_text("".join(lines), encoding="utf-8")
     return out
 
