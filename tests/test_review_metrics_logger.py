@@ -221,7 +221,7 @@ def test_post_agent_record_writes_metric(tmp_path, monkeypatch):
     fake_rg._VERDICT_RE = re.compile(r"Verdict:\s*(\w+)", re.IGNORECASE)
     fake_rg._VERDICT_HEADER_RE = re.compile(r"## Verdict\s*\n\s*(\w+)", re.IGNORECASE)
     fake_rg.record_review_done = lambda *a, **kw: None
-    sys.modules["scripts.review_gate"] = fake_rg
+    monkeypatch.setitem(sys.modules, "scripts.review_gate", fake_rg)
 
     # Stub test_gap_analyzer
     import types as _types
@@ -234,10 +234,10 @@ def test_post_agent_record_writes_metric(tmp_path, monkeypatch):
     fake_tga.changed_files_from_git = lambda ws: []
     fake_tga.git_diff = lambda *a, **kw: ""
     fake_tga.analyze_diff = lambda **kw: _FakeReport()
-    sys.modules["scripts.test_gap_analyzer"] = fake_tga
+    monkeypatch.setitem(sys.modules, "scripts.test_gap_analyzer", fake_tga)
 
     # Stub metrics logger in sys.modules so monkeypatch takes effect
-    sys.modules["scripts.review_metrics_logger"] = rml
+    monkeypatch.setitem(sys.modules, "scripts.review_metrics_logger", rml)
 
     payload = {
         "tool_input": {"subagent_type": "af-critic"},
