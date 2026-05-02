@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-02 — Research Router **Phase 1a 구현 완료** ✅. af-test-runner 107/107 PASS, af-critic BLOCK 1건 수정 완료, af-cross-review BLOCK 1건 수정 완료. **다음 작업: T3 exe 빌드 + GitHub Release** — 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-02 (저녁) — **oh-my-openagent AST/LSP 비교 분석 commit**. cross-review verdict=WARN (advisory, BLOCK 없음). WARN 사항 4건은 다음 세션 인계 (§5.4 측정 재현가능성 보강). **다음 작업: 배선 검증 + 측정 정확도 향상 → plan 진입** — 브랜치: `2026-04-14-build-diet`
 
 ---
 
@@ -113,9 +113,38 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 
 ---
 
-## 🔄 다음 세션 — AST/LSP 인벤토리 재분석 (Fresh start)
+## ✅ AST/LSP 인벤토리 재분석 완료 (2026-05-02 본 세션)
 
-**왜 새로 시작하는가**: 본 세션의 OpenCode 분석 시도가 cross-review BLOCK 3회 받음. baseline 가정이 실제 코드와 계속 어긋나서 finding이 동형으로 재발생. 부분 수정으로 메우려 했으나 §5.1·§5.3 내부 모순까지 추가됨. **분석 자체를 처음부터 다시** 하는 것이 깔끔.
+### 결과
+- **분석 대상 정정**: SST OpenCode → **oh-my-openagent** (`code-yeongyu/oh-my-openagent`, 이전 oh-my-opencode)
+- **신규 문서**: `docs/참고/2026-05-02-oh-my-openagent-ast-lsp-comparison.md` (10개 섹션, 권고 0개, 분석/권고 분리)
+- **인벤토리 6개 질문 답변 완료** + **효과 측정 6개 데이터 수집** (Q-A~Q-F)
+- **cross-review verdict=WARN** (BLOCK 0건, advisory 10건)
+
+### 핵심 사실 (실측 기반)
+1. review_bundle risk_id 인용률: 1/46 review (~2%)
+2. test_gap_analyzer 호출: hook_events.log 0건
+3. LSPCheckHook 호출: 0건 (pyright 미설치 + AGENT_LSP_CHECK 미설정)
+4. 3-tier verdict: 51 PASS / 1 BLOCK ≈ 98% PASS
+5. review_metrics.jsonl 부재 (Phase 3.5 미작동)
+6. oh-my-openagent: AST 2개 + LSP 6개 모두 AI tool로 직접 노출 (pull 모델, push는 본 fetch 범위에서 미확인)
+
+### ⚠️ 다음 세션 인계 — WARN 4건 정정 후 보강 commit
+
+cross-review WARN 사항 (advisory):
+- **§5.4 Q-F 정정**: "데이터 수집 미발생" → "52건 시도 / 0건 성공 = silent failure 또는 hook 미배선" (try/except: pass 봉합 + post_agent_record가 settings.local.json:188-208에 직접 등록 안 됨)
+- **§5.4 Q-D vs Q-B 모순**: af-test-runner 14 PASS인데 test_gap_analyzer 0건 호출 → wiring 끊김 명시 필요
+- **데이터 소스 / 추출 명령 명시**: 각 Q-A~Q-F에 사용한 grep/awk 명령 인라인으로 박아 재현가능성 확보
+- **post_edit_enqueue 552건 fake event 비중 분리 측정**
+
+### 다음 행동 (다음 세션)
+1. 분석 문서 §5.4 정정 commit (WARN 해소)
+2. 배선 검증 측정 (post_edit_enqueue 호출자 / post_agent_record 호출자 / metrics silent failure 원인)
+3. 측정 결과 위에서 plan 작성 (별도 docs/plans/ 파일)
+
+---
+
+## 📦 보존: SST OpenCode 분석 (이전 세션)
 
 ### 다음 세션 시작 시 — 분석 전에 반드시 먼저 읽을 파일 (가정 금지, 실측만)
 
