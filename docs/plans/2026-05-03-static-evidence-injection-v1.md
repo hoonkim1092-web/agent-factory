@@ -117,6 +117,12 @@ for r in risks:
 - `_RISK_DESC` 길이 제한: 각 설명 120자 이내
 - text 길이 제한: 120자 clip (긴 라인 대응)
 - 기존 테스트 `tests/test_review_bundle.py`: 출력 형식 assertion 수정 필요
+- **`dynamic_import` 엔진 불일치 수정**: `_grep_risks`에는 존재하지만 `_ast_risks` patterns에는 누락됨. `_ast_risks` patterns 리스트에 `("__import__($A)", "dynamic_import")` 추가하여 두 engine 결과 통일. ast-grep-py 설치 환경에서도 `dynamic_import` hit 발생하도록 수정.
+
+  ```python
+  # _ast_risks patterns에 추가
+  ("__import__($A)", "dynamic_import"),
+  ```
 
 ### §4.3 review_metrics.jsonl schema 확장
 
@@ -163,14 +169,15 @@ bundle_path = Path(workspace) / ".af_review_queue" / "review_bundle.md"
 if bundle_path.exists():
     evidence_present = True
     bundle_text = bundle_path.read_text(encoding="utf-8")
-    # L{n} `{risk_id}` 패턴 카운트 = items
-    evidence_items = bundle_text.count("`") // 2  # 근사치 — 정확 카운트는 regex
-    # reviewer output에서 "file.py:숫자" 패턴 grep
+    # - L{n} `{risk_id}` 행 수 = items (save() 포맷 기준, backtick 4개/행이므로 count//2 사용 불가)
     import re
+    evidence_items = len(re.findall(r'- L\d+ `[^`]+`', bundle_text))
+    # reviewer output에서 "file.py:숫자" 패턴 grep
+    # 주의: absolute path의 leading `/`는 word boundary로 제거됨 — 상대경로가 대부분이므로 허용
     evidence_cited = len(re.findall(r'\b\w[\w/.-]+\.py:\d+', content))
 ```
 
-- `evidence_items` 정밀 카운트: `re.findall(r'- L\d+ `[^`]+`', bundle_text)` 길이
+- `evidence_items`: `- L\d+ \`[^\`]+\`` 정규식으로 save() 출력 행 수 정확 카운트 (backtick count//2는 항목당 4개 구조로 2배 과산정 발생하므로 사용 안 함)
 - `evidence_cited`: reviewer output(`content`)에서 `\b\w[\w/.-]+\.py:\d+` 패턴 매치 수
   - false positive 허용 (v1은 측정 시작이 목적, precision 튜닝은 v2)
 - Phase 3.5 `append_metric()` 호출 시 3개 파라미터 전달
@@ -183,7 +190,7 @@ if bundle_path.exists():
 |------|---------|---------|
 | `.claude/settings.local.json` | 추가 | PostToolUse Agent 매처 + post_agent_record |
 | `.claude/settings.local.template.json` | 추가 | 동일 (상대경로) |
-| `core/review_bundle.py` | 수정 | `save()` 출력 형식, `_RISK_DESC` dict 추가 |
+| `core/review_bundle.py` | 수정 | `save()` 출력 형식, `_RISK_DESC` dict 추가, `_ast_risks`에 `dynamic_import` 패턴 추가 |
 | `scripts/review_metrics_logger.py` | 수정 | `append_metric()` 파라미터 3개 추가, JSONL row 확장 |
 | `scripts/hook_runner.py` | 수정 | `_post_agent_record()` evidence 수집 + 전달 |
 | `tests/test_review_bundle.py` | 수정 | 출력 형식 assertion 갱신 |
