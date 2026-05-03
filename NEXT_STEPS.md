@@ -1,7 +1,8 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-03 — **Static Evidence Injection v1 완료** (`f66c5353`, 3-Tier PASS). 다음: Research Router Phase 1b+(P2) dry-run 또는 v1 KPI 측정 대기. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-03 — **Research Router Phase 1b 완료** (`b605db22`, 3-Tier PASS). 다음: v1 KPI 측정 또는 Phase 2 라벨 명시화. 브랜치: `2026-04-14-build-diet`
+> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 `AF_SKIP_PROVIDER=codex`로 실행 (Claude 단독 검증)
 
 ---
 
@@ -154,6 +155,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 40 | docs: oh-my-openagent 분석문서 WARN 6건 정정 (M1/M2 권고어 교체, M3/L1/L2/L3 라인범위 수정) | `e71a24cf` | 2026-05-03 |
 | 41 | docs(plan): Static Evidence Injection v1 플랜 작성 + 2라운드 cross-review PASS (BLOCK 2건 수정) | `aac4a784` | 2026-05-03 |
 | 42 | feat(v1): Static Evidence Injection v1 구현 — 배선 복구(PostToolUse Agent 매처) + review_bundle 형식 개선(_RISK_DESC) + review_metrics schema 확장(evidence_present/items/cited) + evidence_cited 측정 — 3-Tier PASS, review_metrics.jsonl 기록 확인 | `f66c5353` | 2026-05-03 |
+| 43 | feat(phase1b-research-router): Research Router Phase 1b — `core/web_search.py` content_full+excerpt 분리 + tavily_extract() 신규 + `core/researcher.py` _build_source_pack() §6.2 정규화 + `core/research_verifier.py` 4-metric(citation_validity/claim_source_ratio/primary_source_ratio/source_pack_chars) + quality-tier gap 3종 + tests/test_research_router_phase1b.py (137 tests) — af-critic PASS / af-cross-review PASS (AF_SKIP_PROVIDER=codex, codex usage limit) | `b605db22` | 2026-05-03 |
 
 ### 🔍 검증 중 발견 (별도 트랙)
 
