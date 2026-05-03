@@ -1,38 +1,51 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v2 작성·커밋 (`f8be0794`)** — Critic-only BLOCK 1건 잔존 (cross-review provider error). 다음 세션: v3 정정 (review_metrics_logger 회귀 명세 추가) + cross-review 재실행. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v3 작성** (Critic 8건 전수 반영, design+코드 변경 6개 파일로 범위 확장). cross-review 재실행 대기 — codex usage limit 회복 시점(2026-05-05 15:37 KST) 이후. 브랜치: `2026-04-14-build-diet`
 > ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 `AF_SKIP_PROVIDER=codex`로 실행 (Claude 단독 검증)
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Phase 2 v3 정정
+## 🔥 다음 세션 즉시 진입 — v3 cross-review 재실행 + 코드 변경 6개 파일 일괄 적용
 
-**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v2, `f8be0794`)
+**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v3, 573줄, 2026-05-03 작성)
 
-### v2 BLOCK 사유 (Critic 단독 — Cross-review provider error)
+### v3 변경 요약 (Critic 8건 전수 반영)
 
-**진짜 BLOCK 1건** (코드 직접 검증 완료):
-- **§5에 `scripts/review_metrics_logger.py` 누락** — 본 파일 line 31-34의 `_FINDING_RE`:
-  ```python
-  _FINDING_RE = re.compile(
-      r'\[(?:ACCEPT[★*]?|WARN|BLOCK|REJECTED)\]',
-      re.IGNORECASE,
-  )
-  ```
-  v2 §5.1이 도입하는 `[ACCEPT-ADV]`와 forward-looking `[HOLD]`가 alternation에 없음 → `findings_count` 0으로 무너짐 → §9.1 운영 검증(WARN 비율 측정)이 self-defeat.
-- **테스트 영향**: `tests/test_review_metrics_logger.py:34-57` 회귀 위험.
+v2(`f8be0794`)에 대한 Critic 단독 review (`docs/reviews/2026-05-03-210936-2026-05-03-phase2-verdict-label-spec-design-review.md`) 8건 모두 반영:
 
-### v3 정정 작업
-1. `docs/2026-05-03-phase2-verdict-label-spec.md` §5에 `scripts/review_metrics_logger.py` 추가:
-   - `_FINDING_RE` alternation에 `ACCEPT-ADV|HOLD` 추가 (대안: 라벨 추출을 ACCEPT prefix로 일반화 `\[ACCEPT(?:-ADV)?[★*]?\]`)
-   - `tests/test_review_metrics_logger.py` 신규 테스트 케이스 spec
-2. cross-review 재실행 (codex usage limit 회복 후) — 본 1건 외 7건이 진짜 발견인지 확인
-3. v3 PASS 후 `.claude/agents/af-cross-review.md` Step 5 적용 진입
+| # | 핵심 | v3 처리 |
+|---|------|--------|
+| 1 (High) | `_FINDING_RE` 회귀 | §5.6 신설 — `\[(?:ACCEPT(?:[★*]|-ADV)?\|WARN\|BLOCK\|REJECTED\|BONUS)\]` (HOLD 제외, 검증 통과) |
+| 2 (High) | `hook_runner.py:344` silent fallback 무력화 | §5.5 신설 — `_log_hook_event("verdict_fallback")` 추가 (Phase 2 차단 격상, F2 이관 취소) |
+| 3 (High) | `_VERDICT_RE` collision | §5.3 신설 — verdict fence + `_extract_verdict_from_content()` wrapper |
+| 4 (Medium) | `[HOLD]` prompt drift | §4.5 / §5.1 변경 7 삭제 — Phase 3로 완전 이관 (정의도 빼기) |
+| 5 (Medium) | severity 누락 매핑 | §4.3에 fail-safe BLOCK default 행 추가 + §7.1 시나리오 9 |
+| 6 (HOLD) | BONUS 헤더 미정의 | §5.1 변경 6 — `[BONUS]`를 finding 라벨로 승격, 헤더 형식 명시 |
+| 7 (Medium) | round 전환 시나리오 누락 | §7.5에 R3~R6 4건 추가 |
+| 8 (Low) | 라벨 마이그레이션 가이드 | §11 1줄 + §10 F7 신설 |
 
-### Critic 발견 8건 추적 (1건 외 7건은 다음 세션 재확인)
-- #1 [High] `_FINDING_RE` 회귀 ✅ 사실 확인됨 (이번 세션)
-- #2~#8: 본 응답 발췌 외 — `019f2a91-...` 트랜스크립트 또는 다음 cross-review에서 회수
+### v3 commit 후 다음 단계 (codex 회복 후)
+
+1. **af-cross-review 재실행** (codex usage limit 회복: 2026-05-05 15:37 KST). v2의 Cross-review provider error 회수.
+2. **PASS 시 코드+에이전트 변경 일괄 적용** (6개 파일):
+   - `.claude/agents/af-cross-review.md` Step 5 (§5.1 변경 1~8)
+   - `scripts/review_gate.py` (§5.3 wrapper)
+   - `scripts/hook_runner.py` (§5.5 fallback 가시화)
+   - `scripts/review_metrics_logger.py` (§5.6 정규식)
+   - `tests/test_review_metrics_logger.py` (§5.6 신규 케이스 — `[ACCEPT-ADV]` / `[BONUS]` / 혼합)
+   - `tests/test_review_gate.py` (§7.2 collision C1~C5)
+3. Tier 2~3 검증 후 commit.
+
+### Critic 발견 8건 회수 완료
+- #1 [High] `_FINDING_RE` 회귀 ✅ v3 §5.6 반영
+- #2 [High] silent fallback ✅ v3 §5.5 반영
+- #3 [High] `_VERDICT_RE` collision ✅ v3 §5.3 반영
+- #4 [Medium] HOLD prompt drift ✅ v3 §4.5 Phase 3 완전 이관
+- #5 [Medium] severity 누락 ✅ v3 §4.3 fail-safe
+- #6 [HOLD] BONUS 헤더 ✅ v3 §5.1 변경 6
+- #7 [Medium] round 전환 ✅ v3 §7.5 R3~R6
+- #8 [Low] 마이그레이션 ✅ v3 §11 + §10 F7
 
 ---
 
@@ -190,6 +203,7 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 43 | feat(phase1b-research-router): Research Router Phase 1b — `core/web_search.py` content_full+excerpt 분리 + tavily_extract() 신규 + `core/researcher.py` _build_source_pack() §6.2 정규화 + `core/research_verifier.py` 4-metric(citation_validity/claim_source_ratio/primary_source_ratio/source_pack_chars) + quality-tier gap 3종 + tests/test_research_router_phase1b.py (137 tests) — af-critic PASS / af-cross-review PASS (AF_SKIP_PROVIDER=codex, codex usage limit) | `b605db22` | 2026-05-03 |
 | 44 | docs(phase2-design): v1 작성 — verdict 라벨 명시화 설계 (BLOCK/WARN/PASS 매핑 + [HOLD] 처리 + [ACCEPT-ADV] 분리). Critic 4건+Cross-review WARN 산출 (provider error로 critic 단독 집계의 ACCEPT 처리). | `5c77af16` | 2026-05-03 |
 | 45 | docs(phase2-design): v2 재설계 — Cross-review WARN 2건 수용(§4.2/§4.3/§5.1 모순 통합 + §7.3 실제 no-fire 경로 재추적) + deep-think 6건(G3 HOLD 입구→Phase 3 이관, G4 parser silent fallback, §4.6 labeling-only 명시, §5.1 severity·scope-creep 호환·HOLD 템플릿, §7.2 parser collision 불변, §9 롤백 계획). Critic 단독 BLOCK 1건 (review_metrics_logger 회귀) — v3 정정 대기. | `f8be0794` | 2026-05-03 |
+| 46 | docs(phase2-design): v3 — Critic 8건 전수 반영 (§5.6 review_metrics_logger _FINDING_RE 확장 / §5.5 hook_runner verdict_fallback 가시화 / §5.3 review_gate verdict fence + last-match wrapper / §4.3 severity 누락 BLOCK fail-safe / §4.5 HOLD 라벨 Phase 3 완전 이관 / §5.1 변경 6 BONUS 헤더 형식 / §7.5 round 전환 R3~R6 / §11 라벨 마이그레이션). design-only → design+code 6개 파일로 범위 확장. cross-review 재실행 대기 (codex 회복 후). | (커밋) | 2026-05-03 |
 
 ### 🔍 검증 중 발견 (별도 트랙)
 
@@ -464,16 +478,19 @@ python start_db.py agent-factory
       결정 대기: 측정 시점, known-bug 샘플 출처(`docs/code_review/code-review.md` 활용 검토)
       의존: Phase 1a 완료 후
 
-- [~] **Phase 2** — 최종 판정 라벨 명시화 BLOCK/WARN/PASS (위험: 中) — **설계 v2 작성 완료, BLOCK 1건 잔존**
-      v1 (`5c77af16`, 2026-05-03): Critic 4건 + Cross-review WARN 산출 (Aggregation Rule 2 ACCEPT)
-      v2 (`f8be0794`, 2026-05-03): v1 BLOCK 2건 정정 + deep-think 6건 추가 — Critic 단독 BLOCK 1건 (review_metrics_logger 회귀, cross-review provider error)
-      v3 작업: §5에 `scripts/review_metrics_logger.py` 추가, `_FINDING_RE`에 ACCEPT-ADV/HOLD 매칭 명세 + cross-review 재실행
+- [~] **Phase 2** — 최종 판정 라벨 명시화 BLOCK/WARN/PASS (위험: 中) — **설계 v3 작성 완료, cross-review 재실행 대기**
+      v1 (`5c77af16`, 2026-05-03): Critic 4건 + Cross-review WARN 산출
+      v2 (`f8be0794`, 2026-05-03): v1 BLOCK 2건 정정 + deep-think 6건 추가 — Critic 단독 BLOCK (cross-review provider error)
+      v3 (커밋 대기, 2026-05-03): Critic 8건 전수 반영 — design+코드 변경 6개 파일로 범위 확장
       목적: CLAUDE.md 정책 3개(BLOCK 정책, WARN-only no-fire, max_rounds=2)가 의지하는 라벨 안정화
-      결정 사항 (v2):
+      결정 사항 (v3):
         - 단독 [ACCEPT] Critical → BLOCK 유지 (§4.7)
-        - [HOLD] any severity → WARN, 입구 조건은 Phase 3 이관 (§4.5, §6 G3)
+        - [HOLD] 라벨은 finding-level에서도 제거, Phase 3 완전 이관 (§4.5)
+        - [BONUS] finding 라벨로 승격, 헤더 = `#### N. [BONUS] [Severity] 제목` (§5.1 변경 6)
         - Medium → WARN (BLOCK 임계 없음, §4.8)
-        - Phase 2 = labeling only (PASS/WARN 함수적 동등, §4.6)
+        - severity 누락 → BLOCK fail-safe default (§4.3)
+        - Phase 2 = labeling + 측정/파서 정합 (§4.6) — 메트릭/파서 fail-safe 포함
+      v3 commit 후 단계: cross-review 재실행 (codex 회복 후) → PASS 시 코드+에이전트 6개 파일 일괄 적용
 
 - [ ] **Phase 3** — Peer verification (외부 CLI 상호 fact-check) (위험: 中~高)
       목적: dedup 한계 보완 (다른 표현의 같은 결함, 한쪽만 본 거짓 양성)
