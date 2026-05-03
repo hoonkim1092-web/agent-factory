@@ -1,15 +1,51 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v5 작성 완료** — v4 cross-review BLOCK 8건(Critical 1+High 4+Medium 3) 정정 (Claude 단독 검증). **다음 세션: (A) v5 cross-review 재실행** (codex 회복 후) 또는 (B) v5 PASS 가정하 §8.2 코드 적용. 브랜치: `2026-04-14-build-diet`
-> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 `AF_SKIP_PROVIDER=codex`로 실행 (Claude 단독 검증) — v5는 사용자 결정으로 Claude 단독 cross-review에 의존
-> ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재. 다른 PC에서 시작 시 v4 review가 없을 수 있음. 본 NEXT_STEPS의 "v5 작업 명세"가 self-contained 인계.
+> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v6 작성 완료** — v5 cross-review WARN advisory 4건 정정 (Claude 단독 검증, BLOCK 사유 없음). **다음 세션: §8.2 코드 적용 진입 (7파일 단일 commit) 또는 codex 회복 후 v6 cross-review 재검증.** 브랜치: `2026-04-14-build-diet`
+> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 `AF_SKIP_PROVIDER=codex`로 실행 (Claude 단독 검증) — v5/v6 모두 Claude 단독 cross-review에 의존
+> ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재. 다른 PC에서 시작 시 v5 review가 없을 수 있음. 본 NEXT_STEPS의 "v6 작업 명세"가 self-contained 인계.
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Phase 2 v5 (BLOCK 해제 후 차후 단계)
+## 🔥 다음 세션 즉시 진입 — Phase 2 v6 §8.2 코드 적용
 
-**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v5, 826줄)
+**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v6, ~840줄)
+**v6 검증 상태**: 본 세션 cross-review 2회 진행 — v4 BLOCK 8건 → v5 정정 → v5 cross-review WARN(advisory 4건) → v6 정정. 모든 검증은 Claude 단독(codex usage limit). v6는 BLOCK 사유 없음 — §8.2 코드 적용 진입 가능.
+
+### v6 advisory 4건 정정 요약 (v5 cross-review WARN)
+
+| # | Severity | 영역 | v6 정정 |
+|---|---------|------|---------|
+| 1 | Medium | §5.3 line 297 "disjoint" prose 과장 | "start-disjoint"로 한정 + 다른 start 동시 매칭 last-position 안전 명시 |
+| 2 | Medium | §5.4 line 391 hook_events.log payload `\|` risk | §5.4에 "payload `\|` 미포함 보장" 1줄 + §10 F10 신규 |
+| 3 | Low | §11 line 790 v3 row audit hybrid | v3 row freeze (6파일) + 후속 변경은 v3→v4 row |
+| 4 | Low | §5.4 try/except fallback silent | §9.2에 "0건 측정 = import 실패 가능성 포함" + import sanity 명령 |
+
+### 다음 세션 — §8.2 코드 적용 단계
+
+**v6 → 코드 적용 7개 파일 (변경 spec 확정)**:
+
+| # | 파일 | 변경 내역 | spec 참조 |
+|---|------|----------|----------|
+| 1 | `.claude/agents/af-cross-review.md` Step 5 | 6개 변경 (§5.1 변경 1~8) | §5.1 |
+| 2 | `scripts/review_gate.py` | `_VERDICT_FENCE_RE` 정규식 + `_extract_verdict_from_content` wrapper (last-position stable sort) | §5.3 |
+| 3 | `scripts/hook_runner.py` | wrapper 호출 + `_log_hook_event("verdict_fallback", subagent_type, 0/1, error=...)` 4-arg | §5.5 |
+| 4 | `scripts/check_pending_review.py` | `from scripts.hook_runner import _log_hook_event` + 1회-알림 분기 안 + `_log_hook_event("warn_only_suppressed", str(round_count), 0, error=json.dumps({...}))` 4-arg | §5.4 |
+| 5 | `scripts/review_metrics_logger.py` | `_FINDING_RE` 확장 + scope-creep 주석 (fence 외부 유지) | §5.6 |
+| 6 | `tests/test_review_metrics_logger.py` | finding 라벨 케이스 + false-positive 회귀 (시나리오 5/6) | §5.6 / §7.6 |
+| 7 | `tests/test_review_gate.py` | C1~C6 collision 회귀 + workspace path 단위 테스트 | §7.2 |
+
+**적용 절차** (§8.2):
+1. `python3 scripts/blast_radius.py --json --files <list>` 사전 출력 → commit message에 첨부
+2. 7파일 단일 commit
+3. 자동 3-tier 검증 발화 (af-test-runner → af-critic → af-cross-review)
+4. BLOCK 시 정정 후 재commit; PASS/WARN 시 push
+
+---
+
+## 📦 보존 — Phase 2 v5 advisory 사유 (참고)
+
+**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v5, 826줄, commit `81eb2a7d`)
 **v5 검증 상태**: 본 세션 v4 cross-review BLOCK 8건 발견 (Critical 1 + High 4 + Medium 3, 모두 ACCEPT, Critic 단독 — codex provider error). 사용자 결정으로 Claude 단독 검증 진행 후 v5 작성.
 
 ### v5 정정 사항 요약 (v4 cross-review BLOCK 8건)
