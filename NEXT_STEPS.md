@@ -1,8 +1,40 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-03 — **Research Router Phase 1b 완료** (`b605db22`, 3-Tier PASS). 다음: v1 KPI 측정 또는 Phase 2 라벨 명시화. 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v2 작성·커밋 (`f8be0794`)** — Critic-only BLOCK 1건 잔존 (cross-review provider error). 다음 세션: v3 정정 (review_metrics_logger 회귀 명세 추가) + cross-review 재실행. 브랜치: `2026-04-14-build-diet`
 > ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 `AF_SKIP_PROVIDER=codex`로 실행 (Claude 단독 검증)
+
+---
+
+## 🔥 다음 세션 즉시 진입 — Phase 2 v3 정정
+
+**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v2, `f8be0794`)
+
+### v2 BLOCK 사유 (Critic 단독 — Cross-review provider error)
+
+**진짜 BLOCK 1건** (코드 직접 검증 완료):
+- **§5에 `scripts/review_metrics_logger.py` 누락** — 본 파일 line 31-34의 `_FINDING_RE`:
+  ```python
+  _FINDING_RE = re.compile(
+      r'\[(?:ACCEPT[★*]?|WARN|BLOCK|REJECTED)\]',
+      re.IGNORECASE,
+  )
+  ```
+  v2 §5.1이 도입하는 `[ACCEPT-ADV]`와 forward-looking `[HOLD]`가 alternation에 없음 → `findings_count` 0으로 무너짐 → §9.1 운영 검증(WARN 비율 측정)이 self-defeat.
+- **테스트 영향**: `tests/test_review_metrics_logger.py:34-57` 회귀 위험.
+
+### v3 정정 작업
+1. `docs/2026-05-03-phase2-verdict-label-spec.md` §5에 `scripts/review_metrics_logger.py` 추가:
+   - `_FINDING_RE` alternation에 `ACCEPT-ADV|HOLD` 추가 (대안: 라벨 추출을 ACCEPT prefix로 일반화 `\[ACCEPT(?:-ADV)?[★*]?\]`)
+   - `tests/test_review_metrics_logger.py` 신규 테스트 케이스 spec
+2. cross-review 재실행 (codex usage limit 회복 후) — 본 1건 외 7건이 진짜 발견인지 확인
+3. v3 PASS 후 `.claude/agents/af-cross-review.md` Step 5 적용 진입
+
+### Critic 발견 8건 추적 (1건 외 7건은 다음 세션 재확인)
+- #1 [High] `_FINDING_RE` 회귀 ✅ 사실 확인됨 (이번 세션)
+- #2~#8: 본 응답 발췌 외 — `019f2a91-...` 트랜스크립트 또는 다음 cross-review에서 회수
+
+---
 
 ---
 
@@ -156,6 +188,8 @@ python start_db.py agent-factory   # Claude Code 메모리 + DB 동기화
 | 41 | docs(plan): Static Evidence Injection v1 플랜 작성 + 2라운드 cross-review PASS (BLOCK 2건 수정) | `aac4a784` | 2026-05-03 |
 | 42 | feat(v1): Static Evidence Injection v1 구현 — 배선 복구(PostToolUse Agent 매처) + review_bundle 형식 개선(_RISK_DESC) + review_metrics schema 확장(evidence_present/items/cited) + evidence_cited 측정 — 3-Tier PASS, review_metrics.jsonl 기록 확인 | `f66c5353` | 2026-05-03 |
 | 43 | feat(phase1b-research-router): Research Router Phase 1b — `core/web_search.py` content_full+excerpt 분리 + tavily_extract() 신규 + `core/researcher.py` _build_source_pack() §6.2 정규화 + `core/research_verifier.py` 4-metric(citation_validity/claim_source_ratio/primary_source_ratio/source_pack_chars) + quality-tier gap 3종 + tests/test_research_router_phase1b.py (137 tests) — af-critic PASS / af-cross-review PASS (AF_SKIP_PROVIDER=codex, codex usage limit) | `b605db22` | 2026-05-03 |
+| 44 | docs(phase2-design): v1 작성 — verdict 라벨 명시화 설계 (BLOCK/WARN/PASS 매핑 + [HOLD] 처리 + [ACCEPT-ADV] 분리). Critic 4건+Cross-review WARN 산출 (provider error로 critic 단독 집계의 ACCEPT 처리). | `5c77af16` | 2026-05-03 |
+| 45 | docs(phase2-design): v2 재설계 — Cross-review WARN 2건 수용(§4.2/§4.3/§5.1 모순 통합 + §7.3 실제 no-fire 경로 재추적) + deep-think 6건(G3 HOLD 입구→Phase 3 이관, G4 parser silent fallback, §4.6 labeling-only 명시, §5.1 severity·scope-creep 호환·HOLD 템플릿, §7.2 parser collision 불변, §9 롤백 계획). Critic 단독 BLOCK 1건 (review_metrics_logger 회귀) — v3 정정 대기. | `f8be0794` | 2026-05-03 |
 
 ### 🔍 검증 중 발견 (별도 트랙)
 
@@ -430,11 +464,16 @@ python start_db.py agent-factory
       결정 대기: 측정 시점, known-bug 샘플 출처(`docs/code_review/code-review.md` 활용 검토)
       의존: Phase 1a 완료 후
 
-- [ ] **Phase 2** — 최종 판정 라벨 명시화 BLOCK/WARN/PASS (위험: 中)
+- [~] **Phase 2** — 최종 판정 라벨 명시화 BLOCK/WARN/PASS (위험: 中) — **설계 v2 작성 완료, BLOCK 1건 잔존**
+      v1 (`5c77af16`, 2026-05-03): Critic 4건 + Cross-review WARN 산출 (Aggregation Rule 2 ACCEPT)
+      v2 (`f8be0794`, 2026-05-03): v1 BLOCK 2건 정정 + deep-think 6건 추가 — Critic 단독 BLOCK 1건 (review_metrics_logger 회귀, cross-review provider error)
+      v3 작업: §5에 `scripts/review_metrics_logger.py` 추가, `_FINDING_RE`에 ACCEPT-ADV/HOLD 매칭 명세 + cross-review 재실행
       목적: CLAUDE.md 정책 3개(BLOCK 정책, WARN-only no-fire, max_rounds=2)가 의지하는 라벨 안정화
-      산출물: 매핑 규칙 + Step 4 출력 블록 갱신 + (필요시) `review_gate.py` 파서 갱신
-      결정 대기: 단독 [ACCEPT] Critical 처리(BLOCK vs WARN), [HOLD] 처리, Medium 임계
-      의존: Phase 1a 1주일 운영 데이터 관찰 후
+      결정 사항 (v2):
+        - 단독 [ACCEPT] Critical → BLOCK 유지 (§4.7)
+        - [HOLD] any severity → WARN, 입구 조건은 Phase 3 이관 (§4.5, §6 G3)
+        - Medium → WARN (BLOCK 임계 없음, §4.8)
+        - Phase 2 = labeling only (PASS/WARN 함수적 동등, §4.6)
 
 - [ ] **Phase 3** — Peer verification (외부 CLI 상호 fact-check) (위험: 中~高)
       목적: dedup 한계 보완 (다른 표현의 같은 결함, 한쪽만 본 거짓 양성)
