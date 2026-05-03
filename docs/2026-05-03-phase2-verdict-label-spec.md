@@ -1,14 +1,13 @@
-# Phase 2: 판정 라벨 명시화 설계 (재설계 v6)
+# Phase 2: 판정 라벨 명시화 설계 (재설계 v7)
 
-작성일: 2026-05-03 (v6 — v5 cross-review WARN advisory 4건 정정, BLOCK 사유 없음)
+작성일: 2026-05-03 (v7 — v6 cross-review BLOCK 7건 중 false positive 3건 dismiss + valid 4건 정정)
 대상 브랜치: `2026-04-14-build-diet`
 선행 완료: Phase 1a (`a8025d25` — af-cross-review.md Step 1+2+3 프롬프트 개선)
 선행 검토:
-  - v2 (`f8be0794`)에 대한 Critic Review — 8건 (Cross-review provider error로 미수행)
-  - v3 (`d9cc3304`)에 대한 Critic Review — Critic 단독 BLOCK 8건 + Missing 권장 4건
-  - v4 (`2174812c`)에 대한 Final Design Review — Critic 단독 8건 ACCEPT [Critical 1 + High 4 + Medium 3]
-  - v5 (`81eb2a7d`)에 대한 cross-review (Claude 단독, codex usage limit) — **WARN** (BLOCK 사유 없음, advisory 4건 [Medium 2 + Low 2])
-  - **v6 (본 문서)**: v5 advisory 4건 정정. Cross-review 재실행은 codex 회복(2026-05-05 15:37 KST) 후 권장
+  - v2/v3/v4: 이력 §11 참조
+  - v5 (`81eb2a7d`) cross-review (Claude 단독, codex usage limit) — **WARN** (advisory 4건)
+  - v6 (`f230eb56`) cross-review (Claude 단독) — **BLOCK 7건** 보고. 단 실측 검증 결과 **3건은 stale baseline false positive** (§11 v5→v6 row·§10 F10·"4건 정정" 헤더 모두 v6 본문에 실재 — line 775/832/836-839 grep으로 직접 반증)
+  - **v7 (본 문서)**: false positive 3건 dismiss with evidence trail + valid 4건(High 1·Medium 2·Low 1) 정정. Path (a) 채택 (Finding #6) — minimal 정리 후 §8.2 진입 의도
 
 ---
 
@@ -33,7 +32,7 @@ CLAUDE.md는 다음 3개 정책에서 verdict 라벨을 직접 의존한다.
 - **감사 추적**: 잡음 많은 리뷰와 깨끗한 리뷰가 메트릭에서 구분됨
 - **미래 정책 hook**: "WARN 3라운드 연속 → BLOCK 승격" 같은 정책의 토대
 
-→ Phase 2는 **labeling 정확화**가 본질이다(§4.6). 단, **labeling 변화가 메트릭/파서를 통과해 효과를 검증할 수 있어야 substantive하다** — 이를 위해 v3은 코드 변경 3건(`review_metrics_logger.py`, `hook_runner.py`, `review_gate.py`)을 Phase 2 차단 의존성으로 격상했고, v4는 운영 메트릭 sink 결손(G11)을 추가로 식별해 `check_pending_review.py`까지 4건의 .py 변경으로 확장했으며, **v5는 v4 §5.4의 `_log_hook_event` 시그니처 모순(v3 BLOCK 재도입)과 sink 폭발을 정정**한다 — 코드 4건 + 테스트 2건 + agent md 1건 = **7파일 단일 commit** (§5.3/§5.4/§5.5/§5.6 + tests 2 + af-cross-review.md, §8.2).
+→ Phase 2는 **labeling 정확화**가 본질이다(§4.6). 단, **labeling 변화가 메트릭/파서를 통과해 효과를 검증할 수 있어야 substantive하다** — 이를 위해 v3은 코드 변경 3건(`review_metrics_logger.py`, `hook_runner.py`, `review_gate.py`)을 Phase 2 차단 의존성으로 격상했고, v4는 운영 메트릭 sink 결손(G11)을 추가로 식별해 `check_pending_review.py`까지 4건의 .py 변경으로 확장했으며, v5는 v4 §5.4의 `_log_hook_event` 시그니처 모순(v3 BLOCK 재도입)과 sink 폭발을 정정했다. **v6은 v5 cross-review WARN advisory 중 #1·#2·#3·#4를 prose 정정으로 흡수(코드 변경 spec 무변경, 7파일 commit 범위 불변). v7은 v6 cross-review BLOCK 7건 중 false positive 3건 dismiss + valid 1건(payload split invariant 회귀 보호)으로 코드 commit 범위가 7→8파일(`tests/test_hook_runner.py` 추가)로 확장된다.** 최종: 코드 4건 + 테스트 3건 + agent md 1건 = **8파일 단일 commit** (§5.3/§5.4/§5.5/§5.6 + tests 3 + af-cross-review.md, §8.2).
 
 ---
 
@@ -392,6 +391,7 @@ if round_count >= 1 and last_summary and not last_summary.get("has_block", True)
 - 호출 약속: 모든 caller (§5.4 / §5.5)는 4-arg 형식 사용. JSON-직렬화 가능 페이로드는 `error=json.dumps({...})`로 전달.
 - §5.4·§5.5 정합: 두 caller 모두 동일 시그니처 사용 — 문서 내부 일관성 보장.
 - **payload `|` 미포함 보장 (v6 정정 — v5 advisory #2)**: `hook_events.log` line format = `f"{ts}|{builtin}|{file}|{exit_code}|{error}\n"`이므로 payload value에 `|`가 들어가면 split 결과가 깨진다. 본 spec의 caller 페이로드는 hardcoded 키·값(agent 이름, round_count 정수, JSON 키)만 사용하므로 안전. **미래 caller가 사용자 입력·파일명·외부 데이터를 payload에 넣을 경우 `\|` escape 또는 JSON-only line format 전환 의무** (Phase 3+ 후보 — §10 F10).
+- **split invariant 회귀 보호 (v7 정정 — v6 cross-review #3 valid)**: spec 단언 ("hardcoded 페이로드만 사용"), prose만으로는 미래 caller drift를 falsifiable하게 차단할 수 없음 — v3~v5 라운드의 일관 원칙(measurable 단언) 적용. **`tests/test_hook_runner.py` 신규 + `test_log_hook_event_split_invariant()` 1건 의무**: 호출 후 `hook_events.log` 마지막 라인을 `line.rstrip("\n").split("|")`로 분할 → 정확히 5 segment 보장. §5.4 caller(`warn_only_suppressed`)와 §5.5 caller(`verdict_fallback`) 둘 다 회귀 케이스. 이로써 §8.2 적용 파일 표가 7→**8파일**로 확장(`tests/test_hook_runner.py` 추가).
 
 **호환성**: 기존 1회-알림은 그대로 유지. 추가된 1줄은 silent (`hook_events.log` append만). 정상 흐름 비파괴.
 
@@ -557,6 +557,7 @@ verdict 라인 형식: `## Tier 3 판정: WARN [scope-creep]` (fence 내부)
 | C4 | fence 부재 + 단일 `Verdict: BLOCK` (af-critic 형식) | verdict=block (호환성) |
 | C5 | fence 부재 + verdict 라인 0개 | `_extract_verdict_from_content() → None` → caller가 silent fallback("pass") + `_log_hook_event("verdict_fallback")` (§5.5 G4 — detection-only) |
 | **C6 (v4 신규)** | **본문에 fence 2쌍 (다중/중첩) — 첫 쌍 내부 `## PASS` + 둘째 쌍 내부 `## BLOCK`** | **verdict=pass — 첫 쌍만 인식, 둘째 쌍은 무시 (Missing #4)** |
+| **C7 (v7 신규)** | **fence 부재 + 정상 verdict 라인 `## PASS` + 그 아래 trailing 본문에 verdict 키워드 (예: "verdict: BLOCK 키워드를 본문에 인용함")** | **verdict=block — last-position 알고리즘이 trailing 캡처 (알려진 한계 — fence 사용으로 차단 권장). v6 cross-review #5가 식별한 LLM drift 한계 케이스 — last-position 휴리스틱이 정규화된 만큼 한계도 spec-level에 명시** |
 
 ### §7.3 WARN-only no-fire 동작 검증 (실제 코드 경로 기반)
 
@@ -661,7 +662,7 @@ v5 코드 변경 7개 파일은 **단일 commit + 3-tier 전체 + `blast_radius.
 
 **대안 — 2-commit 분리 전략 (보류)**: af-cross-review.md를 먼저 commit (Tier 1 — 단순 에이전트 설정) → 새 fence로 다음 라운드 cross-review가 출력 → scripts/*.py 적용 commit. 그러나 첫 commit과 둘째 commit 사이에 prompt와 parser가 비정합 상태(파서 v3, prompt v5)가 되며, 단일 commit 전략은 폴백 경로로 동등 안전성 확보 → **단일 commit 전략 채택**.
 
-**적용 파일 (7개)**:
+**적용 파일 (8개 — v7에서 7→8 확장, `tests/test_hook_runner.py` 추가)**:
 
 | # | 파일 | 변경 위치 | spec 참조 | Tier (blast_radius) |
 |---|------|----------|----------|---------------------|
@@ -671,7 +672,8 @@ v5 코드 변경 7개 파일은 **단일 commit + 3-tier 전체 + `blast_radius.
 | 4 | `scripts/check_pending_review.py` | warn_only_suppressed log | §5.4 | Tier 3 |
 | 5 | `scripts/review_metrics_logger.py` | `_FINDING_RE` 확장 + scope-creep 주석 | §5.6 | Tier 2~3 |
 | 6 | `tests/test_review_metrics_logger.py` | finding 라벨 케이스 추가 | §5.6 | Tier 1~2 |
-| 7 | `tests/test_review_gate.py` | C1~C6 collision 케이스 | §7.2 | Tier 1~2 |
+| 7 | `tests/test_review_gate.py` | C1~C7 collision 케이스 (v7: C7 추가) | §7.2 | Tier 1~2 |
+| 8 (v7 신규) | `tests/test_hook_runner.py` | `test_log_hook_event_split_invariant()` — hook_events.log line이 정확히 5 segment로 split되는가 회귀 보호 | §5.4 v7 정정 | Tier 1~2 |
 
 **검증 게이트**: 단일 commit이 Tier 3 trigger 시 af-test-runner → af-critic → af-cross-review 3-tier 전체 발화. 같은 commit message에 `blast_radius.py --json --files <list>` 사전 출력을 첨부하여 분류 근거를 검증 가능하게 한다.
 
@@ -773,10 +775,11 @@ pytest tests/test_review_metrics_logger.py -v
 | **F8 (v4 신규 — Missing #2)** | **`AF_GATE_ALLOW_VERDICT_BLOCK` 환경 변수 + fence 외부 잔존 인용 처리** | Medium | Phase 3 — gate-level fail-safe 도입과 함께. 사용자가 fence 외부 인용을 의도적으로 사용하는 케이스(예: 문서 내부에 verdict 사례 표기)에서 BLOCK 우회 옵션 필요 시. |
 | **F9 (v4 신규 — Missing #3)** | **마이그레이션 윈도우 — v2 라벨 PR과 v3/v4 라벨 PR 공존 시 `compute_report()` 일관성** | Medium | v3/v4 정규식이 v2 라벨(`[ACCEPT]`/`[ACCEPT★]`/`[WARN]`/`[BLOCK]`/`[REJECTED]`)을 포함하므로 호환됨. 다만 1주 운영 후 "신/구 라벨 혼합 review" 빈도 측정 → 0건이면 본 항목 closed. ≥ 1건이면 신규 라벨로 일괄 재라벨링 검토 (F7과 연계). |
 | **F10 (v6 신규 — v5 advisory #2)** | **`hook_events.log` payload `\|` escape 또는 JSON-only line 전환** | Low | 현재 caller 페이로드는 hardcoded 키·값으로 안전. 미래 caller가 사용자 입력/파일명/외부 데이터를 payload에 넣을 때 `\|` escape 또는 line format을 JSON-only로 전환. 운영 1주 후 caller 풀 점검 시 결정. |
+| **F11 (v7 신규 — v6 cross-review false positive trail)** | **af-cross-review subagent prompt에 "Critical/High BLOCK 주장 전 grep baseline 검증 의무" 1줄 추가** | Medium | v6 cross-review가 §11 v5→v6 row(line 832), §10 F10(line 775) 등 본문 grep으로 즉시 반증 가능한 항목을 "부재" BLOCK으로 잘못 보고. memory `feedback_analysis_doc_baseline_must_be_real_code.md` 원칙 cross-review 적용. Phase 3 prompt 보강. |
 
 ---
 
-## §11 v2 → v3 → v4 → v5 → v6 변경 요약 (감사 추적용)
+## §11 v2 → v3 → v4 → v5 → v6 → v7 변경 요약 (감사 추적용)
 
 ### v2 → v3
 
@@ -838,3 +841,28 @@ pytest tests/test_review_metrics_logger.py -v
 | §11 v3 row audit hybrid | v3 row 안에 "v5 정정 후 재집계는 7파일" 괄호 끼워넣음 — snapshot freeze 원칙 위배 | **v3 row freeze (6파일)** + 후속 변경은 v3→v4 row 참조로 정리 | Advisory #3 [Low] |
 | §9.2 trigger #1 silent skip 가시성 | `_log_hook_event` import 실패 시 silent skip → suppression 0건 측정이 false negative 가능 | **§9.2에 "0건 측정은 import 실패 가능성도 포함" 1줄 + 트리거 발화 전 import sanity 명령** | Advisory #4 [Low] |
 | 코드 변경 파일 수 | 7개 (정합) | **7개 유지** — design-only 정정 (advisory만, 코드 변경 spec 무변경) | — |
+
+### v6 → v7 (cross-review BLOCK 7건 분류 — false positive 3건 dismiss + valid 4건 정정)
+
+**메타 (Critic Finding #6 — path 분기)**: v5 cross-review가 WARN(advisory만)이었음에도 v6/v7로 churn — CLAUDE.md "WARN은 advisory, 자동 수정 의무 없음" 정책상 자동 의무 없음. **사용자 명시 결정으로 path (a) "minimal 정리 후 §8.2 진입"** 채택. v7은 본 churn cycle을 종결하고 §8.2 8파일 단일 commit 진입을 목표.
+
+**False positive 3건 (실측 반증 — dismiss with evidence)**:
+
+| Critic # | 주장 | 실측 반증 (v6 본문 grep) | 판정 |
+|----------|------|--------------------------|------|
+| #1 [Critical] | "§11 v5→v6 audit row 부재" | `grep "v5 → v6" line 832` + 5-row 표 (4 advisory + 코드 변경 파일 수) line 832-840 실재 | **DISMISS** — review가 stale 파일을 봤거나 §11 미스캔. v6 본문에 row 명백히 존재 |
+| #2 [High] | "§10 F10 dead forward-reference" | `grep "F10" line 775` 신규 row 실재. line 394의 forward-reference도 line 775 row를 정확히 가리킴 | **DISMISS** — v6에서 §10 F10이 §5.4 본문 인용과 §10 표 등록이 동시 신설됨 |
+| #4 [Medium] | "헤더 '4건 정정' vs 실제 #3·#4 누락" | line 836-839 "정정" 마커 4건 모두 명시 — Advisory #1(§5.3) / #2(§5.4) / #3(§11 row freeze) / #4(§9.2 silent skip) | **DISMISS** — v6 §11 v5→v6 row가 4건 모두 정정 trail로 명시 |
+
+**Valid 4건 정정**:
+
+| 항목 | v6 (`f230eb56`) | v7 (본 문서) | Critic 출처 |
+|------|----------------|-------------|------------|
+| §5.4 payload split invariant 회귀 보호 | prose 단언만 ("hardcoded 페이로드 안전") — falsifiable test 부재 | **`tests/test_hook_runner.py` 신설 + `test_log_hook_event_split_invariant()` 1건 의무** + §5.4 본문에 split invariant 단언 추가 | High #3 |
+| §7.2 last-position 한계 케이스 | C1~C6만 — trailing prose drift 미검증 | **C7 신규** — fence 부재 + 정상 verdict 라인 + 그 아래 trailing 본문 verdict 키워드 → 알려진 한계 (fence 사용으로 차단 권장) | Medium #5 |
+| §1 line 36 narrative | "v5는 v4 §5.4 ... 정정한다" v5 시점 | **v6/v7 1줄 추가** — v6 advisory 흡수 + v7 split invariant로 7→8파일 확장 명시 | Low #7 |
+| 메타 — CLAUDE.md WARN 정책과 churn | 미언급 | **§11 v6→v7 헤더에 path (a) 채택 명시 + 본 churn cycle 종결 의도** | Medium #6 |
+
+**False positive trail의 의미**: v6 cross-review가 stale baseline을 봤다는 신호 — 본 spec memory 원칙(`feedback_analysis_doc_baseline_must_be_real_code.md`)이 cross-review에도 적용됨. 미래 라운드에서 reviewer가 baseline을 grep으로 직접 검증하지 못하면 동형 오류 반복 가능. **Phase 3 후보 §10 F11**: cross-review subagent prompt에 "Critical/High BLOCK 주장 전 grep으로 1차 baseline 검증 의무" 1줄 추가 검토.
+
+**코드 변경 파일 수**: v6 7개 → **v7 8개** (`tests/test_hook_runner.py` 추가).
