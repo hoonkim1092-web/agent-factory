@@ -1,9 +1,12 @@
-# Phase 2: 판정 라벨 명시화 설계 (재설계 v3)
+# Phase 2: 판정 라벨 명시화 설계 (재설계 v4)
 
-작성일: 2026-05-03 (v3 — Critic 8건 전수 반영 + 코드 변경 범위 확장)
+작성일: 2026-05-03 (v4 — v3 Critic 8건 전수 반영, BLOCK 해제용 정정)
 대상 브랜치: `2026-04-14-build-diet`
 선행 완료: Phase 1a (`a8025d25` — af-cross-review.md Step 1+2+3 프롬프트 개선)
-선행 검토: 본 문서 v2 (`f8be0794`)에 대한 Final Design Review (`docs/reviews/2026-05-03-210936-2026-05-03-phase2-verdict-label-spec-design-review.md`) — Critic 단독 8건 (Cross-review provider error로 미수행, Phase 2 commit 전 재실행 필수 — §8)
+선행 검토:
+  - v2 (`f8be0794`)에 대한 Critic Review — 8건 (Cross-review provider error로 미수행)
+  - v3 (`d9cc3304`)에 대한 Critic Review (`docs/reviews/2026-05-03-224512-2026-05-03-phase2-verdict-label-spec-design-review.md`, untracked, PC-local) — Critic 단독 BLOCK 8건 + Missing 권장 4건 (Cross-review provider error)
+  - **v4 cross-review 재실행 필수** (codex usage limit 회복: 2026-05-05 15:37 KST 이후) — Phase 2 commit 전 차단 의존성 (§8)
 
 ---
 
@@ -28,7 +31,7 @@ CLAUDE.md는 다음 3개 정책에서 verdict 라벨을 직접 의존한다.
 - **감사 추적**: 잡음 많은 리뷰와 깨끗한 리뷰가 메트릭에서 구분됨
 - **미래 정책 hook**: "WARN 3라운드 연속 → BLOCK 승격" 같은 정책의 토대
 
-→ Phase 2는 **labeling 정확화**가 본질이다(§4.6). 단, **labeling 변화가 메트릭/파서를 통과해 효과를 검증할 수 있어야 substantive하다** — 이를 위해 v3은 코드 변경 3건(`review_metrics_logger.py`, `hook_runner.py`, `review_gate.py`)을 Phase 2 차단 의존성으로 격상한다(§5.3/§5.5/§5.6).
+→ Phase 2는 **labeling 정확화**가 본질이다(§4.6). 단, **labeling 변화가 메트릭/파서를 통과해 효과를 검증할 수 있어야 substantive하다** — 이를 위해 v3은 코드 변경 3건(`review_metrics_logger.py`, `hook_runner.py`, `review_gate.py`)을 Phase 2 차단 의존성으로 격상했고, **v4는 운영 메트릭 sink 결손(G11)을 추가로 식별해 `check_pending_review.py`까지 4건의 .py 변경**으로 확장한다(§5.3/§5.4/§5.5/§5.6 + 테스트 2건 = 7파일 단일 commit, §8.2).
 
 ---
 
@@ -123,18 +126,20 @@ T3가 WARN을 단 한 번도 발화하지 않았음 = 갭 확인.
 
 ## §3 문제 진단
 
-| ID | 갭 | 위치 | 영향 | v3 처리 |
+| ID | 갭 | 위치 | 영향 | v4 처리 |
 |----|-----|------|------|--------|
 | G1 | T3가 WARN을 발화하지 않음 | af-cross-review.md Step 5 매핑 | advisory 신호 손실 | §5.1 |
 | G2 | `[ACCEPT]` 라벨이 BLOCK용/Advisory용 두 의미로 중첩 | af-cross-review.md:283/302 | LLM/리뷰어 혼동 | §5.1 |
 | G3 | `[HOLD]` finding 입구 조건 미정의 | Step 3/4 어디에도 진입 조건 없음 | dead label | **Phase 3로 완전 이관 — v3에서 정의도 빼기** (§5.1 / §6) |
-| G4 | parser silent fallback ("pass") | hook_runner.py:344 | 형식 위반 시 조용히 PASS, §9.2 롤백 트리거 falsifiable 무효화 | **Phase 2 차단 의존성으로 격상** — `_log_hook_event("verdict_fallback")` 추가 (§5.5) |
+| G4 | parser silent fallback ("pass") | hook_runner.py:344 | 형식 위반 시 조용히 PASS | **detection-only 해소** (`_log_hook_event("verdict_fallback")`, §5.5) — gate-level 차단은 Phase 3 이관 (v4 정정: v3의 "fail-safe" 표현 강등 — §4.6) |
 | G5 | v1/v2 `§4.2/§4.3/§5.1` 다중 테이블 | (v1·v2 문서) | 구현 혼란 | v2 §4.3 단일 정규 테이블로 정리 완료 |
 | G6 | v1 §7.3이 잘못된 코드 경로(`is_gate_blocked()`) 인용 | (v1 문서) | no-fire 보장 불완전 | v2 §7.3 정정 완료 |
-| **G7** | **`_VERDICT_RE.search()` collision — 본문에 prior round 판정 인용 시 캡처 가능** | review_gate.py:25-28 | LLM 자기 통제 100% 의존, spec defect | **Phase 2 차단 — verdict fence 도입** (§5.1 변경 8 / §5.3) |
-| **G8** | **`_FINDING_RE` 회귀 — `[ACCEPT-ADV]` 미매칭** | review_metrics_logger.py:31-34 | findings_count=0, §9.1 운영 검증 self-defeat | **Phase 2 차단 — 정규식 확장** (§5.6) |
-| **G9** | **severity 누락 매핑 결정 불가** | §4.3 (매핑 입력) | LLM이 severity 잊을 시 silent miscategorization | **§4.3에 fail-safe default 행** (§4.3 / §7.1 시나리오 9) |
-| **G10** | **BONUS finding의 출력 헤더 라벨 미정의** | §5.1 (출력 형식) | 검증 시나리오 입력 명세 불완전 | **§5.1 변경 6에 BONUS 헤더 규칙 명시** |
+| G7 | `_VERDICT_RE.search()` collision — 본문에 prior round 판정 인용 시 캡처 가능 | review_gate.py:25-28 | LLM 자기 통제 100% 의존 | **Phase 2 차단 — verdict fence 도입** (§5.1 변경 8) + **두 정규식 last-position 결합 알고리즘 명시** (§5.3, v4 정정) |
+| G8 | `_FINDING_RE` 회귀 — `[ACCEPT-ADV]` 미매칭 | review_metrics_logger.py:31-34 | findings_count=0, §9.1 운영 검증 self-defeat | **정규식 확장** (§5.6) |
+| G9 | severity 누락 매핑 결정 불가 | §4.3 (매핑 입력) | LLM이 severity 잊을 시 silent miscategorization | **§4.3 fail-safe default + [REJECTED] verdict-neutral 우선 단서** (§4.3 / §7.1 시나리오 11, v4 정정) |
+| G10 | BONUS finding의 출력 헤더 라벨 미정의 | §5.1 (출력 형식) | 검증 시나리오 입력 명세 불완전 | **§5.1 변경 6에 BONUS 헤더 규칙 + REJECTED severity 생략 허용 명시** (v4 정정) |
+| **G11 (v4 신규)** | **§9.2 롤백 트리거 #1 측정 방법 미정의 — `verdict_fallback`과 no-fire 오작동은 직접 인과 관계 없음** | check_pending_review.py:126-138 | 롤백 트리거 falsifiable 불가, §9.1 운영 검증 self-defeat | **§5.4 신규 — `_log_hook_event("warn_only_suppressed")` 1줄 추가** (§5.4 / §9.2 트리거 #1 재정의) |
+| **G12 (v4 신규)** | **`_SCOPE_CREEP_RE` 전역 검색 vs §5.1 변경 5 fence-내부 한정 정책 충돌** | review_metrics_logger.py:_SCOPE_CREEP_RE | 메트릭 손상 또는 정책 모호 | **§5.6에 정책 명시 — scope-creep는 verdict 라벨이 아니므로 fence 외부 검색 유지** (단순성) |
 
 ---
 
@@ -181,23 +186,25 @@ BLOCK > WARN > PASS
 | `[ACCEPT-ADV]` | Critical / High | (해당 없음 — Critical/High은 ACCEPT/ACCEPT★ 경로) |
 | `[ACCEPT-ADV]` | Medium | **WARN** |
 | `[ACCEPT-ADV]` | Low | **WARN** |
-| `[REJECTED]` | any | (verdict-neutral — 무시) |
+| `[REJECTED]` | any (severity **생략 허용**) | (verdict-neutral — 무시 — fail-safe보다 우선) |
 | `[BONUS]` | any | **WARN** |
-| **(severity 누락 — fail-safe default)** | (지정 안 됨) | **BLOCK** |
+| **(severity 누락 — fail-safe default, `[REJECTED]` 외 라벨 한정)** | (지정 안 됨) | **BLOCK** |
 | (발견 없음) | — | **PASS** |
 
 **§4.3 변경 (G9 해소)**: severity bracket이 누락된 finding은 BLOCK 안전 default로 처리한다. Critical/High 가능성이 있는 항목을 silent miscategorization로 잃지 않기 위함. LLM 출력 정확성에 의존하지 않는 fail-safe.
 
+**§4.3 v4 정정 (Critic #2)**: `[REJECTED]` finding은 verdict-neutral이 fail-safe BLOCK보다 **우선**한다. 즉 `#### 1. [REJECTED] 제목` (severity 누락)은 어느 카운트에도 들어가지 않는다. 입구 조건은 §5.1 변경 6에서 "REJECTED는 severity 생략 허용, 그 외 5종 라벨(`[ACCEPT]`/`[ACCEPT★]`/`[ACCEPT-ADV]`/`[BONUS]`)은 severity 의무"로 명시한다. 이는 Codex가 false positive로 인정한 항목 때문에 BLOCK이 발생하는 의도-반전을 차단한다.
+
 ### §4.4 집계 규칙 (우선순위 내림차순)
 
 ```
+0. [REJECTED] finding은 어느 카운트에도 들어가지 않는다 (verdict-neutral, severity 무관).
 1. BLOCK 기여 finding ≥ 1   → 최종 verdict = BLOCK
 2. (BLOCK 없음) WARN 기여 finding ≥ 1   → 최종 verdict = WARN
 3. (BLOCK·WARN 둘 다 없음)   → 최종 verdict = PASS
 ```
 
-REJECTED는 어느 카운트에도 들어가지 않는다 (verdict-neutral).
-severity 누락 finding은 §4.3 fail-safe로 BLOCK 1건이 카운트된다.
+severity 누락 finding은 (§4.3 단서대로 `[REJECTED]`가 아닌 한) §4.3 fail-safe로 BLOCK 1건이 카운트된다.
 
 ### §4.5 [HOLD] 처리 정책 (v3 — Phase 3 완전 이관)
 
@@ -215,12 +222,14 @@ v2까지는 finding-level `[HOLD]` forward-looking 정의를 두었으나, **pro
 - ✅ verdict 라인의 **글자**가 바뀐다 (PASS → WARN, advisory가 있을 때).
 - ✅ `state.reviews[T3].verdict`의 **값**이 바뀐다 (PASS → WARN).
 - ✅ **v3 추가** — `_FINDING_RE`가 새 라벨을 인식해 메트릭이 정상 계측된다.
-- ✅ **v3 추가** — `_VERDICT_RE` collision이 fence로 차단된다.
-- ✅ **v3 추가** — verdict 파서 silent fallback이 hook 이벤트로 가시화된다.
+- ✅ **v3 추가** — `_VERDICT_RE` collision이 fence + last-position 결합으로 차단된다 (§5.3, v4 정정).
+- ✅ **v3 추가** — verdict 파서 silent fallback이 hook 이벤트로 **가시화**된다 (detection-only — gate-level 차단은 Phase 3, v4 정정).
+- ✅ **v4 추가** — WARN-only no-fire suppression 발화가 별도 sink(`warn_only_suppressed`)로 가시화되어 §9.2 트리거가 falsifiable해진다 (§5.4).
 - ❌ gate 차단 빈도는 바뀌지 않는다 (둘 다 차단 안 함).
 - ❌ no-fire 발화 빈도는 바뀌지 않는다 (둘 다 has_block=False).
+- ❌ verdict 파서 형식 위반 → gate-level fail-safe 차단은 Phase 2 비목표 (§6 O5와 정합 — Phase 3에서 알고리즘과 함께 도입).
 
-→ **Phase 2는 정책 변화가 아닌 labeling+측정 정확화다.** 운영 risk가 매우 낮음 (코드 변경 3건은 모두 추가 진단/방어 — 기존 정상 경로 비파괴).
+→ **Phase 2는 정책 변화가 아닌 labeling+측정 정확화다.** 운영 risk가 매우 낮음 (코드 변경은 모두 추가 진단/방어 — 기존 정상 경로 비파괴). G4·G11는 **detection fail-safe** (사후 가시화)이며 gate-level fail-safe는 아니다.
 
 ### §4.7 [ACCEPT] Critical 단독 → BLOCK 유지
 
@@ -257,8 +266,10 @@ WARN-only no-fire가 Medium 폭탄으로 인한 무한루프를 차단한다 (§
 5. **scope-creep / INCOMPLETE 마커 호환성 명시**: 현재 verdict 라인에 붙는 `[scope-creep]` `[INCOMPLETE]` 마커는 WARN/BLOCK/PASS 어느 라벨에도 부착 가능하다는 불변 명시. (단, fence 내부 한정 — §5.1 변경 8.)
 6. **finding 헤더 형식 의무화**: `#### N. [라벨] [Severity] 제목`.
    - 라벨: `[ACCEPT]` / `[ACCEPT★]` / `[ACCEPT-ADV]` / `[REJECTED]` / `[BONUS]` 5종 (G10 해소 — `[BONUS]` finding 라벨 승격).
-   - Severity: `[Critical]` / `[High]` / `[Medium]` / `[Low]` 4종 — **BONUS 포함 의무**.
-   - **severity 누락 시**: §4.3 fail-safe로 BLOCK 처리됨 — Step 5 출력 형식에 "severity 누락은 BLOCK으로 안전 처리됨" 명시 (G9 해소).
+   - Severity: `[Critical]` / `[High]` / `[Medium]` / `[Low]` 4종.
+   - **Severity 의무 라벨**: `[ACCEPT]` / `[ACCEPT★]` / `[ACCEPT-ADV]` / `[BONUS]` 4종 (BONUS 포함).
+   - **Severity 생략 허용 라벨**: `[REJECTED]` 1종 (verdict-neutral이므로 severity 정보 가치 없음 — v4 정정).
+   - **severity 누락 시 (의무 라벨에서)**: §4.3 fail-safe로 BLOCK 처리됨 — Step 5 출력 형식에 "severity 누락은 BLOCK으로 안전 처리됨 (`[REJECTED]` 제외)" 명시 (G9 해소).
 7. **(v3 삭제)** ~~HOLD 라벨 finding-level 정의~~ — §4.5에 따라 Phase 3로 완전 이관. Step 5에 "HOLD 라벨 사용 금지 (Phase 2 범위)" 1줄 추가.
 8. **(v3 신규) verdict fence 도입**: 최종 판정은 반드시 fence 내부에 위치한다.
    ```
@@ -273,54 +284,145 @@ WARN-only no-fire가 Medium 폭탄으로 인한 무한루프를 차단한다 (§
 
 이미 BLOCK/WARN/PASS 직접 출력. Critic은 자체 판단으로 라벨 결정 — finding-level taxonomy 없음.
 
-### §5.3 `scripts/review_gate.py` (변경) — v3 추가
+### §5.3 `scripts/review_gate.py` (변경) — v3 추가, v4 정정
 
 **v3 변경 사유 (G7 해소)**: `_VERDICT_RE.search()` 첫 매칭 정책이 본문 인용을 잘못 캡처하는 collision 위험이 있음.
 
+**v4 정정 (Critic #1, #6, Missing 1·4)**: 두 정규식의 결합 알고리즘과 wrapper 호출자가 v3에서 모호했음. last-position 결합 + 단일 호출자(=`hook_runner.py`) 명시.
+
 **구체 변경**:
-- `_extract_verdict_from_content(content: str) -> str | None` 신규 함수.
-  - 1순위: fence 내부(`<!-- final-verdict-start -->` ~ `<!-- final-verdict-end -->`)에서만 `_VERDICT_RE`/`_VERDICT_HEADER_RE` 매칭.
-  - 2순위(폴백): fence 부재 시 기존 동작 유지 — 단, **last-match 우선** (`re.findall()` 후 마지막 항목)으로 정책 전환. 본문 인용은 보통 위쪽에 있고 verdict 라인은 마지막에 있다.
+- `_extract_verdict_from_content(content: str) -> str | None` 신규 함수 (`scripts/review_gate.py`에 정의).
+  - **1순위 — fence 내부**: 첫 번째 `<!-- final-verdict-start -->`부터 첫 번째 `<!-- final-verdict-end -->`까지의 부분 문자열만 추출 (다중/중첩 fence 발견 시 첫 쌍만 인식 — Missing #4 해소). 추출된 부분 문자열에 대해 `_VERDICT_RE.findall()` + `_VERDICT_HEADER_RE.finditer()` 모두 실행 → **두 패턴의 모든 매칭을 (start_position, group(1).lower()) 튜플로 합쳐 last-position 선택** (단일 패스, ambiguity 0).
+  - **2순위 — fence 부재 폴백**: 전체 content에 대해 동일 알고리즘 수행 — `_VERDICT_RE.finditer()` + `_VERDICT_HEADER_RE.finditer()` 매칭을 (start_position, lowered_label) 튜플로 합쳐 **start_position이 가장 큰 것** 1건 선택. 두 패턴이 같은 위치에 동시 매칭하는 케이스는 spec상 발생하지 않으나 충돌 시 `_VERDICT_RE` 우선(콜론 폼이 더 명시적). 본문 인용은 보통 위쪽에 있고 verdict 라인은 마지막에 있으므로 last-position이 정상 verdict를 선택한다.
+  - **3순위 — 매칭 0건**: `None` 반환 (caller가 fallback 정책 결정 — §5.5 참조).
   - 호환성: af-critic.md, af-test-runner.md는 fence 미사용 → 폴백 경로로 정상 동작.
-- `is_gate_blocked()` / `record_review_done()` / `_compute_round_summary()` 등은 `_extract_verdict_from_content()`를 사용하도록 통합.
+- **단일 호출자**: `_extract_verdict_from_content()`는 `scripts/hook_runner.py:_post_agent_record`에서만 호출한다 (현재 `hook_runner.py:339-344`의 verdict 파싱 블록을 wrapper 호출로 교체). `is_gate_blocked()` / `record_review_done()` / `_compute_round_summary()`는 본문 파싱을 하지 않으며 — 이미 `record_review_done()`이 verdict 인자를 caller로부터 받는 구조 — wrapper와 무관함을 v4에서 명확히 한다 (Critic #6 해소).
+- **`record_review_done()` 인자 신뢰 관계** (Missing #1 해소): wrapper 신설은 `record_review_done()`의 verdict 인자 의미를 변경하지 않는다. 즉 caller(`hook_runner.py`)가 wrapper로 추출한 verdict를 그대로 인자로 전달; `record_review_done()`은 이 인자를 그대로 신뢰해 `state["reviews"][agent]["verdict"]`에 기록한다. fence/non-fence 출처 추적은 wrapper 호출 시점의 `_log_hook_event("verdict_fallback", ...)` (§5.5)로만 이뤄진다.
 - 기존 동작 보존: `_VERDICT_RE`/`_VERDICT_HEADER_RE` 패턴 자체는 무변경.
 
-**테스트 추가 의무** (§7.2):
-- fence 내부 매칭 케이스
-- 본문 인용 + fence 외부 verdict 라인 → fence 내부만 캡처
-- fence 부재 + 단일 verdict 라인 → 정상 캡처
-- fence 부재 + 본문에 "이전 라운드 판정: BLOCK" + 마지막 라인 verdict=PASS → last-match 정책으로 PASS
+**의사 코드** (v4 알고리즘 명세):
 
-### §5.4 `scripts/check_pending_review.py` (변경 없음)
-
-WARN-only no-fire가 `last_summary.has_block`만 본다. WARN/PASS 둘 다 has_block=False → 동일 동작.
-
-### §5.5 `scripts/hook_runner.py` (변경) — v3 추가
-
-**v3 변경 사유 (G4 해소 — Phase 후속 이관 → Phase 2 차단 의존성으로 격상)**: silent "pass" fallback이 Phase 2 효과(verdict 라인 글자 변경)를 LLM 출력 형식 표류 시 침묵 무력화. §9.2 롤백 트리거가 falsifiable하지 않게 됨.
-
-**구체 변경** (`hook_runner.py:343-346`):
 ```python
-# 변경 전
-hm = _VERDICT_HEADER_RE.search(content)
-verdict = hm.group(1).lower() if hm else "pass"
+# scripts/review_gate.py
+_VERDICT_FENCE_RE = re.compile(
+    r"<!--\s*final-verdict-start\s*-->(.*?)<!--\s*final-verdict-end\s*-->",
+    re.DOTALL | re.IGNORECASE,
+)
 
-# 변경 후
-hm = _VERDICT_HEADER_RE.search(content)
-if hm:
-    verdict = hm.group(1).lower()
-else:
-    verdict = "pass"
-    _log_hook_event(workspace, "verdict_fallback", {
-        "agent": agent,
-        "round": round_count,
-        "content_head": content[:200],
-    })
+def _extract_verdict_from_content(content: str) -> str | None:
+    fence = _VERDICT_FENCE_RE.search(content)
+    target = fence.group(1) if fence else content   # 1순위 vs 2순위 분기
+    matches: list[tuple[int, str]] = []
+    for m in _VERDICT_RE.finditer(target):
+        matches.append((m.start(), m.group(1).lower()))
+    for hm in _VERDICT_HEADER_RE.finditer(target):
+        matches.append((hm.start(), hm.group(1).lower()))
+    if not matches:
+        return None
+    matches.sort(key=lambda t: t[0])     # 위치 오름차순
+    return matches[-1][1]                # last-position
 ```
 
-`_log_hook_event()`는 `hook_events.log`에 append. `review_metrics_logger`가 별도 sink로 fallback 발생률을 집계할 수 있도록 함.
+**테스트 추가 의무** (§7.2):
+- C1 fence 내부 매칭 케이스
+- C2 본문 인용 + fence 외부 verdict 라인 → fence 내부만 캡처
+- C3 fence 부재 + `_VERDICT_RE`(본문 인용 BLOCK) + `_VERDICT_HEADER_RE`(마지막 라인 PASS 헤더) 두 정규식이 다른 위치에서 동시 매칭 → last-position인 PASS 헤더 선택 (v4 정정 — 두 정규식 동시 매칭 케이스 명시)
+- C4 fence 부재 + 단일 `Verdict: BLOCK` (af-critic 형식) → block (호환성)
+- C5 fence 부재 + verdict 라인 0개 → `None` → caller가 silent fallback("pass") + `_log_hook_event("verdict_fallback")` (§5.5 G4)
+- **C6 (v4 신규)** 다중/중첩 fence — 본문에 fence 2쌍이 있을 때 첫 쌍 내부만 인식, 둘째 쌍은 무시 (Missing #4 해소)
 
-**호환성**: 정상 verdict 출력 케이스는 동작 무변경. fallback이 발화되는 시점에만 1줄 로그 추가.
+### §5.4 `scripts/check_pending_review.py` (변경) — v4 신규 (Critic #4, G11 해소)
+
+**v3 입장**: "변경 없음. WARN-only no-fire가 `last_summary.has_block`만 본다. WARN/PASS 둘 다 has_block=False → 동일 동작."
+
+**v4 변경 사유 (G11)**: §9.2 롤백 트리거 #1("WARN-only no-fire가 의도와 달리 작동")은 v3 시점에서 falsifiable하지 않다. `verdict_fallback` 이벤트(§5.5)와 no-fire 오작동은 직접 인과 관계가 없으며, `check_pending_review.py:126-138`의 no-fire 분기에는 telemetry sink가 부재 — 발화 빈도를 측정할 수 없다.
+
+**구체 변경** (`check_pending_review.py:126-138`):
+
+WARN-only suppression 분기 진입 시점에 1줄 hook event 기록. 기존 1회-알림 로그(`warn_only_notified_at`)는 사용자 가시 메시지(stdout)만이며 시계열 메트릭 sink가 아니므로 별도 sink가 필요하다.
+
+```python
+# 변경 전 (현재 상태, line 126-138)
+if round_count >= 1 and last_summary and not last_summary.get("has_block", True):
+    if not data.get("warn_only_notified_at"):
+        print("[af-review-suppressed] 직전 라운드가 WARN/PASS만 포함 — 재발화 보류.")
+        print("[af-review-suppressed] commit이 막힌다면: AF_SKIP_REVIEW_GATE=1 ...")
+        data["warn_only_notified_at"] = time.time()
+        _atomic_write(marker, data)
+    return
+
+# 변경 후 (v4)
+if round_count >= 1 and last_summary and not last_summary.get("has_block", True):
+    # G11: 매 suppression 발화마다 1줄 시계열 sink 기록 (1회-알림과 별개)
+    _log_hook_event(workspace, "warn_only_suppressed", {
+        "round_count": round_count,
+        "agents_present": list((last_summary.get("verdicts") or {}).keys()),
+    })
+    if not data.get("warn_only_notified_at"):
+        print("[af-review-suppressed] 직전 라운드가 WARN/PASS만 포함 — 재발화 보류.")
+        print("[af-review-suppressed] commit이 막힌다면: AF_SKIP_REVIEW_GATE=1 ...")
+        data["warn_only_notified_at"] = time.time()
+        _atomic_write(marker, data)
+    return
+```
+
+`_log_hook_event()` 시그니처는 `hook_runner.py`의 helper와 일관(workspace, event_name, payload). `check_pending_review.py`에 동일 helper를 import하거나 inline 재정의(하나의 `_log_hook_event` 정의를 import).
+
+**호환성**: 기존 1회-알림은 그대로 유지. 추가된 1줄은 silent (`hook_events.log` append만). 정상 흐름 비파괴.
+
+**§9.2 트리거 #1 재정의 가능**: "warn_only_suppressed 이벤트 빈도 vs WARN verdict 발화 빈도"로 measurable해짐. 정상 작동 시 두 빈도는 정합 (WARN 라운드마다 다음 사용자 prompt에서 정확히 1회 suppression 기대).
+
+**테스트 갱신 의무**: `tests/test_check_pending_review.py` (또는 hook_runner 통합 테스트)에 WARN-only suppression 분기에서 `warn_only_suppressed` 이벤트가 1회 기록되는 케이스 추가.
+
+**v4 코드 변경 파일 수**: v3 6개 → v4 **7개** (`check_pending_review.py` 추가).
+
+### §5.5 `scripts/hook_runner.py` (변경) — v3 추가, v4 정정
+
+**v3 변경 사유 (G4)**: silent "pass" fallback이 Phase 2 효과(verdict 라인 글자 변경)를 LLM 출력 형식 표류 시 침묵 무력화.
+
+**v4 정정 (Critic #3 + #6)**:
+- **detection-only 강등**: v3은 본 변경을 "G4 해소 + Phase 2 차단 의존성"으로 격상했으나 **gate-level 차단은 여전히 Phase 3로 이관**한다. fallback 시 `verdict="pass"`가 그대로 `record_review_done()`/`has_block=False`로 전파되므로, gate 결정 자체는 형식 위반 LLM 출력 시 silent PASS 그대로다. 본 변경은 사후 가시화(detection fail-safe)일 뿐 현재 라운드 gate를 차단하지 않는다. §6 O5("WARN → gate 차단" 비목표)와도 정합 — 진짜 gate-level fail-safe(WARN/sentinel 강등)는 §6 O5와 모순되므로 Phase 3 영역.
+- **wrapper 호출 (Critic #6)**: v3 변경 코드는 `_VERDICT_HEADER_RE.search()`를 직접 호출했으나 — wrapper(§5.3)와 비정합. v4는 wrapper 단일 호출자(§5.3) 약속에 따라 wrapper로 일원화한다.
+
+**구체 변경** (`hook_runner.py:337-346`):
+
+```python
+# 변경 전 (현재 상태)
+try:
+    from scripts.review_gate import _VERDICT_RE, _VERDICT_HEADER_RE
+    m = _VERDICT_RE.search(content)
+    if m:
+        verdict = m.group(1).lower()
+    else:
+        hm = _VERDICT_HEADER_RE.search(content)
+        verdict = hm.group(1).lower() if hm else "pass"
+except Exception:
+    verdict = "pass"
+
+# 변경 후 (v4)
+try:
+    from scripts.review_gate import _extract_verdict_from_content
+    extracted = _extract_verdict_from_content(content)
+    if extracted is not None:
+        verdict = extracted
+    else:
+        verdict = "pass"
+        _log_hook_event(
+            "verdict_fallback",
+            subagent_type,
+            0,
+            error=f"no-verdict-line:{content[:200]!r}",
+        )
+except Exception as exc:
+    verdict = "pass"
+    _log_hook_event("verdict_fallback", subagent_type, 1, error=str(exc))
+```
+
+(`_log_hook_event` 호출은 본 파일 line 64 정의된 helper 시그니처에 맞춤 — `event/target/exit_code/error` 4-arg.)
+
+**호환성**: 정상 verdict 출력 케이스는 동작 무변경. fallback이 발화되는 시점에만 1줄 로그 추가. **gate 동작은 v3과 동등** (silent "pass" 그대로 전파 — gate-level 차단은 Phase 3).
+
+**§4.6 / §6 정합**: 본 변경은 detection fail-safe (사후 가시화). gate-level fail-safe(verdict="warn"/sentinel 강등 + `is_gate_blocked` 분기)는 §6 O5와 모순되므로 Phase 3로 이관 (§10 F2와 연결).
 
 ### §5.6 `scripts/review_metrics_logger.py` (변경) — v3 신규
 
@@ -346,6 +448,18 @@ _FINDING_RE = re.compile(
 - `BONUS` 추가 — §5.1 변경 6 BONUS finding 라벨 승격에 정합.
 - `HOLD` 미포함 — §4.5 결정에 따라 Phase 3 이관, Phase 2에서 발화 금지. (forward-looking spec도 두지 않음 — Critic #4의 prompt drift 우려 제거.)
 
+**v4 정정 (Critic #7 / G12) — `_SCOPE_CREEP_RE` 검색 범위 정책**:
+
+§5.1 변경 5는 `[scope-creep]` / `[INCOMPLETE]` 마커가 fence 내부 verdict 라인에 부착됨을 명시한다. 그러나 `review_metrics_logger.py`의 `_SCOPE_CREEP_RE`는 전체 content를 검색한다 — 두 정책이 충돌하면 메트릭이 손상되거나 정책 모호성이 발생한다.
+
+**결정**: scope-creep는 verdict 라벨이 아니므로 `_SCOPE_CREEP_RE` 검색 범위는 **fence 외부 검색을 유지**한다 (단순성 우선). 마커는 본문 어디에 있어도 메트릭에 카운트한다. 이는 verdict 파서(§5.3 fence 한정)와 메트릭 파서의 책임 분리:
+- verdict 파서: fence 내부만 (verdict label collision 차단)
+- 메트릭 파서: 전체 content (정량 신호 보존)
+
+**스펙 명시**: `review_metrics_logger.py` 모듈 docstring 또는 `_SCOPE_CREEP_RE` 위 1줄 주석에 "scope-creep 마커는 verdict 라벨이 아니므로 fence 외부도 검색 유지 (Phase 2 v4 §5.6)" 명시.
+
+**호환성**: 기존 메트릭 동작 100% 유지 (검색 범위 변경 없음). v4 정정은 정책 명시만이며 코드 동작은 변경 없음.
+
 **테스트 갱신 의무** (`tests/test_review_metrics_logger.py`):
 - 신규 케이스: `[ACCEPT-ADV]` Medium 3건 → `findings_count = 3`
 - 신규 케이스: `[BONUS]` Critical 2건 → `findings_count = 2`
@@ -364,7 +478,7 @@ _FINDING_RE = re.compile(
 | O4 | `_VERDICT_RE` 패턴 자체 변경 | §5.3에서 호출 wrapper만 도입, 패턴 무변경 |
 | O5 | WARN → gate 차단 | 정책 변경 아님 (§4.6) |
 | **G3** | **[HOLD] finding 입구 조건 정의 + 라벨 자체** | **Phase 3 완전 이관**: deliberation 알고리즘 변경과 동시 도입. v3에서 Step 5 prompt에 "HOLD 사용 금지" 명시. |
-| ~~G4~~ | ~~parser silent fallback 강화~~ | **v3에서 Phase 2 차단 의존성으로 격상** (§5.5) — 이관 취소 |
+| **G4** | **parser silent fallback gate-level 차단 (verdict="warn"/sentinel 강등 + `is_gate_blocked` 분기)** | **Phase 3 이관** — §6 O5("WARN → gate 차단")와 모순되므로 algorithm change와 함께 도입. v4는 detection-only 가시화만 (§5.5). |
 
 ---
 
@@ -384,6 +498,9 @@ _FINDING_RE = re.compile(
 | 8 | `[ACCEPT★]` High 1건 + `[REJECTED]` Critical 1건 | BLOCK | REJECTED 무시, ACCEPT★ High → BLOCK |
 | **9 (v3 신규)** | **severity 누락 finding 1건 (예: `#### 1. [ACCEPT-ADV] 제목`)** | **BLOCK** | **§4.3 fail-safe default (G9)** |
 | **10 (v3 신규)** | **`[BONUS]` Medium 1건 + `[ACCEPT-ADV]` Low 2건** | **WARN** | BLOCK 없음, WARN ≥ 1 |
+| **11 (v4 신규)** | **`[REJECTED]` severity 누락 1건 (예: `#### 1. [REJECTED] 제목`) + 그 외 finding 0건** | **PASS** | §4.3 단서 — REJECTED는 severity 생략 허용 + verdict-neutral fail-safe 우선. fail-safe BLOCK 트리거 안 함 (Critic #2 / G9 보강) |
+| **12 (v4 신규)** | **`[REJECTED]` severity 누락 1건 + `[ACCEPT★]` High 1건** | **BLOCK** | REJECTED는 verdict-neutral, ACCEPT★ High → BLOCK |
+| **13 (v4 신규)** | **의무 라벨 severity 누락 + `[REJECTED]` severity 누락 동시 (예: `#### 1. [ACCEPT-ADV] 제목` + `#### 2. [REJECTED] 제목`)** | **BLOCK** | ACCEPT-ADV severity 누락 → fail-safe BLOCK 1건 (§4.3). REJECTED는 verdict-neutral 무시 |
 
 ### §7.2 파서 호환성 검증 (v3 — fence + collision 회귀)
 
@@ -401,15 +518,17 @@ verdict 라인 형식: `## Tier 3 판정: WARN [scope-creep]` (fence 내부)
 
 → **패턴 변경 불필요 확정. 단 §5.3 wrapper 신설**.
 
-**v3 collision 회귀 케이스 (§5.3 신규 단위 테스트)**:
+**v3/v4 collision 회귀 케이스 (§5.3 신규 단위 테스트)**:
 
 | # | 입력 | 기대 |
 |---|------|------|
 | C1 | fence 내부 단일 `## Tier 3 판정: WARN` | verdict=warn |
 | C2 | 본문에 "이전 라운드 판정: BLOCK" + fence 내부 `## Tier 3 판정: PASS` | verdict=pass (fence 내부만 인식, G7 해소) |
-| C3 | fence 부재 + 본문에 "verdict: BLOCK" 인용 + 마지막 라인 `## Tier 3 판정: PASS` | verdict=pass (last-match 폴백 정책, §5.3) |
+| **C3 (v4 정정)** | **fence 부재 + 본문 위쪽에 `_VERDICT_RE` 매칭(예: "verdict: BLOCK" 인용) + 본문 아래쪽에 `_VERDICT_HEADER_RE` 매칭(예: `## PASS`)** | **verdict=pass — 두 정규식 매칭 위치를 합쳐 last-position(아래쪽 헤더) 선택 (Critic #1)** |
+| **C3b (v4 신규)** | **fence 부재 + 위쪽 `_VERDICT_HEADER_RE` 매칭(`## BLOCK`) + 아래쪽 `_VERDICT_RE` 매칭(`판정: PASS`)** | **verdict=pass — 패턴 종류와 무관, 위치만 비교 (대칭성)** |
 | C4 | fence 부재 + 단일 `Verdict: BLOCK` (af-critic 형식) | verdict=block (호환성) |
-| C5 | fence 부재 + verdict 라인 0개 | `_extract_verdict_from_content() → None` → caller가 silent fallback("pass") + `_log_hook_event("verdict_fallback")` (§5.5 G4) |
+| C5 | fence 부재 + verdict 라인 0개 | `_extract_verdict_from_content() → None` → caller가 silent fallback("pass") + `_log_hook_event("verdict_fallback")` (§5.5 G4 — detection-only) |
+| **C6 (v4 신규)** | **본문에 fence 2쌍 (다중/중첩) — 첫 쌍 내부 `## PASS` + 둘째 쌍 내부 `## BLOCK`** | **verdict=pass — 첫 쌍만 인식, 둘째 쌍은 무시 (Missing #4)** |
 
 ### §7.3 WARN-only no-fire 동작 검증 (실제 코드 경로 기반)
 
@@ -471,20 +590,59 @@ verdict 라인 형식: `## Tier 3 판정: WARN [scope-creep]` (fence 내부)
 
 ---
 
-## §8 구현 순서
+## §8 구현 순서 (v4 — Critic #5/#8 정정)
 
-1. 본 v3 문서에 대해 **af-cross-review만 교차검증** 실행 (단일 설계문서 정책).
-   - codex usage limit 회복(2026-05-05 15:37 KST 이후) 후 실행. 그 이전에는 v2 BLOCK 미해소(provider error)로 인해 commit 차단.
-2. 검증 PASS 확인 후, 코드+에이전트 변경 일괄 적용 (다음 6개 파일):
-   - `.claude/agents/af-cross-review.md` Step 5 (§5.1 변경 1~8)
-   - `scripts/review_gate.py` (§5.3 wrapper 신설)
-   - `scripts/hook_runner.py` (§5.5 verdict fallback 가시화)
-   - `scripts/review_metrics_logger.py` (§5.6 정규식 확장)
-   - `tests/test_review_metrics_logger.py` (§5.6 신규 케이스)
-   - `tests/test_review_gate.py` (또는 신규) — §7.2 collision 회귀 C1~C5
-3. `core/*.py` 변경이 없으므로 **af-cross-review.md 변경에 대해 af-test-runner만** 재실행 (Tier 1: 에이전트 설정 파일). 단, `scripts/*.py` 3건 변경 + 테스트는 Tier 2~3 발화 가능 — `scripts/blast_radius.py`로 사전 분류 권장.
-4. 단위 시나리오(§7.1) 10건 + collision 회귀(§7.2) 5건 + round 전환(§7.5) 6건 + 메트릭(§7.6) 4건 = 25건 회귀 (다음 .py 변경 사이클에서 자연스럽게 검증).
-5. 커밋. CLAUDE.md 정책 변경 없음 (parser·gate 동작 binary 결과 불변).
+### 8.1 검증 사전 단계
+
+1. **본 v4 문서에 대해 af-cross-review만 교차검증** 실행 (단일 설계문서 정책).
+   - codex usage limit 회복(**2026-05-05 15:37 KST 이후**) 후 실행. 그 이전에는 v2 BLOCK·v3 BLOCK 모두 provider error로 미해소 상태이며, v4 commit은 design-only(Tier 1)이므로 commit 자체는 차단되지 않으나 코드 적용 단계 commit은 차단됨.
+
+### 8.2 코드 적용 일괄 commit — 부트스트랩 순서 (Critic #5 G15)
+
+v4 코드 변경 7개 파일은 **단일 commit + 3-tier 전체 + `blast_radius.py` 사전 출력 첨부** 전략으로 적용한다.
+
+**자기모순 회피 (chicken-and-egg)**:
+- `scripts/review_gate.py`, `scripts/hook_runner.py`, `scripts/check_pending_review.py`는 자동 Tier 3 (subprocess/shell=True/hook launcher) — `scripts/blast_radius.py` 분류기준.
+- 본 commit이 적용되기 **전**의 fence/last-position/warn_only_suppressed 동작은 v4 spec과 무관. 즉 본 commit 검증 라운드는 **이전 fence 없는 형식**으로 cross-review가 실행됨. 새 fence 형식은 **본 commit 적용 후 다음 라운드부터** 강제됨.
+- 검증 시점 cross-review 출력은 v3 형식(또는 free-form)이어도 무방. Spec drift는 다음 commit에서 catch됨.
+
+**대안 — 2-commit 분리 전략 (보류)**: af-cross-review.md를 먼저 commit (Tier 1 — 단순 에이전트 설정) → 새 fence로 다음 라운드 cross-review가 출력 → scripts/*.py 적용 commit. 그러나 첫 commit과 둘째 commit 사이에 fence 형식과 파서가 비정합 상태가 됨 (파서 v3, prompt v4) — 운영 리스크가 더 크므로 **단일 commit 전략 채택**.
+
+**적용 파일 (7개)**:
+
+| # | 파일 | 변경 위치 | spec 참조 | Tier (blast_radius) |
+|---|------|----------|----------|---------------------|
+| 1 | `.claude/agents/af-cross-review.md` Step 5 | 6개 변경 (§5.1 변경 1~8) | §5.1 | Tier 1 (agent config) |
+| 2 | `scripts/review_gate.py` | `_extract_verdict_from_content` 신규 | §5.3 | Tier 3 |
+| 3 | `scripts/hook_runner.py` | wrapper 호출 + verdict_fallback log | §5.5 | Tier 3 |
+| 4 | `scripts/check_pending_review.py` | warn_only_suppressed log | §5.4 | Tier 3 |
+| 5 | `scripts/review_metrics_logger.py` | `_FINDING_RE` 확장 + scope-creep 주석 | §5.6 | Tier 2~3 |
+| 6 | `tests/test_review_metrics_logger.py` | finding 라벨 케이스 추가 | §5.6 | Tier 1~2 |
+| 7 | `tests/test_review_gate.py` | C1~C6 collision 케이스 | §7.2 | Tier 1~2 |
+
+**검증 게이트**: 단일 commit이 Tier 3 trigger 시 af-test-runner → af-critic → af-cross-review 3-tier 전체 발화. 같은 commit message에 `blast_radius.py --json --files <list>` 사전 출력을 첨부하여 분류 근거를 검증 가능하게 한다.
+
+### 8.3 Frozen Build Sanity (Critic #8 HOLD)
+
+**약한 evidence**: v4 spec 변경은 hooks가 frozen 컨텍스트(`dist/af/af.exe`)에서 호출되는 경로의 동작을 직접 검증하지 않음. 특히 `_log_hook_event`가 새 키(`verdict_fallback`, `warn_only_suppressed`)를 쓸 때 workspace 경로 해석이 source build와 동일한지 미확인.
+
+**Mac 단계에서는 검증 불가 → Windows PC 빌드 단계로 이관**:
+- Windows PC에서 `python build_exe.py` → `dist/af-{version}.zip` 생성 후 `dist/af/af.exe`가 hook subprocess로 호출되는 경로 1회 sanity 호출:
+  - `hook_runner.py`가 frozen mode에서 `_log_hook_event` 신규 이벤트 키 2종(`verdict_fallback`, `warn_only_suppressed`)을 정상 append하는지 확인.
+  - `.af_review_queue/hook_events.log` 파일 권한·경로가 source build와 동일한지 확인.
+- 비검증 시 install-af.ps1 배포 buyer에서 hook이 silent fail할 수 있음 (low probability, low severity).
+
+### 8.4 단위 시나리오 회귀 (다음 .py 변경 사이클에서 자연스럽게 검증)
+
+- 단위 시나리오(§7.1) **13건** (v3 10건 + v4 신규 11/12/13)
+- collision 회귀(§7.2) **7건** (v3 5건 + v4 신규 C3b·C6)
+- round 전환(§7.5) 6건
+- 메트릭(§7.6) 4건
+- WARN-only suppression(§5.4 신규) 1건 = 31건 회귀
+
+### 8.5 CLAUDE.md 정책 변경 여부
+
+CLAUDE.md 정책 변경 없음 (parser·gate 동작 binary 결과 불변). 단, hook_events.log 신규 키 2종(`verdict_fallback`, `warn_only_suppressed`)을 운영 메트릭 항목으로 §9.1에 등재 (CLAUDE.md 본문에는 미반영, 다음 §10 F2 결정 시 등재 검토).
 
 ---
 
@@ -494,28 +652,34 @@ verdict 라인 형식: `## Tier 3 판정: WARN [scope-creep]` (fence 내부)
 
 - **메트릭**: `review_metrics_logger.compute_report()` 에서 T3 verdict 분포 측정. (§5.6 정규식 확장 선행 필수.)
 - **기대**: PASS 비율 ↓ (현재 100% 중 일부가 WARN으로 이동), WARN 비율 ↑.
+- **운영 sink** (`hook_events.log`):
+  - `verdict_fallback` 이벤트 — fence/패턴 0매칭 시점 1줄 (§5.5).
+  - `warn_only_suppressed` 이벤트 — WARN/PASS 라운드 후 다음 사용자 prompt에서 no-fire 분기 진입 시점 1줄 (§5.4 신규).
 - **우려 지표**:
   - WARN 비율 > 80% → advisory 노이즈 과다 가능성 (Medium 임계 재검토 트리거 — §10 F4).
   - `verdict_fallback` 이벤트 ≥ 1건/주 → LLM 출력 형식 표류 (§10 F2 후속).
   - severity 누락 BLOCK fail-safe 발화 ≥ 1건/주 → Step 5 프롬프트 가이드 강화 검토.
+  - **(v4 신규)** `warn_only_suppressed` 빈도와 WARN verdict 발화 빈도가 0.8x~1.2x 범위 밖 → no-fire 정합성 의심 트리거 (G11).
 
-### §9.2 롤백 트리거
+### §9.2 롤백 트리거 (v4 정정 — 트리거 #1 measurable 재정의)
 
-다음 중 하나라도 발생하면 §5.1/§5.3/§5.5/§5.6 변경 revert:
+다음 중 하나라도 발생하면 §5.1/§5.3/§5.4/§5.5/§5.6 변경 revert:
 
-- WARN-only no-fire가 의도와 달리 작동 (`verdict_fallback` 이벤트 또는 재발화 빈도 측정으로 확인 — falsifiable해짐, G4 해소).
+- **(v4 정정)** WARN-only no-fire가 의도와 달리 작동:
+  - **측정 방법**: 1주 baseline에서 `grep -c "warn_only_suppressed" .af_review_queue/hook_events.log` 빈도 vs `compute_report()` T3 WARN verdict 빈도 비교. WARN 라운드 종결 후 다음 사용자 prompt에서 정확히 1회 suppression 기대 → 두 빈도가 0.8x~1.2x 범위.
+  - 범위 밖 + ≥ 1건/주 → §5.4 변경 revert + check_pending_review.py:126 분기 재검토.
 - WARN 메시지가 사용자에게 BLOCK으로 오인 (UX 피드백).
-- parser collision 발견 (fence 외부에서 verdict 라인 외 텍스트가 캡처되는 사례).
-- `_FINDING_RE` 확장으로 인한 false positive 매칭 (예: 코드 인용 안의 `[ACCEPT-ADV]` 캡처).
+- parser collision 발견 (fence 외부에서 verdict 라인 외 텍스트가 캡처되는 사례) — `verdict_fallback` 이벤트 빈도 ≥ 5건/주 + 발생 케이스 grep 후 false positive 확인.
+- `_FINDING_RE` 확장으로 인한 false positive 매칭 (예: 코드 인용 안의 `[ACCEPT-ADV]` 캡처) — `compute_report()` finding count vs 수동 grep 결과 비교.
 
 ### §9.3 롤백 절차
 
 ```bash
-git revert <commit-hash-of-v3-implementation>
-# 6개 파일 단일 commit 권장 — 단일 revert로 복구 가능
+git revert <commit-hash-of-v4-implementation>
+# 7개 파일 단일 commit (§8.2) — 단일 revert로 복구 가능
 ```
 
-**roll-back safe property**: §5.2/§5.4가 무변경. 변경된 5개 파일은 모두 추가 진단/방어 (silent fallback gate, fence-aware wrapper, 정규식 확장) → revert 시 v2 동작으로 복귀, 데이터 손상 없음.
+**roll-back safe property** (v4 정정): §5.2(`af-critic.md`)는 무변경. v4에서 §5.4도 변경 대상으로 추가됐으나(`warn_only_suppressed` log 1줄), 변경된 모든 파일은 추가 진단/방어 (fence-aware wrapper, last-position 결합, fallback log, suppression log, 정규식 확장) → revert 시 v3 동작으로 복귀(데이터 손상 없음). v4 → v3 → v2 단계 revert도 가능.
 
 ### §9.4 사전 검증 명령
 
@@ -552,22 +716,44 @@ pytest tests/test_review_metrics_logger.py -v
 | F5 | BONUS Critical/High WARN 적정성 | Low | 운영 데이터 기반 판단 |
 | F6 | finding 라벨에 `[ACCEPT★]` 별표 표기의 자동화 가능성 | Low | LLM 재현성 측정 후 |
 | **F7 (v3 신규)** | **과거 review의 라벨 일괄 재라벨링 (선택)** | Low | `docs/reviews/` 30건 grep 일관성. **본 시점 기준 그대로 유지가 default — §11 명시.** |
+| **F8 (v4 신규 — Missing #2)** | **`AF_GATE_ALLOW_VERDICT_BLOCK` 환경 변수 + fence 외부 잔존 인용 처리** | Medium | Phase 3 — gate-level fail-safe 도입과 함께. 사용자가 fence 외부 인용을 의도적으로 사용하는 케이스(예: 문서 내부에 verdict 사례 표기)에서 BLOCK 우회 옵션 필요 시. |
+| **F9 (v4 신규 — Missing #3)** | **마이그레이션 윈도우 — v2 라벨 PR과 v3/v4 라벨 PR 공존 시 `compute_report()` 일관성** | Medium | v3/v4 정규식이 v2 라벨(`[ACCEPT]`/`[ACCEPT★]`/`[WARN]`/`[BLOCK]`/`[REJECTED]`)을 포함하므로 호환됨. 다만 1주 운영 후 "신/구 라벨 혼합 review" 빈도 측정 → 0건이면 본 항목 closed. ≥ 1건이면 신규 라벨로 일괄 재라벨링 검토 (F7과 연계). |
 
 ---
 
-## §11 v2 → v3 변경 요약 (감사 추적용)
+## §11 v2 → v3 → v4 변경 요약 (감사 추적용)
 
-| 항목 | v2 (`f8be0794`) | v3 (본 문서) |
+### v2 → v3
+
+| 항목 | v2 (`f8be0794`) | v3 (`d9cc3304`) |
 |------|----------------|-------------|
 | 매핑 테이블 | §4.3 단일 정규 테이블 | + severity 누락 fail-safe 행 추가 (G9) |
-| HOLD 처리 | finding-level forward-looking 정의 + Phase 3 입구 조건 이관 | **finding-level 정의 자체 제거** (G3 prompt drift 회피, Critic #4) |
+| HOLD 처리 | finding-level forward-looking 정의 + Phase 3 입구 조건 이관 | **finding-level 정의 자체 제거** (G3 prompt drift 회피) |
 | `[BONUS]` | 라벨 prefix 아님 — Codex Round 1 분류 | **finding 라벨로 승격** — 헤더 = `#### N. [BONUS] [Severity] 제목` (G10) |
 | Severity 누락 처리 | 미정의 | **BLOCK fail-safe default** (§4.3 / §7.1 시나리오 9, G9) |
 | `_VERDICT_RE` collision (G7) | 미인식 | **fence 도입** + `_extract_verdict_from_content()` wrapper (§5.1 변경 8 / §5.3) |
 | Silent verdict fallback (G4) | Phase 후속 이관 (§10 F2) | **Phase 2 차단 의존성으로 격상** — `_log_hook_event("verdict_fallback")` (§5.5) |
 | `_FINDING_RE` 회귀 (G8) | 미인식 — §9.1 self-defeat | **정규식 확장 + 테스트** (§5.6) |
-| Round 전환 회귀 시나리오 | §7.5 단일 라운드만 | **R3~R6 4건 추가** (§7.5, Critic #7) |
-| 라벨 마이그레이션 가이드 | 미언급 | **§11에 "기존 review 시점 기준 유지" 1줄 + §10 F7 신설** (Critic #8) |
-| 코드 변경 범위 | design-only (af-cross-review.md만) | **scripts/*.py 3건 + tests/*.py 2건 추가** — §5.3/§5.5/§5.6 |
-| Phase 2 substantive | "labeling only — 기능 불변" (§4.6) | **"labeling + 측정/파이프라인 정합"** (§4.6) — 메트릭/파서 fail-safe 포함 |
-| 정규 출처 명확화 | "§4.3가 THE source of truth" | (유지) + "§5.6 정규식이 메트릭 정규 출처" |
+| Round 전환 회귀 시나리오 | §7.5 단일 라운드만 | **R3~R6 4건 추가** (§7.5) |
+| 라벨 마이그레이션 가이드 | 미언급 | **§11에 "기존 review 시점 기준 유지" 1줄 + §10 F7 신설** |
+| 코드 변경 범위 | design-only (af-cross-review.md만) | **scripts/*.py 3건 + tests/*.py 2건 추가** |
+
+### v3 → v4 (Critic 8건 + Missing 4건 전수 반영)
+
+| 항목 | v3 (`d9cc3304`) | v4 (본 문서) | Critic 출처 |
+|------|----------------|-------------|------------|
+| §5.3 last-match 결합 알고리즘 | 미명세 — 두 정규식의 last-match 결합 정책 모호 | **last-position 결합 명시** — 두 패턴 매칭을 (start_position, label) 튜플로 합쳐 last-position 1건 선택 (단일 패스) + 의사 코드 첨부 | High #1 |
+| §4.3 [REJECTED] vs severity fail-safe 충돌 | 충돌 — REJECTED severity 누락이 BLOCK으로 카운트 (의도-반전) | **[REJECTED] verdict-neutral 우선 단서** + §5.1 변경 6 "REJECTED severity 생략 허용" 명시 + §7.1 시나리오 11/12/13 추가 | High #2 |
+| §5.5 G4 fallback 강도 | "Phase 2 차단 의존성" 격상 (과장) | **detection-only 강등** — gate-level 차단은 Phase 3 (§6 G4 행) — `verdict="pass"` 그대로 전파, hook event만 추가 | High #3 |
+| §5.4 변경 여부 | "변경 없음" — 측정 sink 부재로 §9.2 트리거 #1 falsifiable 불가 | **`_log_hook_event("warn_only_suppressed")` 1줄 추가** (G11 신규) → §9.2 트리거 #1 measurable 재정의 | Medium #4 |
+| §8 부트스트랩 순서 | "af-test-runner만" + "Tier 2~3 발화 가능" 자기모순 | **단일 commit + 3-tier 전체 + blast_radius 사전 출력** 전략 + chicken-and-egg 명시 | Medium #5 |
+| §5.3/§5.5 wrapper 호출자 | "is_gate_blocked/record_review_done 등 통합" — 실제는 hook_runner.py만 호출 | **wrapper 단일 호출자(=hook_runner.py) 명시** + record_review_done은 본문 파싱 무관 명시 | Medium #6 |
+| §5.6 SCOPE_CREEP_RE 정책 | §5.1 변경 5 fence 한정 vs `_SCOPE_CREEP_RE` 전역 검색 충돌 (G12 신규) | **fence 외부 검색 유지** 명시 (단순성) — 코드 동작 무변경, 정책 명시만 | Low #7 |
+| §8 frozen build sanity | 미언급 | **Windows PC 빌드 단계로 이관** — frozen `dist/af/af.exe`로 hook 1회 sanity 호출 의무 (Mac 검증 불가) | HOLD #8 |
+| §5.3 record_review_done 인자 | 인자 신뢰 관계 미명시 | **wrapper와 무관 — caller가 추출한 verdict를 그대로 신뢰** 명시 | Missing #1 |
+| §10 F8 (AF_GATE_ALLOW_VERDICT_BLOCK) | 미정의 | **§10 F8로 등록 (Phase 3 후보)** | Missing #2 |
+| §10 F9 (마이그레이션 윈도우) | 미언급 | **§10 F9로 등록** + v3/v4 정규식이 v2 라벨 호환임을 명시 | Missing #3 |
+| §5.3 다중/중첩 fence | 미명시 | **첫 쌍만 인식, 둘째 쌍 무시** + §7.2 C6 케이스 추가 | Missing #4 |
+| 코드 변경 파일 수 | 6개 | **7개** (`check_pending_review.py` 추가 — §5.4) | Medium #4 효과 |
+| `_VERDICT_FENCE_RE` 정의 | 미명시 | **scripts/review_gate.py에 정규식 명시** + DOTALL flag로 multiline fence 본문 캡처 | High #1 부산물 |
+| §4.6 fail-safe 표현 | "fail-safe" (gate-level 함의) | **"detection fail-safe"로 강등** — §6 O5와 정합 | High #3 부산물 |
