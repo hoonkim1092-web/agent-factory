@@ -4,14 +4,20 @@ core/research_verifier.py
 리서치 근거 품질 검증기.
 
 evidence_bundle을 0~1 점수로 평가하고, 부족한 항목(gaps)을 반환한다.
-점수에 따라 targeted retry를 최대 2회 수행한다.
+점수에 따라 targeted retry를 최대 1회 수행한다.
 
 상태:
   pass    score >= 0.6
   partial 0.4 <= score < 0.6  → gaps 기반 targeted retry
   warn    score < 0.4         → 경고 태그만 붙이고 진행
 
-Per-source quality metadata (v2):
+Phase 1b: notebook_present → deterministic 4-metric (§9.2)
+  - citation_validity    : source_backed_claims의 source_id 실재 비율
+  - claim_source_ratio   : source_id가 있는 claim 비율
+  - primary_source_ratio : source_pack에서 primary 소스 비율
+  - source_pack_chars    : source_pack 본문 총량 (≥500 → pass)
+
+Per-source quality metadata:
   evidence_bundle의 각 reference에 아래 필드를 선택적으로 태깅:
     - relevance_score: float (0.0-1.0)
     - recency: str (ISO date)
@@ -25,10 +31,20 @@ import hashlib
 from dataclasses import dataclass, field
 from typing import Callable
 
-# §9.3 Phase 1a verifier가 emit하는 gap 이름은 §6.5 enum 값을 사용
+# §6.5 enum 값을 직접 사용 (string import 없이 리터럴로 관리)
 _GAP_NO_EXTERNAL = "no_external_evidence"
 _GAP_FRESHNESS_MISSING = "freshness_required_missing"
 _GAP_OFFICIAL_MISSING = "official_source_missing"
+# quality-tier (Phase 1b) — no-op (mode jump 없음)
+_GAP_CITATION_LOW = "citation_validity_low"
+_GAP_CLAIM_SOURCE_LOW = "claim_source_ratio_low"
+_GAP_SOURCE_PACK_SHALLOW = "source_pack_too_shallow"
+
+# Phase 1b 4-metric thresholds (fixture calibration 시점까지 보수적 기본값)
+_THRESHOLD_CITATION_VALIDITY = 0.5
+_THRESHOLD_CLAIM_SOURCE_RATIO = 0.3
+_THRESHOLD_PRIMARY_SOURCE_RATIO = 0.2
+_THRESHOLD_SOURCE_PACK_CHARS = 500
 
 
 @dataclass
@@ -46,18 +62,23 @@ class ResearchVerifier:
     """evidence_bundle 품질을 검증하고 targeted retry를 관리."""
 
     # 신호별 가중치 (합계 1.0)
-    # 기본 6-signal: 0.85, per-source 3-signal: 0.15 (metadata 있을 때만)
+    # 기본 6-signal: 0.85 (notebook_present 0.15 → 4-metric 0.15로 교체)
+    # per-source 3-signal: 0.15 (metadata 있을 때만)
     _WEIGHTS = {
-        "local_count":       0.20,
-        "local_avg_score":   0.15,
-        "external_present":  0.15,
-        "notebook_present":  0.15,
-        "gate_passed":       0.10,
-        "summary_depth":     0.10,
+        "local_count":          0.20,
+        "local_avg_score":      0.15,
+        "external_present":     0.15,
+        # Phase 1b deterministic 4-metric (notebook_present 대체, 합계 0.15)
+        "citation_validity":    0.06,
+        "claim_source_ratio":   0.05,
+        "primary_source_ratio": 0.02,
+        "source_pack_chars":    0.02,
+        "gate_passed":          0.10,
+        "summary_depth":        0.10,
         # per-source 추가 신호 (metadata가 있는 경우에만 적용)
-        "source_diversity":  0.05,
-        "relevance_mean":    0.05,
-        "authority_check":   0.05,
+        "source_diversity":     0.05,
+        "relevance_mean":       0.05,
+        "authority_check":      0.05,
     }
 
     def verify(self, evidence: dict, task_input: str, attempt: int = 0) -> VerificationResult:
@@ -68,9 +89,10 @@ class ResearchVerifier:
         local_refs = [r for r in (evidence.get("local_references") or []) if isinstance(r, dict)]
         web_refs = [r for r in (evidence.get("web_references") or []) if isinstance(r, dict)]
         llm_prior_refs = [r for r in (evidence.get("llm_prior_references") or []) if isinstance(r, dict)]
-        notebook_summary = str(evidence.get("notebook_summary") or "").strip()
         evidence_summary = [s for s in (evidence.get("evidence_summary") or []) if str(s).strip()]
         gate_passed = bool(evidence.get("sufficiency_gate_passed", False))
+        source_pack = evidence.get("source_pack") or {}
+        structured_evidence = evidence.get("structured_evidence") or {}
 
         # 신호 1: 로컬 참조 수
         if len(local_refs) >= 3:
@@ -91,25 +113,25 @@ class ResearchVerifier:
             score += self._WEIGHTS["external_present"]
         else:
             gaps.append(_GAP_NO_EXTERNAL)
-            # §9.3 FRESHNESS_REQUIRED_MISSING: freshness 키워드 있는데 web_refs 없음
             _freshness_kws = ("latest", "current", "release", "version", "security",
                               "최신", "버전", "릴리스", "보안", "가격")
             if any(kw in task_input.lower() for kw in _freshness_kws):
                 gaps.append(_GAP_FRESHNESS_MISSING)
 
-        # 신호 4: NotebookLM 요약 존재
-        if notebook_summary:
-            score += self._WEIGHTS["notebook_present"]
-        else:
-            gaps.append("notebook_summary_absent")
+        # 신호 4~7: Phase 1b deterministic 4-metric (§9.2, notebook_present 대체)
+        four_metric_score, four_metric_gaps = self._evaluate_4_metric(
+            source_pack, structured_evidence
+        )
+        score += four_metric_score
+        gaps.extend(four_metric_gaps)
 
-        # 신호 5: Sufficiency Gate 통과
+        # 신호 8: Sufficiency Gate 통과
         if gate_passed:
             score += self._WEIGHTS["gate_passed"]
         else:
             gaps.append("sufficiency_gate_not_passed")
 
-        # 신호 6: evidence_summary 깊이
+        # 신호 9: evidence_summary 깊이
         if len(evidence_summary) >= 4:
             score += self._WEIGHTS["summary_depth"]
         else:
@@ -121,7 +143,7 @@ class ResearchVerifier:
         has_metadata = any(r.get("relevance_score") is not None for r in all_refs)
 
         if has_metadata:
-            # 신호 7: 소스 유형 다양성 (2가지 이상)
+            # 신호 10: 소스 유형 다양성 (2가지 이상)
             source_types = set(
                 r.get("source_type") or "" for r in all_refs if r.get("source_type")
             )
@@ -130,7 +152,7 @@ class ResearchVerifier:
             else:
                 gaps.append(f"source_diversity_low ({len(source_types)} types, need 2+)")
 
-            # 신호 8: 전체 소스 평균 관련도
+            # 신호 11: 전체 소스 평균 관련도
             rel_scores = [
                 float(r.get("relevance_score") or 0.0)
                 for r in all_refs
@@ -142,7 +164,7 @@ class ResearchVerifier:
             else:
                 gaps.append(f"relevance_mean_low ({rel_mean:.2f} < 0.6)")
 
-            # 신호 9: primary 권위 소스 존재 — §9.3 OFFICIAL_SOURCE_MISSING enum 값
+            # 신호 12: primary 권위 소스 존재 — §9.3 OFFICIAL_SOURCE_MISSING enum 값
             has_primary = any(r.get("authority_level") == "primary" for r in all_refs)
             if has_primary:
                 score += self._WEIGHTS["authority_check"]
@@ -175,6 +197,75 @@ class ResearchVerifier:
             per_source_scores=per_source_scores,
             filtered_evidence_ids=filtered_ids,
         )
+
+    def _evaluate_4_metric(
+        self, source_pack: dict, structured_evidence: dict
+    ) -> tuple[float, list[str]]:
+        """§9.2 deterministic 4-metric 평가.
+
+        Returns:
+            (partial_score, quality_gaps)
+            quality_gaps는 no-op (mode jump 없음, §4.4.2 quality-tier).
+        """
+        sub_score = 0.0
+        gaps: list[str] = []
+        sources = (source_pack.get("sources") or []) if isinstance(source_pack, dict) else []
+        claims = (
+            (structured_evidence.get("source_backed_claims") or [])
+            if isinstance(structured_evidence, dict)
+            else []
+        )
+
+        # source_id 집합 (source_pack)
+        valid_ids: set[str] = {str(s.get("source_id") or "") for s in sources if s.get("source_id")}
+
+        # 신호 4: citation_validity — claim이 참조한 source_id 중 실재 비율
+        cited_ids: list[str] = []
+        for c in claims:
+            if isinstance(c, dict):
+                cited_ids.extend(str(s) for s in (c.get("source_ids") or []) if s)
+        if cited_ids:
+            valid_cited = sum(1 for sid in cited_ids if sid in valid_ids)
+            citation_validity = valid_cited / len(cited_ids)
+        else:
+            citation_validity = 0.0 if claims else 1.0  # claim 없으면 분모 0 → 1.0
+
+        if citation_validity >= _THRESHOLD_CITATION_VALIDITY:
+            sub_score += self._WEIGHTS["citation_validity"]
+        else:
+            gaps.append(_GAP_CITATION_LOW)
+
+        # 신호 5: claim_source_ratio — source_id가 1개 이상인 claim 비율
+        if claims:
+            backed = sum(1 for c in claims if isinstance(c, dict) and c.get("source_ids"))
+            claim_source_ratio = backed / len(claims)
+        else:
+            claim_source_ratio = 1.0  # claim 없으면 N/A → 패널티 없음
+
+        if claim_source_ratio >= _THRESHOLD_CLAIM_SOURCE_RATIO:
+            sub_score += self._WEIGHTS["claim_source_ratio"]
+        else:
+            gaps.append(_GAP_CLAIM_SOURCE_LOW)
+
+        # 신호 6: primary_source_ratio — source_pack에서 primary 소스 비율
+        if sources:
+            primary_count = sum(1 for s in sources if (s.get("authority_level") or "") == "primary")
+            primary_source_ratio = primary_count / len(sources)
+        else:
+            primary_source_ratio = 0.0
+
+        if primary_source_ratio >= _THRESHOLD_PRIMARY_SOURCE_RATIO:
+            sub_score += self._WEIGHTS["primary_source_ratio"]
+        # primary_source_ratio 낮아도 별도 gap 미방출 (OFFICIAL_SOURCE_MISSING은 per-source에서)
+
+        # 신호 7: source_pack_chars — 분석 가능 본문 총량
+        total_chars = sum(len(str(s.get("content_full") or s.get("excerpt") or "")) for s in sources)
+        if total_chars >= _THRESHOLD_SOURCE_PACK_CHARS:
+            sub_score += self._WEIGHTS["source_pack_chars"]
+        else:
+            gaps.append(_GAP_SOURCE_PACK_SHALLOW)
+
+        return sub_score, gaps
 
     def _evaluate_per_source(self, refs: list[dict]) -> tuple[list[dict], list[str]]:
         """각 소스의 quality 점수를 계산하고 filtered_ids(유지할 소스)를 반환."""

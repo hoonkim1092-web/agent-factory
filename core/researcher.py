@@ -327,7 +327,9 @@ class HimariResearchAgent:
         for item in results[:limit]:
             url = str(item.get("url") or "").strip()
             title = self._compact_text(item.get("title") or url, limit=120)
-            excerpt = self._compact_text(item.get("content") or "", limit=260)
+            # Phase 1b: content_full 우선, excerpt fallback, 구버전 content 하위 호환
+            content_full = item.get("content_full") or item.get("content") or ""
+            excerpt = self._compact_text(item.get("excerpt") or content_full, limit=260)
             if not url:
                 continue
             refs.append(
@@ -335,10 +337,155 @@ class HimariResearchAgent:
                     "url": url,
                     "title": title,
                     "excerpt": excerpt,
+                    "content_full": content_full,
                     "score": round(float(item.get("score") or 0.0), 4),
                 }
             )
         return refs
+
+    def _build_source_pack(
+        self,
+        web_refs: list[dict],
+        local_refs: list[dict],
+        llm_prior_refs: list[dict],
+    ) -> dict:
+        """§6.2 source_pack 조립 — web/local/llm_prior refs를 공통 소스 형식으로 정규화."""
+        sources: list[dict] = []
+        counter = {"web": 0, "local": 0, "llm": 0}
+
+        for ref in web_refs:
+            counter["web"] += 1
+            sid = f"web_{counter['web']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "web",
+                "retrieval_method": "tavily_search",
+                "url": ref.get("url", ""),
+                "title": ref.get("title", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("content_full", ""),
+                "authority_level": "secondary",
+                "relevance_score": round(float(ref.get("score") or 0.5), 4),
+                "selected_reason": "tavily_search_result",
+            })
+
+        for ref in local_refs:
+            counter["local"] += 1
+            sid = f"local_{counter['local']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "local",
+                "retrieval_method": "local_rag",
+                "url": "",
+                "title": ref.get("path", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("excerpt", ""),
+                "authority_level": "primary",
+                "relevance_score": round(float(ref.get("score") or 0.5), 4),
+                "selected_reason": "local_rag_result",
+            })
+
+        for ref in llm_prior_refs:
+            counter["llm"] += 1
+            sid = f"llm_{counter['llm']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "llm_prior",
+                "retrieval_method": "llm_prior",
+                "url": "",
+                "title": ref.get("title", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("excerpt", ""),
+                "authority_level": "tertiary",
+                "relevance_score": round(float(ref.get("score") or 0.4), 4),
+                "selected_reason": "llm_prior_knowledge",
+            })
+
+        return {"sources": sources}
+
+    def _synthesize_structured_evidence(
+        self,
+        task_input: str,
+        mode: str,
+        source_pack: dict,
+    ) -> dict:
+        """§6.3 LLM normalizer — source_pack → structured_evidence.
+
+        fast_synthesis 모드는 research_project_brief() LLM 호출에 합쳐지므로
+        이 메서드는 fresh/deep/archive 모드에서만 호출된다.
+        """
+        sources = source_pack.get("sources") or []
+        source_summaries = []
+        for s in sources[:6]:
+            label = s.get("title") or s.get("url") or s.get("source_id") or ""
+            excerpt = (s.get("excerpt") or "")[:200]
+            source_summaries.append(f"[{s['source_id']}] {label}: {excerpt}")
+
+        prompt = f"""You are a research synthesis engine.
+Task: {task_input}
+Research mode: {mode}
+Sources({len(sources)} total):
+{chr(10).join(source_summaries) or '(none)'}
+
+Return JSON only:
+{{
+  "research_mode": "{mode}",
+  "goal_interpretation": "one sentence describing what to build",
+  "recommended_architecture": "architecture style identifier",
+  "recommended_tech_stack": ["tech with version"],
+  "required_capabilities": ["snake_case_capability"],
+  "agent_role_hints": ["snake_case_role"],
+  "skill_gap_hypotheses": [
+    {{
+      "need_skill_id": "snake_case_skill",
+      "required_capabilities": ["cap1"],
+      "reuse_expectation": "reuse|enhance|forge",
+      "reason": "why this skill gap exists"
+    }}
+  ],
+  "risks": ["risk description"],
+  "verification_focus": ["what to verify"],
+  "maintenance_strategy": ["strategy note"],
+  "source_backed_claims": [
+    {{"claim": "factual claim", "source_ids": ["web_001"]}}
+  ]
+}}
+
+Rules:
+- required_capabilities: 3-6 concrete capabilities.
+- source_backed_claims: only claims traceable to provided sources. Use actual source_ids from above.
+- If no sources, return empty source_backed_claims.
+""".strip()
+
+        _FALLBACK: dict = {
+            "research_mode": mode,
+            "goal_interpretation": "",
+            "recommended_architecture": "",
+            "recommended_tech_stack": [],
+            "required_capabilities": [],
+            "agent_role_hints": [],
+            "skill_gap_hypotheses": [],
+            "risks": [],
+            "verification_focus": [],
+            "maintenance_strategy": [],
+            "source_backed_claims": [],
+        }
+
+        from core.requirement_llm import execute_requirement_prompt
+        from core.utils import safe_json_load
+        try:
+            result = execute_requirement_prompt(prompt)
+            if not result.get("ok"):
+                raise RuntimeError("structured_evidence_llm_unavailable")
+            data = safe_json_load(result.get("text") or "{}")
+            if not isinstance(data, dict):
+                raise ValueError("structured_evidence_not_dict")
+            # 필수 필드 누락 시 fallback 기본값으로 채움
+            for k, v in _FALLBACK.items():
+                data.setdefault(k, v)
+            return data
+        except Exception:
+            return dict(_FALLBACK)
 
     def _collect_notebook_summary(self, task_input: str, local_refs: list[dict], web_refs: list[dict]) -> str:
         try:
@@ -610,6 +757,15 @@ Rules:
             notebook_summary,
             llm_prior_refs,
         )
+
+        # Phase 1b: source_pack 조립 + structured_evidence 생성 (non-fast 모드만)
+        source_pack = self._build_source_pack(web_refs, local_refs, llm_prior_refs)
+        structured_evidence: dict = {}
+        if mode != "fast_synthesis":
+            structured_evidence = self._synthesize_structured_evidence(
+                task_input, mode, source_pack
+            )
+
         initial_evidence = {
             "workspace_notes": workspace_notes,
             "local_references": local_refs,
@@ -619,6 +775,8 @@ Rules:
             "evidence_summary": evidence_summary,
             "sufficiency_gate_passed": sufficient,
             "research_plan": research_plan.to_dict(),
+            "source_pack": source_pack,
+            "structured_evidence": structured_evidence,
         }
 
         # §4.4.5 router gap detection — hint_gaps is None = first call only (max 1 retry)
@@ -661,6 +819,17 @@ Rules:
         data["web_references"] = web_references
         data["llm_prior_references"] = llm_prior_references
         data["notebook_summary"] = notebook_summary
+
+        # §6.4 structured evidence 필드 (Phase 1b) — evidence_bundle에서 복사 (optional)
+        se = evidence.get("structured_evidence") or {}
+        if isinstance(se, dict) and se:
+            for key in (
+                "research_mode", "recommended_architecture", "recommended_tech_stack",
+                "required_capabilities", "skill_gap_hypotheses", "verification_focus",
+                "maintenance_strategy", "source_backed_claims",
+            ):
+                if se.get(key) is not None:
+                    data.setdefault(key, se[key])
 
         derived_notes: list[str] = []
         if local_references:
@@ -735,6 +904,21 @@ Rules:
         notebook_summary = str(evidence.get("notebook_summary") or "").strip()
         evidence_summary = [str(x).strip() for x in (evidence.get("evidence_summary") or []) if str(x).strip()]
 
+        # fast_synthesis 모드: structured evidence를 같은 LLM 호출에 합친다 (Phase 1b)
+        research_plan_obj = evidence.get("research_plan") or {}
+        mode = research_plan_obj.get("mode", "fast_synthesis") if isinstance(research_plan_obj, dict) else "fast_synthesis"
+        se_extra = ""
+        if mode == "fast_synthesis":
+            se_extra = """
+  "research_mode": "fast_synthesis",
+  "recommended_architecture": "architecture style identifier",
+  "recommended_tech_stack": ["tech with version"],
+  "required_capabilities": ["snake_case_capability"],
+  "skill_gap_hypotheses": [],
+  "verification_focus": ["what to verify in tests"],
+  "maintenance_strategy": [],
+  "source_backed_claims": [],"""
+
         prompt = f"""
 You are Himari, a project research director.
 Task: {task_input}
@@ -760,7 +944,7 @@ Return JSON only:
   "data_model": [{{"entity": "EntityName", "fields": ["field1", "field2"], "storage": "sqlite|json|memory"}}],
   "user_flows": ["actor: action -> system response"],
   "non_goals": ["what this project will NOT do"],
-  "architecture_style": "desktop_gui|web_app|cli|api_server|library"
+  "architecture_style": "desktop_gui|web_app|cli|api_server|library"{se_extra}
 }}
 
 Rules:
