@@ -15,7 +15,7 @@
 | core/ 총 라인 수 | 46,030 |
 | 서브디렉토리 | 6개 (control, continuity, hooks, memory_system, providers, synergy) |
 | 최대 파일 | agent_runner.py (1,419줄) |
-| Dead code 파일 | 3개 (ise_loop, claim_tracer, onboarding_wizard) |
+| Dead code 파일 | 2개 (ise_loop, onboarding_wizard) |
 
 ### 서브디렉토리별 규모
 
@@ -352,7 +352,6 @@
 | 파일 | 줄 | 상태 | 비고 |
 |------|-----|------|------|
 | `ise_loop.py` | 469 | **0 import** | v3 Phase 1B에서 활성화 예정 |
-| `claim_tracer.py` | 214 | **0 import** | 삭제 검토 필요 |
 | `onboarding_wizard.py` | 191 | **0 import** | 삭제 검토 필요 |
 
 ---
@@ -3895,5 +3894,35 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Context**: edit: /Users/hoon/workTree/agent-factory/core/provider_detect.py
 
 **Changed (3)**: `.claude/settings.local.json, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-03 01:18 — `2026-04-14-build-diet` (aac4a784)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/scripts/review_metrics_logger.py
+
+**Changed (1634)**: `.claude/settings.local.json, .claude/settings.local.template.json, AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md ... (+1619)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-03 09:50 — `2026-04-14-build-diet` (d4cfa9c2)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/web_search.py
+
+**Changed (1634)**: `.claude/settings.local.json, AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml ... (+1619)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-03 17:03 — `2026-04-14-build-diet` (e4feb4e2)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/claim_tracer.py
+
+**Changed (1639)**: `.claude/settings.local.json, AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml ... (+1624)`
 
 _Review skipped (--no-llm or LLM unavailable)_
