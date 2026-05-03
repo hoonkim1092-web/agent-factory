@@ -1,49 +1,44 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-03 — **Phase 2 verdict-label spec v7 작성 완료** — v6 cross-review BLOCK 7건 중 false positive 3건(§11 v5→v6 row·§10 F10·"4건 정정" 헤더 모두 v6 본문 실재) dismiss + valid 4건 정정 (High 1·Medium 2·Low 1). **코드 commit 범위 7→8파일로 확장** (`tests/test_hook_runner.py` 추가 — split invariant 회귀). **다음 세션: §8.2 코드 적용 진입.** 브랜치: `2026-04-14-build-diet`
+> 마지막 업데이트: 2026-05-04 — **Phase 2 verdict-label spec v7 §8.2 코드 적용 완료** — 8파일 단일 commit `ac8d4455` (433+/29-). pytest 102/102 (touched modules). 부트스트랩 자기모순 회피 사유로 `AF_SKIP_REVIEW_GATE=1` 우회 commit. 브랜치: `2026-04-14-build-diet`
 > ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 Claude 단독 검증 (codex provider error)
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 > ⚠️ v6 cross-review false positive trail — **F11 신규 (§10)**: cross-review prompt에 grep baseline 검증 의무 추가 (Phase 3 후보)
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Phase 2 v7 §8.2 코드 적용 (8파일 단일 commit)
+## 🔥 다음 세션 즉시 진입 — Phase 2 v7 §8.2 commit 사후 검증 + §9.1 baseline 시작
 
-**대상 문서**: `docs/2026-05-03-phase2-verdict-label-spec.md` (v7, ~870줄)
-**v7 검증 상태**: 본 세션 cross-review 3회 — v4 BLOCK → v5 정정 → v5 WARN advisory → v6 정정 → v6 BLOCK(false positive 3 + valid 4) → v7 정정. 모든 검증은 Claude 단독(codex usage limit). v7은 BLOCK 사유 없음 — §8.2 코드 적용 진입 가능.
+**현재 상태**: commit `ac8d4455` 적용 완료. push 완료. 자동 3-tier 검증은 부트스트랩 우회로 commit 시점에 발화하지 않음 — **다음 세션 첫 .py 편집 시점에 자연스럽게 발화** (parser+prompt 동시 활성화 상태에서 첫 라운드 수행).
 
-### v7 정정 분류 (v6 cross-review BLOCK 7건)
+### 다음 세션 권장 절차
 
-**False positive 3건 (실측 반증으로 dismiss)**:
-- #1 [Critical] "§11 v5→v6 row 부재" → line 832-840 5-row 실재
-- #2 [High] "§10 F10 dead reference" → line 775 실재
-- #4 [Medium] "헤더 4건 vs 실제 #3·#4 누락" → 4건 모두 정정 마커 명시
+1. **부트스트랩 사후 sanity 1회** — Claude 단독 af-cross-review 1회 수동 발화로 v7 형식(fence + finding 헤더 형식) LLM 출력 검증.
+2. **codex 회복 후 (2026-05-05 15:37 KST 이후)** — fan-out 포함 cross-review로 verdict 형식 정합 재확인.
+3. **§9.1 1주 baseline 시작** — `python3 -m scripts.review_metrics_logger` 주기 호출로 verdict 분포 + `verdict_fallback`/`warn_only_suppressed` 빈도 측정.
+4. **§9.2 트리거 모니터링**:
+   - 트리거 #1 (single sink): WARN 라운드당 정확히 1건 `warn_only_suppressed` 정합 확인
+   - 트리거 #2 (verdict_fallback 빈도): 형식 위반 LLM 출력 detection
+   - 트리거 #4 (false-positive): `_FINDING_RE` noise 측정 (정책: 1주 후 fence 한정 재평가)
 
-**Valid 4건 정정**:
-- #3 [High] payload split invariant 회귀 → `tests/test_hook_runner.py` 신설 + 7→8파일 (§5.4)
-- #5 [Medium] §7.2 last-position 한계 → C7 추가
-- #6 [Medium] CLAUDE.md WARN 정책 churn → path (a) 채택 명시 + churn cycle 종결 의도
-- #7 [Low] §1 line 36 narrative v6/v7 갱신
-
-### 다음 세션 — §8.2 코드 적용 단계 (8파일)
+### 적용된 변경 요약 (commit `ac8d4455`)
 
 | # | 파일 | 변경 내역 | spec 참조 |
 |---|------|----------|----------|
-| 1 | `.claude/agents/af-cross-review.md` Step 5 | 6개 변경 (§5.1 변경 1~8) | §5.1 |
+| 1 | `.claude/agents/af-cross-review.md` Step 5 | §4.3 10행 매핑 + §4.4 집계 + finding 헤더 형식 + verdict fence + WARN/PASS 케이스 + HOLD 금지 | §5.1 |
 | 2 | `scripts/review_gate.py` | `_VERDICT_FENCE_RE` + `_extract_verdict_from_content` wrapper | §5.3 |
-| 3 | `scripts/hook_runner.py` | wrapper 호출 + verdict_fallback log (4-arg) | §5.5 |
-| 4 | `scripts/check_pending_review.py` | warn_only_suppressed log (1회-알림 분기 안, 4-arg) | §5.4 |
-| 5 | `scripts/review_metrics_logger.py` | `_FINDING_RE` 확장 + scope-creep 주석 | §5.6 |
-| 6 | `tests/test_review_metrics_logger.py` | finding 라벨 케이스 + false-positive 시나리오 5/6 | §5.6 / §7.6 |
-| 7 | `tests/test_review_gate.py` | C1~C7 collision (v7: C7 추가) + workspace path 단위 테스트 | §7.2 |
-| **8 (v7 신규)** | **`tests/test_hook_runner.py`** | **`test_log_hook_event_split_invariant()` — hook_events.log line 5-segment split 회귀 보호** | **§5.4 v7 정정** |
+| 3 | `scripts/hook_runner.py` | wrapper 단일 호출자 + `verdict_fallback` 4-arg log | §5.5 |
+| 4 | `scripts/check_pending_review.py` | `warn_only_suppressed` 4-arg log + project root sys.path 보정 | §5.4 |
+| 5 | `scripts/review_metrics_logger.py` | `_FINDING_RE` 확장 + scope-creep 책임 분리 주석 | §5.6 |
+| 6 | `tests/test_review_metrics_logger.py` | finding 라벨 6건 + false-positive 시나리오 5/6 + post_agent_record stub 갱신 | §5.6 / §7.6 |
+| 7 | `tests/test_review_gate.py` | C1~C7 collision 회귀 (v7: C7 trailing 한계) | §7.2 |
+| 8 | `tests/test_hook_runner.py` (신규) | `test_log_hook_event_split_invariant()` — line 5-segment split 회귀 보호 | §5.4 v7 정정 |
 
-**적용 절차** (§8.2):
-1. `python3 scripts/blast_radius.py --json --files <list>` 사전 출력 → commit message에 첨부
-2. 8파일 단일 commit
-3. 자동 3-tier 검증 발화 (af-test-runner → af-critic → af-cross-review)
-4. BLOCK 시 정정 후 재commit; PASS/WARN 시 push
+### 알려진 limitation (운영 트리거)
+
+- **C7 trailing body quote**: fence 부재 시 last-position이 trailing 인용을 캡처 → fence 의무화로 차단. 운영 시 fence 미사용 출력 발견 시 §5.5 `verdict_fallback`로 가시화.
+- **false-positive `[ACCEPT-ADV]`/`[BONUS]` markdown fence/prose 인용**: 단순성 우선 정책으로 카운트. 1주 후 빈도 측정 → §10 F4와 함께 fence 한정 정책 재검토.
 
 ---
 
