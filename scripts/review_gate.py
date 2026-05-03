@@ -30,6 +30,36 @@ _VERDICT_HEADER_RE = re.compile(
     r"^#{1,4}\s+(BLOCK|WARN|PASS|FAIL)\b",
     re.IGNORECASE | re.MULTILINE,
 )
+# Phase 2 v7 §5.3: verdict fence — body 인용 collision 차단 (G7 해소).
+# 첫 쌍만 인식; 다중/중첩 fence 발견 시 둘째 쌍 이후는 무시.
+_VERDICT_FENCE_RE = re.compile(
+    r"<!--\s*final-verdict-start\s*-->(.*?)<!--\s*final-verdict-end\s*-->",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def _extract_verdict_from_content(content: str) -> str | None:
+    """Phase 2 v7 §5.3: verdict 추출 — fence 우선 + last-position 결합.
+
+    1순위 fence 내부: `_VERDICT_RE` + `_VERDICT_HEADER_RE` 매칭을 (start, label)
+        튜플로 합쳐 위치 오름차순 정렬 후 last-position 선택.
+    2순위 fence 부재 폴백: 전체 content에 동일 알고리즘.
+    3순위 매칭 0건: None 반환 (caller가 fallback 정책 결정 — §5.5).
+
+    두 정규식은 동일 start position 충돌 불가능(start-disjoint). 다른 start에서의
+    동시 매칭은 last-position 알고리즘이 마지막 출현(통상 verdict 라인)을 선택.
+    """
+    fence = _VERDICT_FENCE_RE.search(content)
+    target = fence.group(1) if fence else content
+    matches: list[tuple[int, str]] = []
+    for m in _VERDICT_RE.finditer(target):
+        matches.append((m.start(), m.group(1).lower()))
+    for hm in _VERDICT_HEADER_RE.finditer(target):
+        matches.append((hm.start(), hm.group(1).lower()))
+    if not matches:
+        return None
+    matches.sort(key=lambda t: t[0])
+    return matches[-1][1]
 
 _TIER_AGENTS: dict[int, str] = {
     1: "af-test-runner",

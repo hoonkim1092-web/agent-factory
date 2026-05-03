@@ -61,6 +61,62 @@ def test_findings_count_case_insensitive(metrics_mod):
     assert metrics_mod.parse_findings_count("[warn] lower case") == 1
 
 
+# Phase 2 v7 §5.6: 신규 라벨 매칭 케이스
+def test_findings_count_accept_adv(metrics_mod):
+    """`[ACCEPT-ADV]` Medium 3건 → findings_count = 3."""
+    content = (
+        "#### 1. [ACCEPT-ADV] [Medium] item 1\n"
+        "#### 2. [ACCEPT-ADV] [Medium] item 2\n"
+        "#### 3. [ACCEPT-ADV] [Medium] item 3\n"
+    )
+    assert metrics_mod.parse_findings_count(content) == 3
+
+
+def test_findings_count_bonus(metrics_mod):
+    """`[BONUS]` Critical 2건 → findings_count = 2."""
+    content = (
+        "#### 1. [BONUS] [Critical] off-scope item 1\n"
+        "#### 2. [BONUS] [Critical] off-scope item 2\n"
+    )
+    assert metrics_mod.parse_findings_count(content) == 2
+
+
+def test_findings_count_mixed_labels(metrics_mod):
+    """혼합 (`[ACCEPT★]`, `[ACCEPT-ADV]`, `[REJECTED]`, `[BONUS]`) → 모두 카운트."""
+    content = (
+        "#### 1. [ACCEPT★] [High] item\n"
+        "#### 2. [ACCEPT-ADV] [Medium] item\n"
+        "#### 3. [REJECTED] item\n"
+        "#### 4. [BONUS] [Critical] item\n"
+    )
+    assert metrics_mod.parse_findings_count(content) == 4
+
+
+def test_findings_count_legacy_labels_still_match(metrics_mod):
+    """회귀 보호: 기존 `[ACCEPT]` / `[WARN]` / `[BLOCK]` / `[REJECTED]` 4종 매칭 유지."""
+    content = "[ACCEPT] a\n[WARN] b\n[BLOCK] c\n[REJECTED] d\n"
+    assert metrics_mod.parse_findings_count(content) == 4
+
+
+# Phase 2 v7 §7.6: false-positive 회귀 (Critic #8 보강 — 정책: 모두 카운트, 단순성 우선)
+def test_findings_count_false_positive_in_markdown_fence(metrics_mod):
+    """markdown 코드 fence 내부 라벨도 카운트 (단순성 우선 정책 — Phase 2 v5 §7.6 시나리오 5)."""
+    content = (
+        "여기는 정책 설명 블록입니다.\n"
+        "```\n"
+        "예시: 라벨 [ACCEPT-ADV] Medium은 advisory를 의미합니다.\n"
+        "```\n"
+    )
+    # 정책 (v7): fence 내부/외부 분리 비용이 단순 grep을 깨트림 — 모두 카운트.
+    assert metrics_mod.parse_findings_count(content) == 1
+
+
+def test_findings_count_false_positive_in_prose_quote(metrics_mod):
+    """prose 인용도 카운트 (단순성 우선 정책 — Phase 2 v5 §7.6 시나리오 6)."""
+    content = '"라벨 [BONUS]를 새로 도입한다는 의미로 본문에 인용한 케이스"'
+    assert metrics_mod.parse_findings_count(content) == 1
+
+
 # ── parse_extension_log_count ─────────────────────────────────────────────────
 
 def test_ext_log_none_korean(metrics_mod):
@@ -237,11 +293,21 @@ def test_post_agent_record_writes_metric(tmp_path, monkeypatch):
     (q / "pending_agent_review.json").write_text(_json.dumps({"files": [], "blast_tier": 1}))
 
     # Stub out review_gate imports
+    # Phase 2 v7 §5.3: hook_runner는 이제 `_extract_verdict_from_content` wrapper만 호출
+    # → 직접 _VERDICT_RE/_VERDICT_HEADER_RE access는 무관, wrapper stub 필요.
     import types
     fake_rg = types.ModuleType("scripts.review_gate")
     import re
     fake_rg._VERDICT_RE = re.compile(r"Verdict:\s*(\w+)", re.IGNORECASE)
     fake_rg._VERDICT_HEADER_RE = re.compile(r"## Verdict\s*\n\s*(\w+)", re.IGNORECASE)
+
+    def _fake_extract(content: str):
+        m = fake_rg._VERDICT_RE.search(content)
+        if m:
+            return m.group(1).lower()
+        hm = fake_rg._VERDICT_HEADER_RE.search(content)
+        return hm.group(1).lower() if hm else None
+    fake_rg._extract_verdict_from_content = _fake_extract
     fake_rg.record_review_done = lambda *a, **kw: None
     monkeypatch.setitem(sys.modules, "scripts.review_gate", fake_rg)
 

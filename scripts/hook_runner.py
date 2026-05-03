@@ -335,15 +335,23 @@ def _post_agent_record(payload: dict) -> int:
     sys.path.insert(0, root)  # 단일 삽입 (L1 중복 제거)
 
     try:
-        from scripts.review_gate import _VERDICT_RE, _VERDICT_HEADER_RE  # type: ignore[import]
-        m = _VERDICT_RE.search(content)
-        if m:
-            verdict = m.group(1).lower()
+        from scripts.review_gate import _extract_verdict_from_content  # type: ignore[import]
+        extracted = _extract_verdict_from_content(content)
+        if extracted is not None:
+            verdict = extracted
         else:
-            hm = _VERDICT_HEADER_RE.search(content)
-            verdict = hm.group(1).lower() if hm else "pass"
-    except Exception:
+            # Phase 2 v7 §5.5: detection-only fail-safe — silent "pass" 폴백을
+            # hook 이벤트로 가시화 (gate-level 차단은 Phase 3로 이관, §6 O5 정합).
+            verdict = "pass"
+            _log_hook_event(
+                "verdict_fallback",
+                subagent_type,
+                0,
+                error=f"no-verdict-line:{content[:200]!r}",
+            )
+    except Exception as exc:
         verdict = "pass"
+        _log_hook_event("verdict_fallback", subagent_type, 1, error=str(exc))
 
     if subagent_type == "af-test-runner":
         verdict = _apply_test_gap_verdict(workspace, verdict)

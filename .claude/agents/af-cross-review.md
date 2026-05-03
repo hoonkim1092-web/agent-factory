@@ -39,7 +39,10 @@ echo "probe exit=$PROBE_EXIT json=$PROBE_JSON"
 if [ $PROBE_EXIT -ne 0 ] || [ -z "$PROBE_JSON" ]; then
   echo "WARN: provider_detect 실패 — SKIP 처리"
   cat /tmp/af-probe-err.txt 2>/dev/null
-  echo "## Tier 3 판정: PASS (provider_detect 실패로 SKIP)"
+  echo "<!-- final-verdict-start -->"
+  echo "## Tier 3 판정: PASS"
+  echo "사유: provider_detect 실패로 SKIP"
+  echo "<!-- final-verdict-end -->"
   exit 0
 fi
 ```
@@ -63,7 +66,10 @@ echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
 재로그인 후 다시 시도하거나, 해당 세션만 우회:
   AF_SKIP_PROVIDER=<provider_id> git commit ...
 
+<!-- final-verdict-start -->
 ## Tier 3 판정: BLOCK
+사유: 외부 프로바이더 인증 만료
+<!-- final-verdict-end -->
 ```
 
 **케이스 2 — `fan_out` 비어있음 (외부 AI 없음)**:
@@ -74,7 +80,10 @@ echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
 Claude 외 가용 CLI 없음 (codex/gemini 미설치 또는 AF_SKIP_PROVIDER로 제외).
 Tier 3은 통과로 간주합니다.
 
+<!-- final-verdict-start -->
 ## Tier 3 판정: PASS
+사유: 외부 프로바이더 0개 — SKIP 통과 간주
+<!-- final-verdict-end -->
 ```
 
 **케이스 3 — `fan_out` 1개 이상**: Step 1로 진행.
@@ -254,20 +263,55 @@ Claude가 실제 코드를 읽고 각 항목에 의문을 제기합니다.
 
 모든 라운드 결과를 종합해 최종 판정을 내린다.
 
-**판정 규칙**:
+> **정규 출처**: 본 Step 5의 verdict 매핑·집계 규칙은 `docs/2026-05-03-phase2-verdict-label-spec.md` (Phase 2 verdict-label spec, v7)의 §4.3 / §4.4가 유일한 정규 출처다. 아래는 spec 요약 — 충돌 시 spec 본문이 우선한다 (G5 재발 방지).
 
-| 출처 | 조건 | 최종 판정 |
-|------|------|-----------|
-| High/Critical + verified (Claude 직접 확인) | — | ACCEPT |
-| High/Critical + challenged + Codex `[보강]` | 코드 근거 충분 | ACCEPT★ |
-| High/Critical + challenged + Codex `[보강]` | 코드 근거 불충분 | REJECT |
-| High/Critical + challenged + Codex `[철회]` | — | REJECTED |
-| Medium/Low (unchallenged) | — | ACCEPT (advisory) |
-| BONUS 항목 | — | advisory only |
+**§4.3 finding → final verdict 매핑 (정규 요약 — 10행)**:
 
-**BLOCK 판정 기준**: ACCEPT 또는 ACCEPT★ 항목 중 Critical/High가 1개 이상 → 수정 필요.
+| finding 라벨 | severity | final verdict 기여 |
+|------------|---------|----------------|
+| `[ACCEPT]` / `[ACCEPT★]` | Critical | **BLOCK** |
+| `[ACCEPT]` / `[ACCEPT★]` | High | **BLOCK** |
+| `[ACCEPT]` / `[ACCEPT★]` | Medium / Low | (해당 없음 — challenge 대상 아님) |
+| `[ACCEPT-ADV]` | Critical / High | (해당 없음 — Critical/High은 ACCEPT/ACCEPT★ 경로) |
+| `[ACCEPT-ADV]` | Medium | **WARN** |
+| `[ACCEPT-ADV]` | Low | **WARN** |
+| `[REJECTED]` | any (severity **생략 허용**) | (verdict-neutral — 무시 — fail-safe보다 우선) |
+| `[BONUS]` | any | **WARN** |
+| **(severity 누락 — `[REJECTED]` 외 4종 라벨 한정)** | (지정 안 됨) | **BLOCK** (fail-safe default) |
+| (발견 없음) | — | **PASS** |
 
-출력 형식:
+**§4.4 집계 규칙 (우선순위 내림차순)**:
+
+```
+0. [REJECTED] finding은 어느 카운트에도 들어가지 않는다 (verdict-neutral, severity 무관).
+1. BLOCK 기여 finding ≥ 1   → 최종 verdict = BLOCK
+2. (BLOCK 없음) WARN 기여 finding ≥ 1   → 최종 verdict = WARN
+3. (BLOCK·WARN 둘 다 없음)   → 최종 verdict = PASS
+```
+
+severity 누락 finding은 `[REJECTED]`가 아닌 한 fail-safe로 BLOCK 1건이 카운트된다.
+
+**finding 헤더 형식 (의무)**: `#### N. [라벨] [Severity] 제목`
+- 라벨: `[ACCEPT]` / `[ACCEPT★]` / `[ACCEPT-ADV]` / `[REJECTED]` / `[BONUS]` 5종.
+- Severity: `[Critical]` / `[High]` / `[Medium]` / `[Low]` 4종.
+- **Severity 의무**: `[ACCEPT]` / `[ACCEPT★]` / `[ACCEPT-ADV]` / `[BONUS]` 4종.
+- **Severity 생략 허용**: `[REJECTED]` 1종 (verdict-neutral).
+- severity 누락은 `[REJECTED]` 제외 시 BLOCK으로 안전 처리됨 (G9 fail-safe).
+
+**HOLD 라벨 사용 금지** (Phase 2 범위 — §4.5에 따라 Phase 3로 완전 이관).
+
+**`[scope-creep]` / `[INCOMPLETE]` 마커**: WARN/BLOCK/PASS 어느 라벨에도 부착 가능. 단 verdict 라인은 fence 내부에 위치해야 한다 (아래 출력 형식 참조).
+
+**verdict fence 의무 (G7 collision 차단)**: 최종 판정은 반드시 아래 fence 내부에 위치한다. 본문 어디에서도 fence를 재사용할 수 없다.
+
+```
+<!-- final-verdict-start -->
+## Tier 3 판정: BLOCK
+사유: <한 줄>
+<!-- final-verdict-end -->
+```
+
+출력 형식 예시:
 
 ```
 ## 교차 검증 결과 (참여: codex_cli — 4-Round Deliberation)
@@ -280,7 +324,7 @@ Claude가 실제 코드를 읽고 각 항목에 의문을 제기합니다.
 
 ### 최종 판정
 
-#### 1. [ACCEPT★] 제목 (challenged → [보강] 방어 성공)
+#### 1. [ACCEPT★] [High] 제목 (challenged → [보강] 방어 성공)
 - **원문**: "..."
 - **대상 코드**: `core/xxx.py:123`
 - **Claude Challenge**: "..."
@@ -288,28 +332,51 @@ Claude가 실제 코드를 읽고 각 항목에 의문을 제기합니다.
 - **판정 근거**: 코드 확인 결과 실제 문제 존재
 - **수정 제안**: ...
 
-#### 2. [ACCEPT] 제목 (verified — Challenge 생략)
+#### 2. [ACCEPT] [Critical] 제목 (verified — Challenge 생략)
 - **원문**: "..."
 - **대상 코드**: `core/yyy.py:456`
 - **판정 근거**: 직접 코드 확인, 지적 정확
 
-#### 3. [REJECTED] 제목 (Codex [철회])
+#### 3. [REJECTED] 제목 (Codex [철회], severity 생략 허용)
 - **원문**: "..."
 - **Claude Challenge**: "..."
 - **Codex Defense [철회]**: "..."
 - **판정 근거**: Codex가 지적을 스스로 철회
 
-#### 4. [ACCEPT] 제목 (advisory — Medium/Low)
+#### 4. [ACCEPT-ADV] [Medium] 제목 (advisory)
 - **원문**: "..."
 - **대상 코드**: `core/zzz.py:789`
 
+#### 5. [BONUS] [Critical] 제목 (변경 무관 advisory)
+- **원문**: "..."
+
 ### 수용 항목 적용 여부
 Critical/High ACCEPT/ACCEPT★ 항목은 즉시 수정이 필요합니다.
-Medium/Low Advisory 항목은 사용자 판단에 따라 수정하세요.
+Medium/Low / BONUS Advisory 항목은 사용자 판단에 따라 수정하세요.
 
+<!-- final-verdict-start -->
 ## Tier 3 판정: BLOCK
+사유: ACCEPT★ High 1건 — `core/xxx.py:123` 검증 후 코드 근거 충분
+<!-- final-verdict-end -->
 ```
-(BLOCK-level 항목이 없으면 `PASS`)
+
+WARN 케이스 예시 (advisory만 발견 — Medium/Low ACCEPT-ADV 또는 BONUS):
+
+```
+<!-- final-verdict-start -->
+## Tier 3 판정: WARN
+사유: Advisory Medium 2건, Low 1건 — 사용자 검토 권장
+<!-- final-verdict-end -->
+```
+
+PASS 케이스 예시 (BLOCK·WARN 모두 없음):
+
+```
+<!-- final-verdict-start -->
+## Tier 3 판정: PASS
+사유: BLOCK/WARN 기여 finding 0건
+<!-- final-verdict-end -->
+```
 
 ---
 
@@ -335,8 +402,8 @@ fi
    - result: <verified | rejected | hold>
    ```
 3. 최종 응답 마지막에 extension log 전체를 출력한다. (0건이면 `Extension Log: 없음`)
-4. extension log 항목이 5개를 초과하면 verdict 라인에 `[scope-creep]` 마커를 추가한다.
-5. **bundle stale** 감지 시 즉시 종결: `Tier 3 판정: PASS (bundle-stale — 재생성 필요)`
+4. extension log 항목이 5개를 초과하면 verdict 라인에 `[scope-creep]` 마커를 추가한다 (fence 내부에 부착).
+5. **bundle stale** 감지 시 즉시 종결: fence 내부에 `## Tier 3 판정: PASS` + `사유: bundle-stale — 재생성 필요`
 
 **bundle 미존재 시**: 전통적 탐색 모드로 진행한다. 응답 첫 줄에 `(bundle: absent)` 표기.
 

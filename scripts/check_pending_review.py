@@ -80,7 +80,11 @@ def main() -> None:
         return
 
     # Import lock from review_gate for consistent RMW protection
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    _scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, _scripts_dir)
+    # Phase 2 v7 §5.4: project root도 sys.path에 추가 — `from scripts.hook_runner import`
+    # 가 hook subprocess 환경(run.py 호출)에서 resolve되도록 보장.
+    sys.path.insert(0, os.path.dirname(_scripts_dir))
     try:
         from review_gate import _state_lock  # type: ignore
     except Exception:
@@ -126,6 +130,22 @@ def main() -> None:
         if round_count >= 1 and last_summary and not last_summary.get("has_block", True):
             # 1회 알림: WARN-only suppression이 왜 commit을 막을 수 있는지 설명
             if not data.get("warn_only_notified_at"):
+                # Phase 2 v7 §5.4: WARN 라운드당 정확히 1건 — 1회-알림과 동일 분기에서
+                # 시계열 sink 기록 (§9.2 트리거 #1 falsifiable 재정의 G11 해소).
+                try:
+                    from scripts.hook_runner import _log_hook_event  # type: ignore
+                    _log_hook_event(
+                        "warn_only_suppressed",
+                        str(round_count),
+                        0,
+                        error=json.dumps({
+                            "agents_present": list(
+                                (last_summary.get("verdicts") or {}).keys()
+                            ),
+                        }),
+                    )
+                except Exception:
+                    pass  # sink 결손은 Phase 2 비목표 (detection-only)
                 print(
                     "[af-review-suppressed] 직전 라운드가 WARN/PASS만 포함 — 재발화 보류."
                 )

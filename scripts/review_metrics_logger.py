@@ -28,8 +28,11 @@ METRICS_FILE = "review_metrics.jsonl"
 SKIP_AUDIT_FILE = "skip_audit.jsonl"
 
 # finding 마커 패턴 (구조화된 verdict 라인만 인식)
+# Phase 2 v7 §5.6: `[ACCEPT-ADV]` (Medium/Low advisory) + `[BONUS]` (변경 무관 advisory)
+# 라벨 추가. ACCEPT 변형 4종(`[ACCEPT]`, `[ACCEPT★]`, `[ACCEPT*]`, `[ACCEPT-ADV]`) 통합.
+# `[HOLD]`는 §4.5 결정으로 Phase 3 이관 — 발화 금지.
 _FINDING_RE = re.compile(
-    r'\[(?:ACCEPT[★*]?|WARN|BLOCK|REJECTED)\]',
+    r'\[(?:ACCEPT(?:[★*]|-ADV)?|WARN|BLOCK|REJECTED|BONUS)\]',
     re.IGNORECASE,
 )
 
@@ -39,6 +42,8 @@ _EXT_LOG_NONE_RE = re.compile(r'Extension Log[：:]\s*(?:없음|None|없다)', r
 _EXT_LOG_ITEM_RE = re.compile(r'^\s*[-*]\s+\S', re.MULTILINE)
 
 # scope-creep 마커 (>5건 이상임을 나타냄)
+# Phase 2 v7 §5.6: scope-creep 마커는 verdict 라벨이 아니므로 fence 외부도 검색 유지
+# (§5.3 verdict 파서는 fence 내부 한정 — 책임 분리).
 _SCOPE_CREEP_RE = re.compile(r'\[scope-creep\]', re.IGNORECASE)
 
 

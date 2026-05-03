@@ -260,3 +260,106 @@ def test_no_py_files_pass(ws):
     blocked, reason = is_gate_blocked(ws)
     assert not blocked
     assert reason == "no-py-files"
+
+
+# ── Phase 2 v7 §7.2: `_extract_verdict_from_content` collision 회귀 (C1~C7) ─
+
+from scripts.review_gate import _extract_verdict_from_content  # noqa: E402
+
+
+def test_c1_fence_inner_single_verdict_line():
+    """C1: fence 내부 단일 `## Tier 3 판정: WARN` → verdict=warn."""
+    content = (
+        "# header\n"
+        "본문\n"
+        "<!-- final-verdict-start -->\n"
+        "## Tier 3 판정: WARN\n"
+        "사유: advisory only\n"
+        "<!-- final-verdict-end -->\n"
+    )
+    assert _extract_verdict_from_content(content) == "warn"
+
+
+def test_c2_body_quote_outside_fence_uses_fence_only():
+    """C2: 본문 인용 + fence 내부 verdict 라인 → fence 내부만 인식 (G7 차단)."""
+    content = (
+        "이전 라운드 판정: BLOCK 이라고 알려져 있다 (인용)\n"
+        "<!-- final-verdict-start -->\n"
+        "## Tier 3 판정: PASS\n"
+        "사유: 발견 없음\n"
+        "<!-- final-verdict-end -->\n"
+    )
+    assert _extract_verdict_from_content(content) == "pass"
+
+
+def test_c3_no_fence_two_patterns_last_position_wins():
+    """C3 (v4 정정): fence 부재 + 위쪽 _VERDICT_RE BLOCK + 아래쪽 _VERDICT_HEADER_RE PASS
+    → last-position 헤더 PASS 선택 (Critic #1 핵심 케이스)."""
+    content = (
+        "verdict: BLOCK 라는 이전 인용\n"
+        "본문 본문 본문\n"
+        "## PASS\n"
+    )
+    assert _extract_verdict_from_content(content) == "pass"
+
+
+def test_c3b_no_fence_symmetric_swap_position_wins():
+    """C3b (v4 신규): fence 부재 + 위쪽 헤더 BLOCK + 아래쪽 verdict-line PASS
+    → last-position(verdict-line PASS) 선택 — 패턴 종류 무관, 위치만 비교 (대칭성)."""
+    content = (
+        "## BLOCK\n"
+        "본문 본문 본문\n"
+        "판정: PASS\n"
+    )
+    assert _extract_verdict_from_content(content) == "pass"
+
+
+def test_c4_no_fence_critic_format_compat():
+    """C4: fence 부재 + 단일 `Verdict: BLOCK` (af-critic 형식) → block (호환성)."""
+    content = "Verdict: BLOCK\n"
+    assert _extract_verdict_from_content(content) == "block"
+
+
+def test_c5_no_fence_no_verdict_line_returns_none():
+    """C5: fence 부재 + verdict 라인 0건 → None (caller가 silent fallback 결정)."""
+    content = "본문에 verdict 라벨이 전혀 없음\n"
+    assert _extract_verdict_from_content(content) is None
+
+
+def test_c6_multiple_fences_first_pair_only():
+    """C6 (v4 신규): 본문에 fence 2쌍 — 첫 쌍 PASS + 둘째 쌍 BLOCK
+    → 첫 쌍만 인식 → verdict=pass (Missing #4 해소)."""
+    content = (
+        "<!-- final-verdict-start -->\n"
+        "## Tier 3 판정: PASS\n"
+        "사유: 첫 쌍\n"
+        "<!-- final-verdict-end -->\n"
+        "본문\n"
+        "<!-- final-verdict-start -->\n"
+        "## Tier 3 판정: BLOCK\n"
+        "사유: 둘째 쌍은 무시되어야 함\n"
+        "<!-- final-verdict-end -->\n"
+    )
+    assert _extract_verdict_from_content(content) == "pass"
+
+
+def test_c7_no_fence_trailing_body_quote_known_limitation():
+    """C7 (v7 신규): fence 부재 + 정상 verdict 라인 `## PASS` + trailing 본문 인용
+    → last-position이 trailing 캡처 → block (LLM drift 한계 — fence 사용으로 차단 권장).
+
+    v6 cross-review #5가 식별한 last-position 휴리스틱의 알려진 한계.
+    spec-level에 명시 — 운영 시 fence 의무화로 차단."""
+    content = (
+        "## PASS\n"
+        "사유: 정상\n"
+        "한계 케이스: verdict: BLOCK 키워드를 본문에 인용함\n"
+    )
+    # 알려진 한계 — last-position이 trailing BLOCK 인용을 캡처
+    assert _extract_verdict_from_content(content) == "block"
+
+
+def test_workspace_path_consistency_via_log_event():
+    """workspace path 일관성 단위: AF_SKIP_REVIEW_GATE=1 시 hook_events.log가
+    workspace 하위 .af_review_queue/ 경로에 기록되는가."""
+    # test_j_skip_gate_env 와 같은 보장이지만 path 자체에 초점.
+    pass  # test_j_skip_gate_env가 동일 보장을 이미 다룸 — duplicate 방지
