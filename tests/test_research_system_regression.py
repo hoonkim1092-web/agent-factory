@@ -89,7 +89,6 @@ class TestG2FastSynthesisSecondaryFreshLookup(unittest.TestCase):
 
 class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
 
-    @pytest.mark.xfail(strict=True, reason="G3 RED: AF_RESEARCH_LLM_FALLBACK not implemented")
     def test_g3_tavily_unset_fallback_path(self):
         from core.research_router import ResearchPlan
         from core.researcher import HimariResearchAgent

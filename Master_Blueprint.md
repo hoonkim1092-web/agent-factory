@@ -1275,6 +1275,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-04 | (unreleased) | feat(researcher): P3 G3 — `core/researcher.py` TAVILY 미설정 + `AF_RESEARCH_LLM_FALLBACK=1` 시 `_collect_llm_prior_knowledge` 결과를 `web_refs` 슬롯에 병합. `elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1"` 분기 2곳(`requires_web` / `not sufficient`) 추가. `tests/test_research_system_regression.py` G3 xfail 마커 제거 → GREEN. 회귀 138 passed. |
 | 2026-05-04 | (unreleased) | feat(research-router): P2 G1 — `core/research_router.py` 한국어 토큰 누락 보강: `_FRESHNESS_TOKENS`+"최근", `_OPERATIONAL_RISK_TOKENS`+"동시 접속"(띄어쓰기 변형)/"8인"/"다인용"/"멀티유저", `_DEEP_DECISION_TOKENS`+"공신력"/"권위 있는". `tests/test_research_system_regression.py` case 1 xfail 마커 제거 → GREEN. 회귀 7/7 PASS(G3 xfail 유지). §0 `core/research_router` 행 갱신. |
 | 2026-05-04 | (unreleased) | fix(researcher): P1 G2 — `core/researcher.py:690` `if mode == "fast_synthesis"` 조건을 `and not research_plan.requires_web`로 강화. fast_synthesis + secondary_modes=["fresh_lookup"] + requires_web=True 조합 시 `elif requires_web` 분기로 진입하지 못하던 버그 수정. `tests/test_research_system_regression.py` P0 7 cases 신규(4 PASS / 2 XFAIL / 1 xfail→PASS 후 마커 제거). §0 researcher 행 `last_updated` 갱신. |
 | 2026-05-03 | (unreleased) | chore(dead-code): `core/claim_tracer.py` 삭제 — 0 import dead code(2026-04-03 code-review 이래 삭제 검토 대상). `docs/code_review/code-review.md` Dead code 카운트 3→2 갱신. |
