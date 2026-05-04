@@ -12,9 +12,9 @@
 >
 > `--ff-only`가 reject되면 origin이 force-update된 흔적 — `git fetch && git status`로 분기 확인 후 결정. 본 세션에서 이걸 건너뛰어 hook 분기 이슈 진단이 늦어졌음.
 >
-> ✅ **다음 세션 최우선 작업** (P0 A1+A6 완료, 커밋 `9d06bfef`):
->   ① P0 자기검증 실행 — 포커 build prompt 1회 실행, `project_brief["original_request"]` byte-for-byte 확인 + `docs/research/<slug>-project-brief.json` 파일 존재 확인 (A1·A6 검증)
->   ② P0 나머지 — A2→A5→A3→A4 순서 구현 (설계문서 §11.3)
+> ✅ **다음 세션 최우선 작업** (P0 전체 완료, 커밋 `deb9195d`):
+>   ① P0 자기검증 — 포커 build prompt 실행: `project_brief["original_request"]` byte-for-byte + `docs/research/<slug>-project-brief.json` 파일 존재 + plan.md References 자기참조 노이즈 없음 + web_refs 상위 4건 중 권위 도메인 ≥ 1건 (Tavily 환경)
+>   ② P1 진입 준비 — 설계문서 §5.2 B1(Evidence Matrix/RecoverySearchLoop) 검토
 >   ③ codex 회복(2026-05-05 15:37 KST↑) 후 fan-out cross-review 1회
 > ⚠️ **hook auto-amend 분기 이슈** (이번 세션 30회 amend chain 관찰 + 15:41 origin forced-update): hook 체인이 push 직후 워킹트리에 chore 변경 추가 → 자동 `--amend` 또는 별도 chore commit + force-push로 SHA 갈아끼움. 다른 PC에서도 같은 패턴 작동 중 (오늘 origin forced-update가 그 증거). 다중 PC 작업 시 분기 위험 ↑.
 > ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
@@ -22,11 +22,12 @@
 
 ---
 
-## ✅ 완료 (2026-05-05 세션) — P0 A1+A6
+## ✅ 완료 (2026-05-05 세션) — P0 전체 (A1~A6)
 
 | 커밋 | 내용 |
 |------|------|
-| `9d06bfef` | feat(researcher+pipeline): P0 A1+A6 — `original_request` verbatim 보존 + `docs/research/<slug>-project-brief.json` 추적 저장. cross-review BLOCK #2 반영(fallback 경로). 3-tier PASS. |
+| `9d06bfef` | feat(researcher+pipeline): P0 A1+A6 — `original_request` verbatim 보존 + brief 추적 저장. 3-tier PASS. |
+| `deb9195d` | feat(researcher+router): P0 A2+A3+A4+A5 — 도메인 필터+trust_score+checklist+ResearchPlan 3종. BLOCK 2건 수정. 140 tests PASS. |
 
 ## ✅ 완료 (2026-05-04 세션) — Master_Blueprint §12 deprecation + P5 G4 병렬화
 
