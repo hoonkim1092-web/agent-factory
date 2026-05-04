@@ -27,10 +27,18 @@
 2. **schedule 등록** (선택) — 2026-05-11 09:00 KST `python3 -m scripts.review_metrics_logger` 자동 호출
 3. **비-검증 작업 일반** — 코드/문서 작업 가능. `.py` 편집 시 자동 3-tier는 Claude 단독으로 발화
 
-### codex 회복 후 (2026-05-05 15:37 KST↑)
+### codex 회복 후 (2026-05-05 15:37 KST↑) — 날짜별 진입 가이드
 
-1. **fan-out 포함 af-cross-review** — v7 fence/finding 헤더 multi-provider 정합 재확인
-2. **multi-provider verdict 일치성 검증** — codex/claude/gemini 간 verdict 분포 차이 측정
+| 날짜 | 작업 | 진입 명령 / 산출물 |
+|------|------|------------------|
+| **2026-05-05 (화)** 15:37 KST 이후 | ① codex 가용성 sanity check<br>② fan-out 포함 af-cross-review **1회** 수동 발화 (target: NEXT_STEPS.md 또는 임의 docs) → v7 fence/finding 헤더 multi-provider 정합 1차 검증 | `python3 core/provider_detect.py` 로 codex 인증 확인 → Agent 호출 (af-cross-review) |
+| **2026-05-06 (수)** | ① 어제 fan-out 결과 review 파일 분석 (codex/claude/gemini 간 verdict 분포 차이)<br>② §9.2 트리거 #2 `verdict_fallback` 빈도 중간 측정<br>③ 차이 발견 시 v7 prompt/fence 정정안 작성 (필요 시 v8) | `grep -c verdict_fallback .af_review_queue/hook_events.log`<br>`python3 -m scripts.review_metrics_logger` |
+| **2026-05-11 (월)** 09:00 KST | §9.1 1주 baseline **종료** — compute_report 수동 호출 후 결과를 docs/2026-05-11-phase2-baseline-report.md로 저장 | `python3 -m scripts.review_metrics_logger > /tmp/baseline.txt` → 분석 + 신규 docs 작성 |
+
+**진입 시 cold-start 절차** (PC 변경 시):
+1. `git pull && python start_db.py agent-factory`
+2. 본 §🔥 § "Baseline 시작점 캡처" 표와 현재 상태 diff 확인 (`python3 -m scripts.review_metrics_logger`)
+3. 위 표의 해당 날짜 행 진입 명령 실행
 
 ### §9.2 트리거 모니터링 (baseline 1주 기간 내)
 
