@@ -1,5 +1,6 @@
 # Agent Factory — Claude Code 지시사항
 
+<!-- KARPATHY-PRINCIPLES-START (실험 2026-05-04 ~ 2026-05-11, 제거 시 이 마커 사이 전부 삭제) -->
 ## LLM 행동 원칙 (Karpathy)
 
 > 출처: [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
@@ -53,6 +54,7 @@
 강한 성공 기준은 독립 반복을 가능하게 한다. "그냥 동작하게 해" 같은 약한 기준은 매번 명확화가 필요하다.
 
 **효과 측정**: 불필요한 변경 감소, 과설계로 인한 재작성 감소, 구현 후가 아닌 구현 전 명확화 질문 증가.
+<!-- KARPATHY-PRINCIPLES-END -->
 
 ---
 
