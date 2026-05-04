@@ -1,18 +1,49 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 (오후 2차) — **B안 advisory 3건 정정 완료**, 회귀 141 PASS. 브랜치: `2026-04-14-build-diet`
-> ✅ **다음 세션 최우선**: P5 G4 병렬화 진입 (`_collect_*` 4종 직렬 → 병렬). §📦 섹션 참조
+> 마지막 업데이트: 2026-05-04 (오후 3차) — **B안 advisory 3건 정정 + post-merge double-prefix bug fix 완료**, 회귀 142 PASS. 브랜치: `2026-04-14-build-diet`. 직전 커밋 `c739f5e9`.
+> ✅ **다음 세션 최우선**: ① Master_Blueprint §12 deprecation entry 추가 (rebase 충돌 처리 중 누락) ② P5 G4 병렬화 진입. §📦 섹션 참조
+> ⚠️ **hook auto-amend 분기 이슈**: push 시 hook 체인이 자동 amend로 SHA를 바꿔 origin과 분기 발생. rebase 시 hook 자동 chore 라인이 충돌 영역에 끼어 의도 entry까지 누락 위험 (이번 세션 deprecation entry 1줄 손실). hook 안정화 별도 spec 필요.
 > ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 
 ---
 
-## 📦 다음 세션 즉시 진입 — P5 G4 병렬화
+## 🔥 즉시 진입 — Master_Blueprint §12 deprecation entry 추가
+
+**누락 사실**: B안 advisory 정정 commit (`f47e3c35`)에서 `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기를 §12 변경이력 본문에는 적었지만, 별도 deprecation 명시 entry 1줄 추가 작업이 rebase 충돌 처리 중 손실됨.
+
+**작업**: §12에 1줄 추가 — 위치는 `f47e3c35` advisory entry 위.
+```markdown
+| 2026-05-04 | (unreleased) | docs(blueprint): `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기 명시 — 직전 advisory commit `f47e3c35`에서 코드/테스트 일괄 제거됨. 더 이상 인식되지 않으며, 설정해도 동작에 영향 없음. |
+```
+
+작은 docs 변경이므로 review-gate 자동 통과. 1 commit + push.
+
+---
+
+## 📦 그 다음 — P5 G4 병렬화
 
 **갭**: `_collect_local_references` / `_collect_web_references` / `_collect_notebook_summary` / `_collect_llm_prior_knowledge` 가 직렬 실행 — 합산 budget 압박. asyncio.gather 또는 ThreadPoolExecutor로 병렬화.
 
 **참고**: `tests/test_research_system_regression.py:test_g4_evidence_parallel_runs_within_budget` 가 baseline 캡처. 절반 이하 시간 목표.
+
+---
+
+## 🔧 별도 spec — hook auto-amend 분기 이슈
+
+**증상**: `.py` 파일 commit 후 hook 체인 (review-gate / blueprint_updater / code_review_updater / skill_promotion 등)이 워킹트리에 chore 변경을 만들면서 commit을 자동 amend → 로컬 SHA가 변경되는데, 동시에 별도 hook flow가 origin에 push해 origin SHA가 따로 결정 → 분기 발생.
+
+**관찰**: 본 세션에서 2회 발생 (`8db561f3 → 4d057fdd vs origin f47e3c35`, `_ → 7ee6cf3a` 패턴). rebase 시 hook chore 라인(38줄)이 충돌 영역을 점유해 의도된 entry 손실 위험.
+
+**root cause 후보**:
+- post-commit hook이 `git commit --amend`를 무조건 실행
+- push 직후 별도 chore commit + auto-push가 race condition 유발
+- blueprint_updater가 워킹트리 변경 후 `--amend` 사용
+
+**진단 진입점**: `scripts/blueprint_updater.py`, `scripts/code_review_updater.py`, `core/hooks/event_bus.py`. `hook_events.log`에서 `auto_amend` / `auto_commit` 이벤트 카운트 측정.
+
+**임시 우회**: hook이 다 끝난 후 `git status --short`로 chore 변경 보이면 전체 정리 후 push. 또는 `AF_SKIP_REVIEW_GATE=1`로 hook 우회.
 
 ---
 
