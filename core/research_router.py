@@ -144,7 +144,7 @@ _OPERATIONAL_RISK_TOKENS: frozenset[str] = frozenset({
     "realtime", "multiplayer", "network", "scheduler", "payment", "auth",
     "scaling", "migration", "concurrent",
     "실시간", "결제", "인증", "멀티플레이어", "멀티유저", "동시접속", "동시 접속",
-    "8인", "다인용", "풀네트워크", "스케줄러",
+    "다인용", "풀네트워크", "스케줄러",
 })
 
 _DATA_PIPELINE_TOKENS: frozenset[str] = frozenset({
