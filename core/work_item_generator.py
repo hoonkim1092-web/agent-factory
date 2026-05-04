@@ -92,7 +92,10 @@ def _reference_bullets(project_brief: dict[str, Any], limit: int = 8) -> str:
     for item in project_brief.get("llm_prior_references") or []:
         if not isinstance(item, dict):
             continue
-        label = _clean(item.get("title") or item.get("url"))
+        # producer(researcher._collect_llm_prior_knowledge)가 title에 "[LLM prior] " prefix를
+        # 이미 부착하므로(researcher.py:630), bullet 라인 prefix와 중복되지 않게 strip한다.
+        raw_label = _clean(item.get("title") or item.get("url"))
+        label = raw_label[len("[LLM prior] "):] if raw_label.startswith("[LLM prior] ") else raw_label
         detail = _trim_text(item.get("excerpt"), limit=180)
         if not label:
             continue
