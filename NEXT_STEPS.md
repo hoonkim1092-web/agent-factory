@@ -1,33 +1,104 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 (야간) — **P0+P1 완료**. P0 commit `97f52bd6`, P1 commit `2819b874`. 다음은 **Phase 2(G1 토큰 보강)**. 브랜치: `2026-04-14-build-diet`
-> ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증. **fan-out 의존 작업 전부 보류 — §🔥 "codex 회복 후" 섹션 참조**
+> 마지막 업데이트: 2026-05-04 (오전) — **P2 G1 + P3 G3 + P4 G5 완료, hook fix 완료**. 브랜치: `2026-04-14-build-diet`
+> ⚠️ **다음 세션 최우선**: P3/P4 코드에 깊이분석 발견 결함 2건 잔존 — §🔥 "결함 정정" 섹션 참조
+> ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
-> ⚠️ v6 cross-review false positive trail — **F11 신규 (§10)**: cross-review prompt에 grep baseline 검증 의무 추가 (Phase 3 후보)
-> ✅ Phase 2 v7 §8.2 코드 적용 완료 — 8파일 단일 commit `ac8d4455` (433+/29-). pytest 102/102 (touched modules). 부트스트랩 자기모순 회피 사유로 `AF_SKIP_REVIEW_GATE=1` 우회 commit.
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Research 시스템 개선 Phase 2 (G1)
+## 🔥 다음 세션 즉시 진입 — P3/P4 결함 정정 (#1, #2)
 
-**대상 문서**: `docs/plans/2026-05-04-research-system-improvement.md` §4.3 (P2 G1 토큰 보강)
+**배경**: 본 세션에서 P3 G3 + P4 G5 구현 후 깊이분석으로 결함 2건 발견. P5(G4 병렬화) 진입 전에 정정 필수.
 
-**완료된 Phase**:
-- ✅ P0 (`97f52bd6`): `tests/test_research_system_regression.py` 7 cases (4 PASS / 2 XFAIL / 1 PASS)
-- ✅ P1 (`2819b874`): G2 fix — `researcher.py:690` fast_synthesis + requires_web 조건 추가. af-test-runner 136/2xfail PASS. af-critic WARN-4/BLOCK-0 (W4는 의도된 설계).
+### 결함 #1 (Critical) — G3 메타데이터 오염
 
-**Phase 2 진입 명령** (T2 — research_router.py):
-1. `core/research_router.py:132-169` 토큰셋 보강:
-   - `_FRESHNESS_TOKENS`에 "최근" 추가
-   - `_OPERATIONAL_RISK_TOKENS`에 "동시 접속", "8인", "다인용", "멀티유저" 추가
-   - `_DEEP_DECISION_TOKENS`에 "공신력", "권위 있는" 추가
-2. `tests/test_research_system_regression.py` case 1 xfail 마커 제거 (G1 GREEN)
-3. commit msg: `feat(research-router): P2 G1 — 한국어 토큰 누락 보강 + 띄어쓰기 변형`
-4. af-test-runner + af-critic 발화 → PASS 시 Phase 3(G3) 또는 Phase 4(G5) 진입
+**위치**: `core/researcher.py:710-712, 719-720`
 
-**참고 문서**:
-- `docs/plans/2026-05-04-research-system-improvement.md` §4.3
+**증상**: G3 fallback이 `_collect_llm_prior_knowledge()` 결과를 `web_refs` 슬롯에 넣음. 그러나:
+- `_build_source_pack:356-370`이 web_refs를 무조건 `source_type="web"`, `authority_level="secondary"`, `retrieval_method="tavily_search"`로 처리
+- virtual chunk 인덱싱 `:730-738`이 web_refs를 무조건 `source_type="web"`, `weight=0.9`, `verified=True`로 처리
+- LLM prior 메타데이터(`source_type="llm_prior"`, `verified=False`, `weight=0.4`) 전부 덮어씌워짐
+- source_id가 `web_001`로 부착 → synthesizer가 LLM 추측을 검증된 웹 출처로 오인
+
+**수정안**:
+```python
+# Option A (권장): web_refs 대신 llm_prior_refs 슬롯 사용
+elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
+    llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+```
++ 테스트 `test_g3_tavily_unset_fallback_path` assertion을 `result["web_references"]` → `result["llm_prior_references"]`로 변경
+
+**대안**: `_build_source_pack`이 ref dict의 `source_type` 필드를 우선 검사하도록 수정 (더 큰 변경, 권장 X)
+
+### 결함 #2 (High) — G5 retry 예외 포착 비대칭
+
+**위치**: `core/researcher.py:476-500`
+
+**증상**: retry 호출이 외부 try/except 안에 있어서 retry 도중 예외 시 1차로 얻은 `data`(claims=0이지만 다른 필드 채워짐)도 통째로 잃고 빈 `_FALLBACK` 반환. 원본 보존 의도와 모순.
+
+**수정안**:
+```python
+try:
+    result = execute_requirement_prompt(prompt)
+    if not result.get("ok"):
+        raise RuntimeError("structured_evidence_llm_unavailable")
+    data = safe_json_load(result.get("text") or "{}")
+    if not isinstance(data, dict):
+        raise ValueError("structured_evidence_not_dict")
+    for k, v in _FALLBACK.items():
+        data.setdefault(k, v)
+except Exception:
+    return dict(_FALLBACK)
+
+# G5 retry — 외부 try/except 밖. 실패 시 원본 data 보존
+if len(sources) >= 3 and not data.get("source_backed_claims"):
+    try:
+        retry_result = execute_requirement_prompt(retry_prompt)
+        if retry_result.get("ok"):
+            retry_data = safe_json_load(retry_result.get("text") or "{}")
+            if isinstance(retry_data, dict) and retry_data.get("source_backed_claims"):
+                for k, v in _FALLBACK.items():
+                    retry_data.setdefault(k, v)
+                return retry_data
+    except Exception:
+        pass  # retry 실패 시 원본 data 유지
+return data
+```
+
+### 진입 순서
+
+1. 결함 #1 정정 → `pytest tests/test_research_system_regression.py tests/test_research_router_modes.py tests/test_research_router_phase1b.py -q`
+2. 결함 #2 정정 → 동일 테스트
+3. Master_Blueprint.md §0 + §12 갱신
+4. 단일 commit: `fix(researcher): P3+P4 결함 정정 — G3 메타데이터 오염 + G5 retry 예외 포착`
+5. af-test-runner + af-critic 자동 발화 → PASS 시 P5(G4 병렬화) 진입
+
+### 후속 갭 (정정 후 별도 처리 검토)
+
+| 갭 | 위치 | 비고 |
+|----|------|------|
+| G3 코드 중복 | researcher.py 706-722 — `requires_web` ↔ `not sufficient` 두 분기 동일 if/elif/else 복제 | refactor 후보 (helper method) |
+| G3 `not sufficient` 테스트 미커버 | 동일 분기에 `AF_RESEARCH_LLM_FALLBACK` 경로 테스트 0건 | 회귀 테스트 추가 |
+| G5 retry 예외 경로 미커버 | 결함 #2 정정 후 회귀 테스트 추가 필요 | retry throw 시 원본 data 반환 검증 |
+| settings.local.template.json 구 패턴 | 10건 `sh scripts/hookpy.sh` 잔존 — 새 PC 부트스트랩 시 hook 에러 재발 | `python3 scripts/run.py`로 일괄 교체 |
+| 토큰셋 substring 중복 | `FRESHNESS ∩ DATA_PIPELINE = {"회차"}`, `EXTERNAL_STACK ∩ OPERATIONAL_RISK = {"풀네트워크", "멀티플레이어"}` | 기존 문제, 분류 과민성. 별도 spec |
+
+---
+
+## ✅ 본 세션 완료 작업 (2026-05-04 오전)
+
+| 커밋 | 내용 |
+|------|------|
+| `17c38ea7` | feat(research-router): P2 G1 — 한국어 토큰 보강 (`"최근"`, `"동시 접속"`, `"8인"`, `"다인용"`, `"멀티유저"`, `"공신력"`, `"권위 있는"`) |
+| `9cefae9c` | refactor(research-router): P2 G1 후속 — `"8인"` 제거 (af-critic W1 수용, false positive 위험) |
+| `470e8d10` | feat(researcher): P3 G3 — TAVILY 미설정 + `AF_RESEARCH_LLM_FALLBACK=1` fallback 토글 ⚠️ 결함 #1 잔존 |
+| `06d3ac3d` | feat(researcher): P4 G5 — sources>=3 시 source_backed_claims 1회 retry ⚠️ 결함 #2 잔존 |
+| `a8314d15` | fix(hooks): `sh scripts/hookpy.sh` → `python scripts/run.py` (Windows `/usr/bin/sh` ELF 실행 불가 해결) |
+| `5991f00d` | fix(hooks): `python` → `python3` (macOS 호환) |
+
+**검증**: af-test-runner PASS (138 tests) / af-critic WARN-4/BLOCK-0 — WARN 4건 중 W1+W2가 결함 #1, W3가 결함 #2.
 
 ---
 
