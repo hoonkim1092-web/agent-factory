@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 18:48 (저녁, 종료) — **B안 advisory 3건 정정 + post-merge double-prefix bug fix 완료**, 회귀 142 PASS. 브랜치: `2026-04-14-build-diet`. 직전 커밋 `75aa2996`.
+> 마지막 업데이트: 2026-05-04 21:30 KST — **P5 G4 병렬화 완료** (ThreadPoolExecutor local+secondary 병렬, 7/7 PASS). 브랜치: `2026-04-14-build-diet`. 직전 커밋 `31057abf`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,31 +12,19 @@
 >
 > `--ff-only`가 reject되면 origin이 force-update된 흔적 — `git fetch && git status`로 분기 확인 후 결정. 본 세션에서 이걸 건너뛰어 hook 분기 이슈 진단이 늦어졌음.
 >
-> ✅ **다음 세션 최우선 작업**: ① Master_Blueprint §12 deprecation entry 추가 (rebase 충돌 처리 중 누락) ② hook auto-amend 분기 이슈 진단 ③ P5 G4 병렬화 진입. §📦 섹션 참조
+> ✅ **다음 세션 최우선 작업**: ① hook auto-amend 분기 이슈 진단 (§🔧 섹션 참조) ② codex 회복 후 fan-out cross-review 1회 (2026-05-05 15:37 KST 이후)
 > ⚠️ **hook auto-amend 분기 이슈** (이번 세션 30회 amend chain 관찰 + 15:41 origin forced-update): hook 체인이 push 직후 워킹트리에 chore 변경 추가 → 자동 `--amend` 또는 별도 chore commit + force-push로 SHA 갈아끼움. 다른 PC에서도 같은 패턴 작동 중 (오늘 origin forced-update가 그 증거). 다중 PC 작업 시 분기 위험 ↑.
 > ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 
 ---
 
-## 🔥 즉시 진입 — Master_Blueprint §12 deprecation entry 추가
+## ✅ 완료 (이번 세션 오후) — Master_Blueprint §12 deprecation + P5 G4 병렬화
 
-**누락 사실**: B안 advisory 정정 commit (`f47e3c35`)에서 `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기를 §12 변경이력 본문에는 적었지만, 별도 deprecation 명시 entry 1줄 추가 작업이 rebase 충돌 처리 중 손실됨.
-
-**작업**: §12에 1줄 추가 — 위치는 `f47e3c35` advisory entry 위.
-```markdown
-| 2026-05-04 | (unreleased) | docs(blueprint): `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기 명시 — 직전 advisory commit `f47e3c35`에서 코드/테스트 일괄 제거됨. 더 이상 인식되지 않으며, 설정해도 동작에 영향 없음. |
-```
-
-작은 docs 변경이므로 review-gate 자동 통과. 1 commit + push.
-
----
-
-## 📦 그 다음 — P5 G4 병렬화
-
-**갭**: `_collect_local_references` / `_collect_web_references` / `_collect_notebook_summary` / `_collect_llm_prior_knowledge` 가 직렬 실행 — 합산 budget 압박. asyncio.gather 또는 ThreadPoolExecutor로 병렬화.
-
-**참고**: `tests/test_research_system_regression.py:test_g4_evidence_parallel_runs_within_budget` 가 baseline 캡처. 절반 이하 시간 목표.
+| 커밋 | 내용 |
+|------|------|
+| `25bff994` | docs(blueprint): `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기 §12 entry 추가 |
+| `31057abf` | feat(researcher): P5 G4 — ThreadPoolExecutor(max_workers=2) local+secondary 병렬 수집. 7/7 PASS. 3-tier WARN-only |
 
 ---
 
@@ -134,10 +122,12 @@ return data
 
 ---
 
-## ✅ 본 세션 완료 작업 (2026-05-04 오전)
+## ✅ 본 세션 완료 작업 (2026-05-04)
 
 | 커밋 | 내용 |
 |------|------|
+| `25bff994` | docs(blueprint): `AF_RESEARCH_LLM_FALLBACK` 환경변수 폐기 §12 entry 추가 |
+| `31057abf` | feat(researcher): P5 G4 — ThreadPoolExecutor(max_workers=2) 병렬화. 7/7 PASS. |
 | `17c38ea7` | feat(research-router): P2 G1 — 한국어 토큰 보강 (`"최근"`, `"동시 접속"`, `"8인"`, `"다인용"`, `"멀티유저"`, `"공신력"`, `"권위 있는"`) |
 | `9cefae9c` | refactor(research-router): P2 G1 후속 — `"8인"` 제거 (af-critic W1 수용, false positive 위험) |
 | `470e8d10` | feat(researcher): P3 G3 — TAVILY 미설정 + `AF_RESEARCH_LLM_FALLBACK=1` fallback 토글 ⚠️ 결함 #1 잔존 |
