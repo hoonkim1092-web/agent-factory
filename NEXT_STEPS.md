@@ -15,7 +15,7 @@
 
 **완료된 Phase**:
 - ✅ P0 (`97f52bd6`): `tests/test_research_system_regression.py` 7 cases (4 PASS / 2 XFAIL / 1 PASS)
-- ✅ P1 (`2819b874`): G2 fix — `researcher.py:690` fast_synthesis + requires_web 조건 추가. af-test-runner 136/2xfail PASS.
+- ✅ P1 (`2819b874`): G2 fix — `researcher.py:690` fast_synthesis + requires_web 조건 추가. af-test-runner 136/2xfail PASS. af-critic WARN-4/BLOCK-0 (W4는 의도된 설계).
 
 **Phase 2 진입 명령** (T2 — research_router.py):
 1. `core/research_router.py:132-169` 토큰셋 보강:
