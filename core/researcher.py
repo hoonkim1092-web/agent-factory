@@ -828,6 +828,7 @@ Rules:
 
     def _merge_project_brief_evidence(self, brief: dict, task_input: str, evidence_bundle: dict | None) -> dict:
         data = dict(brief or {})
+        data["original_request"] = task_input  # unconditional override — LLM 변형 방지, 정상+fallback 경로 동시 커버
         evidence = dict(evidence_bundle or {})
         workspace_notes = [str(x).strip() for x in (evidence.get("workspace_notes") or []) if str(x).strip()]
         evidence_summary = [str(x).strip() for x in (evidence.get("evidence_summary") or []) if str(x).strip()]
@@ -961,6 +962,7 @@ NotebookLM synthesis: {notebook_summary or '(none)'}
 
 Return JSON only:
 {{
+  "original_request": "(will be overwritten verbatim by Python — leave empty or echo task_input)",
   "goal": "single sentence describing what to build",
   "background_context": "2-3 sentences on project motivation and existing situation (different from goal)",
   "problem_statement": "the specific pain point or gap this project solves (different angle from goal)",

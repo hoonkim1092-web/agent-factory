@@ -98,7 +98,7 @@
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()`, `_installed_cli_cache_lock` |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
 | `core/research_router.py` | Phase 1a: project research mode 분류 + complexity gap 탐지. P2 G1: `_FRESHNESS_TOKENS`+"최근", `_OPERATIONAL_RISK_TOKENS`+"동시 접속"/"다인용"/"멀티유저", `_DEEP_DECISION_TOKENS`+"공신력"/"권위 있는" 보강 ("8인" 제거 — false positive) | `ResearchRouter.plan()`, `ResearchRouter.detect_complexity_gaps()`, `ResearchPlan`, `ResearchGap` (9종 enum), `gap_to_mode()`, `ResearchPlan.for_mode()` |
-| `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) — Phase 1b: source_pack 조립 + structured_evidence LLM normalizer. 결함 정정(2026-05-04): G3 fallback이 `llm_prior_refs` 슬롯 사용(메타데이터 보존), G5 retry 외부 try/except 분리(1차 data 보존) | `HimariResearchAgent`, `collect_project_evidence(research_plan, hint_gaps, **_kwargs)`, `_collect_web_references()`, `_build_source_pack()`, `_synthesize_structured_evidence()`, `_collect_notebook_summary()` |
+| `core/researcher.py` | Himari 리서치 에이전트 (로컬+웹+NotebookLM) — Phase 1b: source_pack 조립 + structured_evidence LLM normalizer. 결함 정정(2026-05-04): G3 fallback이 `llm_prior_refs` 슬롯 사용(메타데이터 보존), G5 retry 외부 try/except 분리(1차 data 보존). P0 A1(2026-05-05): `_merge_project_brief_evidence()` 첫 줄에 `original_request=task_input` unconditional override — 정상+fallback 양 경로 커버 | `HimariResearchAgent`, `collect_project_evidence(research_plan, hint_gaps, **_kwargs)`, `_collect_web_references()`, `_build_source_pack()`, `_synthesize_structured_evidence()`, `_collect_notebook_summary()`, `_merge_project_brief_evidence()` |
 | `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
 | `core/setup_wizard.py` | 외부 리서치 도구(TAVILY/NotebookLM) 점검·복구 단일 진입점 | `ensure_external_research_capabilities()`, `_find_or_create_archive_notebook()` |
 | `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
@@ -329,7 +329,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-04-21 -->
+<!-- last_updated: 2026-05-05 -->
 
 **클래스:** `ProjectPipeline`
 
@@ -346,6 +346,7 @@ AgentRunner.run(agent, task_input, workspace)
   - `status ∈ {crashed, unknown}` → 전체 skip
   - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
+- **P0 A6** (2026-05-05): `prepare_brief()` → `_save_checkpoint` 직후 `docs/research/<slug>-project-brief.json` 보조 저장 (Quality Gate 추적용, try/except pass 보호)
 
 ---
 
@@ -1280,6 +1281,7 @@ model_utils.py (독립 모듈)
 | 2026-05-04 | v1.2.22 | chore(skills+code-review): new_skill 승격 이벤트 1건 + 코드리뷰 로그 2건 자동 기록 — skill-usage.jsonl 18번째 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 항목 append, codex bridge session_cursor·skill-eval-report·skill-promotion·registry 메타데이터 동기화 |
 | 2026-05-04 | v1.2.22 | chore(skills+review): 스킬 promotion 이벤트 누적 + 코드리뷰 로그 동기화 — skill-usage.jsonl에 new_skill candidate 승급 이벤트 1건 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 append, skill-eval-report.json·skill-promotion.json·registry.yaml 메타데이터 갱신, codex bridge session_cursor 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills): new_skill 평가 자동화 산출물 갱신 — skill-promotion 18회차 후보 승급 로그 추가, skill-eval-report 재생성, registry.yaml 동기화, code-review.md 최근 커밋 2건 추가, codex bridge session_cursor 갱신 |
+| 2026-05-05 | (unreleased) | feat(researcher+pipeline): P0 A1+A6 — Quality Gate 기반 `original_request` verbatim 보존 + brief 추적 저장. A1: `core/researcher.py:_merge_project_brief_evidence()` 첫 줄에 `data["original_request"] = task_input` unconditional override 추가(정상+fallback 양 경로 커버) + `research_project_brief()` 프롬프트 스키마에 `original_request` 필드 안내 1줄 추가. A6: `core/project_pipeline.py:prepare_brief()` `_save_checkpoint` 직후 `docs/research/<slug>-project-brief.json` 보조 저장 블록(try/except pass). cross-review BLOCK #2 반영(fallback 경로 커버리지 — `_merge_project_brief_evidence` 공통 함수에 삽입). 109 tests PASS. 3-tier gate PASS. |
 | 2026-05-04 | v1.2.22 | chore(skill-promotion): new_skill candidate 승급 + 코드리뷰 로그 누적 — skill-usage.jsonl 18번째 promotion 이벤트 기록, code-review.md에 c52e79f1/c55fa99e 2건 추가, registry.yaml/skill-eval-report.json/promotion.json 동기화, session_cursor.json 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills+docs): skill_promotion 이벤트·코드리뷰 로그 누적 — skill-usage.jsonl new_skill candidate 승급 이벤트 18회차 추가, code-review.md researcher.py 리뷰 2건 append, skill-eval-report·promotion 메타데이터 갱신, registry.yaml 동기화, codex bridge session_cursor 업데이트 |
 | 2026-05-04 | v1.2.22 | chore(skills): skill_promotion 자동 기록 갱신 — new_skill candidate 승급 18회 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 추가, skill-eval/promotion JSON·registry.yaml·session_cursor.json 메타 갱신 |

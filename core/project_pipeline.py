@@ -723,6 +723,15 @@ class ProjectPipeline:
         self._write_json(project_brief_path, project_brief)
         self._save_checkpoint(target_workspace, "draft_brief", project_brief)
 
+        # P0 A6: brief를 docs/research/<slug>-project-brief.json 에 저장 (Quality Gate 추적용)
+        try:
+            _slug = slug_from_brief(project_brief)
+            _research_dir = os.path.join(target_workspace, "docs", "research")
+            os.makedirs(_research_dir, exist_ok=True)
+            self._write_json(os.path.join(_research_dir, f"{_slug}-project-brief.json"), project_brief)
+        except Exception:
+            pass
+
         return PreparedBrief(
             run_id=run_id,
             workspace=target_workspace,
