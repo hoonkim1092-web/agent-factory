@@ -197,8 +197,7 @@ class TestG5ClaimCountMinimumWhenSourcesPresent(unittest.TestCase):
         agent = HimariResearchAgent(mr)
         source_pack = self._make_source_pack(3)
 
-        # Baseline: LLM stub returns 0 claims — worst case that G5 fix will handle
-        fake_response = {
+        base = {
             "research_mode": "fresh_lookup",
             "goal_interpretation": "Build poker game",
             "recommended_architecture": "web_app",
@@ -209,18 +208,20 @@ class TestG5ClaimCountMinimumWhenSourcesPresent(unittest.TestCase):
             "risks": [],
             "verification_focus": [],
             "maintenance_strategy": [],
-            "source_backed_claims": [],  # 0 claims — G5 대상 시나리오
+            "source_backed_claims": [],  # 0 claims — triggers G5 retry
         }
-        with patch("core.requirement_llm.execute_requirement_prompt",
-                   return_value={"ok": True, "text": json.dumps(fake_response)}):
+        with_claim = {**base, "source_backed_claims": [{"claim": "Poker SDK exists", "source_ids": ["web_000"]}]}
+        side_effects = [
+            {"ok": True, "text": json.dumps(base)},       # 1st call → 0 claims
+            {"ok": True, "text": json.dumps(with_claim)}, # retry → 1 claim
+        ]
+        with patch("core.requirement_llm.execute_requirement_prompt", side_effect=side_effects):
             result = agent._synthesize_structured_evidence(
                 "8인 포커게임 만들어줘", "fresh_lookup", source_pack
             )
 
-        # Baseline: 현재는 0개 가능. G5 fix 후 sources>=3 시 >=1 보장해야 함.
         claims = result.get("source_backed_claims", [])
-        self.assertIsInstance(claims, list)
-        # TODO(G5 Phase 4): assertGreaterEqual(len(claims), 1) after retry logic added
+        self.assertGreaterEqual(len(claims), 1)
 
 
 # ---------------------------------------------------------------------------

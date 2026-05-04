@@ -480,9 +480,22 @@ Rules:
             data = safe_json_load(result.get("text") or "{}")
             if not isinstance(data, dict):
                 raise ValueError("structured_evidence_not_dict")
-            # 필수 필드 누락 시 fallback 기본값으로 채움
             for k, v in _FALLBACK.items():
                 data.setdefault(k, v)
+            # G5: sources>=3인데 claims=0이면 1회 retry
+            if len(sources) >= 3 and not data.get("source_backed_claims"):
+                retry_prompt = (
+                    prompt
+                    + "\n\nNote: previous response had no source_backed_claims."
+                    " Provide at least 1 claim traceable to the sources above."
+                )
+                retry_result = execute_requirement_prompt(retry_prompt)
+                if retry_result.get("ok"):
+                    retry_data = safe_json_load(retry_result.get("text") or "{}")
+                    if isinstance(retry_data, dict) and retry_data.get("source_backed_claims"):
+                        for k, v in _FALLBACK.items():
+                            retry_data.setdefault(k, v)
+                        return retry_data
             return data
         except Exception:
             return dict(_FALLBACK)
