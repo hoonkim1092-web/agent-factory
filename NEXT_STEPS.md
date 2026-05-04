@@ -1,26 +1,43 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 — **Phase 2 verdict-label spec v7 §8.2 코드 적용 완료** — 8파일 단일 commit `ac8d4455` (433+/29-). pytest 102/102 (touched modules). 부트스트랩 자기모순 회피 사유로 `AF_SKIP_REVIEW_GATE=1` 우회 commit. 브랜치: `2026-04-14-build-diet`
-> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 Claude 단독 검증 (codex provider error)
+> 마지막 업데이트: 2026-05-04 09:00 KST — **§9.1 1주 baseline 시작** (종료 목표 2026-05-11 09:00 KST). codex 회복 전까지 fan-out cross-review 작업은 모두 보류, Claude 단독 검증만 수행. 브랜치: `2026-04-14-build-diet`
+> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 Claude 단독 검증 (codex provider error). **fan-out 의존 작업 전부 보류 — §🔥 "codex 회복 후" 섹션 참조**
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 > ⚠️ v6 cross-review false positive trail — **F11 신규 (§10)**: cross-review prompt에 grep baseline 검증 의무 추가 (Phase 3 후보)
+> ✅ Phase 2 v7 §8.2 코드 적용 완료 — 8파일 단일 commit `ac8d4455` (433+/29-). pytest 102/102 (touched modules). 부트스트랩 자기모순 회피 사유로 `AF_SKIP_REVIEW_GATE=1` 우회 commit.
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Phase 2 v7 §8.2 commit 사후 검증 + §9.1 baseline 시작
+## 🔥 다음 세션 즉시 진입 — Phase 2 v7 사후 검증 (codex 가용성 분리)
 
-**현재 상태**: commit `ac8d4455` 적용 완료. push 완료. 자동 3-tier 검증은 부트스트랩 우회로 commit 시점에 발화하지 않음 — **다음 세션 첫 .py 편집 시점에 자연스럽게 발화** (parser+prompt 동시 활성화 상태에서 첫 라운드 수행).
+**현재 상태**: commit `ac8d4455` 적용 + push 완료. 자동 3-tier 미발화 (부트스트랩 우회). §9.1 baseline 시작: **2026-05-04 09:00 KST** / 종료 목표: **2026-05-11 09:00 KST**.
 
-### 다음 세션 권장 절차
+### Baseline 시작점 (2026-05-04 09:00 KST 캡처)
 
-1. **부트스트랩 사후 sanity 1회** — Claude 단독 af-cross-review 1회 수동 발화로 v7 형식(fence + finding 헤더 형식) LLM 출력 검증.
-2. **codex 회복 후 (2026-05-05 15:37 KST 이후)** — fan-out 포함 cross-review로 verdict 형식 정합 재확인.
-3. **§9.1 1주 baseline 시작** — `python3 -m scripts.review_metrics_logger` 주기 호출로 verdict 분포 + `verdict_fallback`/`warn_only_suppressed` 빈도 측정.
-4. **§9.2 트리거 모니터링**:
-   - 트리거 #1 (single sink): WARN 라운드당 정확히 1건 `warn_only_suppressed` 정합 확인
-   - 트리거 #2 (verdict_fallback 빈도): 형식 위반 LLM 출력 detection
-   - 트리거 #4 (false-positive): `_FINDING_RE` noise 측정 (정책: 1주 후 fence 한정 재평가)
+- **review_metrics.jsonl**: 6 레코드 (모두 ac8d4455 이전 commit_sha — `f66c5353`/`d4cfa9c2`/`81eb2a7d`)
+  - T2 (af-critic): pass:2 / T3 (af-cross-review): pass:2, block:2
+  - 전체 findings: T1=0, T2=0, T3=9 (T3-only 100%) / T3 BLOCK-only: 1/3 / 평균 ext-log: 0.0건
+- **hook_events.log**: 3,311 lines / `verdict_fallback`: **0** / `warn_only_suppressed`: **0**
+- 채택: **롤링 baseline** — `commit_sha`로 ac8d4455 전/후 분리 가능, 별도 컷오프 불필요
+
+### 오늘 가능 (Claude 단독 — codex 미의존)
+
+1. **부트스트랩 사후 sanity** (선택) — Claude 단독 af-cross-review 1회 수동 발화로 v7 fence/헤더 형식 LLM 출력 검증. fan-out 정합 재확인 가치는 부분만 (multi-provider 비교는 codex 회복 후로 이관)
+2. **schedule 등록** (선택) — 2026-05-11 09:00 KST `python3 -m scripts.review_metrics_logger` 자동 호출
+3. **비-검증 작업 일반** — 코드/문서 작업 가능. `.py` 편집 시 자동 3-tier는 Claude 단독으로 발화
+
+### codex 회복 후 (2026-05-05 15:37 KST↑)
+
+1. **fan-out 포함 af-cross-review** — v7 fence/finding 헤더 multi-provider 정합 재확인
+2. **multi-provider verdict 일치성 검증** — codex/claude/gemini 간 verdict 분포 차이 측정
+
+### §9.2 트리거 모니터링 (baseline 1주 기간 내)
+
+- **#1 single sink** — WARN 라운드당 정확히 1건 `warn_only_suppressed` 정합 (현재 0/0 → 비율 정의 불가)
+- **#2 verdict_fallback 빈도** — 형식 위반 LLM 출력 detection (현재 0)
+- **#4 false-positive** — `_FINDING_RE` noise 측정. 정책: 1주 후 fence 한정 재평가
+- **주기 호출**: `python3 -m scripts.review_metrics_logger` (수동 — append는 hook_runner 자동)
 
 ### 적용된 변경 요약 (commit `ac8d4455`)
 
