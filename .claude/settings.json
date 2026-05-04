@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py check_pending_review.py"
+            "command": "python3 scripts/run.py check_pending_review.py"
           }
         ]
       },
@@ -86,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py check_design_pending.py"
+            "command": "python3 scripts/run.py check_design_pending.py"
           }
         ]
       },
@@ -94,7 +94,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -104,7 +104,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -114,7 +114,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -124,7 +124,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -135,7 +135,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py post_edit_code_review",
+            "command": "python3 scripts/run.py post_edit_code_review",
             "timeout": 30
           }
         ]
@@ -145,7 +145,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py post_edit_design_review",
+            "command": "python3 scripts/run.py post_edit_design_review",
             "timeout": 10
           }
         ]
@@ -155,7 +155,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/run.py post_agent_record",
+            "command": "python3 scripts/run.py post_agent_record",
             "timeout": 60
           }
         ]
