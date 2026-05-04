@@ -687,8 +687,8 @@ Rules:
         # -- 웹 또는 LLM fallback (mode-aware gating) --
         web_refs: list[dict] = []
         llm_prior_refs: list[dict] = []
-        if mode == "fast_synthesis":
-            # fast_synthesis: Tavily OFF, LLM fallback OFF
+        if mode == "fast_synthesis" and not research_plan.requires_web:
+            # fast_synthesis + no secondary web requirement: Tavily OFF, LLM fallback OFF
             pass
         elif research_plan.requires_web:
             # fresh_lookup/deep/live: Tavily ON (sufficiency gate 무시)

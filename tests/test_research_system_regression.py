@@ -56,7 +56,6 @@ class TestG1KoreanPlayerCountMatch(unittest.TestCase):
 
 class TestG2FastSynthesisSecondaryFreshLookup(unittest.TestCase):
 
-    @pytest.mark.xfail(strict=True, reason="G2 RED: line 690 'pass' blocks requires_web branch")
     def test_g2_fast_synthesis_secondary_fresh_lookup(self):
         from core.research_router import ResearchPlan
         from core.researcher import HimariResearchAgent
