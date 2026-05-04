@@ -89,6 +89,22 @@ def _reference_bullets(project_brief: dict[str, Any], limit: int = 8) -> str:
         if len(lines) >= limit:
             return "\n".join(lines)
 
+    for item in project_brief.get("llm_prior_references") or []:
+        if not isinstance(item, dict):
+            continue
+        label = _clean(item.get("title") or item.get("url"))
+        detail = _trim_text(item.get("excerpt"), limit=180)
+        if not label:
+            continue
+        line = f"- LLM prior: {label}"
+        if detail:
+            line += f" | {detail}"
+        if line not in seen:
+            seen.add(line)
+            lines.append(line)
+        if len(lines) >= limit:
+            return "\n".join(lines)
+
     return "\n".join(lines) if lines else "- (no additional references)"
 
 

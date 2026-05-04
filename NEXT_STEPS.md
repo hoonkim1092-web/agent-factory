@@ -1,69 +1,14 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 (오후, clear 직전) — **결함 #1·#2 정정 완료, 3-tier PASS**. 브랜치: `2026-04-14-build-diet`
-> ✅ **다음 세션 최우선**: B안 — advisory 3건 정정 → 그 후 P5(G4 병렬화) 진입. §🔥 "B안 advisory 정정" 섹션 참조
+> 마지막 업데이트: 2026-05-04 (오후 2차) — **B안 advisory 3건 정정 완료**, 회귀 141 PASS. 브랜치: `2026-04-14-build-diet`
+> ✅ **다음 세션 최우선**: P5 G4 병렬화 진입 (`_collect_*` 4종 직렬 → 병렬). §📦 섹션 참조
 > ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — B안 advisory 3건 정정
-
-**배경**: commit `c55fa99e` (결함 #1·#2 정정) 3-tier 검증 PASS / WARN-1 (advisory) / PASS. 결함 정정으로 사전 존재했던 inconsistency 3건이 노출됨. P5 진입 전에 정리.
-
-### Advisory #1 — `core/researcher.py:714-718, 723-726` dead branch
-
-`elif AF_RESEARCH_LLM_FALLBACK == "1"`와 `else`가 동일 동작 (`llm_prior_refs = self._collect_llm_prior_knowledge(...)`). 결함 #1 정정의 부산물 — 환경변수 의미 상실.
-
-**수정안 (택 1)**:
-- **A (권장)**: elif 제거 + else 단일화. `AF_RESEARCH_LLM_FALLBACK` 환경변수도 코드베이스에서 제거 (grep 후 일괄 정리).
-- **B**: 의미 복원 — `elif fallback==1`은 LLM prior 호출, `else`는 빈 리스트 (LLM prior 자체 OFF). 환경변수가 "fallback ON/OFF 토글"로 재정의됨.
-
-판단: 본 정정 전 `else` 분기가 이미 `llm_prior_refs = ...` 였으므로, 환경변수의 원래 의미는 "web_refs 슬롯에 병합하는 토글"이었음. 그 의미가 결함이었으므로 **A 권장** (제거).
-
-### Advisory #2 — `core/research_router.py:220-225` deep_signal escalation 빈도 변화
-
-```python
-web_obligation_unmet = not evidence.get("web_references")
-if deep_signal and is_pre_deep and web_obligation_unmet:
-    gaps.append(ResearchGap.MULTI_CLIENT_MISSING)
-    gaps.append(ResearchGap.HIGH_RISK_CAPABILITY_MISSING)
-```
-
-정정 전: TAVILY 미설정 + LLM_FALLBACK=1 환경에서 LLM prior가 `web_references`로 들어가 검사를 (잘못된 이유로) 통과.
-정정 후: LLM prior가 `llm_prior_references`로 분리됨 → deep_signal 트리거 시 escalation 빈도 ↑.
-
-**판단 필요**: 의미론적으로는 정확한 방향(LLM prior는 web evidence 의무 미충족). 하지만 거동 변화 — `test_research_router_modes.py` 회귀 케이스 재검토 후 임계 재조정 여부 결정.
-
-**수정안**: 회귀 케이스 추가하여 새 거동을 명시적으로 고정. 임계 재조정은 별도 plan 필요시.
-
-### Advisory #3 — `core/work_item_generator.py:76` LLM prior 누락 (실제 기능 손실)
-
-```python
-for item in project_brief.get("web_references") or []:
-```
-
-work_item generator가 `llm_prior_references`를 무시. 정정 전엔 LLM prior가 web_references에 머지돼 work item 생성에 활용됐으나, 정정 후로는 LLM prior 정보가 work item에 미반영.
-
-**수정안**:
-```python
-for item in (project_brief.get("web_references") or []) + (project_brief.get("llm_prior_references") or []):
-```
-또는 별도 루프로 분리하되 출력은 통합. 회귀 테스트 1건 추가 (LLM prior가 work_item에 포함되는지 검증).
-
-### 진입 순서
-
-1. Advisory #1 정정 (dead branch 제거) → 회귀 138 + 환경변수 제거 검증
-2. Advisory #3 정정 (work_item LLM prior 통합) → 회귀 + 신규 테스트
-3. Advisory #2 — 회귀 케이스 추가만 (임계 재조정은 별도)
-4. 단일 commit: `refactor(researcher): advisory 3건 정정 — dead branch 제거 + work_item LLM prior 통합 + router escalation 회귀 고정`
-5. af-test-runner + af-critic + af-cross-review 자동 발화
-6. P5 G4 병렬화 진입
-
----
-
-## 📦 P5 G4 병렬화 (B안 완료 후)
+## 📦 다음 세션 즉시 진입 — P5 G4 병렬화
 
 **갭**: `_collect_local_references` / `_collect_web_references` / `_collect_notebook_summary` / `_collect_llm_prior_knowledge` 가 직렬 실행 — 합산 budget 압박. asyncio.gather 또는 ThreadPoolExecutor로 병렬화.
 

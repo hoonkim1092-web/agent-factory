@@ -409,3 +409,16 @@ class TestDetectComplexityGaps:
         request = "간단한 todo 웹앱 만들어줘"
         gaps = router.detect_complexity_gaps(request, evidence={}, final_mode="fast_synthesis")
         assert gaps == []
+
+    def test_llm_prior_only_does_not_satisfy_web_obligation(self):
+        from core.research_router import ResearchGap
+        router = ResearchRouter()
+        request = "Build a websocket server with mobile client and multiple client instances"
+        # web_references는 비어 있고 llm_prior_references만 존재 → web obligation 미충족 (LLM prior는 verified=False)
+        gaps = router.detect_complexity_gaps(
+            request,
+            evidence={"web_references": [], "llm_prior_references": [{"title": "LLM guess", "excerpt": "..."}]},
+            final_mode="fast_synthesis",
+        )
+        assert ResearchGap.MULTI_CLIENT_MISSING in gaps
+        assert ResearchGap.HIGH_RISK_CAPABILITY_MISSING in gaps

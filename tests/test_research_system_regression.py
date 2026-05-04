@@ -84,7 +84,7 @@ class TestG2FastSynthesisSecondaryFreshLookup(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# G3 case 4 — RED: TAVILY 미설정 + AF_RESEARCH_LLM_FALLBACK=1 → llm_prior_references 비어있음
+# G3 case 4 — TAVILY 미설정 → LLM prior fallback이 llm_prior_references 슬롯에 적재
 # ---------------------------------------------------------------------------
 
 class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
@@ -100,7 +100,6 @@ class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
 
         fake_llm_prior = [{"title": "LLM prior knowledge", "excerpt": "pocker SDK info", "url": ""}]
         env_no_tavily = {k: v for k, v in os.environ.items() if k != "TAVILY_API_KEY"}
-        env_no_tavily["AF_RESEARCH_LLM_FALLBACK"] = "1"
 
         with patch.dict(os.environ, env_no_tavily, clear=True), \
              patch.object(agent, "_collect_local_references", return_value=[]), \

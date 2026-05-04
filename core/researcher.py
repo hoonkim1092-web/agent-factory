@@ -711,17 +711,13 @@ Rules:
             # fresh_lookup/deep/live: Tavily ON (sufficiency gate 무시)
             if os.getenv("TAVILY_API_KEY"):
                 web_refs = self._collect_web_references(task_input)
-            elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
-                # Tavily 미설정 + fallback 토글: LLM prior 메타데이터(verified=False, weight=0.4) 보존
-                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
             else:
+                # Tavily 미설정: LLM prior로 fallback (verified=False, weight=0.4 메타데이터 보존)
                 llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
         elif not sufficient:
             # archive_research 또는 기타: 기존 sufficiency gate 유지
             if os.getenv("TAVILY_API_KEY"):
                 web_refs = self._collect_web_references(task_input)
-            elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
-                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
             else:
                 llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
 
