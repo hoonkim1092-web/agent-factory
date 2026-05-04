@@ -15,6 +15,23 @@ from core.retrieval_router import RetrievalRouter, RetrievalStrategy
 from core.skill_feedback import SkillFeedbackLoop
 from core.skill_retrieval_engine import SkillRetrievalEngine
 
+# A3: 권위 출처 도메인 화이트리스트 (포커 도메인)
+_AUTHORITY_DOMAINS_POKER = frozenset({
+    "wsop.com", "pokertda.com", "pokerstars.com",
+    "upswingpoker.com", "pokernews.com",
+})
+
+# A2: 도메인 토큰 추출 시 제거할 stopwords
+_STOPWORDS = frozenset({
+    # 영문
+    "the", "and", "for", "are", "but", "not", "you", "all", "can", "was",
+    "has", "had", "one", "our", "out", "use", "how", "his", "her", "its",
+    "with", "this", "that", "from", "have", "been", "will", "when", "also",
+    # 한국어 조사/어미 (2자 이하라서 길이 필터로 이미 걸러지지만 명시)
+    "이것", "그것", "저것",
+})
+
+
 class HimariResearchAgent:
     """Specialized research agent utilizing local and external knowledge (NotebookLM)."""
     def __init__(self, mr):
@@ -255,6 +272,12 @@ class HimariResearchAgent:
             pass
         return to_portable_path(abs_path)
 
+    def _extract_domain_tokens(self, text: str) -> set[str]:
+        """A2: 도메인 키워드 토큰 추출. 외부 라이브러리 의존 없음."""
+        import re
+        tokens = re.split(r"[\s\-_/\\,.;:!?()\[\]{}\"']+", (text or "").lower())
+        return {t for t in tokens if len(t) >= 3 and t not in _STOPWORDS}
+
     def _collect_local_references(self, task_input: str, workspace: str, limit: int = 6) -> list[dict]:
         from core.ingestion_pipeline import IngestionPipeline
 
@@ -305,8 +328,21 @@ class HimariResearchAgent:
                     }
                 )
                 if len(refs) >= limit:
-                    return refs
-        return refs
+                    break
+            if len(refs) >= limit:  # 내부 루프 limit 도달 시 외부 루프도 탈출
+                break
+
+        # A2: 도메인 매칭 가드 — task_input 토큰이 excerpt/heading에 없는 자기참조 노이즈 제거
+        domain_tokens = self._extract_domain_tokens(task_input)
+        if domain_tokens:
+            refs = [
+                r for r in refs
+                if any(
+                    tok in (r.get("excerpt") or "").lower() + " " + (r.get("heading") or "").lower()
+                    for tok in domain_tokens
+                )
+            ]
+        return refs[:limit]
 
     def _collect_web_references(self, task_input: str, limit: int = 4) -> list[dict]:
         if not os.getenv("TAVILY_API_KEY"):
@@ -325,7 +361,7 @@ class HimariResearchAgent:
             return []
 
         refs: list[dict] = []
-        for item in results[:limit]:
+        for item in results:
             url = str(item.get("url") or "").strip()
             title = self._compact_text(item.get("title") or url, limit=120)
             # Phase 1b: content_full 우선, excerpt fallback, 구버전 content 하위 호환
@@ -333,16 +369,28 @@ class HimariResearchAgent:
             excerpt = self._compact_text(item.get("excerpt") or content_full, limit=260)
             if not url:
                 continue
+            # A3: 권위 출처 화이트리스트 — trust_score 0.0~1.0 (정확한 도메인/서브도메인 매칭)
+            url_host = url.split("//")[-1].split("/")[0]
+            if url_host.startswith("www."):
+                url_host = url_host[4:]
+            trust_score = 0.4 if (
+                url_host in _AUTHORITY_DOMAINS_POKER
+                or any(url_host.endswith("." + d) for d in _AUTHORITY_DOMAINS_POKER)
+            ) else 0.0
+            raw_score = float(item.get("score") or 0.0)
             refs.append(
                 {
                     "url": url,
                     "title": title,
                     "excerpt": excerpt,
                     "content_full": content_full,
-                    "score": round(float(item.get("score") or 0.0), 4),
+                    "score": round(raw_score, 4),
+                    "trust_score": trust_score,
+                    "_sort_key": raw_score * (1 + trust_score),
                 }
             )
-        return refs
+        refs.sort(key=lambda r: r.pop("_sort_key"), reverse=True)
+        return refs[:limit]
 
     def _build_source_pack(
         self,
@@ -547,7 +595,12 @@ Rules:
             return ""
         return self._compact_text(insight, limit=1200)
 
-    def _is_sufficient(self, local_refs: list[dict], task_input: str) -> bool:
+    def _is_sufficient(
+        self,
+        local_refs: list[dict],
+        task_input: str,
+        domain_checklist: list[str] | None = None,  # A4: P1 토대, P0에서는 None으로만 호출
+    ) -> bool:
         """로컬 근거만으로 충분한지 판정하는 Sufficiency Gate.
 
         아래 조건을 모두 만족하면 충분:
@@ -574,6 +627,15 @@ Rules:
         text_lower = (task_input or "").lower()
         if any(kw in text_lower for kw in freshness_keywords):
             return False
+        # A4: 도메인 체크리스트 (P1에서 활성화, P0에서는 None)
+        if domain_checklist:
+            joined = " ".join(
+                (r.get("excerpt") or "") + " " + (r.get("heading") or "")
+                for r in local_refs
+            ).lower()
+            matched = sum(1 for item in domain_checklist if item.lower() in joined)
+            if matched < len(domain_checklist) * 0.7:
+                return False
         return True
 
     def _collect_llm_prior_knowledge(self, task_input: str, limit: int = 4) -> list[dict]:
@@ -687,7 +749,9 @@ Rules:
             escalated_mode = gap_to_mode(hint_gaps)
             if escalated_mode and (research_plan is None or research_plan.mode != escalated_mode):
                 # for_mode()으로 모든 파생 필드를 atomic하게 재계산 (partial mutation 방지)
+                prev_domain = research_plan.domain if research_plan else ""
                 research_plan = ResearchPlan.for_mode(escalated_mode)
+                research_plan.domain = prev_domain  # A5: escalation 후 기존 도메인 감지 결과 유지
 
         if research_plan is None:
             research_plan = ResearchRouter().plan(task_input)

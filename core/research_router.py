@@ -86,6 +86,10 @@ class ResearchPlan:
     requires_notebooklm: bool = False
     requires_deep_source_pack: bool = False
     risk_level: str = "normal"
+    # A5: Quality Gate 3종 플래그
+    requires_research: bool = False      # deep_source_research / live_project_analysis 또는 external_stack_score >= 2
+    domain: str = ""                     # "" | "poker" | <future>
+    research_depth: str = "shallow"      # shallow | normal | deep
 
     @classmethod
     def for_mode(
@@ -100,15 +104,28 @@ class ResearchPlan:
             mode in ("fresh_lookup", "deep_source_research", "live_project_analysis")
             or "fresh_lookup" in secondary
         )
+        # A5: escalation 시에도 requires_research/research_depth 재계산
+        _scores = scores or {}
+        requires_research = (
+            mode in ("deep_source_research", "live_project_analysis")
+            or _scores.get("external_stack_score", 0) >= 2
+        )
+        research_depth = (
+            "deep" if requires_research and _scores.get("operational_risk_score", 0) >= 3
+            else "normal" if requires_research
+            else "shallow"
+        )
         return cls(
             mode=mode,
             secondary_modes=secondary,
-            scores=scores or {},
+            scores=_scores,
             requires_web=requires_web,
             requires_tavily_extract=mode in ("fresh_lookup", "deep_source_research"),
             requires_notebooklm=mode in ("archive_research", "deep_source_research"),
             requires_deep_source_pack=mode == "deep_source_research",
             risk_level="high" if mode in ("deep_source_research", "live_project_analysis") else "normal",
+            requires_research=requires_research,
+            research_depth=research_depth,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -122,6 +139,9 @@ class ResearchPlan:
             "requires_notebooklm": self.requires_notebooklm,
             "requires_deep_source_pack": self.requires_deep_source_pack,
             "risk_level": self.risk_level,
+            "requires_research": self.requires_research,
+            "domain": self.domain,
+            "research_depth": self.research_depth,
         }
 
 
@@ -194,7 +214,9 @@ class ResearchRouter:
     def plan(self, request: str) -> ResearchPlan:
         """§4.2.1 알고리즘으로 request → ResearchPlan."""
         scores = self._compute_signal_scores(request)
-        return self._select_mode(scores)
+        result = self._select_mode(scores)
+        result.domain = self._detect_domain(request)  # A5: request 텍스트에서 도메인 감지
+        return result
 
     def detect_complexity_gaps(
         self,
@@ -229,6 +251,19 @@ class ResearchRouter:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    # A5: 포커 도메인 토큰셋 (D4 결정)
+    _POKER_TOKENS: frozenset[str] = frozenset({
+        "포커", "poker", "hold'em", "holdem", "blind", "blinds", "all-in",
+        "allin", "flop", "turn", "river", "ante", "showdown",
+    })
+
+    def _detect_domain(self, request: str) -> str:
+        """A5: 요청 텍스트에서 도메인을 감지. 현재 포커만 지원."""
+        text = (request or "").lower()
+        if any(tok in text for tok in self._POKER_TOKENS):
+            return "poker"
+        return ""
 
     def _compute_signal_scores(self, request: str) -> dict[str, int]:
         """§4.2 7개 신호 점수화. plan()과 detect_complexity_gaps() 공유."""
@@ -273,6 +308,17 @@ class ResearchRouter:
         requires_notebooklm = primary in ("archive_research", "deep_source_research")
         risk_level = "high" if primary in ("deep_source_research", "live_project_analysis") else "normal"
 
+        # A5: Quality Gate 3종 derivation
+        requires_research = (
+            primary in ("deep_source_research", "live_project_analysis")
+            or scores.get("external_stack_score", 0) >= 2
+        )
+        research_depth = (
+            "deep" if requires_research and scores.get("operational_risk_score", 0) >= 3
+            else "normal" if requires_research
+            else "shallow"
+        )
+
         return ResearchPlan(
             mode=primary,
             secondary_modes=secondary,
@@ -282,6 +328,9 @@ class ResearchRouter:
             requires_notebooklm=requires_notebooklm,
             requires_deep_source_pack=primary == "deep_source_research",
             risk_level=risk_level,
+            requires_research=requires_research,
+            domain="",  # _detect_domain은 plan()에서 별도 호출 — _select_mode는 scores만 봄
+            research_depth=research_depth,
         )
 
 
