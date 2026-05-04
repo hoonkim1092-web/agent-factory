@@ -24,7 +24,6 @@ import pytest
 
 class TestG1KoreanFreshnessTokenMatch(unittest.TestCase):
 
-    @pytest.mark.xfail(strict=True, reason="G1 RED: '최근' not in _FRESHNESS_TOKENS")
     def test_g1_korean_freshness_token_match(self):
         from core.research_router import _FRESHNESS_TOKENS, _count_matches
         text = "최근 출시된 sdk"

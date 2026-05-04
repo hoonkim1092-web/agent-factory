@@ -131,7 +131,7 @@ class ResearchPlan:
 
 _FRESHNESS_TOKENS: frozenset[str] = frozenset({
     "latest", "current", "2026", "release", "version", "price", "security",
-    "최신", "버전", "릴리스", "가격", "보안", "매주", "회차",
+    "최신", "최근", "버전", "릴리스", "가격", "보안", "매주", "회차",
 })
 
 _EXTERNAL_STACK_TOKENS: frozenset[str] = frozenset({
@@ -143,7 +143,8 @@ _EXTERNAL_STACK_TOKENS: frozenset[str] = frozenset({
 _OPERATIONAL_RISK_TOKENS: frozenset[str] = frozenset({
     "realtime", "multiplayer", "network", "scheduler", "payment", "auth",
     "scaling", "migration", "concurrent",
-    "실시간", "결제", "인증", "멀티플레이어", "동시접속", "풀네트워크", "스케줄러",
+    "실시간", "결제", "인증", "멀티플레이어", "멀티유저", "동시접속", "동시 접속",
+    "8인", "다인용", "풀네트워크", "스케줄러",
 })
 
 _DATA_PIPELINE_TOKENS: frozenset[str] = frozenset({
@@ -160,7 +161,7 @@ _LIVE_PROJECT_TOKENS: frozenset[str] = frozenset({
 
 _DEEP_DECISION_TOKENS: frozenset[str] = frozenset({
     "compare", "trade-off", "tradeoff", "architecture", "decision", "high-risk",
-    "비교", "트레이드오프", "아키텍처", "기술스택 선택", "고위험 결정",
+    "비교", "트레이드오프", "아키텍처", "기술스택 선택", "고위험 결정", "공신력", "권위 있는",
 })
 
 _ARCHIVE_TOKENS: frozenset[str] = frozenset({
