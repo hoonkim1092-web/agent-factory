@@ -158,9 +158,8 @@ class TestG4EvidenceParallelRunsWithinBudget(unittest.TestCase):
             agent.collect_project_evidence("8인 포커게임", research_plan=plan)
             elapsed = time.monotonic() - t0
 
-        # Baseline: 순차 실행 → local+web 합산 ≥ 0.12s
-        # P5 병렬화 후 목표: elapsed < 0.10s (절반 이하)
-        self.assertGreaterEqual(elapsed, 0.10, "sequential baseline: local+web should take ≥ 0.10s")
+        # P5 병렬화 후: local+web 동시 실행 → 합산 < 0.10s (sleep 0.06 * 2 = 0.12 순차 대비)
+        self.assertLess(elapsed, 0.10, "parallel: local+web should run concurrently")
         self.assertLess(elapsed, 10.0, "sanity upper bound")
 
 

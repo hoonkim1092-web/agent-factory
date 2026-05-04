@@ -2,6 +2,7 @@
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from core.requirement_llm import execute_requirement_prompt
 from core.utils import (
     safe_id, read_yaml, write_yaml, now_iso, get_random_signature,
@@ -696,30 +697,42 @@ Rules:
         target_workspace = os.path.abspath(workspace or os.getenv("AGENT_PROJECT_ROOT") or os.getcwd())
 
         workspace_notes = self._workspace_notes(target_workspace)
-        local_refs = self._collect_local_references(task_input, target_workspace)
-
-        # -- Sufficiency Gate --
-        sufficient = self._is_sufficient(local_refs, task_input)
 
         # -- 웹 또는 LLM fallback (mode-aware gating) --
         web_refs: list[dict] = []
         llm_prior_refs: list[dict] = []
-        if mode == "fast_synthesis" and not research_plan.requires_web:
-            # fast_synthesis + no secondary web requirement: Tavily OFF, LLM fallback OFF
-            pass
-        elif research_plan.requires_web:
-            # fresh_lookup/deep/live: Tavily ON (sufficiency gate 무시)
-            if os.getenv("TAVILY_API_KEY"):
-                web_refs = self._collect_web_references(task_input)
+        sufficient: bool = True  # requires_web/fast_synthesis 분기에선 gate 미사용
+
+        if research_plan.requires_web:
+            # fresh_lookup/deep/live: local + secondary 병렬 수집 (sufficiency gate 무시)
+            def _collect_secondary():
+                if os.getenv("TAVILY_API_KEY"):
+                    return "web", self._collect_web_references(task_input)
+                return "llm_prior", self._collect_llm_prior_knowledge(task_input)
+
+            with ThreadPoolExecutor(max_workers=2) as _executor:
+                _fut_local = _executor.submit(
+                    self._collect_local_references, task_input, target_workspace
+                )
+                _fut_secondary = _executor.submit(_collect_secondary)
+                local_refs = _fut_local.result()
+                _kind, _refs = _fut_secondary.result()
+            if _kind == "web":
+                web_refs = _refs
             else:
-                # Tavily 미설정: LLM prior로 fallback (verified=False, weight=0.4 메타데이터 보존)
-                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
-        elif not sufficient:
-            # archive_research 또는 기타: 기존 sufficiency gate 유지
-            if os.getenv("TAVILY_API_KEY"):
-                web_refs = self._collect_web_references(task_input)
-            else:
-                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+                llm_prior_refs = _refs
+        elif mode == "fast_synthesis":
+            # fast_synthesis + no secondary: 순차, 웹 수집 없음
+            local_refs = self._collect_local_references(task_input, target_workspace)
+        else:
+            # archive_research 또는 기타: sufficiency gate 유지 (순차)
+            local_refs = self._collect_local_references(task_input, target_workspace)
+            sufficient = self._is_sufficient(local_refs, task_input)
+            if not sufficient:
+                if os.getenv("TAVILY_API_KEY"):
+                    web_refs = self._collect_web_references(task_input)
+                else:
+                    llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
 
         # -- virtual chunk 인덱싱 (Unified RAG) --
         # _collect_local_references가 캐싱한 pipeline에 직접 올려야 동일 인덱스에서 검색 가능
