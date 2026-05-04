@@ -24,6 +24,16 @@ if [ -n "$CODE_CHANGED" ]; then
     fi
 fi
 
+# ── machine-local 파일 커밋 차단 ──
+if git diff --cached --diff-filter=ACMRT --name-only | grep -q "^\.claude/settings\.local\.json$"; then
+    echo ""
+    echo "❌ [pre-commit] .claude/settings.local.json 은 machine-local 파일입니다."
+    echo "   이 파일은 각 PC가 독립적으로 관리합니다. git에 올리지 마세요."
+    echo "   staged 해제: git restore --staged .claude/settings.local.json"
+    echo ""
+    exit 1
+fi
+
 # ── 신규: review-gate fast-path ──
 if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
