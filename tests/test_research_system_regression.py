@@ -84,7 +84,7 @@ class TestG2FastSynthesisSecondaryFreshLookup(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# G3 case 4 — RED: TAVILY 미설정 + AF_RESEARCH_LLM_FALLBACK=1 → web_references 비어있음
+# G3 case 4 — RED: TAVILY 미설정 + AF_RESEARCH_LLM_FALLBACK=1 → llm_prior_references 비어있음
 # ---------------------------------------------------------------------------
 
 class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
@@ -116,8 +116,9 @@ class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
              patch("core.research_router.ResearchRouter.detect_complexity_gaps", return_value=[]):
             result = agent.collect_project_evidence("최근 포커 SDK 정보", research_plan=plan)
 
-        # After G3 fix: LLM prior merged into web_references slot when AF_RESEARCH_LLM_FALLBACK=1
-        self.assertGreater(len(result["web_references"]), 0)
+        # After G3 fix (defect #1 정정): LLM prior는 llm_prior_references 슬롯 — 메타데이터(verified=False) 보존
+        self.assertGreater(len(result["llm_prior_references"]), 0)
+        self.assertEqual(len(result["web_references"]), 0)
 
 
 # ---------------------------------------------------------------------------

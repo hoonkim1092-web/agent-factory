@@ -1,18 +1,26 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 (오전) — **P2 G1 + P3 G3 + P4 G5 완료, hook fix 완료**. 브랜치: `2026-04-14-build-diet`
-> ⚠️ **다음 세션 최우선**: P3/P4 코드에 깊이분석 발견 결함 2건 잔존 — §🔥 "결함 정정" 섹션 참조
+> 마지막 업데이트: 2026-05-04 (오후) — **P2 G1 + P3 G3 + P4 G5 + 결함 #1·#2 정정 완료**. 브랜치: `2026-04-14-build-diet`
+> ✅ **다음 세션 최우선**: P5(G4 병렬화) 진입 — §🔥 "P5 진입" 섹션 참조
 > ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — P3/P4 결함 정정 (#1, #2)
+## 🔥 다음 세션 즉시 진입 — P5 G4 병렬화
 
-**배경**: 본 세션에서 P3 G3 + P4 G5 구현 후 깊이분석으로 결함 2건 발견. P5(G4 병렬화) 진입 전에 정정 필수.
+**배경**: P3/P4 결함 #1·#2 정정 완료 (2026-05-04 오후). 회귀 138 PASS. 이제 P5 G4 병렬화 진입 가능.
 
-### 결함 #1 (Critical) — G3 메타데이터 오염
+**갭**: `_collect_local_references` / `_collect_web_references` / `_collect_notebook_summary` / `_collect_llm_prior_knowledge` 가 직렬 실행 — 합산 budget 압박. asyncio.gather 또는 ThreadPoolExecutor로 병렬화.
+
+**참고**: `tests/test_research_system_regression.py:test_g4_evidence_parallel_runs_within_budget` 가 baseline 캡처. 절반 이하 시간 목표.
+
+---
+
+## 📁 정정 완료 (2026-05-04 오후) — 참고용 보존
+
+### 결함 #1 (Critical) — G3 메타데이터 오염 ✅
 
 **위치**: `core/researcher.py:710-712, 719-720`
 
@@ -32,7 +40,7 @@ elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
 
 **대안**: `_build_source_pack`이 ref dict의 `source_type` 필드를 우선 검사하도록 수정 (더 큰 변경, 권장 X)
 
-### 결함 #2 (High) — G5 retry 예외 포착 비대칭
+### 결함 #2 (High) — G5 retry 예외 포착 비대칭 ✅
 
 **위치**: `core/researcher.py:476-500`
 

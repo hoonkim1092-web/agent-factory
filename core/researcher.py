@@ -482,13 +482,17 @@ Rules:
                 raise ValueError("structured_evidence_not_dict")
             for k, v in _FALLBACK.items():
                 data.setdefault(k, v)
-            # G5: sources>=3인데 claims=0이면 1회 retry
-            if len(sources) >= 3 and not data.get("source_backed_claims"):
-                retry_prompt = (
-                    prompt
-                    + "\n\nNote: previous response had no source_backed_claims."
-                    " Provide at least 1 claim traceable to the sources above."
-                )
+        except Exception:
+            return dict(_FALLBACK)
+
+        # G5: sources>=3인데 claims=0이면 1회 retry — retry 실패 시 1차 data 보존
+        if len(sources) >= 3 and not data.get("source_backed_claims"):
+            retry_prompt = (
+                prompt
+                + "\n\nNote: previous response had no source_backed_claims."
+                " Provide at least 1 claim traceable to the sources above."
+            )
+            try:
                 retry_result = execute_requirement_prompt(retry_prompt)
                 if retry_result.get("ok"):
                     retry_data = safe_json_load(retry_result.get("text") or "{}")
@@ -496,9 +500,9 @@ Rules:
                         for k, v in _FALLBACK.items():
                             retry_data.setdefault(k, v)
                         return retry_data
-            return data
-        except Exception:
-            return dict(_FALLBACK)
+            except Exception:
+                pass
+        return data
 
     def _collect_notebook_summary(self, task_input: str, local_refs: list[dict], web_refs: list[dict]) -> str:
         try:
@@ -708,8 +712,8 @@ Rules:
             if os.getenv("TAVILY_API_KEY"):
                 web_refs = self._collect_web_references(task_input)
             elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
-                # Tavily 미설정 + fallback 토글: LLM prior를 web_refs 슬롯에 병합
-                web_refs = self._collect_llm_prior_knowledge(task_input)
+                # Tavily 미설정 + fallback 토글: LLM prior 메타데이터(verified=False, weight=0.4) 보존
+                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
             else:
                 llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
         elif not sufficient:
@@ -717,7 +721,7 @@ Rules:
             if os.getenv("TAVILY_API_KEY"):
                 web_refs = self._collect_web_references(task_input)
             elif os.getenv("AF_RESEARCH_LLM_FALLBACK") == "1":
-                web_refs = self._collect_llm_prior_knowledge(task_input)
+                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
             else:
                 llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
 
