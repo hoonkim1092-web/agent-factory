@@ -1,33 +1,33 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 (저녁) — **Research 시스템 개선 플랜 v2 commit `89ddcf1f`**. 다음 세션에서 Phase 0 진입. Phase 2 v7 baseline은 백그라운드 진행(2026-05-11 종료 목표 유지). 브랜치: `2026-04-14-build-diet`
-> ⚠️ codex usage limit → 2026-05-05 15:37 KST 이전까지 af-cross-review는 Claude 단독 검증 (codex provider error). **fan-out 의존 작업 전부 보류 — §🔥 "codex 회복 후" 섹션 참조**
+> 마지막 업데이트: 2026-05-04 (야간) — **P0+P1 완료**. P0 commit `97f52bd6`, P1 commit `2819b874`. 다음은 **Phase 2(G1 토큰 보강)**. 브랜치: `2026-04-14-build-diet`
+> ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증. **fan-out 의존 작업 전부 보류 — §🔥 "codex 회복 후" 섹션 참조**
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 > ⚠️ v6 cross-review false positive trail — **F11 신규 (§10)**: cross-review prompt에 grep baseline 검증 의무 추가 (Phase 3 후보)
 > ✅ Phase 2 v7 §8.2 코드 적용 완료 — 8파일 단일 commit `ac8d4455` (433+/29-). pytest 102/102 (touched modules). 부트스트랩 자기모순 회피 사유로 `AF_SKIP_REVIEW_GATE=1` 우회 commit.
 
 ---
 
-## 🔥 다음 세션 즉시 진입 — Research 시스템 개선 Phase 0
+## 🔥 다음 세션 즉시 진입 — Research 시스템 개선 Phase 2 (G1)
 
-**대상 문서**: `docs/plans/2026-05-04-research-system-improvement.md` (v2, 329줄, commit `89ddcf1f`)
+**대상 문서**: `docs/plans/2026-05-04-research-system-improvement.md` §4.3 (P2 G1 토큰 보강)
 
-**현황**:
-- 메모리 v2 정정 완료 (HIGH-3 "dead code" 거짓 → 제거, MED-6 "테스트 부재" 거짓 → "claim 최소 보장 부재"로 좁힘)
-- 5건 결함(G1~G5) 확정, Phase P0~P5 분할
-- af-doc-qa WARN 3건 정정 반영(v2)
-- af-cross-review 본 라운드 사용자 결정으로 생략
+**완료된 Phase**:
+- ✅ P0 (`97f52bd6`): `tests/test_research_system_regression.py` 7 cases (4 PASS / 2 XFAIL / 1 PASS)
+- ✅ P1 (`2819b874`): G2 fix — `researcher.py:690` fast_synthesis + requires_web 조건 추가. af-test-runner 136/2xfail PASS.
 
-**Phase 0 진입 명령** (T1 — tests/만):
-1. `tests/test_research_system_regression.py` 신규 작성 — 7개 case (5건 결함 회귀 + race 사전 검증)
-2. case 1~6은 RED 또는 baseline 캡처, case #7(thread race)은 trivial PASS
-3. commit msg: `test(research): P0 — 5건 결함 회귀 baseline 7개 케이스(race 사전포함)`
-4. 자동 3-tier 검증 발화 → PASS 시 Phase 1(G2) 진입
+**Phase 2 진입 명령** (T2 — research_router.py):
+1. `core/research_router.py:132-169` 토큰셋 보강:
+   - `_FRESHNESS_TOKENS`에 "최근" 추가
+   - `_OPERATIONAL_RISK_TOKENS`에 "동시 접속", "8인", "다인용", "멀티유저" 추가
+   - `_DEEP_DECISION_TOKENS`에 "공신력", "권위 있는" 추가
+2. `tests/test_research_system_regression.py` case 1 xfail 마커 제거 (G1 GREEN)
+3. commit msg: `feat(research-router): P2 G1 — 한국어 토큰 누락 보강 + 띄어쓰기 변형`
+4. af-test-runner + af-critic 발화 → PASS 시 Phase 3(G3) 또는 Phase 4(G5) 진입
 
 **참고 문서**:
-- `docs/plans/2026-05-04-research-system-improvement.md` §4.1 (P0 case 명세)
-- 메모리 `project_research_system_gaps.md` v2
+- `docs/plans/2026-05-04-research-system-improvement.md` §4.3
 
 ---
 
