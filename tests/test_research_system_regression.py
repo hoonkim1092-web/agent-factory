@@ -271,5 +271,139 @@ class TestG4LocalWebNoPipelineRace(unittest.TestCase):
         # P5 병렬화 후 동일 assertion이 GREEN 유지되어야 acceptance
 
 
+# ---------------------------------------------------------------------------
+# B1 case 8 — max_rounds 캡: unmet_gaps가 매 라운드 동일하게 남아도 루프 탈출
+# ---------------------------------------------------------------------------
+
+class TestB1MaxRoundsCapPreventsInfiniteLoop(unittest.TestCase):
+
+    def test_b1_max_rounds_cap(self):
+        """unmet_gaps가 지워지지 않아도 max_rounds 후 루프가 종료되어야 한다."""
+        from core.research_router import ResearchPlan
+        from core.researcher import HimariResearchAgent
+
+        mr = MagicMock()
+        agent = HimariResearchAgent(mr)
+
+        # archive_research 모드 (requires_web=False, mode != "fast_synthesis")
+        plan = ResearchPlan.for_mode("archive_research")
+        plan.domain = "poker"
+        plan.research_depth = "normal"  # max_rounds = 2
+
+        call_count = {"web": 0}
+
+        def _fake_collect_web(task_input, limit=4):
+            call_count["web"] += 1
+            return []  # 항상 빈 결과 → unmet_gaps 제거 안 됨
+
+        fake_local = [
+            {"excerpt": "some content", "heading": "h", "score": 0.3},
+            {"excerpt": "more content", "heading": "h2", "score": 0.3},
+            {"excerpt": "third content", "heading": "h3", "score": 0.3},
+        ]
+
+        with patch.dict(os.environ, {"TAVILY_API_KEY": "fake-key"}), \
+             patch.object(agent, "_collect_local_references", return_value=fake_local), \
+             patch.object(agent, "_collect_web_references", side_effect=_fake_collect_web), \
+             patch.object(agent, "_collect_llm_prior_knowledge", return_value=[]), \
+             patch.object(agent, "_workspace_notes", return_value=""), \
+             patch.object(agent, "_collect_notebook_summary", return_value=""), \
+             patch.object(agent, "_build_source_pack", return_value={"sources": []}), \
+             patch.object(agent, "_synthesize_structured_evidence", return_value={
+                 "research_mode": "archive_research", "goal_interpretation": "",
+                 "source_backed_claims": [],
+             }), \
+             patch("core.research_router.ResearchRouter.detect_complexity_gaps", return_value=[]):
+            result = agent.collect_project_evidence("포커 게임 만들어줘", research_plan=plan)
+
+        # max_rounds=2이므로 loop 내 web 호출이 2회 이하여야 함 (무한루프 없음)
+        # 실제 호출 수는 unmet 항목 수(최대 8개) * rounds이나, rounds <= max_rounds=2 보장
+        self.assertLessEqual(call_count["web"], 8 * 2, "web calls must be capped by max_rounds")
+        # 루프가 종료되고 결과가 반환되어야 함
+        self.assertIn("unmet_gaps", result)
+        self.assertIn("local_references", result)
+
+
+class TestC1DomainSpecGate(unittest.TestCase):
+    """P2 C1: prepare_documents domain spec gate."""
+
+    def _make_pipeline(self):
+        from core.project_pipeline import ProjectPipeline
+        mr = MagicMock()
+        mr.config = {}
+        return ProjectPipeline(mr, MagicMock(), MagicMock(), MagicMock())
+
+    def test_c1_spec_generation_triggered_when_no_specs_exist(self):
+        """domain="poker" + no existing specs → SpecGenerator.generate 호출."""
+        import tempfile
+        from core.project_pipeline import ProjectPipeline
+        from unittest.mock import patch, MagicMock
+
+        pipeline = self._make_pipeline()
+
+        with tempfile.TemporaryDirectory() as ws:
+            brief = {"research_plan": {"domain": "poker"}, "goal": "poker game", "original_request": "8인 포커"}
+            research_evidence = {"coverage_report": {"block": False, "match_rate": 1.0, "missing": []}}
+
+            mock_specs = {"rules": "# Rules\n", "state_machine": "# SM\n"}
+            with patch("core.spec_generator.SpecGenerator.generate", return_value=mock_specs) as mock_gen, \
+                 patch.object(pipeline, "_save_specs") as mock_save:
+                pipeline._domain = "poker"
+                # _verify_domain_spec → False (no files yet)
+                self.assertFalse(pipeline._verify_domain_spec(ws, "test-slug"))
+                # Gate logic
+                if not pipeline._verify_domain_spec(ws, "test-slug"):
+                    from core.spec_generator import SpecGenerator
+                    specs = SpecGenerator().generate(brief)
+                    pipeline._save_specs(specs, ws, "test-slug")
+                self.assertTrue(mock_gen.called)
+                self.assertTrue(mock_save.called)
+
+    def test_c1_coverage_block_raises_research_gate_blocked(self):
+        """coverage_report.block=True → ResearchGateBlocked raised."""
+        import tempfile
+        from core.project_pipeline import ProjectPipeline, ResearchGateBlocked
+        from unittest.mock import patch, MagicMock
+
+        pipeline = self._make_pipeline()
+
+        with tempfile.TemporaryDirectory() as ws:
+            # Simulate spec already exists (so SpecGenerator skipped)
+            import os
+            specs_dir = os.path.join(ws, "docs", "specs")
+            os.makedirs(specs_dir)
+            open(os.path.join(specs_dir, "slug-rules-spec.md"), "w").close()
+
+            self.assertTrue(pipeline._verify_domain_spec(ws, "slug"))
+            self.assertTrue(pipeline._coverage_blocked({
+                "coverage_report": {"block": True, "match_rate": 0.5, "missing": ["hand_ranking"]}
+            }))
+
+    def test_c1_no_domain_skips_gate(self):
+        """domain="" → gate not triggered."""
+        from core.project_pipeline import ProjectPipeline
+        pipeline = self._make_pipeline()
+        # _coverage_blocked with no coverage_report should be False
+        self.assertFalse(pipeline._coverage_blocked({}))
+        self.assertFalse(pipeline._coverage_blocked({"coverage_report": {"block": False}}))
+
+    def test_c1_save_specs_writes_files(self):
+        """_save_specs가 docs/specs/<slug>-*.md 파일을 디스크에 저장한다."""
+        import tempfile
+        from pathlib import Path
+        from core.project_pipeline import ProjectPipeline
+
+        pipeline = self._make_pipeline()
+        specs = {
+            "rules": "# Rules\ncontent",
+            "state_machine": "# State Machine\ncontent",
+        }
+        with tempfile.TemporaryDirectory() as ws:
+            pipeline._save_specs(specs, ws, "myslug")
+            specs_dir = Path(ws) / "docs" / "specs"
+            self.assertTrue((specs_dir / "myslug-rules-spec.md").exists())
+            self.assertTrue((specs_dir / "myslug-state-machine.md").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

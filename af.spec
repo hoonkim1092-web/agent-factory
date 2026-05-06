@@ -61,6 +61,7 @@ a = Analysis(
         'core.research_router',
         'core.researcher',
         'core.research_verifier',
+        'core.spec_generator',
         'core.retrieval_router',
         'core.provider_detect',
         'core.external_skill_candidate_importer',

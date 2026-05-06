@@ -34,6 +34,10 @@ from core.agent_runner import _safe_print
 PROJECT_ROLE_BASELINE_SKILLS = ("file_handler", "core_memory")
 
 
+class ResearchGateBlocked(RuntimeError):
+    """P2 C1: coverage_report.block==True 시 work_item 생성을 차단하는 예외."""
+
+
 @dataclass
 class PreparedBrief:
     """prepare_brief() 결과 — Evidence + Brief까지만 담은 중간 객체.
@@ -204,6 +208,26 @@ class ProjectPipeline:
             return payload.get("data")
         except Exception:
             return None
+
+    # ── P2 C1 helpers ──────────────────────────────────────────────────
+
+    def _verify_domain_spec(self, workspace: str, slug: str) -> bool:
+        """도메인 스펙 파일이 이미 생성되어 있으면 True."""
+        from pathlib import Path
+        return any((Path(workspace) / "docs" / "specs").glob(f"{slug}-*.md"))
+
+    def _save_specs(self, specs: dict, workspace: str, slug: str) -> None:
+        """SpecGenerator 출력을 docs/specs/<slug>-<filename> 에 저장."""
+        from pathlib import Path
+        from core.spec_generator import SPEC_FILENAMES
+        specs_dir = Path(workspace) / "docs" / "specs"
+        specs_dir.mkdir(parents=True, exist_ok=True)
+        for key, content in specs.items():
+            filename = SPEC_FILENAMES.get(key, f"{key}.md")
+            (specs_dir / f"{slug}-{filename}").write_text(content, encoding="utf-8")
+
+    def _coverage_blocked(self, research_evidence: dict) -> bool:
+        return bool((research_evidence.get("coverage_report") or {}).get("block"))
 
     # ── Structural Gate (Rubric-based) ─────────────────────────────────
 
@@ -814,6 +838,21 @@ class ProjectPipeline:
 
         # -- Work Items --
         slug = slug_from_brief(project_brief)
+
+        # P2 C1: Domain Spec Gate — coverage BLOCK 시 work_item 생성 차단
+        _domain = (project_brief.get("research_plan") or {}).get("domain", "")
+        if _domain:
+            if not self._verify_domain_spec(target_workspace, slug):
+                from core.spec_generator import SpecGenerator
+                _specs = SpecGenerator().generate(project_brief)
+                self._save_specs(_specs, target_workspace, slug)
+            if self._coverage_blocked(research_evidence):
+                _cr = research_evidence.get("coverage_report") or {}
+                raise ResearchGateBlocked(
+                    f"domain={_domain} match_rate={_cr.get('match_rate', 0):.0%} "
+                    f"missing={_cr.get('missing', [])}"
+                )
+
         _raw_target = str(project_brief.get("target_path") or "").strip()
         doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace
         work_item_files = generate_work_items(
