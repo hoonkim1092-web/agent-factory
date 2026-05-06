@@ -419,6 +419,19 @@ def _fallback_impl_design(
             risk_items.append(c)
     risks_text = "\n".join(f"- {r}" for r in risk_items) if risk_items else "- (edit required)"
 
+    # Event Sequence / Phase Flow: domain_specs_summary.state_machine 우선 사용
+    _specs_sum = project_brief.get("domain_specs_summary") or {}
+    _state_machine = _clean(_specs_sum.get("state_machine") or "")
+    if _state_machine:
+        _phase_text = _state_machine[:800]  # 프롬프트 크기 제한
+    else:
+        _phase_text = (
+            "- **Phase 1 — 초기화**: 시스템 준비 및 의존성 설정\n"
+            "- **Phase 2 — 입력 수신**: 사용자/외부 이벤트 수신 및 유효성 검사\n"
+            "- **Phase 3 — 핵심 처리**: 비즈니스 로직 실행 및 상태 전환\n"
+            "- **Phase 4 — 결과 반환**: 처리 결과 직렬화 및 응답 전송"
+        )
+
     return (
         "# Implementation Design\n\n"
         "## Metadata\n\n"
@@ -433,6 +446,8 @@ def _fallback_impl_design(
         f"{module_text}\n\n"
         "## Data Flow\n\n"
         f"{flow_text}\n\n"
+        "## Event Sequence / Phase Flow\n\n"
+        f"{_phase_text}\n\n"
         "## Interface Impact\n\n"
         "- (edit required)\n\n"
         "## State And Data Model\n\n"
@@ -614,6 +629,9 @@ def _generate_implementation_design(
         "# Implementation Design\n\n"
         "## Metadata\n(work_item, spec_type, source_spec, status, last_updated)\n\n"
         "## Design Summary\n\n## Planned Modules\n\n## Data Flow\n\n"
+        "## Event Sequence / Phase Flow\n"
+        "(시스템 전체 실행 흐름을 단계별로 기술. 각 Phase: 이름 / 진입 조건 / 핵심 이벤트 / 다음 Phase 전환 트리거. "
+        "domain_specs_summary의 state_machine이 있으면 반드시 반영할 것. 최소 4개 Phase 이상.)\n\n"
         "## Interface Impact\n\n## State And Data Model\n\n"
         "## Compatibility Considerations\n\n## Migration Requirement\n\n"
         "## Risks\n\n## Alternatives Considered\n\n"
@@ -622,6 +640,7 @@ def _generate_implementation_design(
         "- 한국어로 작성\n"
         "- \"(edit required)\" 사용 금지\n"
         "- 기술 선택 근거 포함\n"
+        "- Event Sequence / Phase Flow는 반드시 작성 (생략 불가)\n"
         f"- work_item: {work_item}, goal: {goal}"
     )
 

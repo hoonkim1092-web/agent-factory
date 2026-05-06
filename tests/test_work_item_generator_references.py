@@ -1,12 +1,15 @@
-"""Regression — work_item_generator._reference_bullets must include llm_prior_references.
+"""Regression — work_item_generator._reference_bullets + D2 Phase Flow 테스트.
 
-Fixture는 producer(researcher._collect_llm_prior_knowledge)가 실제로 emit하는 title 형식
-"[LLM prior] {label}: {text}"을 그대로 쓴다. consumer는 bullet 라인에서 prefix 중복을 제거해야 한다.
+_reference_bullets: producer(researcher._collect_llm_prior_knowledge)가 실제로 emit하는
+title 형식 "[LLM prior] {label}: {text}"을 그대로 쓴다.
+consumer는 bullet 라인에서 prefix 중복을 제거해야 한다.
+
+D2: _fallback_impl_design이 '## Event Sequence / Phase Flow' 섹션을 포함하는지 검증.
 """
 
 from __future__ import annotations
 
-from core.work_item_generator import _reference_bullets
+from core.work_item_generator import _reference_bullets, _fallback_impl_design
 
 
 def test_llm_prior_references_appear_in_bullets():
@@ -41,3 +44,37 @@ def test_llm_prior_only_still_renders():
     assert "LLM prior: Risk: fallback excerpt" in out
     assert "[LLM prior] [LLM prior]" not in out
     assert "(no additional references)" not in out
+
+
+# --- D2: Event Sequence / Phase Flow 섹션 검증 ---
+
+def test_d2_fallback_impl_design_contains_phase_flow_section():
+    """D2: _fallback_impl_design이 '## Event Sequence / Phase Flow' 섹션을 포함한다."""
+    brief = {"goal": "포커 게임 구현", "tech_stack": ["Python", "WebSocket"]}
+    role_plan = {"modules": [], "execution_strategy": "sequential"}
+    out = _fallback_impl_design("poker-backend", brief, role_plan)
+    assert "## Event Sequence / Phase Flow" in out
+
+
+def test_d2_fallback_uses_state_machine_from_domain_specs_summary():
+    """D2: domain_specs_summary.state_machine이 있으면 Phase Flow 섹션에 반영된다."""
+    brief = {
+        "goal": "포커 게임",
+        "domain_specs_summary": {
+            "state_machine": "# State Machine\n- Phase 1: Waiting\n- Phase 2: Dealing\n- Phase 3: Betting"
+        },
+    }
+    role_plan = {"modules": [], "execution_strategy": "sequential"}
+    out = _fallback_impl_design("poker-backend", brief, role_plan)
+    assert "## Event Sequence / Phase Flow" in out
+    assert "State Machine" in out or "Phase 1" in out
+
+
+def test_d2_fallback_generic_phases_when_no_state_machine():
+    """D2: domain_specs_summary 없으면 4-phase 기본 템플릿이 삽입된다."""
+    brief = {"goal": "일반 서비스"}
+    role_plan = {"modules": [], "execution_strategy": "parallel"}
+    out = _fallback_impl_design("generic-service", brief, role_plan)
+    assert "## Event Sequence / Phase Flow" in out
+    assert "Phase 1" in out
+    assert "Phase 4" in out
