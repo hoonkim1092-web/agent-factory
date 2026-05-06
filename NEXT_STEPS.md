@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **P3 D1 완료** (`cef06534`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-07 KST — **P3 D1+D2 완료** (`800622d3`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -15,9 +15,11 @@
 > ✅ **다음 세션 최우선 작업**:
 >   ① ~~**P3 D1**: spec 파일 → work_item_generator 주입~~ ✅ 완료 (`cef06534`)
 >      - `project_brief["domain_specs_summary"]` 주입 + `planning_files` spec 경로 추가
->   ② **P3 D2**: G1 ⑦ 시뮬레이션 문서 — implementation-design.md에 "Event Sequence / Phase Flow" 섹션 추가
->      - `work_item_generator.py` `_generate_implementation_design` 프롬프트에 6 phase sequence 지시 추가
->   ③ **P3 D3**: live run으로 G1/G2/G3 실측 (D1+D2 완료 후)
+>   ② ~~**P3 D2**: G1 ⑦ 시뮬레이션 문서~~ ✅ 완료 (`800622d3`)
+>      - `_generate_implementation_design` 프롬프트 + fallback에 Event Sequence / Phase Flow 섹션 추가
+>   ③ **P3 D3**: live run으로 G1/G2/G3 실측 (D1+D2 완료 → 지금 진입 가능)
+>      - `af run "8인 포커 게임 구현"` 실행 후 생성된 work-item 문서 품질 측정
+>      - G1 체크리스트 재채점, G3 점수 측정 (목표 0.70)
 >
 > ℹ️ **P3 정적 진단 결과** (2026-05-06, D1 이전 기준):
 >   - G1: 4-5/9 FAIL — ⑥⑨ spec 미주입(→D1으로 수정), ⑦ 시뮬레이션 미대응(→D2)
