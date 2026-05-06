@@ -31,7 +31,7 @@
 
 | 커밋 | 내용 |
 |------|------|
-| (커밋 예정) | feat(pipeline+spec_generator): P2 C3+C4 — AdrGenerator + TraceabilityGenerator. BLOCK 6건 수정. 19 tests PASS. |
+| `965f9aba` | feat(pipeline+spec_generator): P2 C3+C4 — AdrGenerator + TraceabilityGenerator. BLOCK 6건 수정. 19 tests PASS. |
 
 ## ✅ 완료 (2026-05-06 세션 4회차) — P2 C1+C2 Domain Spec Gate + SpecGenerator
 
