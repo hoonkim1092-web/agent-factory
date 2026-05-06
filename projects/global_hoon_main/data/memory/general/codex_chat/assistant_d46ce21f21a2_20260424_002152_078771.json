@@ -1,0 +1,18 @@
+{
+  "key": "assistant 제공된 경로와 실제 워크스페이스가 어긋나 있어 파일 존재 여부를 다시 확인합니다 로컬 근거를 직접 열 수 없으면 현재 평가는 아티팩트 내부 표기만 기준으로 내려야 합니다",
+  "value": "[assistant] 제공된 경로와 실제 워크스페이스가 어긋나 있어 파일 존재 여부를 다시 확인합니다. 로컬 근거를 직접 열 수 없으면, 현재 평가는 아티팩트 내부 표기만 기준으로 내려야 합니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T00:21:52.079056+00:00",
+  "updated_at": "2026-04-24T00:21:52.079056+00:00",
+  "details": {
+    "text": "[assistant] 제공된 경로와 실제 워크스페이스가 어긋나 있어 파일 존재 여부를 다시 확인합니다. 로컬 근거를 직접 열 수 없으면, 현재 평가는 아티팩트 내부 표기만 기준으로 내려야 합니다.",
+    "event_timestamp": "2026-04-24T00:21:26.855Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-bcb54d9b/.af_runtime/codex_home/sessions/2026/04/24/rollout-2026-04-24T09-21-03-019dbcdc-8c28-7661-bd9b-39c947775e50.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

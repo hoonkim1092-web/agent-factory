@@ -1,0 +1,18 @@
+{
+  "key": "assistant 로컬 근거로 인용된 docsarchitecturemd와 상위 스펙 문서들이 실제 워크스페이스에는 없습니다 이 상태면 문서의 인용 체계 자체가 약하므로 실재 파일 기준으로 세부 주장까지 다시 대조하겠",
+  "value": "[assistant] 로컬 근거로 인용된 `docs/architecture.md`와 상위 스펙 문서들이 실제 워크스페이스에는 없습니다. 이 상태면 문서의 인용 체계 자체가 약하므로, 실재 파일 기준으로 세부 주장까지 다시 대조하겠습니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T23:29:13.788377+00:00",
+  "updated_at": "2026-04-22T23:29:13.788377+00:00",
+  "details": {
+    "text": "[assistant] 로컬 근거로 인용된 `docs/architecture.md`와 상위 스펙 문서들이 실제 워크스페이스에는 없습니다. 이 상태면 문서의 인용 체계 자체가 약하므로, 실재 파일 기준으로 세부 주장까지 다시 대조하겠습니다.",
+    "event_timestamp": "2026-04-22T23:28:45.862Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-89983000/.af_runtime/codex_home/sessions/2026/04/23/rollout-2026-04-23T08-28-12-019db785-cc11-77e1-8ed5-89fd39e09716.jsonl",
+    "session_line": 28,
+    "provider": "codex"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 01  gaps     work_items가 빈 배열로 인도 가능한 deliverable이 하나도 없음    각 work_item에 owner 필드가 없어 책임 소재 불명   ",
+  "value": "[assistant] ```json {   \"score\": 0.1,   \"gaps\": [     \"work_items가 빈 배열([])로 인도 가능한 deliverable이 하나도 없음\",     \"각 work_item에 owner 필드가 없어 책임 소재 불명\",     \"risk 항목이 전혀 없음 — 위험 식별 및 완화 전략 부재\",     \"acceptance_criteria 필드가 존재하지 않아 완료 기준을 관찰·검증할 수 없음\",     \"reque...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:15:25.391912+00:00",
+  "updated_at": "2026-05-01T02:15:25.391912+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.1,\n  \"gaps\": [\n    \"work_items가 빈 배열([])로 인도 가능한 deliverable이 하나도 없음\",\n    \"각 work_item에 owner 필드가 없어 책임 소재 불명\",\n    \"risk 항목이 전혀 없음 — 위험 식별 및 완화 전략 부재\",\n    \"acceptance_criteria 필드가 존재하지 않아 완료 기준을 관찰·검증할 수 없음\",\n    \"requested_role이 빈 문자열 — 요청 역할 미정의\",\n    \"route가 빈 객체 — 실행 경로 라우팅 정보 누락\",\n    \"item_count가 0으로 실질적인 산출물이 전무함\"\n  ],\n  \"strengths\": [\n    \"goal 필드가 원본 요청('test goal')과 일치하여 최소한의 목표 정렬은 달성됨\",\n    \"generated_at 타임스탬프가 포함되어 생성 시점 추적 가능\",\n    \"project_brief 구조가 존재하여 스키마 뼈대는 갖춤\"\n  ],\n  \"revision_instructions\": [\n    \"work_items 배열에 최소 1개 이상의 work item을 추가하고, 각 항목에 title·owner·due_date 필드를 포함할 것\",\n    \"각 work item 또는 project_brief 수준에 risks 배열을 추가하고, 각 risk에 description과 mitigation 필드를 명시할 것\",\n    \"acceptance_criteria 필드를 추가하고, 관찰 가능하고 검증 가능한(observable & testable) 기준을 최소 2개 이상 작성할 것\",\n    \"requested_role 필드에 실제 역할 값을 채워 실행 주체를 명확히 할 것\",\n    \"route 필드에 실행 흐름(예: 에이전트 라우팅 키)을 정의하거나, 의도적으로 비워둘 경우 그 이유를 project_brief에 기록할 것\",\n    \"'test goal'은 검증 목적의 더미 값으로 추정되므로, 실제 배포 전에 구체적인 목표 설명으로 교체해야 함\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:15:23.327Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-bb3e9dc7/a1e184e1-68b2-4f46-b850-f285d6af0103.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

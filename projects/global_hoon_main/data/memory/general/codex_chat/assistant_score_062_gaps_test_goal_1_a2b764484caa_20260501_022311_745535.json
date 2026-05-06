@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 062  gaps     핵심 산출물의 대부분은 test goal이 플레이스홀더라는 관찰에는 근거가 있지만 실제 프로젝트 목표이해관계자제약조건에 대한 1차 증거가 전혀 없어 실행 가능",
+  "value": "[assistant] {   \"score\": 0.62,   \"gaps\": [     \"핵심 산출물의 대부분은 'test goal'이 플레이스홀더라는 관찰에는 근거가 있지만, 실제 프로젝트 목표·이해관계자·제약조건에 대한 1차 증거가 전혀 없어 실행 가능한 계획으로는 근거가 약하다.\",     \"PMBOK 7th Edition, PMI 공개 자료, Stage-Gate, Agile Alliance, Cucumber 문서 등은 참고문헌으로 제시됐지만 artifa...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:23:11.745917+00:00",
+  "updated_at": "2026-05-01T02:23:11.745917+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.62,\n  \"gaps\": [\n    \"핵심 산출물의 대부분은 'test goal'이 플레이스홀더라는 관찰에는 근거가 있지만, 실제 프로젝트 목표·이해관계자·제약조건에 대한 1차 증거가 전혀 없어 실행 가능한 계획으로는 근거가 약하다.\",\n    \"PMBOK 7th Edition, PMI 공개 자료, Stage-Gate, Agile Alliance, Cucumber 문서 등은 참고문헌으로 제시됐지만 artifact 내부의 구체 주장과 어떤 문장이 어떤 출처에 의해 뒷받침되는지 연결되어 있지 않다.\",\n    \"일부 참고문헌 설명이 부정확하거나 검증이 필요하다. 예를 들어 PMBOK 7th Edition의 특정 절 번호와 '공개 표준' 표현은 출처 접근성 및 정확한 조항 확인이 필요하다.\",\n    \"due_date가 모두 TBD라서 일정·SLA·임계 경로 관련 주장은 검증 가능성이 낮다.\",\n    \"item_count는 5개 work_items와 일치하지만, project_brief.route가 비어 있는데도 route 완성 계획의 근거가 아직 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"목표 확인 없이 실행 계획을 수립하면 전체 artifact가 무효화될 수 있다는 주장\",\n    \"WI-001이 모든 후속 작업의 선행 조건이라는 주장\",\n    \"project_brief.requested_role이 빈 문자열이면 owner 배정 근거가 없다는 주장\",\n    \"WI-003이 불필요한 작업 생성 비용을 막는 게이트 역할을 한다는 주장\",\n    \"프로젝트 수준 리스크를 별도로 관리해야 임계 경로 전체의 리스크 가시성이 확보된다는 주장\",\n    \"P0 리스크 항목에는 반드시 contingency plan이 필요하다는 주장\",\n    \"2영업일 무응답 시 에스컬레이션이 적절하다는 SLA 가정\",\n    \"24시간 비동기 검토 후 이견 항목만 동기 회의 처리한다는 방식이 적절하다는 주장\",\n    \"이해관계자 최소 2인 이상 등재가 충분하다는 기준\",\n    \"프로젝트 리스크 레지스터에 5개 이상 항목을 등록해야 한다는 기준\",\n    \"acceptance_criteria가 반드시 '주어-동사-측정값' 형태여야 한다는 기준\",\n    \"기한 내 무응답 시 조건부 승인 처리 가능성이 적절한 거버넌스라는 주장\"\n  ],\n  \"strengths\": [\n    \"원본 goal이 'test goal'이고 requested_role과 route가 비어 있다는 artifact 자체의 사실을 잘 포착했다.\",\n    \"목표 확인, 이해관계자 식별, 스코핑, 역할 배정, 최종 검토로 이어지는 단계 구조는 논리적으로 일관된다.\",\n    \"각 work_item에 acceptance_criteria, risks, route, due_date가 포함되어 있어 검토 가능한 구조를 갖췄다.\",\n    \"대안 A/B/C와 보류 조건을 포함해 일부 alternative perspective를 고려했다.\",\n    \"SMART, MoSCoW, RACI, CPM, Gherkin, DAG 등 관련 프레임워크를 폭넓게 참조하려는 시도가 있다.\"\n  ],\n  \"revision_instructions\": [\n    \"각 주요 주장 옆에 출처 또는 내부 근거를 직접 연결하라. 예: '왜 2영업일 SLA인지', '왜 이해관계자 2인이 최소 기준인지'를 명시한다.\",\n    \"PMBOK, PMI, Stage-Gate 등 참고문헌의 정확한 문서명, 판본, 접근 가능 URL, 확인일을 보강하라.\",\n    \"'공개 표준', 특정 섹션 번호, 공식 문서 여부처럼 사실 검증이 필요한 표현은 확인된 경우에만 유지하라.\",\n    \"현재 artifact가 실제 실행 계획이 아니라 목표 확인을 위한 discovery plan임을 명확히 표시하라.\",\n    \"TBD 항목은 허용하되, 언제까지 누가 확정하는지에 대한 임시 기준을 추가하라.\",\n    \"조건부 승인, 자동 워크숍 전환, 에스컬레이션 같은 거버넌스 규칙은 이해관계자 승인 전에는 '제안'으로 낮춰 표현하라.\"\n  ]\n}",
+    "event_timestamp": "2026-05-01T02:23:01.643Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b8162dda/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-22-35-019de158-5386-7a10-820c-5fb37f47c7f8.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

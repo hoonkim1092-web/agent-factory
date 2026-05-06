@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 042  gaps     원본 목표가 단순히 test goal인데 산출물은 실제 사용자 의도나 도메인 근거 없이 대규모 프로젝트 관리 계획으로 확장되어 있다    각 work item",
+  "value": "[assistant] {   \"score\": 0.42,   \"gaps\": [     \"원본 목표가 단순히 'test goal'인데, 산출물은 실제 사용자 의도나 도메인 근거 없이 대규모 프로젝트 관리 계획으로 확장되어 있다.\",     \"각 work item에는 sources 필드가 있으나, 다수의 출처가 실제 존재 여부나 해당 주장과의 직접 관련성이 검증되지 않았다.\",     \"내부 파일 경로와 commit hash가 인용되지만, 해당 파일이 실제로 존...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T05:27:22.243332+00:00",
+  "updated_at": "2026-05-02T05:27:22.243332+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.42,\n  \"gaps\": [\n    \"원본 목표가 단순히 'test goal'인데, 산출물은 실제 사용자 의도나 도메인 근거 없이 대규모 프로젝트 관리 계획으로 확장되어 있다.\",\n    \"각 work item에는 sources 필드가 있으나, 다수의 출처가 실제 존재 여부나 해당 주장과의 직접 관련성이 검증되지 않았다.\",\n    \"내부 파일 경로와 commit hash가 인용되지만, 해당 파일이 실제로 존재하거나 인용된 내용을 포함한다는 증거가 없다.\",\n    \"외부 표준(PMBOK, ISO 31000, BDD 등)은 일반 방법론 근거로는 유용하지만, 이 artifact의 구체적 일정, 역할, acceptance criteria를 뒷받침하지는 않는다.\",\n    \"recency 정보는 모든 항목에 포함되어 있으나 실제 검증 수행 결과가 아니라 '재확인 필요', '분기별 검토' 같은 계획 수준에 머문다.\",\n    \"requested_role과 route가 비어 있다는 사실은 맞지만, workflow-architect, risk-manager, qa-lead 등 구체 역할 배정은 근거 없이 생성된 것으로 보인다.\"\n  ],\n  \"unsupported_claims\": [\n    \"이해관계자 인터뷰 및 요구사항 분석 워크숍이 필요하다는 주장\",\n    \"이해관계자 최소 2명의 서면 승인이 필요하다는 기준\",\n    \"범위 IN/OUT 항목이 각각 3개 이상이어야 한다는 기준\",\n    \"route 객체에 mode, escalation_path, fallback 3개 키가 필요하다는 주장\",\n    \"WI-001부터 WI-006까지 R/A/C/I 역할 지정이 필요하다는 주장\",\n    \"core/research_router.py가 Research Router v1.4.1 라우팅 규칙을 제공한다는 주장\",\n    \"commit 8654ce2a가 관련 규칙 또는 token-trace 정합성을 뒷받침한다는 주장\",\n    \"Master_Blueprint.md §11 또는 §12가 실제로 존재하고 관련 실패 모드나 변경 이력을 포함한다는 주장\",\n    \"af-test-runner와 통합 검증이 가능하다는 주장\",\n    \"agents/af-test-runner/profile.md가 존재하고 검증 프로토콜을 정의한다는 주장\",\n    \"CI에서 stale 항목 자동 경고 job이 동작해야 한다는 기준\",\n    \"Wayback Machine 스냅샷 URL 병기가 이 프로젝트에 적절한 완화책이라는 주장\",\n    \"PERT/CPM 분석과 간트 차트가 이 요청에 필요한 수준의 산출물이라는 주장\",\n    \"총 8일 일정, 각 duration_days, due_offset_days가 타당하다는 주장\"\n  ],\n  \"strengths\": [\n    \"대부분의 work item이 sources, alternatives, acceptance_criteria, risks, dependencies, timeline, freshness를 포함해 구조적으로는 완결성이 높다.\",\n    \"모호한 목표를 먼저 명확화해야 한다는 WI-001의 핵심 문제 인식은 타당하다.\",\n    \"각 항목에 최소 2개의 대안과 tradeoff가 포함되어 alternative perspectives 형식은 갖추고 있다.\",\n    \"freshness.last_verified, verification_method, stale_after_days 필드를 둔 점은 recency 관리 의도를 보여준다.\",\n    \"일부 acceptance criteria는 객관적 판정 가능성을 고려하고 있다.\"\n  ],\n  \"revision_instructions\": [\n    \"먼저 'test goal'의 실제 의미, 도메인, 사용자 기대 산출물을 확인하기 전까지 WI-002 이후 항목은 provisional 상태로 표시하라.\",\n    \"존재가 확인되지 않은 내부 경로, commit hash, 문서 섹션 인용은 제거하거나 실제 파일 검증 결과를 첨부하라.\",\n    \"각 source가 어떤 claim을 뒷받침하는지 claim-to-source 매핑을 추가하라.\",\n    \"PMBOK, ISO 31000, BDD 같은 일반 방법론 출처는 구체 일정이나 역할 배정의 근거로 사용하지 말고, 방법론 참고 수준으로 낮춰 표기하라.\",\n    \"일정, 역할, acceptance criteria의 수치 기준은 임의값임을 명시하거나 사용자 승인/조직 표준/과거 프로젝트 데이터로 근거를 보강하라.\",\n    \"recency 필드는 계획이 아니라 실제 검증 상태를 기록하도록 바꾸고, 검증하지 않은 항목은 last_verified를 비워 두거나 status: unverified로 표시하라.\",\n    \"대안에는 '목표 확인 전 작업 보류', '최소 1개 clarifying question만 생성', '테스트용 더미 산출물로 명시' 같은 더 중요한 관점을 추가하라.\"\n  ]\n}",
+    "event_timestamp": "2026-05-02T05:27:21.757Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-1e3eec67/.af_runtime/codex_home/sessions/2026/05/02/rollout-2026-05-02T14-26-59-019de727-8087-7781-b64a-2861e36ceb8f.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

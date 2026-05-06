@@ -1,0 +1,18 @@
+{
+  "key": "assistant The main risk is in hook execution semantics the config now invokes both the new wrapper and the old absolute ",
+  "value": "[assistant] The main risk is in hook execution semantics: the config now invokes both the new wrapper and the old absolute hook runner for the same events, so I’m checking whether that causes duplicate side effects or broken script resolution.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:38:23.056950+00:00",
+  "updated_at": "2026-05-01T02:38:23.056950+00:00",
+  "details": {
+    "text": "[assistant] The main risk is in hook execution semantics: the config now invokes both the new wrapper and the old absolute hook runner for the same events, so I’m checking whether that causes duplicate side effects or broken script resolution.",
+    "event_timestamp": "2026-04-29T14:19:39.982Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-19-18-019dd99b-c71e-7041-8350-fc75aeb34753.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

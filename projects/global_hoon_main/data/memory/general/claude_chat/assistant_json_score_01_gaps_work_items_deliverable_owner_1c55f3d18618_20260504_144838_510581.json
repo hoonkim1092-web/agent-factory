@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 01  gaps     work_items 배열이 비어 있음  어떤 작업도 정의되지 않아 산출물로서 기능하지 않음    deliverable 소유자owner 없음  누가 무엇을",
+  "value": "[assistant] ```json {   \"score\": 0.1,   \"gaps\": [     \"work_items 배열이 비어 있음 — 어떤 작업도 정의되지 않아 산출물로서 기능하지 않음\",     \"deliverable 소유자(owner) 없음 — 누가 무엇을 담당하는지 불명확\",     \"리스크 항목 없음 — 위험 요소 및 완화 전략 전무\",     \"수용 기준(acceptance criteria) 없음 — 완료 조건을 검증할 방법 없음\",...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:48:38.511216+00:00",
+  "updated_at": "2026-05-04T14:48:38.511216+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.1,\n  \"gaps\": [\n    \"work_items 배열이 비어 있음 — 어떤 작업도 정의되지 않아 산출물로서 기능하지 않음\",\n    \"deliverable 소유자(owner) 없음 — 누가 무엇을 담당하는지 불명확\",\n    \"리스크 항목 없음 — 위험 요소 및 완화 전략 전무\",\n    \"수용 기준(acceptance criteria) 없음 — 완료 조건을 검증할 방법 없음\",\n    \"goal이 'test goal'로만 명시되어 구체적 목표 내용 없음\",\n    \"route가 빈 객체 — 실행 경로/담당 에이전트 미지정\",\n    \"requested_role이 빈 문자열 — 역할 컨텍스트 없음\"\n  ],\n  \"strengths\": [\n    \"JSON 구조 자체는 유효하고 파싱 가능함\",\n    \"project_brief에 생성 시각(generated_at) 타임스탬프 포함\"\n  ],\n  \"revision_instructions\": [\n    \"goal을 측정 가능한 구체적 목표로 교체하라 (예: '무엇을 달성하면 성공인가'를 한 문장으로)\",\n    \"work_items에 최소 1개 이상의 항목을 추가하고 각 항목에 id, title, owner, due_date, acceptance_criteria 필드를 포함하라\",\n    \"각 work_item에 risks 배열을 추가하고 risk 항목마다 description과 mitigation을 명시하라\",\n    \"acceptance_criteria는 '관찰 가능하고 테스트 가능한' 조건으로 작성하라 (예: 'X 명령 실행 시 Y 출력 반환')\",\n    \"route에 실행 에이전트 또는 파이프라인 경로를 지정하라\",\n    \"requested_role을 실제 역할값으로 채워라\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-04T14:48:37.171Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-5b60e385/2af82161-ebd8-4037-a346-6331ca9ea2cd.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

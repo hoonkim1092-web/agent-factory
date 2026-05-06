@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceUsershoonworkTreeagent-factorytests_tmpaf-test-f2a26114TaskProject context goal test goal generated_at 202",
+  "value": "[user] [Workspace] /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-f2a26114  [Task] Project context: {\"goal\": \"test goal\", \"generated_at\": \"2026-05-04T23:41:31\", \"requested_role\": \"\", \"route\": {}}  You are a plan refinement assistant. The following wo...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:47:09.008644+00:00",
+  "updated_at": "2026-05-04T14:47:09.008644+00:00",
+  "details": {
+    "text": "[user] [Workspace]\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-f2a26114\n\n[Task]\nProject context: {\"goal\": \"test goal\", \"generated_at\": \"2026-05-04T23:41:31\", \"requested_role\": \"\", \"route\": {}}\n\nYou are a plan refinement assistant.\nThe following work-items were generated for a task but have quality issues.\nRewrite the work-items to address all issues listed below.\nReturn the improved work-items as a JSON array in the same structure as the input.\nDo NOT include any explanation — return JSON only.\n\nOriginal task:\ntest goal\n\nIssues to address:\n- work_items 배열이 비어 있음 — 어떤 작업도, 담당자도, 일정도 없음\n- goal이 'test goal'로 실질적 의미 없음 — 구체적 목표 서술 부재\n- 리스크 항목 전무 — 완화 전략 작성 불가\n- 수락 기준(acceptance criteria) 항목 전무 — 관찰·검증 가능한 완료 조건 없음\n- requested_role 비어 있음 — 책임자 불명확\n- route 비어 있음 — 실행 경로 미정의\n- item_count=0이 work_items=[]와 일치하나, 둘 다 0이므로 산출물 자체가 없음\n\nCurrent work-items:\n[]",
+    "event_timestamp": "2026-05-04T14:42:04.937Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-f2a26114/f37aef46-7962-440f-a97d-9913f288fb5a.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

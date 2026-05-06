@@ -1,0 +1,18 @@
+{
+  "key": "assistant 두 문서feature-planmd feature-specmd를 읽겠습니다",
+  "value": "[assistant] 두 문서(feature-plan.md, feature-spec.md)를 읽겠습니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:29:25.436735+00:00",
+  "updated_at": "2026-05-01T02:29:25.436735+00:00",
+  "details": {
+    "text": "[assistant] 두 문서(feature-plan.md, feature-spec.md)를 읽겠습니다.",
+    "event_timestamp": "2026-05-01T02:28:41.337Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-16c06143/8e0ffe15-f1c0-422f-a123-e187255683dd.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

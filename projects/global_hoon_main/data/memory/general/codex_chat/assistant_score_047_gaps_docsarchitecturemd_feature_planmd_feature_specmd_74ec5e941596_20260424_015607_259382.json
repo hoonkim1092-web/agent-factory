@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 047  gaps     핵심 설계 주장 다수가 실제 인용 가능한 근거에 직접 연결되지 않았다 docsarchitecturemd feature-planmd feature-specmd는",
+  "value": "[assistant] {   \"score\": 0.47,   \"gaps\": [     \"핵심 설계 주장 다수가 실제 인용 가능한 근거에 직접 연결되지 않았다. `docs/architecture.md`, `feature-plan.md`, `feature-spec.md`는 본 워크스페이스에서 확인되지 않아 로컬 근거 체인이 끊겨 있다.\",     \"외부 근거가 `https://example.com/poker-rules`로만 표기되어 있어 실질적인 출처 검증이 불...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T01:56:07.259917+00:00",
+  "updated_at": "2026-04-24T01:56:07.259917+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.47,\n  \"gaps\": [\n    \"핵심 설계 주장 다수가 실제 인용 가능한 근거에 직접 연결되지 않았다. `docs/architecture.md`, `feature-plan.md`, `feature-spec.md`는 본 워크스페이스에서 확인되지 않아 로컬 근거 체인이 끊겨 있다.\",\n    \"외부 근거가 `https://example.com/poker-rules`로만 표기되어 있어 실질적인 출처 검증이 불가능하다. 규칙 우선순위, 상태 전이, 팟 분배 규칙의 표준 근거로 보기 어렵다.\",\n    \"증거 표가 문서 존재 사실만 적고 있으며, 어떤 요구사항이 어떤 문장과 어떤 설계 결정으로 이어졌는지 추적 가능성이 낮다.\",\n    \"`implementation-tasks.md`의 `e2e_command`가 전부 `(needs_backfill)` 상태라서 검증 계획이 실행 가능한 수준으로 구체화되지 않았다.\",\n    \"승인 게이트의 스냅샷 버전 필드가 비어 있어 최신 문서와 승인 상태의 정합성을 입증할 수 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"`docs/architecture.md`의 `# Modules`가 현재 설계의 `StateManager`, `RulesEngine`, `UIRenderer`, `BotStrategy`, `GameController` 분리를 직접 뒷받침한다는 주장\",\n    \"`StateManager` 단일 소유 원칙이 로컬 레퍼런스의 직접 근거라는 주장\",\n    \"`VALID_TRANSITIONS` 맵이 외부 포커 규칙 레퍼런스에 의해 정당화된다는 주장\",\n    \"`HandEvaluator.compare()`의 다단계 킥커 규칙 설계가 외부 레퍼런스에 의해 뒷받침된다는 주장\",\n    \"`requestAnimationFrame` 일괄 처리만으로 NFR-03(100ms 이내 처리)를 충족한다는 주장\",\n    \"`가로 1024px 기준 레이아웃`이 실제 NFR-04 요구사항이라는 주장\",\n    \"`홀수 칩은 딜러 버튼 기준 선행 플레이어에게 귀속` 규칙이 표준 규칙 또는 프로젝트 요구사항이라는 주장\",\n    \"`플레이어 액션 후 1초 이내 봇 액션`이 요구사항 또는 근거 기반 결정이라는 주장\",\n    \"`Chrome/Firefox 최신 버전 기본 지원`을 전제로 한 호환성 판단이 현재 기준으로 충분하다는 주장\"\n  ],\n  \"strengths\": [\n    \"규칙 엔진을 DOM 비의존 순수 함수로 분리하고 테스트 가능성을 높인 방향은 타당하며, 위험 `rule evaluation bug`와도 잘 연결된다.\",\n    \"핸드 평가 버그, 상태 전이 경쟁, DOM 의존성 누수 등 주요 리스크를 식별했고 완화 전략을 문서화했다.\",\n    \"테스트 전략이 단위 테스트, 통합 체크리스트, 정적 분석으로 나뉘어 있어 검증 관점은 비교적 명확하다.\",\n    \"대안 비교 섹션에서 상태 관리 방식, 렌더링 방식, 핸드 평가 구현 방식 등 몇 가지 중요한 구현 선택지를 검토했다.\"\n  ],\n  \"revision_instructions\": [\n    \"실재하는 로컬 문서 경로와 버전을 먼저 복구하라. `docs/architecture.md`, `feature-plan.md`, `feature-spec.md`가 없다면 문서의 근거 표와 참조 목록에서 제거하거나 실제 파일을 생성한 뒤 정확한 섹션 인용을 추가하라.\",\n    \"외부 레퍼런스를 `example.com`이 아닌 실제 검증 가능한 규칙 출처로 교체하고, 핸드 랭킹, 타이브레이커, 베팅/올인/스플릿 팟 규칙별로 어느 조항을 채택했는지 명시하라.\",\n    \"설계 문서의 핵심 문장마다 근거 연결을 강화하라. 특히 상태 전이, 팟 분배, UI 성능 목표, 호환 브라우저 범위는 요구사항 또는 출처를 각주 수준으로 달아야 한다.\",\n    \"비표준 또는 하우스 룰인 결정은 명시적으로 분리하라. 예: 홀수 팟 분배 규칙, 봇 응답 1초, 최소 뷰포트 1024px.\",\n    \"대안 검토를 보강하라. 현재는 구현 패턴 대안은 있으나 게임 규칙 범위 대안이 부족하다. `Texas Hold'em heads-up 고정` 여부, 사이드 팟 지원 제외 여부, 블라인드/딜러 버튼 회전 정책을 명시하라.\",\n    \"`implementation-tasks.md`의 모든 `e2e_command`를 실제 실행 가능한 명령으로 채우고, 각 verify 단계가 어떤 산출물과 어떤 테스트 결과를 남겨야 하는지 구체화하라.\",\n    \"`approval-gate.md`에 문서 버전과 승인 스냅샷을 채워 최신성 추적이 가능하게 하라. 현재 상태로는 어떤 문서가 최신 승인본인지 판단할 수 없다.\",\n    \"최신성 관점에서 브라우저 지원 범위와 Node 테스트 실행 방식(`--experimental-vm-modules`)이 2026-04-24 기준으로 여전히 필요한지 재검증하고, 필요 없으면 더 단순한 실행 계약으로 갱신하라.\"\n  ]\n}",
+    "event_timestamp": "2026-04-24T01:56:06.652Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-c104e602/.af_runtime/codex_home/sessions/2026/04/24/rollout-2026-04-24T10-55-15-019dbd32-ca73-7d20-b2d3-7aedf5ed083b.jsonl",
+    "session_line": 31,
+    "provider": "codex"
+  }
+}

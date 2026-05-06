@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Medium claudesettingslocaljson66  cli_hook_bridge now runs once via scriptsrunpy and again via an added abso",
+  "value": "[assistant] - [Medium] `.claude/settings.local.json:66` — `cli_hook_bridge` now runs once via `scripts/run.py` and again via an added absolute-path hook for the same events, which can duplicate bridge side effects. - [Low] `.claude/settings.local.json:72` —...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:38:23.100322+00:00",
+  "updated_at": "2026-05-01T02:38:23.100322+00:00",
+  "details": {
+    "text": "[assistant] - [Medium] `.claude/settings.local.json:66` — `cli_hook_bridge` now runs once via `scripts/run.py` and again via an added absolute-path hook for the same events, which can duplicate bridge side effects.\n- [Low] `.claude/settings.local.json:72` — hard-coded `/Users/hoon/workTree/agent-factory` paths make the local Claude hook config non-portable despite being a machine-local settings file.\n\nAGENT_FACTORY_OK",
+    "event_timestamp": "2026-04-29T14:43:53.120Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-43-41-019dd9b2-1937-7d32-9052-03e5bfd41221.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

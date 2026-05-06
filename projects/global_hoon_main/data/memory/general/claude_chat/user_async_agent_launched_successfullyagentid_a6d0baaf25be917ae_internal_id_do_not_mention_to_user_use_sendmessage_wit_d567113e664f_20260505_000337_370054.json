@@ -1,0 +1,18 @@
+{
+  "key": "user Async agent launched successfullyagentId a6d0baaf25be917ae internal ID - do not mention to user Use SendMessage wit",
+  "value": "[user] Async agent launched successfully. agentId: a6d0baaf25be917ae (internal ID - do not mention to user. Use SendMessage with to: 'a6d0baaf25be917ae' to continue this agent.) The agent is working in the background. You will be notified automatically when...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-05T00:03:37.370306+00:00",
+  "updated_at": "2026-05-05T00:03:37.370306+00:00",
+  "details": {
+    "text": "[user] Async agent launched successfully.\nagentId: a6d0baaf25be917ae (internal ID - do not mention to user. Use SendMessage with to: 'a6d0baaf25be917ae' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes.\nDo not duplicate this agent's work — avoid working with the same files or topics it is using. Work on non-overlapping tasks, or briefly tell the user what you launched and end your response.\noutput_file: /private/tmp/claude-502/-Users-hoon-workTree-agent-factory/fca4846f-2bc3-4d8d-bd67-630c7e3a7e34/tasks/a6d0baaf25be917ae.output\nDo NOT Read or Bash tail this file — it is the full sub-agent JSONL transcript and reading it will overflow your context. If the user asks for progress, say the agent is still running; you'll get a completion notification.",
+    "event_timestamp": "2026-04-18T14:26:12.563Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fca4846f-2bc3-4d8d-bd67-630c7e3a7e34.jsonl",
+    "session_line": 16,
+    "provider": "claude"
+  }
+}

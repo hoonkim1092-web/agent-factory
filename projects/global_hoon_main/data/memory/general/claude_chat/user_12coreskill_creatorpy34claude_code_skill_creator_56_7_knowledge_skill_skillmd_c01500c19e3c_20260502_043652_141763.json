@@ -1,0 +1,18 @@
+{
+  "key": "user 12coreskill_creatorpy34Claude Code의 Skill Creator와 동일한 방식으로 스킬을 생성하는 모듈56지원하는 스킬 형식7  - Knowledge Skill SKILLmd 기반 ",
+  "value": "[user] 1\t\"\"\" 2\tcore/skill_creator.py 3\t===================== 4\tClaude Code의 Skill Creator와 동일한 방식으로 스킬을 생성하는 모듈. 5\t 6\t지원하는 스킬 형식: 7\t  - Knowledge Skill (SKILL.md 기반) — Claude Code 호환 8\t  - Action Skill (skill.py + meta.yaml) — agent-factory 기존 형식 9\t 10\t주요 함...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:36:52.142459+00:00",
+  "updated_at": "2026-05-02T04:36:52.142459+00:00",
+  "details": {
+    "text": "[user] 1\t\"\"\"\n2\tcore/skill_creator.py\n3\t=====================\n4\tClaude Code의 Skill Creator와 동일한 방식으로 스킬을 생성하는 모듈.\n5\t\n6\t지원하는 스킬 형식:\n7\t  - Knowledge Skill (SKILL.md 기반) — Claude Code 호환\n8\t  - Action Skill (skill.py + meta.yaml) — agent-factory 기존 형식\n9\t\n10\t주요 함수:\n11\t  - create_skill(): 대화형/CLI 스킬 생성\n12\t  - init_skill_dir(): 스킬 디렉토리 초기화\n13\t  - validate_skill(): 스킬 구조 검증\n14\t  - generate_skill_content(): LLM으로 SKILL.md 내용 생성\n15\t\"\"\"\n16\t\n17\timport os\n18\timport re\n19\timport json\n20\timport time\n21\timport shutil\n22\timport datetime\n23\t\n24\timport yaml\n25\t\n26\t# ---------------------------------------------------------------------------\n27\t# Constants\n28\t# ---------------------------------------------------------------------------\n29\tMAX_SKILL_NAME_LENGTH = 64\n30\tALLOWED_RESOURCES = {\"scripts\", \"references\", \"assets\"}\n31\t\n32\tSKILL_MD_TEMPLATE = \"\"\"\\\n33\t---\n34\tname: {name}\n35\tdescription: \"{description}\"\n36\t---\n37\t\n38\t# {title}\n39\t\n40\t{body}\n41\t\"\"\"\n42\t\n43\tACTION_SKILL_TEMPLATE = '''\\\n44\t\"\"\"\n45\t{title} — Action Skill\n46\t========================\n47\t자동 생성된 액션 스킬.\n48\t\"\"\"\n49\t\n50\t\n51\tdef propose(ctx):\n52\t    \"\"\"스킬 메타데이터를 반환합니다.\"\"\"\n53\t    return {{\n54\t        \"skill_id\": \"{skill_id}\",\n55\t        \"description\": \"{description}\",\n56\t        \"required_keys\": [],\n57\t        \"optional_keys\": [],\n58\t    }}\n59\t\n60\t\n61\tdef apply(ctx):\n62\t    \"\"\"스킬 주요 로직을 실행합니다.\"\"\"\n63\t    # TODO: 구현 필요\n64\t    return {{\"ok\": True, \"result\": \"not_implemented\"}}\n65\t\n66\t\n67\tdef test(ctx):\n68\t    \"\"\"스킬 테스트를 실행합니다.\"\"\"\n69\t    r = apply(ctx or {{}})\n70\t    return {{\"ok\": bool(r.get(\"ok\")), \"result\": r}}\n71\t'''\n72\t\n73\tMETA_YAML_TEMPLATE = {\n74\t    \"type\": \"action\",\n75\t    \"status\": \"active\",\n76\t    \"version\": \"0.1.0\",\n77\t    \"capabilities\": [],\n78\t    \"last_test_ok\": False,\n79\t}\n80",
+    "event_timestamp": "2026-04-29T00:05:51.735Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fdb1af89-91b6-4377-a316-96e4145fc838.jsonl",
+    "session_line": 20,
+    "provider": "claude"
+  }
+}

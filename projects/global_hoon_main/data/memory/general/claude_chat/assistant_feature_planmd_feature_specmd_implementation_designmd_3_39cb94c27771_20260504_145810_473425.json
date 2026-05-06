@@ -1,0 +1,18 @@
+{
+  "key": "assistant feature-planmd feature-specmd implementation-designmd 3개 파일이 실제로 존재하지 않습니다  경로만 등록되고 내용이 없는 상태입니다 이 사실 자체가 핵심 ",
+  "value": "[assistant] `feature-plan.md`, `feature-spec.md`, `implementation-design.md` 3개 파일이 실제로 존재하지 않습니다 — 경로만 등록되고 내용이 없는 상태입니다. 이 사실 자체가 핵심 결함입니다.  ```json {   \"score\": 0.28,   \"gaps\": [     \"feature-plan.md, feature-spec.md, implementation-design.md 3개 파일이 실제로...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:58:10.474288+00:00",
+  "updated_at": "2026-05-04T14:58:10.474288+00:00",
+  "details": {
+    "text": "[assistant] `feature-plan.md`, `feature-spec.md`, `implementation-design.md` 3개 파일이 실제로 존재하지 않습니다 — 경로만 등록되고 내용이 없는 상태입니다. 이 사실 자체가 핵심 결함입니다.\n\n```json\n{\n  \"score\": 0.28,\n  \"gaps\": [\n    \"feature-plan.md, feature-spec.md, implementation-design.md 3개 파일이 실제로 존재하지 않음 — work_items 배열에 경로만 등록되었고 내용이 없어 산출물 세트가 사실상 불완전\",\n    \"모든 e2e_command 필드가 '(needs_backfill)' 자리표시자 — 인수 기준을 실행·검증할 명령어가 없어 Definition of Done 달성 불가\",\n    \"식별된 최고 위험인 'rule evaluation bug'에 대한 구체적 완화 전략이 없음 (winner 평가 로직 단위 테스트 계획, 핸드 랭킹 표 등 없음)\",\n    \"approval-gate.md의 approver 필드와 모든 version 필드가 비어있어 게이트 자체가 무효화 규칙을 이미 위반 중\",\n    \"tech_stack: vanilla_js로 명시되었으나 파일 구조, 모듈 경계, 빌드 진입점(index.html 등)이 어느 문서에도 없음\",\n    \"QA Engineer 태스크(test checklist)의 acceptance criteria가 'test checklist의 핵심 기능이 구현된다'로 순환 정의 — 무엇이 통과 기준인지 불명확\",\n    \"game ui / game rules / test checklist 세 모듈 간 의존성 순서가 implementation-tasks.md에 명시되지 않음 (game rules가 완료되어야 game ui가 통합 가능한지 등)\",\n    \"research_notes가 'seed' 단일 문자열뿐 — 참조된 poker rules 출처(https://example.com/poker-rules)의 실제 규칙이 spec에 반영되었는지 추적 불가\"\n  ],\n  \"strengths\": [\n    \"phase 3단계(scope→build→verify) 구조가 명확하고 task_id·depends_on 필드로 의존 그래프가 표현되어 있음\",\n    \"owner_role이 모든 태스크에 할당되어 책임 소재가 명시됨\",\n    \"Rollback Sign-Off 정책(모듈 단위 커밋)이 명시되어 롤백 범위가 제한됨\",\n    \"Definition of Done에 verification-report.md 작성 + PASS/WARN/BLOCK 판정 요구가 포함되어 있어 완료 기준의 형식적 구조는 갖춤\",\n    \"architecture.md 로컬 참조와 poker rules 웹 참조가 evidence로 연결되어 연구 맥락이 문서에 이어짐\"\n  ],\n  \"revision_instructions\": [\n    \"feature-plan.md, feature-spec.md, implementation-design.md 3개 파일을 실제 내용으로 작성한다 — 파일이 없으면 나머지 모든 리뷰·게이트 체크가 무의미함\",\n    \"각 태스크의 e2e_command를 구체적인 실행 명령어로 채운다 (예: 'open index.html → 5-card hand 테스트', 'node tests/hand-eval.test.js')\",\n    \"rule evaluation bug 위험에 대해 명시적 완화 전략을 추가한다: (1) 핸드 랭킹 표를 feature-spec에 포함, (2) 경계 케이스(동점, 킥커) 단위 테스트 목록을 test checklist에 열거\",\n    \"approval-gate.md의 approver와 version 스냅샷 필드를 채우거나, 아직 리뷰 전임을 명시하고 execution_open: false를 유지하되 활성화 조건을 기술한다\",\n    \"implementation-design.md에 vanilla_js 파일 트리(index.html, src/deck.js, src/hand-eval.js, src/ui.js 등)와 모듈 간 인터페이스를 정의한다\",\n    \"QA Engineer 태스크의 acceptance를 observable한 기준으로 교체한다 (예: '플러시·스트레이트·풀하우스 각 1케이스 이상 PASS', '잘못된 승자 판정 0건')\",\n    \"game rules → game ui 통합 순서를 depends_on으로 명시하고, 통합 이전에 game rules 단독 검증 단계를 삽입한다\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-04T14:58:08.948Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-71345f4c/3e0d0acf-9134-452c-8b33-9b0c8c03d825.jsonl",
+    "session_line": 17,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High coreskill_quality_gatepy87  total_cases  0일 때 static_gateok만으로 pass_rate10 간주  테스트 케이스 없는 스킬이 게이트를 통과할 ",
+  "value": "[assistant] - [High] `core/skill_quality_gate.py:87` — `total_cases == 0`일 때 `static_gate.ok`만으로 `pass_rate=1.0` 간주 → 테스트 케이스 없는 스킬이 게이트를 통과할 수 있음 - [High] `core/skill_quality_gate.py:132` — `_register_with_eval`의 `except Exception: pass`가 등록 실패를 완전히 묵살 (로그...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:35:19.722942+00:00",
+  "updated_at": "2026-05-02T04:35:19.722942+00:00",
+  "details": {
+    "text": "[assistant] - [High] `core/skill_quality_gate.py:87` — `total_cases == 0`일 때 `static_gate.ok`만으로 `pass_rate=1.0` 간주 → 테스트 케이스 없는 스킬이 게이트를 통과할 수 있음\n- [High] `core/skill_quality_gate.py:132` — `_register_with_eval`의 `except Exception: pass`가 등록 실패를 완전히 묵살 (로그조차 없음)\n- [Medium] `core/skill_creator.py:161` — `if name and not re.match(...)` 조건 탓에 `name: \"\"` (빈 문자열) frontmatter가 validation을 통과\n- [Medium] `core/fsa_loop.py:163-168` — `get_run_budget().is_exhausted()` 예외를 `pass`로 삼킴 → 예산 시스템 오류 시 무한 루프 위험\n- [Medium] `core/fsa_loop.py:86` — `\"gemini-1.5-pro-latest\"` 하드코딩 fallback — 모델 명세 변경 시 런타임 오류 발생\n- [Low] `core/fsa_loop.py:207` — 매 사이클 무조건 `git.commit()` 호출 → 변경 없을 때도 빈 커밋 생성 가능\n- [Low] `core/skill_quality_gate.py:51-63` — knowledge skill은 내용 검증 없이 `pass_rate=1.0`으로 auto-register 됨\n- [Info] `core/skill_evolution_safety.py:6-8` — DEPRECATED 주석이 달린 채 Sprint 2 이후에도 계속 사용 중 (Sprint 4 정리 예정)",
+    "event_timestamp": "2026-04-29T00:06:22.612Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fdb1af89-91b6-4377-a316-96e4145fc838.jsonl",
+    "session_line": 33,
+    "provider": "claude"
+  }
+}

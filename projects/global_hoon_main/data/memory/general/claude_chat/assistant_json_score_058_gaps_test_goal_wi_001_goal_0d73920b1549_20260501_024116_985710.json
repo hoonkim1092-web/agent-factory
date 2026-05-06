@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 058  gaps     목표가 test goal 플레이스홀더로 실제 비즈니스 가치나 성공 기준이 전혀 없음  WI-001이 목표를 나중에 정의하는 구조라 평가 시점에 goal",
+  "value": "[assistant] ```json {   \"score\": 0.58,   \"gaps\": [     \"목표가 'test goal' 플레이스홀더로, 실제 비즈니스 가치나 성공 기준이 전혀 없음 — WI-001이 목표를 '나중에 정의'하는 구조라 평가 시점에 goal alignment 검증 불가\",     \"프로젝트 수준 타임라인·마일스톤이 없음 — 개별 WI에 estimated_effort만 있고 전체 완료 예상일이 없어 납기 리스크 식별 불가\",     \"W...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:41:16.986033+00:00",
+  "updated_at": "2026-05-01T02:41:16.986033+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.58,\n  \"gaps\": [\n    \"목표가 'test goal' 플레이스홀더로, 실제 비즈니스 가치나 성공 기준이 전혀 없음 — WI-001이 목표를 '나중에 정의'하는 구조라 평가 시점에 goal alignment 검증 불가\",\n    \"프로젝트 수준 타임라인·마일스톤이 없음 — 개별 WI에 estimated_effort만 있고 전체 완료 예상일이 없어 납기 리스크 식별 불가\",\n    \"WI-002 수용 기준이 'core/provider_detect.py' 코드베이스 구체 파일을 참조하나, 작업 프로파일에는 라우팅 컨텍스트가 없음 — 범위 초과 가정\",\n    \"WI-004(리스크 등록부)가 WI-001 이후 순서로 배치됐으나 리스크는 목표 정의와 병렬 또는 선행이어야 함 — 의존성 순서 오류\",\n    \"모든 WI가 WI-001에 직렬 의존 — WI-001 블록 시 전체 프로젝트가 멈추는 단일 장애점(SPOF), 병렬 실행 경로 없음\",\n    \"이해관계자 목록, 의사결정권자, 에스컬레이션 경로가 전혀 정의되지 않음\",\n    \"project_brief 내 데이터(goal, generated_at 등)가 최상위 필드와 중복 — 스키마 정규화 미흡\",\n    \"WI-001의 '이해관계자 최소 1인 서명' 기준은 과소 — 단독 승인으로는 합의 검증 불충분\"\n  ],\n  \"strengths\": [\n    \"모든 WI에 owner, priority, status, acceptance_criteria, risks, constraints, dependencies, estimated_effort 필드가 빠짐없이 채워짐 — 구조적 완결성 높음\",\n    \"수용 기준이 대부분 이진 판단(충족/미충족) 가능한 형태로 작성됨 (예: '최소 3개 이상', '서명함', '필드가 추가됨')\",\n    \"WI-001에 SMART 기준 명시 — 목표 문서화 품질 기준이 구체적\",\n    \"각 리스크에 대응 전략이 구체적 행동(워크숍, 스크립트 실행, fallback 코드 추가)으로 기술됨\",\n    \"WI-006의 valid_until/review_date 정책 제안 — 계획 진부화(staleness) 리스크를 선제적으로 다룸\",\n    \"WBS 분해(WI-003)와 DoD 정의(WI-005)를 별도 WI로 분리한 점이 명확한 책임 구분을 가능하게 함\"\n  ],\n  \"revision_instructions\": [\n    \"실제 목표가 없으면 artifact 생성을 거부하거나 goal 필드 검증 단계를 generator 앞에 두어 'test goal' 같은 플레이스홀더를 사전 차단할 것\",\n    \"project_brief 중복 제거: 최상위 goal/generated_at과 project_brief 내 동일 필드를 하나로 통합하고 project_brief에는 추가 메타데이터(deadline, stakeholders)만 남길 것\",\n    \"WI-004 의존성을 WI-001과 병렬(dependencies: [])로 수정하고, 리스크 식별을 목표 정의와 동시에 시작하는 병렬 트랙으로 재구성할 것\",\n    \"프로젝트 수준 summary 필드 추가: 전체 완료 예상일, 총 estimated_effort 합산, 크리티컬 패스 WI 목록\",\n    \"WI-001 수용 기준의 '이해관계자 최소 1인 서명'을 '관련 이해관계자 전원(최소 3인) 서명 또는 공식 검토 회의 의사록'으로 강화할 것\",\n    \"WI-002 수용 기준에서 코드베이스 특정 파일(core/provider_detect.py) 참조를 제거하거나, 해당 제약을 constraints 필드로 이동하여 AC와 구분할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:38:23.017Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-af4eac81/806e9ed7-f131-4338-80bd-80857465b3f9.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 042  gaps     핵심 입력이 test goal뿐이라 산출물 대부분이 실제 프로젝트 사실보다 일반적인 프로젝트 관리 템플릿으로 구성되어 있다    evidence_sources",
+  "value": "[assistant] {   \"score\": 0.42,   \"gaps\": [     \"핵심 입력이 'test goal'뿐이라 산출물 대부분이 실제 프로젝트 사실보다 일반적인 프로젝트 관리 템플릿으로 구성되어 있다.\",     \"evidence_sources가 실제 인용 가능한 자료가 아니라 예상 자료명 또는 향후 수집 대상에 가깝다.\",     \"각 work_item의 owner, requested_role, priority, dependency가 왜 그렇...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:43:53.392185+00:00",
+  "updated_at": "2026-05-01T02:43:53.392185+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.42,\n  \"gaps\": [\n    \"핵심 입력이 'test goal'뿐이라 산출물 대부분이 실제 프로젝트 사실보다 일반적인 프로젝트 관리 템플릿으로 구성되어 있다.\",\n    \"evidence_sources가 실제 인용 가능한 자료가 아니라 예상 자료명 또는 향후 수집 대상에 가깝다.\",\n    \"각 work_item의 owner, requested_role, priority, dependency가 왜 그렇게 정해졌는지 근거가 없다.\",\n    \"SMART 기준, RACI, DAG, PMBoK 7판, ISO/IEC 25010 등 방법론은 언급되지만 해당 목표에 적용해야 하는 이유가 설명되지 않는다.\",\n    \"대안적 접근, 예를 들어 더미 목표를 보류 처리하거나 사용자에게 재입력을 요청하는 방식이 고려되지 않았다.\",\n    \"recency는 generated_at이 포함되어 있어 생성 시점은 명확하지만, 외부 기준이나 조직 데이터의 최신성은 검증되지 않았다.\"\n  ],\n  \"unsupported_claims\": [\n    \"wi-001이 wi-002, wi-003, wi-004를 반드시 block한다는 의존 관계\",\n    \"requested_role 공백을 RACI 매트릭스와 역할-담당자 매핑으로 해결해야 한다는 판단\",\n    \"route가 빈 객체인 문제를 DAG와 Impact vs Effort 매트릭스로 해결해야 한다는 판단\",\n    \"프로젝트 전체 리스크가 최소 5건 이상 식별되어야 한다는 기준\",\n    \"High 등급 리스크에는 contingency plan이 필요하다는 기준이 이 프로젝트에 적용된다는 주장\",\n    \"검토자 2인의 확인, 이해관계자 1명 이상의 승인, 최종 승인 획득이 필요한 절차라는 주장\",\n    \"팀 조직도, 스프린트 capacity 데이터, 팀 velocity 데이터, 유사 프로젝트 실행 이력, post-mortem 보고서가 존재하거나 접근 가능하다는 전제\",\n    \"PMBoK 7판과 ISO/IEC 25010이 이 artifact의 검증 기준으로 적절하다는 주장\",\n    \"각 risk의 likelihood와 impact 값\"\n  ],\n  \"strengths\": [\n    \"입력 artifact의 결함인 goal, requested_role, route 공백을 직접적으로 다루려는 구조는 명확하다.\",\n    \"각 work_item에 deliverables, acceptance_criteria, risks, evidence_sources를 일관된 형식으로 포함했다.\",\n    \"의존 관계와 priority를 명시해 실행 순서를 검토할 수 있게 했다.\",\n    \"더미 목표를 실제 목표로 구체화해야 한다는 문제 인식은 타당하다.\"\n  ],\n  \"revision_instructions\": [\n    \"실제 근거가 없는 evidence_sources는 '필요한 근거'와 '확보된 근거'로 분리하라.\",\n    \"현재 입력만으로 확정할 수 없는 owner, priority, dependency, acceptance_criteria는 가정으로 표시하라.\",\n    \"각 work_item마다 최소 1개 이상의 실제 근거 또는 입력 필드 참조를 연결하라.\",\n    \"외부 프레임워크를 사용할 경우 해당 기준이 왜 이 목표에 적합한지 설명하거나, 검증 전까지 선택지로 남겨라.\",\n    \"대안 관점을 추가하라: 목표가 더미값이면 작업 계획을 생성하지 않고 사용자 clarification을 요구하는 옵션, 최소 viable planning 옵션, full PMO planning 옵션을 비교하라.\",\n    \"recency 검토를 위해 generated_at 외에 사용한 조직 데이터, 표준, 과거 프로젝트 자료의 날짜와 출처를 명시하라.\"\n  ]\n}",
+    "event_timestamp": "2026-05-01T02:43:52.810Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ae423974/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-43-27-019de16b-6fc1-7150-a945-b46a784d354e.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

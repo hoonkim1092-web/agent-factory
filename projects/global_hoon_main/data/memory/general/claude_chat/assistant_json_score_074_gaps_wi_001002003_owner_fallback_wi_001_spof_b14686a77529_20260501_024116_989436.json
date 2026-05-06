@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 074  gaps     WI-001002003 owner가 전부 미정  fallback 담당자예 요청자 본인가 없으면 WI-001 자체가 SPOF가 됨    전체 프로젝트 누",
+  "value": "[assistant] ```json {   \"score\": 0.74,   \"gaps\": [     \"WI-001·002·003 owner가 전부 '미정' — fallback 담당자(예: 요청자 본인)가 없으면 WI-001 자체가 SPOF가 됨\",     \"전체 프로젝트 누적 effort(4.5일)와 완료 예상일이 project_brief에 없음\",     \"WI-007의 dependencies에 WI-004가 누락 — WI-006 WBS는 WI-004 목표...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:41:16.989886+00:00",
+  "updated_at": "2026-05-01T02:41:16.989886+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.74,\n  \"gaps\": [\n    \"WI-001·002·003 owner가 전부 '미정' — fallback 담당자(예: 요청자 본인)가 없으면 WI-001 자체가 SPOF가 됨\",\n    \"전체 프로젝트 누적 effort(4.5일)와 완료 예상일이 project_brief에 없음\",\n    \"WI-007의 dependencies에 WI-004가 누락 — WI-006 WBS는 WI-004 목표가 확정되어야 의미가 있고, WI-007도 동일한 전제를 가짐\",\n    \"WI-001 escalation이 WI-002(이해관계자 매핑)를 참조하는데, WI-002 완료 전 에스컬레이션이 발동되는 시나리오의 처리 경로가 없음 (순환 의존 위험)\",\n    \"프로젝트 전체 중단(abort) 조건이 정의되지 않음 — 더미 입력 확정 외에, 목표 범위 초과·예산 초과 시 중단 기준 없음\",\n    \"alternatives 필드가 WI-001에만 존재하고 나머지 WI에는 없음 — 스키마 불일치\",\n    \"시스템·크로스커팅 리스크(예: 핵심 이해관계자 장기 부재, 예산 제약) 등록부가 없음 — 개별 WI 리스크만 있음\",\n    \"WI-004의 'SMART 기준 충족' AC는 주관적 — 누가 어떤 체크리스트로 판정하는지 명시 필요\",\n    \"requested_role과 route가 빈 값({})인데, WI-006에서 이를 채우기 위한 입력 소스(어떤 문서를 조회할지)가 구체화되지 않음\"\n  ],\n  \"strengths\": [\n    \"플레이스홀더 입력을 정확히 감지하여 Clarification-first 구조로 전체 계획을 설계한 판단이 우수함\",\n    \"모든 risk에 mitigation이 대응되어 있고 mitigation이 실행 가능한 수준으로 구체적임\",\n    \"WI-001에 48시간 SLA를 부여하여 acceptance_criteria가 시간 기반으로 관측 가능함\",\n    \"WI-001·002·003을 병렬 실행 가능하도록 dependencies를 설계하여 직렬 SPOF를 줄임\",\n    \"WI-002 RACI 2인 이상 서면 동의 조건 등 대부분의 AC가 이진 판단 가능한 형태임\",\n    \"constraints가 코드베이스 가정 금지·임의 추정 금지를 명시하여 가정 기반 오류를 선제 차단함\",\n    \"WI-001 alternatives에 '더미 확정 시 전체 WI 철회' 경로가 명시된 점이 실용적임\"\n  ],\n  \"revision_instructions\": [\n    \"WI-001·002·003의 owner에 interim 담당자를 지정하거나, '요청자(requester) — WI-001 완료 전 임시'로 명시하여 소유자 공백을 제거할 것\",\n    \"WI-007.dependencies에 WI-004를 추가하고, 의존성 그래프 전체를 재검토하여 암묵적 전제를 명시적 dependency로 전환할 것\",\n    \"WI-001 escalation 경로를 WI-002 완료 이전 시나리오에서도 작동하도록 재정의 — 예: '조직 디렉터리에서 의사결정권자 직접 식별' 또는 '요청자 직속 상위자에게 즉시 에스컬레이션'\",\n    \"project_brief에 estimated_total_effort(합산 4.5일)와 target_completion_date 필드를 추가할 것\",\n    \"프로젝트 전체 abort_criteria를 project_brief 또는 별도 WI로 추가 — '더미 입력 확정 시', '예산/일정 임계 초과 시' 등\",\n    \"WI-004의 'SMART 기준 충족' AC에 검증 주체(예: 승인자 2인이 SMART 체크리스트를 사용하여 서명)를 구체화할 것\",\n    \"WI-002~007에도 alternatives 필드를 추가하거나, alternatives를 스키마에서 선택 필드(optional)로 명시하여 구조 불일치를 해소할 것\",\n    \"WI-006에서 requested_role·route 채우기 위한 조회 소스(예: 시스템 문서 경로, 코드베이스 grep 명령)를 constraints 또는 description에 예시로 포함할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:41:15.753Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-af4eac81/e95373e3-cac4-426b-8baf-2dae3c8cae98.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

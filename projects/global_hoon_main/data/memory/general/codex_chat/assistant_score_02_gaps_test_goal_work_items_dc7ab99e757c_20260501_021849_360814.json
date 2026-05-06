@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 02  gaps     핵심 목표가 test goal로만 제시되어 평가 가능한 맥락 범위 성공 기준이 없다    work_items가 비어 있어 목표를 달성하기 위한 작업 분해나 실행",
+  "value": "[assistant] {   \"score\": 0.2,   \"gaps\": [     \"핵심 목표가 `test goal`로만 제시되어 평가 가능한 맥락, 범위, 성공 기준이 없다.\",     \"work_items가 비어 있어 목표를 달성하기 위한 작업 분해나 실행 계획을 검토할 수 없다.\",     \"인용 출처나 근거 자료가 전혀 없어 증거 기반성을 판단할 수 없다.\",     \"대안 경로, 역할 배정, 위험 요소, 우선순위가 고려되지 않았다.\",     \"g...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:18:49.361604+00:00",
+  "updated_at": "2026-05-01T02:18:49.361604+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.2,\n  \"gaps\": [\n    \"핵심 목표가 `test goal`로만 제시되어 평가 가능한 맥락, 범위, 성공 기준이 없다.\",\n    \"work_items가 비어 있어 목표를 달성하기 위한 작업 분해나 실행 계획을 검토할 수 없다.\",\n    \"인용 출처나 근거 자료가 전혀 없어 증거 기반성을 판단할 수 없다.\",\n    \"대안 경로, 역할 배정, 위험 요소, 우선순위가 고려되지 않았다.\",\n    \"generated_at 외에는 최신성 판단에 필요한 외부 정보나 기준 시점이 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"`goal`이 실제 프로젝트 목표를 충분히 대표한다는 근거가 없다.\",\n    \"`work_items`가 비어 있어도 산출물이 완전하다는 근거가 없다.\",\n    \"`route`가 빈 객체여도 요청 처리에 문제가 없다는 근거가 없다.\"\n  ],\n  \"strengths\": [\n    \"구조는 명확한 JSON 형태이며 `goal`, `work_items`, `project_brief` 필드를 일관되게 포함한다.\",\n    \"`item_count`가 `work_items` 길이와 일치한다.\",\n    \"`generated_at` 타임스탬프가 포함되어 생성 시점은 확인 가능하다.\"\n  ],\n  \"revision_instructions\": [\n    \"목표를 검증 가능한 문장으로 구체화하고 성공 기준을 추가한다.\",\n    \"목표 달성을 위한 `work_items`를 작업 단위로 분해해 포함한다.\",\n    \"각 핵심 판단이나 계획 항목에 근거, 출처, 입력 데이터 또는 의사결정 이유를 연결한다.\",\n    \"고려하지 않은 대안 경로와 그 배제 사유를 추가한다.\",\n    \"정보의 기준 시점과 최신성 확인 방법을 명시한다.\"\n  ]\n}",
+    "event_timestamp": "2026-05-01T02:18:48.609Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b8162dda/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-18-31-019de154-98d0-7ca2-9997-5fd894910457.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

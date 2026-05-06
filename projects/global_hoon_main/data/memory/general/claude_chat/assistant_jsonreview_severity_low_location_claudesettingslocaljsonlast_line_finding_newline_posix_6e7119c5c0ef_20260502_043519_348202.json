@@ -1,0 +1,18 @@
+{
+  "key": "assistant jsonreview   severity Low location claudesettingslocaljsonlast-line finding 파일 끝 개행 문자newline 누락  POSIX 표준 위반 ",
+  "value": "[assistant] ```json {\"review\": [   {\"severity\": \"Low\", \"location\": \".claude/settings.local.json:last-line\", \"finding\": \"파일 끝 개행 문자(newline) 누락 — POSIX 표준 위반, diff 노이즈 발생\"},   {\"severity\": \"Info\", \"location\": \".claude/settings.local.json\", \"finding\": \"훅 name...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:35:19.352875+00:00",
+  "updated_at": "2026-05-02T04:35:19.352875+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\"review\": [\n  {\"severity\": \"Low\", \"location\": \".claude/settings.local.json:last-line\", \"finding\": \"파일 끝 개행 문자(newline) 누락 — POSIX 표준 위반, diff 노이즈 발생\"},\n  {\"severity\": \"Info\", \"location\": \".claude/settings.local.json\", \"finding\": \"훅 name 필드 추가는 식별성 향상에 유효 — 정상 변경\"},\n  {\"severity\": \"Info\", \"location\": \".system_generated/cache/document_index.json\", \"finding\": \"자동 생성 캐시 파일 — 커밋 대상에서 제외(.gitignore) 검토 권장\"},\n  {\"severity\": \"Info\", \"location\": \"tests/_tmp/af-test-*/proj_retry/\", \"finding\": \"임시 테스트 디렉터리 파일 삭제(D) — .gitignore로 추적 방지가 더 적절\"}\n]}\n```",
+    "event_timestamp": "2026-04-19T16:05:38.664Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fc68be79-db74-4373-b79e-c8ae09a8053d.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

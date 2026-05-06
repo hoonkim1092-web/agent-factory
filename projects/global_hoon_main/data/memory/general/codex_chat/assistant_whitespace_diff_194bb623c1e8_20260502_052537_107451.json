@@ -1,0 +1,18 @@
+{
+  "key": "assistant 대부분은 줄 끝 문자공백 변화로 보입니다 실제 의미 있는 변경만 분리하기 위해 whitespace 무시 diff와 파일별 통계를 확인하겠습니다",
+  "value": "[assistant] 대부분은 줄 끝 문자/공백 변화로 보입니다. 실제 의미 있는 변경만 분리하기 위해 whitespace 무시 diff와 파일별 통계를 확인하겠습니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T05:25:37.107579+00:00",
+  "updated_at": "2026-05-02T05:25:37.107579+00:00",
+  "details": {
+    "text": "[assistant] 대부분은 줄 끝 문자/공백 변화로 보입니다. 실제 의미 있는 변경만 분리하기 위해 whitespace 무시 diff와 파일별 통계를 확인하겠습니다.",
+    "event_timestamp": "2026-05-01T02:40:15.939Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-39-54-019de168-2daf-7b72-a3d6-d61ddd57fbbb.jsonl",
+    "session_line": 18,
+    "provider": "codex"
+  }
+}

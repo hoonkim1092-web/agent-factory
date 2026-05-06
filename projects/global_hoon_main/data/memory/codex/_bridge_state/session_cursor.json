@@ -1,9 +1,9 @@
 {
-  "last_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-79be5679/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-55-22-019dd9bc-cbfc-71f1-a0d5-36bca13ebaf5.jsonl",
-  "last_line": 12,
-  "updated_at": "2026-04-29T14:55:50.326059+00:00",
+  "last_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-f0d1ad09/.af_runtime/codex_home/sessions/2026/05/05/rollout-2026-05-05T09-30-35-019df58b-3a8b-72f0-8939-d0dcd164d082.jsonl",
+  "last_line": 8,
+  "updated_at": "2026-05-05T00:30:41.413544+00:00",
   "user_key": "hoon_main",
-  "sessions_root": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-79be5679/.af_runtime/codex_home/sessions",
+  "sessions_root": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-f0d1ad09/.af_runtime/codex_home/sessions",
   "provider": "codex",
-  "written_last_run": 3
+  "written_last_run": 2
 }

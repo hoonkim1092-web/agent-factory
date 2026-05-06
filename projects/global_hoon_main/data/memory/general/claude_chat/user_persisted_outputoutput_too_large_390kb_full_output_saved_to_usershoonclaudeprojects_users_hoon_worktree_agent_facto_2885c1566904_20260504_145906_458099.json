@@ -1,0 +1,18 @@
+{
+  "key": "user persisted-outputOutput too large 390KB Full output saved to Usershoonclaudeprojects-Users-hoon-workTree-agent-facto",
+  "value": "[user] <persisted-output> Output too large (390KB). Full output saved to: /Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-ffcf0602/23b5515a-985b-41f0-850f-80a446833d28/tool-results/bi0vozeba.txt  Preview (first 2KB): /User...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:59:06.458685+00:00",
+  "updated_at": "2026-05-04T14:59:06.458685+00:00",
+  "details": {
+    "text": "[user] <persisted-output>\nOutput too large (390KB). Full output saved to: /Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-ffcf0602/23b5515a-985b-41f0-850f-80a446833d28/tool-results/bi0vozeba.txt\n\nPreview (first 2KB):\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/cli_sessions/claude_cli_critique_claude_cli.json\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/cli_sessions/claude_cli_critique_claude_cli_events.jsonl\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/cli_sessions/codex_cli_critique_codex_cli.json\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/app-server-remote-plugin-sync-v1\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins.sha\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.agents/plugins/marketplace.json\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.agents/skills/plugin-creator/SKILL.md\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.agents/skills/plugin-creator/agents/openai.yaml\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.agents/skills/plugin-creator/references/plugin-json-spec.md\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.agents/skills/plugin-creator/scripts/create_basic_plugin.py\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.git/HEAD\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.git/config\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.git/description\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.git/hooks/applypatch-msg.sample\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/.af_runtime/codex_home/.tmp/plugins/.git/hooks/commit-msg.sample\n...\n</persisted-output>",
+    "event_timestamp": "2026-05-04T14:56:07.352Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-ffcf0602/23b5515a-985b-41f0-850f-80a446833d28/subagents/agent-ab779d78a7843b13c.jsonl",
+    "session_line": 17,
+    "provider": "claude"
+  }
+}

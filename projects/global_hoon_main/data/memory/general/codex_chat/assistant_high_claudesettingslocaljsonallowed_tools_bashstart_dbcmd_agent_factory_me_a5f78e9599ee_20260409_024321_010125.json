@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljsonallowed_tools  Bashstart_dbcmd agent-factory 패턴 허용은 인자 주입 위험 인자 화이트리스트고정값 필요- Me",
+  "value": "[assistant] - [High] .claude/settings.local.json:allowed_tools — \"Bash(start_db.cmd agent-factory:*)\" 패턴 허용은 인자 주입 위험; 인자 화이트리스트/고정값 필요. - [Medium] .claude/settings.local.json:allowed_tools — \"mcp__codex__codex\" 추가로 도구 표면적 확대; 인증·스코프 제한 및 로깅 필요. - [Low] .sy...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-09T02:43:21.010349+00:00",
+  "updated_at": "2026-04-09T02:43:21.010349+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:allowed_tools — \"Bash(start_db.cmd agent-factory:*)\" 패턴 허용은 인자 주입 위험; 인자 화이트리스트/고정값 필요.\n- [Medium] .claude/settings.local.json:allowed_tools — \"mcp__codex__codex\" 추가로 도구 표면적 확대; 인증·스코프 제한 및 로깅 필요.\n- [Low] .system_generated/cache/document_index.json:1 — 생성물 커밋으로 repo 노이즈 유발; .gitignore 고려.\n- [Info] Master_Blueprint.md:1 — 메타데이터/체인지로그 갱신 적절; 참조된 심볼이 실제 존재하는지 빌드로 확인 권장.\n- [Medium] af.spec:82 — hiddenimports에 'core.plan_verifier' 추가됐으나 변경 목록에 파일 없음; 누락 시 PyInstaller 빌드 실패 가능.\n- [Info] af.spec:104 — 'core.skill_quality_gate' hiddenimports 추가가 설계 변경과 일치.\n- [Low] core/bootstrap_roles.py:395 — `plan(..., memory_context=None)` 시그니처 확장은 하위호환이지만, 새로운 컨텍스트가 실제로 전달되는지 호출부 점검 필요.\n- [Medium] core/bootstrap_roles.py:399 — 프롬프트에 사용자 입력 직접 주입; 중괄호 이스케이프/델리미터로 프롬프트 인젝션 완화 권장.\n- [Info] core/control/intake.py:? — 변경 미제시; `NormalizedRequest.memory_context` 타입 전파 및 기본값 처리 테스트 필요.\n- [Info] core/fsa_loop.py:? — 품질 게이트 삽입 시 실패/예외 경로의 재시도·중단 기준 확인 필요.\n- [Info] core/project_pipeline.py:? — 에피소드 기록/메모리 통합의 I/O 실패 대비 로깅·폴백 확인 필요.\n- [Info] docs/2026-04-09-three-plane-integration-design.md:? — 내용 미제시; 구현과 문서 싱크 유지 확인.\n- [Info] resume_brief.md:? — ko-KR 문구 일관성 및 계약 준수 확인.\n\nAGENT_FACTORY_OK",
+    "event_timestamp": "2026-04-09T02:43:20.721Z",
+    "session_file": "D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/04/09/rollout-2026-04-09T11-42-57-019d701f-0c98-7d10-865d-ff1d0c0c0d73.jsonl",
+    "session_line": 15,
+    "provider": "codex"
+  }
+}

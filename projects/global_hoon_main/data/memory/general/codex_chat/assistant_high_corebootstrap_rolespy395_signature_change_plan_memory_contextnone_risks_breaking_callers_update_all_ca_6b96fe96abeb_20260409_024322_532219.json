@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High corebootstrap_rolespy395  Signature change plan memory_contextNone risks breaking callers update all ca",
+  "value": "[assistant] - [High] core/bootstrap_roles.py:395 — Signature change `plan(..., memory_context=None)` risks breaking callers; update all call sites or add `*`/`**` to preserve compat. - [Medium] core/bootstrap_roles.py:397 — `memory_context` accepted but nev...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-09T02:43:22.532461+00:00",
+  "updated_at": "2026-04-09T02:43:22.532461+00:00",
+  "details": {
+    "text": "[assistant] - [High] core/bootstrap_roles.py:395 — Signature change `plan(..., memory_context=None)` risks breaking callers; update all call sites or add `*`/`**` to preserve compat.\n- [Medium] core/bootstrap_roles.py:397 — `memory_context` accepted but never used in `prompt`; incorporate recalled lessons or remove param.\n- [Medium] core/control/intake.py:1 — Adding `NormalizedRequest.memory_context` may break deserialization if not defaulted; ensure optional with safe parsing.\n- [High] core/fsa_loop.py:1 — If `_try_evolve_failed_skill()` now returns `GateResult`, all callers must handle new return type; verify branching and error paths.\n- [High] core/fsa_loop.py:1 — New `_run_quality_gate()` must fail closed with clear retries/timeouts; check exceptions are caught and surfaced.\n- [Medium] core/project_pipeline.py:1 — Episode recording to `UnifiedMemoryFacade` needs I/O error handling and backpressure; avoid blocking main loop.\n- [Medium] af.spec:82 — Added hiddenimport `core.plan_verifier`; build fails if module absent/renamed; confirm file exists in `core/`.\n- [Low] af.spec:82 — Hiddenimports grow; consider wildcard package collection to reduce brittleness across modules.\n- [Medium] .claude/settings.local.json:1 — Added `mcp__codex__codex` tool expands capability surface; restrict scope or add allowlist args to mitigate misuse.\n- [Medium] .claude/settings.local.json:1 — Allowing `start_db.cmd agent-factory:*` enables arbitrary script exec; validate path and sanitize args.\n- [Low] Master_Blueprint.md:1 — Version bump references multiple code changes; ensure each item actually landed to prevent doc-code drift.\n- [Info] .system_generated/cache/document_index.json:1 — Cache mutation only; no functional risk detected.",
+    "event_timestamp": "2026-04-09T02:43:22.132Z",
+    "session_file": "D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/04/09/rollout-2026-04-09T11-42-57-019d701f-112d-79d0-bd9d-c5b51e8877f8.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

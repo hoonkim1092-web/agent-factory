@@ -1,0 +1,18 @@
+{
+  "key": "assistant 아티팩트의 근거성과 최신성 판단을 위해 로컬 근거 문서와 작업 문서의 연결 상태를 먼저 확인하겠습니다 핵심은 설계태스크 문서의 주장 중 실제로 출처가 붙은 것과 그렇지 않은 것을 구분하는 일입니다",
+  "value": "[assistant] 아티팩트의 근거성과 최신성 판단을 위해 로컬 근거 문서와 작업 문서의 연결 상태를 먼저 확인하겠습니다. 핵심은 설계·태스크 문서의 주장 중 실제로 출처가 붙은 것과 그렇지 않은 것을 구분하는 일입니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T00:21:52.078347+00:00",
+  "updated_at": "2026-04-24T00:21:52.078347+00:00",
+  "details": {
+    "text": "[assistant] 아티팩트의 근거성과 최신성 판단을 위해 로컬 근거 문서와 작업 문서의 연결 상태를 먼저 확인하겠습니다. 핵심은 설계·태스크 문서의 주장 중 실제로 출처가 붙은 것과 그렇지 않은 것을 구분하는 일입니다.",
+    "event_timestamp": "2026-04-24T00:21:18.579Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-bcb54d9b/.af_runtime/codex_home/sessions/2026/04/24/rollout-2026-04-24T09-21-03-019dbcdc-8c28-7661-bd9b-39c947775e50.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

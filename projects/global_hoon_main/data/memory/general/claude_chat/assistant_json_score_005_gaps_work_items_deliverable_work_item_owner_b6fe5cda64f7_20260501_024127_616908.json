@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 005  gaps     work_items 배열이 비어 있어 실행 가능한 deliverable이 전혀 없음    어떤 work item에도 owner가 지정되어 있지 않음  ",
+  "value": "[assistant] ```json {   \"score\": 0.05,   \"gaps\": [     \"work_items 배열이 비어 있어 실행 가능한 deliverable이 전혀 없음\",     \"어떤 work item에도 owner가 지정되어 있지 않음\",     \"식별된 리스크 및 완화 전략이 전무함\",     \"관찰·검증 가능한 인수 기준(acceptance criteria)이 없음\",     \"requested_role이 빈 문자열로 담당 역할 미정...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:41:27.617290+00:00",
+  "updated_at": "2026-05-01T02:41:27.617290+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.05,\n  \"gaps\": [\n    \"work_items 배열이 비어 있어 실행 가능한 deliverable이 전혀 없음\",\n    \"어떤 work item에도 owner가 지정되어 있지 않음\",\n    \"식별된 리스크 및 완화 전략이 전무함\",\n    \"관찰·검증 가능한 인수 기준(acceptance criteria)이 없음\",\n    \"requested_role이 빈 문자열로 담당 역할 미정의\",\n    \"route 객체가 비어 있어 라우팅·의존성 정보 부재\",\n    \"'test goal'은 실질적인 목표 기술이 아님 — 범위, 성공 지표, 완료 조건 불명확\"\n  ],\n  \"strengths\": [\n    \"스키마 구조 자체는 유효한 JSON임 (goal, work_items, item_count, project_brief 키 존재)\",\n    \"generated_at 타임스탬프가 포함되어 생성 시점 추적 가능\"\n  ],\n  \"revision_instructions\": [\n    \"work_items에 최소 1개 이상의 항목을 추가하고 각 항목에 담당자(owner), 마감일, 산출물(deliverable)을 명시할 것\",\n    \"각 work item에 인수 기준(acceptance_criteria) 필드를 추가하고, 관찰·측정 가능한 조건으로 작성할 것 (예: 'X API가 200 응답 반환', '테스트 커버리지 80% 이상')\",\n    \"risks 배열 필드를 추가하여 각 리스크에 severity, description, mitigation_strategy를 포함할 것\",\n    \"goal을 구체적인 범위와 성공 지표가 포함된 문장으로 교체할 것 (예: '사용자 인증 모듈을 OAuth2로 전환하여 로그인 실패율을 5% 미만으로 줄인다')\",\n    \"requested_role을 실제 역할(예: 'backend-dev-agent')로 채울 것\",\n    \"route 객체에 실행 경로 또는 의존 서비스 정보를 명시할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:40:46.664Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-909ab40c/5c982496-86d9-4d1c-9138-185837b446b4.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

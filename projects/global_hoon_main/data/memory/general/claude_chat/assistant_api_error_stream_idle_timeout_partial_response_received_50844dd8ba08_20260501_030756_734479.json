@@ -1,0 +1,18 @@
+{
+  "key": "assistant API Error Stream idle timeout - partial response received",
+  "value": "[assistant] API Error: Stream idle timeout - partial response received",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T03:07:56.734593+00:00",
+  "updated_at": "2026-05-01T03:07:56.734593+00:00",
+  "details": {
+    "text": "[assistant] API Error: Stream idle timeout - partial response received",
+    "event_timestamp": "2026-05-01T03:07:55.332Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-1d8f3418/67f151dd-7c43-433c-94ce-b452101c1679.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

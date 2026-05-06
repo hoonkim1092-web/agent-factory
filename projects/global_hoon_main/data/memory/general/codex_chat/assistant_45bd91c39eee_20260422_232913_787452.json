@@ -1,0 +1,18 @@
+{
+  "key": "assistant 문서가 현재 작업 디렉터리 기준 경로에는 없습니다 경로 해석이 어긋났는지부터 확인하고 실제 파일 존재 여부 자체를 근거 평가에 반영하겠습니다",
+  "value": "[assistant] 문서가 현재 작업 디렉터리 기준 경로에는 없습니다. 경로 해석이 어긋났는지부터 확인하고, 실제 파일 존재 여부 자체를 근거 평가에 반영하겠습니다.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-22T23:29:13.787568+00:00",
+  "updated_at": "2026-04-22T23:29:13.787568+00:00",
+  "details": {
+    "text": "[assistant] 문서가 현재 작업 디렉터리 기준 경로에는 없습니다. 경로 해석이 어긋났는지부터 확인하고, 실제 파일 존재 여부 자체를 근거 평가에 반영하겠습니다.",
+    "event_timestamp": "2026-04-22T23:28:36.893Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-89983000/.af_runtime/codex_home/sessions/2026/04/23/rollout-2026-04-23T08-28-12-019db785-cc11-77e1-8ed5-89fd39e09716.jsonl",
+    "session_line": 20,
+    "provider": "codex"
+  }
+}

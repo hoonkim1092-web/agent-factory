@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 062  gaps     목표가 test goal 플레이스홀더라 도메인 특화 작업을 정의할 수 없음  실제 목표가 입력되기 전까지 wi-002wi-004의 acceptance_",
+  "value": "[assistant] ```json {   \"score\": 0.62,   \"gaps\": [     \"목표가 'test goal' 플레이스홀더라 도메인 특화 작업을 정의할 수 없음 — 실제 목표가 입력되기 전까지 wi-002~wi-004의 acceptance_criteria가 구체성 없음\",     \"작업 항목 간 공식 의존성(dependency) 필드 없음 — wi-003이 wi-002에, wi-004가 wi-003에 의존하지만 구조적으로 표현되지 않아 병...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:40:30.817415+00:00",
+  "updated_at": "2026-05-01T02:40:30.817415+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.62,\n  \"gaps\": [\n    \"목표가 'test goal' 플레이스홀더라 도메인 특화 작업을 정의할 수 없음 — 실제 목표가 입력되기 전까지 wi-002~wi-004의 acceptance_criteria가 구체성 없음\",\n    \"작업 항목 간 공식 의존성(dependency) 필드 없음 — wi-003이 wi-002에, wi-004가 wi-003에 의존하지만 구조적으로 표현되지 않아 병렬 착수 오류 발생 가능\",\n    \"마감일(due_date) 또는 예상 소요 기간 미포함 — acceptance_criteria의 '마감일이 현실적으로 설정됨'이 wi-003에서야 생성되는 순환 구조\",\n    \"각 work item당 리스크 1개만 식별 — 현실 프로젝트에서 단일 리스크 모델은 blind spot 발생 가능성 높음\",\n    \"wi-004 owner가 '실행팀'으로 추상적 — 실명/역할 코드 없이 에스컬레이션 경로 불명확\",\n    \"project_brief.route가 빈 객체 `{}`, requested_role이 빈 문자열 — 라우팅 메타데이터 미완성으로 자동화 파이프라인 연동 불가\",\n    \"wi-005 리스크 완화 전략이 예방(wi-001 참조)에만 의존하고 사후 대응(contingency) 없음\"\n  ],\n  \"strengths\": [\n    \"5개 work item 모두 owner 명시 — 책임 소재 명확\",\n    \"모든 리스크에 mitigation 전략 1:1 대응 — 리스크 커버리지 형식 요건 충족\",\n    \"acceptance_criteria가 관찰·측정 가능한 형태(수치, 완료 여부, 시간 기준) — wi-004의 80% 진행률, 24시간 에스컬레이션 등\",\n    \"wi-001을 첫 번째 항목으로 배치하여 모호한 목표를 구체화하는 선행 단계 보장 — 플레이스홀더 목표에 적절한 대응\",\n    \"evidence_sources 필드로 각 작업의 입력 근거 추적 가능\",\n    \"wi-005가 wi-001 성공 지표를 검증 기준으로 참조 — 목표-검증 간 루프 폐쇄 구조\"\n  ],\n  \"revision_instructions\": [\n    \"work item 스키마에 `dependencies: [wi-id, ...]` 배열 필드를 추가하고, wi-002→wi-001, wi-003→wi-002, wi-004→wi-003, wi-005→wi-004 의존성을 명시적으로 기록하라\",\n    \"각 work item에 `estimated_days` 또는 `deadline` 필드를 추가하거나, wi-003 acceptance_criteria에서 마감일 설정을 독립 work item으로 분리하여 순환 참조를 제거하라\",\n    \"wi-004 owner를 '실행팀 리드 + 팀원 코드' 형식으로 구체화하고, 에스컬레이션 대상(이름 또는 역할)을 acceptance_criteria에 명시하라\",\n    \"project_brief.route에 최소한 `assigned_role` 또는 `workflow_type` 필드를 채워 라우팅 메타데이터를 완성하라\",\n    \"wi-005의 리스크 mitigation에 contingency를 추가하라: 예) 'wi-001 지표가 불충분할 경우 wi-005 착수 전 이해관계자와 재협의 세션 진행'\",\n    \"실제 목표가 확정되면 wi-002~wi-004의 acceptance_criteria를 도메인 특화 지표로 교체하라 — 현재 기준값은 목표 구체화 전 임시 값임을 문서 주석으로 표시하라\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:40:28.076Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-bb13f95a/b1d9841f-a09c-474b-82b6-38f268523041.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

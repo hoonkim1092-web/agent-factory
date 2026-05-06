@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceUsershoonworkTreeagent-factorytests_tmpaf-test-b8162ddaTaskTask profile original_request test goal goal te",
+  "value": "[user] [Workspace] /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b8162dda  [Task] Task profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-05-01T11:18:29\", \"requested_role\": \"\", \"route\": {}}  Artifact to critique:...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:19:40.236417+00:00",
+  "updated_at": "2026-05-01T02:19:40.236417+00:00",
+  "details": {
+    "text": "[user] [Workspace]\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b8162dda\n\n[Task]\nTask profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-05-01T11:18:29\", \"requested_role\": \"\", \"route\": {}}\n\nArtifact to critique:\n\n{\n  \"goal\": \"test goal\",\n  \"work_items\": [],\n  \"item_count\": 0,\n  \"project_brief\": {\n    \"goal\": \"test goal\",\n    \"generated_at\": \"2026-05-01T11:18:29\",\n    \"requested_role\": \"\",\n    \"route\": {}\n  }\n}",
+    "event_timestamp": "2026-05-01T02:18:37.072Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-b8162dda/ff0593f0-5eaf-41a2-a745-ae1b25588351.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

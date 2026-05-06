@@ -1,0 +1,18 @@
+{
+  "key": "assistant markdown Feature Plan Metadata- work_item implement-a-browser-poker-game- owner Frontend Dev  QA Engineer- sta",
+  "value": "[assistant] ```markdown # Feature Plan  ## Metadata  - work_item: implement-a-browser-poker-game - owner: Frontend Dev / QA Engineer - status: draft - last_updated: 2026-04-18T22:51:26  ## Background  Implement a browser poker game  ## Problem Statement  브라...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:30:27.769577+00:00",
+  "updated_at": "2026-05-01T02:30:27.769577+00:00",
+  "details": {
+    "text": "[assistant] ```markdown\n# Feature Plan\n\n## Metadata\n\n- work_item: implement-a-browser-poker-game\n- owner: Frontend Dev / QA Engineer\n- status: draft\n- last_updated: 2026-04-18T22:51:26\n\n## Background\n\nImplement a browser poker game\n\n## Problem Statement\n\n브라우저에서 동작하는 포커 게임이 없어 사용자가 별도 클라이언트 없이 게임을 즐길 수 없다. Vanilla JS 기반으로 게임 UI, 규칙 엔진, 검증 체크리스트를 구현하여 브라우저만으로 완결되는 포커 게임 경험을 제공한다. 게임 상태는 모듈 단위로 분리하고, 룰 평가 버그를 방지하기 위해 상태 전이와 승자 판정 로직을 명시적으로 검증한다.\n\n## Goals\n\n- game ui\n- game rules\n- test checklist\n\n## Non-Goals\n\n- 백엔드 서버 또는 데이터베이스 연동\n- 실시간 멀티플레이어 네트워크 기능\n- 모바일 네이티브 앱 빌드\n- 사용자 계정·인증·랭킹 시스템\n\n## Scope\n\n- **game ui**: game ui을(를) 구현한다.\n- **game rules**: game rules을(를) 구현한다.\n- **test checklist**: test checklist을(를) 구현한다.\n\n## Stakeholders\n\n- Frontend Dev: Implement the game UI.\n- QA Engineer: Verify the core gameplay flow.\n\n## Success Metrics\n\n- game ui — 완성 및 동작 검증됨\n- game rules — 완성 및 동작 검증됨\n- test checklist — 완성 및 동작 검증됨\n\n## Risks and Assumptions\n\n- rule evaluation bug\n\n## Evidence\n\n- Local reference: docs/architecture.md -> game state is split by module.\n- Web reference: Poker rules -> verify state transitions and winner evaluation.\n- NotebookLM: Prefer isolated game-rule modules and explicit verification checkpoints.\n\n## References\n\n- Local: docs/architecture.md | # Modules\n- Web: Poker rules | verify state transitions and winner evaluation.\n\n## Approval Request\n\n- Review this scope and confirm approval-gate.md when ready.\n```",
+    "event_timestamp": "2026-04-18T13:51:44.081Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/ff339ab4-e456-4966-bea9-b1b37db50256.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

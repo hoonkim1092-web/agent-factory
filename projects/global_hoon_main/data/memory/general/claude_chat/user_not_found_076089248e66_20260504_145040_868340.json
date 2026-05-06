@@ -1,0 +1,18 @@
+{
+  "key": "user not found",
+  "value": "[user] not found",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:50:40.868419+00:00",
+  "updated_at": "2026-05-04T14:50:40.868419+00:00",
+  "details": {
+    "text": "[user] not found",
+    "event_timestamp": "2026-05-04T14:50:04.126Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-5b60e385/4681bcef-b8dc-4d6d-9153-bc315dd8178b/subagents/agent-afd9587d6111fb47a.jsonl",
+    "session_line": 3,
+    "provider": "claude"
+  }
+}

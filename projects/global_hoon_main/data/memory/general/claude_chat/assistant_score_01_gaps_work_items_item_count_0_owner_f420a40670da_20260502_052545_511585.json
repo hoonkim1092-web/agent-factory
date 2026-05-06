@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 01  gaps     work_items 배열이 비어 있어 어떤 산출물도 정의되지 않음 item_count 0    각 산출물에 대한 owner담당자 지정이 전무함    리스크 식별",
+  "value": "[assistant] {   \"score\": 0.1,   \"gaps\": [     \"work_items 배열이 비어 있어 어떤 산출물도 정의되지 않음 (item_count: 0)\",     \"각 산출물에 대한 owner(담당자) 지정이 전무함\",     \"리스크 식별 및 그에 대한 완화 전략(mitigation)이 전혀 명시되지 않음\",     \"관찰 가능하고 테스트 가능한 인수 기준(acceptance criteria)이 부재함\",     \"원본 요청 '...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T05:25:45.512116+00:00",
+  "updated_at": "2026-05-02T05:25:45.512116+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.1,\n  \"gaps\": [\n    \"work_items 배열이 비어 있어 어떤 산출물도 정의되지 않음 (item_count: 0)\",\n    \"각 산출물에 대한 owner(담당자) 지정이 전무함\",\n    \"리스크 식별 및 그에 대한 완화 전략(mitigation)이 전혀 명시되지 않음\",\n    \"관찰 가능하고 테스트 가능한 인수 기준(acceptance criteria)이 부재함\",\n    \"원본 요청 'test goal'이 모호하여 구체적 범위·성공 기준으로 분해되지 않았음\",\n    \"requested_role 필드가 빈 문자열이라 책임 주체가 불명확함\",\n    \"route 객체가 빈 dict로, 워크플로 라우팅 정보가 없음\",\n    \"타임라인, 마일스톤, 의존성 그래프가 전혀 제공되지 않음\"\n  ],\n  \"strengths\": [\n    \"project_brief에 goal과 generated_at 타임스탬프가 일관되게 기록되어 있음\",\n    \"JSON 구조 자체는 파싱 가능한 유효한 형식임\",\n    \"최상위 goal과 project_brief.goal 사이의 일관성이 유지됨\"\n  ],\n  \"revision_instructions\": [\n    \"원본 요청 'test goal'을 구체화하여 측정 가능한 목표 명세(예: 무엇을, 누구를 위해, 어떤 성공 지표로)로 재작성할 것\",\n    \"최소 1개 이상의 work_item을 정의하고, 각 항목에 id, title, description, owner, deliverable, due_date 필드를 포함시킬 것\",\n    \"각 work_item마다 관찰 가능한 인수 기준(acceptance_criteria) 리스트를 추가할 것 — 예: '컴포넌트 X가 입력 Y에 대해 출력 Z를 반환한다'\",\n    \"프로젝트 수준 risks 배열을 추가하고, 각 risk에 description, likelihood, impact, mitigation, owner를 포함시킬 것\",\n    \"requested_role을 명시적으로 채우거나 'unspecified' 같은 명시적 sentinel로 대체할 것\",\n    \"route 객체에 워크플로 노드/엣지 정보를 채우거나 라우팅이 불필요한 경우 그 이유를 메타데이터로 기록할 것\",\n    \"item_count가 0인 경우 artifact 생성을 차단하거나 'draft' 상태로 표시하는 검증 로직을 도입할 것\"\n  ]\n}",
+    "event_timestamp": "2026-05-02T05:25:44.823Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-1e3eec67/220f2e8a-9150-4a4b-90a4-c9f956760b31.jsonl",
+    "session_line": 8,
+    "provider": "claude"
+  }
+}

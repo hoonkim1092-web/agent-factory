@@ -1,0 +1,18 @@
+{
+  "key": "user UsershoonworkTreeagent-factorytests_tmpaf-test-ffcf0602docswork-itemsimplement-a-browser-poker-gameapproval-gatemdU",
+  "value": "[user] /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/docs/work-items/implement-a-browser-poker-game/approval-gate.md /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/docs/work-items/implement-a-browser-poker-game/implementatio...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:59:06.454511+00:00",
+  "updated_at": "2026-05-04T14:59:06.454511+00:00",
+  "details": {
+    "text": "[user] /Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/docs/work-items/implement-a-browser-poker-game/approval-gate.md\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-ffcf0602/docs/work-items/implement-a-browser-poker-game/implementation-tasks.md",
+    "event_timestamp": "2026-05-04T14:56:02.983Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-ffcf0602/23b5515a-985b-41f0-850f-80a446833d28/subagents/agent-ab779d78a7843b13c.jsonl",
+    "session_line": 12,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 062  gaps     원본 요청이 test goal로 비어 있어 아티팩트 전체가 메타-부트스트랩 계획이 됨  실제 deliverable이 없고 평가 기준 자체가 공허해짐  ",
+  "value": "[assistant] ```json {   \"score\": 0.62,   \"gaps\": [     \"원본 요청이 'test goal'로 비어 있어 아티팩트 전체가 메타-부트스트랩 계획이 됨 — 실제 deliverable이 없고, 평가 기준 자체가 공허해짐\",     \"evidence_basis 필드에서 '이슈 목록'을 반복 참조하지만 해당 이슈 목록이 입력 컨텍스트에 존재하지 않음 — 근거가 자기참조적임\",     \"wi-003(리스크 식별)이 wi-001...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:42:21.675903+00:00",
+  "updated_at": "2026-05-01T02:42:21.675903+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.62,\n  \"gaps\": [\n    \"원본 요청이 'test goal'로 비어 있어 아티팩트 전체가 메타-부트스트랩 계획이 됨 — 실제 deliverable이 없고, 평가 기준 자체가 공허해짐\",\n    \"evidence_basis 필드에서 '이슈 목록'을 반복 참조하지만 해당 이슈 목록이 입력 컨텍스트에 존재하지 않음 — 근거가 자기참조적임\",\n    \"wi-003(리스크 식별)이 wi-001에 의존하면서도, wi-001의 리스크 항목들이 이미 wi-003 범위의 내용을 포함함 — 순환 논리\",\n    \"일정(date/milestone)이 전무함 — 노력 추정치(effort estimate)만 있고 절대 날짜 또는 상대 마감이 없어 스케줄 추적 불가\",\n    \"wi-006(검증·완료 확인)은 독립 work item이 아닌 각 item의 AC에 흡수되어야 할 내용 — 별도 항목으로 분리하면 오버헤드만 증가\",\n    \"requested_role과 route가 비어 있는 상태에서 owner 필드(project-lead, architect 등)가 임의 할당됨 — 실제 조직 구조와 정합성 미검증\",\n    \"크로스-아이템 리스크 없음 — wi-001 지연 시 wi-002~wi-005 전체 블로킹 위험이 명시적으로 다뤄지지 않음\"\n  ],\n  \"strengths\": [\n    \"모든 work item에 owner가 명시되어 책임 소재가 분명함\",\n    \"의존성 그래프가 단방향이고 순환이 없음 (wi-001 → wi-002/003/004/005 → wi-006)\",\n    \"각 item마다 risk + mitigation 쌍이 빠짐없이 존재함\",\n    \"acceptance criteria가 대체로 관찰·검증 가능한 형태로 작성됨 (서명 완료, 최소 N개 등)\",\n    \"빈 입력에 대한 자기인식적 접근(meta-bootstrap)이 실용적으로 적절함 — 목표 미정의 시 계획 수립 자체가 첫 deliverable이 됨\",\n    \"effort estimate가 각 item에 명시되어 총 작업량 산정 가능 (약 4.5일)\"\n  ],\n  \"revision_instructions\": [\n    \"evidence_basis를 '이슈 목록'이 아닌 실제 입력 필드(goal, requested_role, route)에서 직접 인용하도록 수정 — 예: 'project_brief.goal = \\\"test goal\\\" (공백), project_brief.route = {} (빈 객체)'\",\n    \"wi-003을 wi-001과 병렬로 실행 가능하도록 재설계하거나 wi-001 내부 하위 태스크로 통합 — 리스크 식별이 목표 정의와 동시에 진행되어야 순환 논리 해소\",\n    \"wi-006을 삭제하고, 해당 내용(이해관계자 승인, 완료 보고서)을 wi-001의 AC로 이전 — 검증은 각 item AC에서 충족되어야 함\",\n    \"각 work item에 예상 완료 날짜(target_date) 필드 추가 또는 전체 프로젝트에 마일스톤 섹션 신설\",\n    \"크로스-아이템 리스크 섹션을 최상위 레벨에 추가 — 예: 'wi-001 2일 이상 지연 시 wi-002~wi-005 착수 불가, 완화: wi-001을 time-boxed 4시간 스프린트로 분할'\",\n    \"owner 필드에 실제 식별자(이메일 또는 시스템 역할 ID)를 사용하거나, requested_role이 채워질 때까지 'TBD' 로 표기하여 임의 할당 오해를 방지\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:42:20.299Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-909ab40c/9024a9d6-62b4-4006-9625-27689fe96536.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

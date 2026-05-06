@@ -1,0 +1,18 @@
+{
+  "key": "user   files     coredocumentation_policypy    corewatchdogpy    corenightly_statepy    coredynamic_orchestratorpy    ru",
+  "value": "[user] {   \"files\": [     \"core/documentation_policy.py\",     \"core/watchdog.py\",     \"core/nightly_state.py\",     \"core/dynamic_orchestrator.py\",     \"run_factory_cli.py\",     \"core/document_policy.py\",     \"core/work_item_generator.py\",     \"core/approval...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:36:51.895119+00:00",
+  "updated_at": "2026-05-02T04:36:51.895119+00:00",
+  "details": {
+    "text": "[user] {\n  \"files\": [\n    \"core/documentation_policy.py\",\n    \"core/watchdog.py\",\n    \"core/nightly_state.py\",\n    \"core/dynamic_orchestrator.py\",\n    \"run_factory_cli.py\",\n    \"core/document_policy.py\",\n    \"core/work_item_generator.py\",\n    \"core/approval_gate.py\",\n    \"core/lineage_ledger.py\",\n    \"core/project_task_board.py\",\n    \"core/fsa_loop.py\"\n  ],\n  \"created_at\": 1776432651.559106,\n  \"updated_at\": 1776517513.315066,\n  \"fired_at\": 1776517531.262929\n}",
+    "event_timestamp": "2026-04-18T13:05:53.394Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c/subagents/agent-a594d1d300a194c9a.jsonl",
+    "session_line": 3,
+    "provider": "claude"
+  }
+}

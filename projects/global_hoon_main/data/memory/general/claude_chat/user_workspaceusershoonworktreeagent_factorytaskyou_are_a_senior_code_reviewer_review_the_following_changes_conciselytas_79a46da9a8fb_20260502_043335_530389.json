@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceUsershoonworkTreeagent-factoryTaskYou are a senior code reviewer Review the following changes conciselyTas",
+  "value": "[user] [Workspace] /Users/hoon/workTree/agent-factory  [Task] You are a senior code reviewer. Review the following changes concisely.  [Task Context] execute task  [Changed Files (7)] .system_generated/cache/document_index.json, Master_Blueprint.md, core/me...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:33:35.530899+00:00",
+  "updated_at": "2026-05-02T04:33:35.530899+00:00",
+  "details": {
+    "text": "[user] [Workspace]\n/Users/hoon/workTree/agent-factory\n\n[Task]\nYou are a senior code reviewer. Review the following changes concisely.\n\n[Task Context]\nexecute task\n\n[Changed Files (7)]\n.system_generated/cache/document_index.json, Master_Blueprint.md, core/memory_system/episode_matcher.py, core/project_pipeline.py, core/project_task_board.py, docs/code_review/code-review.md, skill-eval-report.json\n\n[Diff]\n\n\nProvide a brief review in this format:\n- [Severity] file:line — finding (one line each)\n\nSeverity levels: Critical, High, Medium, Low, Info\nFocus on: security issues, bugs, error handling gaps, performance problems.\nIf no issues found, write \"No issues found.\"\nKeep the review under 20 lines.",
+    "event_timestamp": "2026-04-19T00:38:52.602Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fbcb2cb2-f59f-43a1-9545-63e21aa8a00c.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

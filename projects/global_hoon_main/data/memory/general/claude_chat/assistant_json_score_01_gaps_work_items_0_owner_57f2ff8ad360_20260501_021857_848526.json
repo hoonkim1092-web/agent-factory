@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 01  gaps     work_items 배열이 비어 있음  실행 가능한 항목이 0개 담당자owner 없음    리스크 식별 없음  위험 항목 및 완화 전략 전무    수용 ",
+  "value": "[assistant] ```json {   \"score\": 0.1,   \"gaps\": [     \"work_items 배열이 비어 있음 — 실행 가능한 항목이 0개, 담당자(owner) 없음\",     \"리스크 식별 없음 — 위험 항목 및 완화 전략 전무\",     \"수용 기준(acceptance criteria) 없음 — 관찰·검증 가능한 완료 조건 미정의\",     \"requested_role 공백 — 역할 컨텍스트 누락으로 적합한 실행 계획 수립 불가...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:18:57.848888+00:00",
+  "updated_at": "2026-05-01T02:18:57.848888+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.1,\n  \"gaps\": [\n    \"work_items 배열이 비어 있음 — 실행 가능한 항목이 0개, 담당자(owner) 없음\",\n    \"리스크 식별 없음 — 위험 항목 및 완화 전략 전무\",\n    \"수용 기준(acceptance criteria) 없음 — 관찰·검증 가능한 완료 조건 미정의\",\n    \"requested_role 공백 — 역할 컨텍스트 누락으로 적합한 실행 계획 수립 불가\",\n    \"route 객체 비어 있음 — 실행 경로(라우팅) 정보 없음\",\n    \"goal이 'test goal' 플레이스홀더 — 실질적 목표 기술 없음\"\n  ],\n  \"strengths\": [\n    \"스키마 구조 자체는 올바름 (goal, work_items, project_brief 필드 존재)\",\n    \"generated_at 타임스탬프가 포함되어 추적 가능성 확보\"\n  ],\n  \"revision_instructions\": [\n    \"goal 필드에 구체적이고 측정 가능한 목표를 기술한다 (예: 'X 기능 구현 완료, 출력 조건 Y 충족')\",\n    \"work_items에 최소 1개 이상의 항목을 추가하고 각 항목에 owner, due_date, deliverable을 명시한다\",\n    \"risks 배열을 추가하고 각 리스크마다 description + mitigation 필드를 포함한다\",\n    \"acceptance_criteria 배열을 추가하고 각 항목은 'given/when/then' 또는 관찰 가능한 체크리스트 형식으로 작성한다\",\n    \"requested_role에 실행 주체 역할을 명시한다 (예: 'backend-dev-agent')\",\n    \"route 객체에 실행 흐름 정보를 채운다 (provider, model, skill 등)\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:18:56.377Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-b8162dda/ff0593f0-5eaf-41a2-a745-ae1b25588351.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

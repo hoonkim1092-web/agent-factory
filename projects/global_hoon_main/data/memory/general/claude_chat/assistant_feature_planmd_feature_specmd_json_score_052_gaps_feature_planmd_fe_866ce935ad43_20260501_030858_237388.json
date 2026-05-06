@@ -1,0 +1,18 @@
+{
+  "key": "assistant feature-planmd와 feature-specmd가 존재하지 않습니다 나머지 세 파일의 내용을 기반으로 평가합니다json  score 052  gaps     feature-planmd와 fe",
+  "value": "[assistant] feature-plan.md와 feature-spec.md가 존재하지 않습니다. 나머지 세 파일의 내용을 기반으로 평가합니다.  ```json {   \"score\": 0.52,   \"gaps\": [     \"feature-plan.md와 feature-spec.md 파일이 실제로 존재하지 않음 — work_items에 경로만 있고 파일 미생성. 승인 게이트가 열릴 수 없는 치명적 결함.\",     \"approval-gate.md의 모든...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T03:08:58.238061+00:00",
+  "updated_at": "2026-05-01T03:08:58.238061+00:00",
+  "details": {
+    "text": "[assistant] feature-plan.md와 feature-spec.md가 존재하지 않습니다. 나머지 세 파일의 내용을 기반으로 평가합니다.\n\n```json\n{\n  \"score\": 0.52,\n  \"gaps\": [\n    \"feature-plan.md와 feature-spec.md 파일이 실제로 존재하지 않음 — work_items에 경로만 있고 파일 미생성. 승인 게이트가 열릴 수 없는 치명적 결함.\",\n    \"approval-gate.md의 모든 버전 필드가 공백이고 approver가 미지정 — 게이트가 형식상 존재하나 사실상 무기능.\",\n    \"리스크 'rule evaluation bug'에 대한 완화 전략 없음 — implementation-design.md §Risks에 리스크 나열만 있고 mitigation 없음.\",\n    \"모든 e2e_command가 '(needs_backfill)' — 인수 기준이 관찰·실행 불가능. Definition of Done에서 e2e_command 기재를 요구하지만 미이행.\",\n    \"test checklist 태스크의 acceptance가 '기능이 구현된다'처럼 순환 정의 — 무엇을 검사하는지 구체적 조건 없음.\",\n    \"poker 규칙 핵심 상세(betting round 순서, 족보 우선순위, 올인 사이드팟 처리)가 design 또는 spec 어디에도 명세되지 않음.\",\n    \"단일 플레이어(로컬 AI 상대) 모드라고 명시했으나 AI 로직(bet/fold 결정 알고리즘) 설계가 전혀 없음.\",\n    \"Data Flow가 '(시작) → 각 모듈' 병렬 화살표만 있고 실제 게임 진행 중 모듈 간 이벤트 흐름이 기술되지 않음.\",\n    \"qa_engineer 역할이 scope/build/verify 3단계 태스크를 가지지만 실제로 '무엇을 테스트하는지' 체크리스트 항목이 전무 — deliverable인 'test checklist'가 내용 없이 태스크로만 선언됨.\",\n    \"network_allowed 제약이 설계에서 '향후 멀티플레이어 고려'로만 처리 — 현재 버전에서 허용된 네트워크 사용 범위(원격 룰 API 여부)가 불명확.\"\n  ],\n  \"strengths\": [\n    \"GameState/PlayerState/Card 데이터 모델이 구체적으로 정의되어 있고 phase 전환 열거형이 명시됨.\",\n    \"모듈 간 인터페이스 계약(순수 함수 호출, 공유 상태 없음, DOM 커스텀 이벤트 방향)이 명확히 기술됨.\",\n    \"기술 스택 선택(vanilla JS ES2020, 빌드 도구 없음)에 대한 대안 비교 근거가 제시됨.\",\n    \"상태 변이를 applyAction(state, action) → newState 순수 함수로 제한한 설계가 테스트 가능성을 높임.\",\n    \"브라우저 호환성 범위(Chromium 최신 2, Firefox ESR, Safari 15+)가 명시됨.\",\n    \"태스크에 depends_on 필드로 선행 조건이 표시되어 실행 순서 파악 가능.\"\n  ],\n  \"revision_instructions\": [\n    \"feature-plan.md와 feature-spec.md를 실제로 생성하고, approval-gate.md의 버전 필드와 approver를 채워 게이트가 동작하도록 수정한다.\",\n    \"implementation-design.md §Risks에 'rule evaluation bug' 완화 전략을 추가한다 — 예: '족보 평가 함수를 순수 함수로 분리하고 표준 족보 테스트 벡터(Royal Flush vs Straight Flush 등 21개 케이스) 단위 테스트로 커버한다'.\",\n    \"모든 태스크의 e2e_command를 실행 가능한 명령어로 채운다 — 예: 'open index.html → 베팅 라운드 완료 후 팟 금액 DOM 확인', 'node tests/hand-eval.test.js' 등.\",\n    \"implementation-design.md 또는 feature-spec.md에 포커 규칙 상세를 명세한다: betting round 순서(pre-flop → flop 공통 3장 공개 → …), 족보 우선순위 10등급, 사이드팟 처리 여부.\",\n    \"AI 상대 로직 설계를 추가한다 — 최소한 랜덤 액션 fallback과 bet/raise 빈도 파라미터 정의 수준이라도 기술한다.\",\n    \"test checklist 태스크의 acceptance를 관찰 가능한 조건으로 교체한다 — 예: '족보 평가 21개 케이스 전부 PASS', 'pre-flop → showdown 전체 흐름 수동 플레이 1회 완주 오류 없음', '칩 합계가 라운드 전후 항상 일정'.\",\n    \"Data Flow 다이어그램에 게임 진행 이벤트 흐름을 추가한다 — 예: 'player action → applyAction() → 상태 변경 → DOM 이벤트 발행 → UI 갱신' 시퀀스.\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T03:08:57.319Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-01f1cafe/8a5fddcf-d973-4b65-8c10-fdab5238b66d.jsonl",
+    "session_line": 15,
+    "provider": "claude"
+  }
+}

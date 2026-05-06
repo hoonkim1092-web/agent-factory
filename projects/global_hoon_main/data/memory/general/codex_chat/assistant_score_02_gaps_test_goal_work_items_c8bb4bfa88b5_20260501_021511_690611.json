@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 02  gaps     핵심 목표가 test goal로만 제시되어 평가 가능한 범위 성공 기준 맥락이 부족합니다    work_items가 비어 있어 실행 계획이나 산출물 구조를 검증",
+  "value": "[assistant] {   \"score\": 0.2,   \"gaps\": [     \"핵심 목표가 'test goal'로만 제시되어 평가 가능한 범위, 성공 기준, 맥락이 부족합니다.\",     \"work_items가 비어 있어 실행 계획이나 산출물 구조를 검증할 수 없습니다.\",     \"출처나 근거 필드가 전혀 없어 증거 기반성을 판단하기 어렵습니다.\",     \"대안적 접근, 제약 조건, 리스크가 고려되지 않았습니다.\",     \"generated_at...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:15:11.690871+00:00",
+  "updated_at": "2026-05-01T02:15:11.690871+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.2,\n  \"gaps\": [\n    \"핵심 목표가 'test goal'로만 제시되어 평가 가능한 범위, 성공 기준, 맥락이 부족합니다.\",\n    \"work_items가 비어 있어 실행 계획이나 산출물 구조를 검증할 수 없습니다.\",\n    \"출처나 근거 필드가 전혀 없어 증거 기반성을 판단하기 어렵습니다.\",\n    \"대안적 접근, 제약 조건, 리스크가 고려되지 않았습니다.\",\n    \"generated_at 외에는 정보의 최신성을 판단할 근거가 없습니다.\"\n  ],\n  \"unsupported_claims\": [\n    \"goal이 실제 사용자 목표를 충분히 반영한다는 점이 근거 없이 제시되어 있습니다.\",\n    \"work_items가 0개여도 목표 달성에 충분하다는 암묵적 판단이 근거 없이 남아 있습니다.\",\n    \"route가 빈 객체인 상태가 적절하다는 설명이나 근거가 없습니다.\"\n  ],\n  \"strengths\": [\n    \"artifact 구조는 명확하고 JSON으로 파싱 가능합니다.\",\n    \"goal, item_count, project_brief 같은 기본 필드는 포함되어 있습니다.\",\n    \"generated_at 타임스탬프가 있어 생성 시점은 확인할 수 있습니다.\"\n  ],\n  \"revision_instructions\": [\n    \"goal을 구체적인 사용자 요구, 기대 결과, 성공 기준으로 확장하십시오.\",\n    \"목표 달성을 위한 work_items를 최소 1개 이상 추가하고 각 항목의 목적과 완료 조건을 명시하십시오.\",\n    \"주요 판단에는 입력 원문, 사용자 요구, 관련 문서 등 근거를 연결하십시오.\",\n    \"대안적 실행 경로와 선택하지 않은 이유를 간단히 포함하십시오.\",\n    \"generated_at 기준으로 현재성이 충분한지, 추가 확인이 필요한 정보가 있는지 명시하십시오.\"\n  ]\n}",
+    "event_timestamp": "2026-05-01T02:15:11.063Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-bb3e9dc7/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-14-56-019de151-50d2-71f3-9195-7633512901cb.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

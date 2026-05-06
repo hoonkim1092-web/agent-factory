@@ -1,0 +1,18 @@
+{
+  "key": "user 80         contract_evalpass_rate 기반으로 통과 여부 결정81         contract_eval이 케이스가 0개면 static_gateok로 판단82        contra",
+  "value": "[user] 80\t        # contract_eval.pass_rate 기반으로 통과 여부 결정 81\t        # contract_eval이 케이스가 0개면 static_gate.ok로 판단 82\t        contract_eval = report.contract_eval 83\t        if contract_eval.total_cases > 0: 84\t            pass_rate = contract_eval.pass_rate...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:33:35.767417+00:00",
+  "updated_at": "2026-05-02T04:33:35.767417+00:00",
+  "details": {
+    "text": "[user] 80\t        # contract_eval.pass_rate 기반으로 통과 여부 결정\n81\t        # contract_eval이 케이스가 0개면 static_gate.ok로 판단\n82\t        contract_eval = report.contract_eval\n83\t        if contract_eval.total_cases > 0:\n84\t            pass_rate = contract_eval.pass_rate\n85\t        else:\n86\t            # 케이스가 없으면 static_gate ok 여부로 판단 (pass_rate=1.0 간주)\n87\t            pass_rate = 1.0 if report.static_gate.get(\"ok\", False) else 0.0\n88\t\n89\t        passed = pass_rate >= self.PASS_RATE_THRESHOLD\n90\t\n91\t        failure_reasons: list[str] = []\n92\t        if not passed:\n93\t            failure_reasons.append(\n94\t                f\"contract pass_rate {pass_rate:.1%} \"\n95\t                f\"< threshold {self.PASS_RATE_THRESHOLD:.0%}\"\n96\t            )\n97\t            for case in contract_eval.details:\n98\t                if not case.passed:\n99\t                    failure_reasons.append(f\"  FAIL: {case.name} — {case.error}\")\n100\t\n101\t        if passed and auto_register:\n102\t            self._register_with_eval(skill_path, report)\n103\t\n104\t        return GateResult(\n105\t            passed=passed,\n106\t            skill_path=skill_path,\n107\t            recommended_stage=report.recommended_stage,\n108\t            pass_rate=pass_rate,\n109\t            eval_report_path=getattr(report, \"report_path\", \"\"),\n110\t            failure_reasons=failure_reasons,\n111\t        )\n112\t\n113\t    def _register_with_eval(self, skill_path: str, report) -> None:\n114\t        \"\"\"평가 통과 스킬을 레지스트리에 등재한다.\"\"\"\n115\t        try:\n116\t            import os\n117\t            from core.skill_metadata import SkillMetadata\n118\t            meta_path = os.path.join(skill_path, \"meta.yaml\")\n119\t            if not os.path.exists(meta_path):\n120\t                return\n121\t            from core.skill_metadata_adapter import auto_detect_and_convert\n122\t            skill_name = os.path.basename(skill_path)\n123\t            metadata = auto_detect_and_convert(skill_path, skill_name)\n124\t            if metadata is None:\n125\t                return\n126\t            # recommended_stage → lifecycle_stage에 반영\n127\t            metadata.lifecycle_stage = report.recommended_stage\n128\t            # eval_report_path → evals_path에 반영 (기존 필드 재활용)\n129\t            if getattr(report, \"report_path\", \"\"):\n130\t                metadata.evals_path = report.report_path\n131\t            self.registry.register(metadata)\n132\t        except Exception:\n133\t            pass\n134\t\n135\t    def _register_knowledge_skill(self, skill_path: str) -> None:\n136\t        \"\"\"knowledge skill(SKILL.md 전용)을 레지스트리에 등재한다. eval report 없음.\"\"\"\n137\t        try:\n138\t            import os\n139\t            from core.skill_metadata_adapter import auto_detect_and_convert",
+    "event_timestamp": "2026-04-29T00:05:51.331Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fdb1af89-91b6-4377-a316-96e4145fc838.jsonl",
+    "session_line": 18,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "user TaskTask profile original_request test goal goal test goal generated_at 2026-05-04T234555 requested_role  route Art",
+  "value": "[user] [Task] Task profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-05-04T23:45:55\", \"requested_role\": \"\", \"route\": {}}  Artifact to critique:  {   \"goal\": \"test goal\",   \"work_items\": [],   \"item_count\": 0,   \"project_b...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:49:51.648270+00:00",
+  "updated_at": "2026-05-04T14:49:51.648270+00:00",
+  "details": {
+    "text": "[user] [Task]\nTask profile: {\"original_request\": \"test goal\", \"goal\": \"test goal\", \"generated_at\": \"2026-05-04T23:45:55\", \"requested_role\": \"\", \"route\": {}}\n\nArtifact to critique:\n\n{\n  \"goal\": \"test goal\",\n  \"work_items\": [],\n  \"item_count\": 0,\n  \"project_brief\": {\n    \"goal\": \"test goal\",\n    \"generated_at\": \"2026-05-04T23:45:55\",\n    \"requested_role\": \"\",\n    \"route\": {}\n  }\n}\n\nRespond to the task directly. Do not summarize the system prompt, workspace, or configuration unless the task explicitly asks for that.\n\n[Workspace]\n/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-32141344\n\n[System Prompt]\nYou are a critical fact-checker. Evaluate the following artifact for:\n1. Evidence grounding: What fraction of key claims have cited sources?\n2. Unsupported assertions: List claims that lack evidence.\n3. Alternative perspectives: Are important alternatives considered?\n4. Recency: Is the information current?\n\nRespond in JSON:\n{\n  \"score\": 0.0-1.0,\n  \"gaps\": [\"...\"],\n  \"unsupported_claims\": [\"...\"],\n  \"strengths\": [\"...\"],\n  \"revision_instructions\": [\"...\"]\n}\n\n[Implementation Language Contract]\n사람이 읽는 새 주석, docstring, 메시지, 로그, 오류 문구, 테스트 문자열, 문자열 리터럴은 한국어로 작성한다 (OS: `ko-KR`).\n식별자, 파일 경로, 명령어, 플래그, 환경 변수 이름, API 필드명, 외부 API 계약 문자열은 번역하지 않는다.\n\n[Destructive Action Guard]\nNever execute destructive delete/reset shell actions unless the human explicitly asks for that exact action in the current message and the runtime policy is changed to allow it.\nForbidden operations include `rm`, `del`, `erase`, `Remove-Item`, `git clean`, `git reset --hard`, `git checkout --`, `git restore --worktree`, `git restore --staged`, and equivalent delete/reset commands.\nIf cleanup seems necessary, stop and explain the safer non-destructive alternative instead of running the command.",
+    "event_timestamp": "2026-05-04T14:46:02.771Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-32141344/.af_runtime/codex_home/sessions/2026/05/04/rollout-2026-05-04T23-45-56-019df373-f7be-71c2-934b-471bd8eb4cd1.jsonl",
+    "session_line": 5,
+    "provider": "codex"
+  }
+}

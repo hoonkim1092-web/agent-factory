@@ -1,0 +1,18 @@
+{
+  "key": "user UsershoonworkTreeagent-factoryteststest_phase7_dep_graph_evolvepy",
+  "value": "[user] /Users/hoon/workTree/agent-factory/tests//test_phase7_dep_graph_evolve.py",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:30:27.180319+00:00",
+  "updated_at": "2026-05-01T02:30:27.180319+00:00",
+  "details": {
+    "text": "[user] /Users/hoon/workTree/agent-factory/tests//test_phase7_dep_graph_evolve.py",
+    "event_timestamp": "2026-04-18T13:06:10.424Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fad1992f-1259-4c17-bf81-e4d09e3a289c/subagents/agent-a594d1d300a194c9a.jsonl",
+    "session_line": 15,
+    "provider": "claude"
+  }
+}

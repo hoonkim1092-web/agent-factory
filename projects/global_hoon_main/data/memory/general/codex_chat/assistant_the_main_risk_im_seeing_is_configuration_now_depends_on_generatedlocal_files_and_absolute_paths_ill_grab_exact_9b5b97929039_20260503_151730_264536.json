@@ -1,0 +1,18 @@
+{
+  "key": "assistant The main risk Im seeing is configuration now depends on generatedlocal files and absolute paths Ill grab exact",
+  "value": "[assistant] The main risk I’m seeing is configuration now depends on generated/local files and absolute paths. I’ll grab exact line numbers for the affected settings and registry deletion before returning the concise findings.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-03T15:17:30.265966+00:00",
+  "updated_at": "2026-05-03T15:17:30.265966+00:00",
+  "details": {
+    "text": "[assistant] The main risk I’m seeing is configuration now depends on generated/local files and absolute paths. I’ll grab exact line numbers for the affected settings and registry deletion before returning the concise findings.",
+    "event_timestamp": "2026-04-29T14:26:21.454Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T23-26-05-019dd9a1-feb1-71b1-86ee-7bb6a450bd5c.jsonl",
+    "session_line": 18,
+    "provider": "codex"
+  }
+}

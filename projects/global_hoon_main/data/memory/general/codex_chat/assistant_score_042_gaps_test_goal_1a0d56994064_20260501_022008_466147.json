@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 042  gaps     핵심 입력인 test goal이 실제 목표가 아니라 플레이스홀더인데 산출물은 이를 전제로 구체 일정과 작업 구조를 생성했다    대부분의 참고자료가 실제 문서",
+  "value": "[assistant] {   \"score\": 0.42,   \"gaps\": [     \"핵심 입력인 `test goal`이 실제 목표가 아니라 플레이스홀더인데, 산출물은 이를 전제로 구체 일정과 작업 구조를 생성했다.\",     \"대부분의 참고자료가 실제 문서 존재 여부나 접근 가능성이 확인되지 않은 내부 경로 또는 일반 명칭이다.\",     \"일정, 담당자, 우선순위, phase, 의존성은 근거 없이 임의로 설정된 것으로 보인다.\",     \"프로젝트 성격...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:20:08.466528+00:00",
+  "updated_at": "2026-05-01T02:20:08.466528+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.42,\n  \"gaps\": [\n    \"핵심 입력인 `test goal`이 실제 목표가 아니라 플레이스홀더인데, 산출물은 이를 전제로 구체 일정과 작업 구조를 생성했다.\",\n    \"대부분의 참고자료가 실제 문서 존재 여부나 접근 가능성이 확인되지 않은 내부 경로 또는 일반 명칭이다.\",\n    \"일정, 담당자, 우선순위, phase, 의존성은 근거 없이 임의로 설정된 것으로 보인다.\",\n    \"프로젝트 성격, 이해관계자, 제약조건, 예산, 기술 범위, 품질 기준이 없어 작업 항목의 적합성을 검증하기 어렵다.\",\n    \"대안적 접근이 거의 없다. 예를 들어 목표 재질의 전제 확인, 스코핑 워크숍 선행, 작업 생성 보류, 최소 질문 목록 도출 같은 선택지가 비교되지 않았다.\",\n    \"recency 판단에 필요한 외부 표준이나 문서 버전 확인이 부족하다.\"\n  ],\n  \"unsupported_claims\": [\n    \"`2026-05-07`부터 `2026-05-14`까지의 due_date가 적절하다는 근거가 없다.\",\n    \"`프로젝트 리더`, `기술 리드`, `QA 리드`가 존재하거나 해당 작업의 owner로 적합하다는 근거가 없다.\",\n    \"`project-manager`, `tech-lead`, `qa-lead`가 요청된 역할 또는 필요한 역할이라는 근거가 없다.\",\n    \"`P0`, `P1` 우선순위 지정의 기준이 제시되지 않았다.\",\n    \"`WI-001` 이후 `WI-002`, `WI-003`으로 진행하는 route가 최적이라는 근거가 없다.\",\n    \"리스크 likelihood와 impact 값이 실제 프로젝트 데이터 없이 지정되었다.\",\n    \"`이해관계자 1인 이상 승인 서명`이 필요한 완료 기준이라는 근거가 없다.\",\n    \"`리스크 레지스터에 5개 이상의 리스크 항목 등록`이 충분하거나 적절하다는 근거가 없다.\",\n    \"`Gantt 또는 동등한 시각화 자료 제공`이 이 목표에 필요한 산출물이라는 근거가 없다.\",\n    \"`PMBOK 7th Edition §10` 참조는 부정확할 가능성이 있다. PMBOK 7판은 전통적인 장 번호 기반 프로세스 구조와 다르므로 확인이 필요하다.\",\n    \"`docs/templates/project_charter.md`, `docs/templates/raci_matrix.md`, `docs/risk_register_template.md` 등이 실제 존재한다는 증거가 없다.\"\n  ],\n  \"strengths\": [\n    \"작업 항목 구조가 일관적이며 `id`, `title`, `description`, `owner`, `priority`, `status`, `acceptance_criteria`, `risks`, `route`, `due_date`를 포함한다.\",\n    \"플레이스홀더 목표를 먼저 구체화해야 한다는 문제 인식은 타당하다.\",\n    \"수용 기준, 리스크, 의존성, 검증 단계를 포함해 프로젝트 계획 산출물의 기본 구성은 갖추고 있다.\",\n    \"SMART, RACI, CPM, Given-When-Then 등 일반적으로 알려진 프로젝트 관리 개념을 참고하려는 방향은 합리적이다.\"\n  ],\n  \"revision_instructions\": [\n    \"`test goal`을 그대로 계획하지 말고, 먼저 목표 확정을 위한 질문 목록 또는 가정 목록을 작성하라.\",\n    \"각 work_item의 일정, owner, priority, dependency에 대해 근거 필드를 추가하라.\",\n    \"실제 접근 가능한 자료만 references에 남기고, 내부 문서 경로는 존재 여부를 확인한 뒤 사용하라.\",\n    \"PMBOK, Cucumber, SMART, RACI 등 외부 참조는 정확한 공식 출처와 확인 날짜를 포함하라.\",\n    \"불확실한 항목은 확정값처럼 쓰지 말고 `assumption`, `needs_confirmation`, `confidence` 같은 필드로 표시하라.\",\n    \"대안 경로를 추가하라. 예: `목표 확인 전 작업 생성 보류`, `최소 프로젝트 헌장 작성`, `이해관계자 인터뷰 먼저 수행`.\",\n    \"recency 검토를 위해 표준 문서의 최신 버전과 생성일 기준 사용 가능성을 명시하라.\"\n  ]\n}",
+    "event_timestamp": "2026-05-01T02:20:07.796Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b8162dda/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-19-41-019de155-ac12-79c0-8671-340e7d475491.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

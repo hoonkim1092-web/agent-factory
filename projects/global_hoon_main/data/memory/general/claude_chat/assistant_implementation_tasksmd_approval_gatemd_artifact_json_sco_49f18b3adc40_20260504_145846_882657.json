@@ -1,0 +1,18 @@
+{
+  "key": "assistant 세 파일이 존재하지 않습니다 이것 자체가 심각한 갭입니다 제공된 내용implementation-tasksmd approval-gatemd과 artifact 메타데이터만으로 평가합니다json  sco",
+  "value": "[assistant] 세 파일이 존재하지 않습니다. 이것 자체가 심각한 갭입니다. 제공된 내용(`implementation-tasks.md`, `approval-gate.md`)과 artifact 메타데이터만으로 평가합니다.  ```json {   \"score\": 0.31,   \"gaps\": [     \"feature-plan.md, feature-spec.md, implementation-design.md — 세 핵심 문서가 디스크에 존재하지 않음. 경로...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:58:46.883448+00:00",
+  "updated_at": "2026-05-04T14:58:46.883448+00:00",
+  "details": {
+    "text": "[assistant] 세 파일이 존재하지 않습니다. 이것 자체가 심각한 갭입니다. 제공된 내용(`implementation-tasks.md`, `approval-gate.md`)과 artifact 메타데이터만으로 평가합니다.\n\n```json\n{\n  \"score\": 0.31,\n  \"gaps\": [\n    \"feature-plan.md, feature-spec.md, implementation-design.md — 세 핵심 문서가 디스크에 존재하지 않음. 경로만 선언되고 내용 없음. approval-gate의 version 스냅샷 필드가 전부 공백인 것과 일치하며, 문서 세트 자체가 미완성 상태임.\",\n    \"approval-gate.md의 approver, 모든 _version 필드가 공백 — 게이트가 기능적으로 무효. execution_open: false인데 승인자 없음.\",\n    \"모든 9개 태스크의 e2e_command가 '(needs_backfill)' — 검증 기준이 관찰·실행 불가능 상태. 완료 정의(DoD)가 e2e_command 기재를 요구하지만 실현되지 않음.\",\n    \"식별된 리스크 'rule evaluation bug'에 대한 구체적 완화 전략이 없음. implementation-tasks.md에 리스크 대응 태스크나 QA 체크포인트가 별도 존재하지 않음.\",\n    \"vanilla_js 기술 스택이 명시됐지만 구현 태스크에 파일 구조, 모듈 분리 방식, 진입점(HTML/JS) 정보가 전혀 없음.\",\n    \"integration_test_guard 스킬이 required_skills에 있으나, QA Engineer 태스크가 'test checklist 범위 정의 → 구현 → 검증' 3단계뿐으로 실제 통합 테스트 실행 태스크가 없음.\",\n    \"game rules 태스크의 owner가 frontend_dev로 지정됨 — 게임 규칙 평가 로직은 gameplay_core 스킬 영역이나 해당 역할이 role_hints에는 없고 태스크 배정도 맞지 않음.\",\n    \"포커 핸드 평가(winner evaluation, state transition)에 대한 명시적 검증 태스크 없음. 리스크 문서에서 지목된 항목임에도 태스크 목록에 미반영.\"\n  ],\n  \"strengths\": [\n    \"3-phase(scope → build → verify) 구조와 depends_on 체인이 일관되게 적용됨. 태스크 간 선후 관계가 명확.\",\n    \"task_id 체계가 {role}_{module}_{phase}_{seq} 패턴으로 파싱 가능한 형식.\",\n    \"local reference(docs/architecture.md)와 web reference(Poker rules)가 Task Evidence 섹션에 명시돼 있어 근거 추적 가능.\",\n    \"DoD에 verification-report.md 작성 + verdict 필드 기재 요구가 포함돼 있어 마감 기준이 선언됨.\",\n    \"Rollback Sign-Off에서 모듈 단위 커밋 정책을 명시해 부분 롤백 경로 존재.\"\n  ],\n  \"revision_instructions\": [\n    \"feature-plan.md, feature-spec.md, implementation-design.md를 즉시 생성하거나, 없으면 artifact의 item_count를 5→2로 정정하고 누락 문서를 별도 태스크로 등록할 것.\",\n    \"approval-gate.md의 approver와 모든 _version 필드를 채우거나, status를 'blocked_missing_docs'로 변경해 실행 불가 상태임을 명시할 것.\",\n    \"각 태스크의 e2e_command를 실행 가능한 명령어로 backfill할 것. 예: 'open index.html → 베팅 버튼 클릭 → 결과 확인', 또는 'npx jest game-rules.test.js'. '(needs_backfill)'은 DoD 위반.\",\n    \"'rule evaluation bug' 리스크에 대한 완화 태스크를 qa_engineer 소유로 별도 추가할 것. 포커 핸드 순위 평가 함수에 대한 단위 테스트 suite를 e2e_command로 명시.\",\n    \"game rules 태스크의 owner를 gameplay_core 담당자로 변경하거나, role_hints에 해당 역할을 추가할 것. frontend_dev가 규칙 평가 로직을 소유하는 것은 책임 경계 위반.\",\n    \"포커 state transition(pre-flop → flop → turn → river → showdown) 검증을 독립 태스크로 분리하고, winner evaluation 정확성 검증 e2e_command를 포함할 것.\",\n    \"vanilla_js 기술 스택에 맞춰 implementation-design.md에 파일 구조(예: deck.js, hand-evaluator.js, ui.js, main.js)를 명시하고, 해당 모듈들이 implementation-tasks.md의 파일 산출물로 추적될 것.\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-04T14:58:45.339Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-11b3c95a/ce195031-a4c7-492d-a39d-0dc5e272d1c8.jsonl",
+    "session_line": 17,
+    "provider": "claude"
+  }
+}

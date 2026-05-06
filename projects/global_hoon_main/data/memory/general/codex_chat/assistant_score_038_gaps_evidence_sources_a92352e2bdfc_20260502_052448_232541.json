@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 038  gaps     핵심 근거의 상당수가 실제로 인용되거나 첨부되지 않았습니다 evidence_sources는 대부분 추가 수집 필요 내부 문서명 향후 산출물 참조 수준이라 검증",
+  "value": "[assistant] {   \"score\": 0.38,   \"gaps\": [     \"핵심 근거의 상당수가 실제로 인용되거나 첨부되지 않았습니다. evidence_sources는 대부분 '추가 수집 필요', 내부 문서명, 향후 산출물 참조 수준이라 검증 가능한 출처로 보기 어렵습니다.\",     \"원본 요청이 'test goal'뿐이라는 사실에는 잘 반응했지만, 그 모호성 때문에 이후 WI-002~WI-006의 산출물, 역할, 일정, 테스트 계획은 대부분...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T05:24:48.233033+00:00",
+  "updated_at": "2026-05-02T05:24:48.233033+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.38,\n  \"gaps\": [\n    \"핵심 근거의 상당수가 실제로 인용되거나 첨부되지 않았습니다. evidence_sources는 대부분 '추가 수집 필요', 내부 문서명, 향후 산출물 참조 수준이라 검증 가능한 출처로 보기 어렵습니다.\",\n    \"원본 요청이 'test goal'뿐이라는 사실에는 잘 반응했지만, 그 모호성 때문에 이후 WI-002~WI-006의 산출물, 역할, 일정, 테스트 계획은 대부분 가정 기반입니다.\",\n    \"내부 문서인 Master_Blueprint.md, PROJECT_LOG.md, agents/*.yaml, 조직 캘린더/리소스 가용성이 실제 존재하거나 관련 있다는 증거가 없습니다.\",\n    \"대안 접근은 WI-002에서 향후 검토하겠다고 되어 있을 뿐, 현재 artifact 자체에는 중요한 대안 관점이 제시되어 있지 않습니다.\",\n    \"recency 측면에서 generated_at은 제공되었지만, 참조 자료의 작성일, 최신성, 버전, 유효 기간이 없습니다.\"\n  ],\n  \"unsupported_claims\": [\n    \"후속 작업의 전제 조건으로 SMART 목표 정의가 반드시 우선 처리되어야 한다는 주장\",\n    \"WI-002에서 내부 아키텍처 문서 Master_Blueprint.md가 증거 स्रोत로 사용 가능하다는 주장\",\n    \"PROJECT_LOG.md에 과거 인시던트 기록이 존재하고 리스크 평가에 활용 가능하다는 주장\",\n    \"다중 에이전트 환경에서 명시적 route 설계가 충돌과 누락을 방지한다는 구체적 효과 주장\",\n    \"JSON Schema validator 사전 구축이 에이전트 간 인터페이스 불일치 리스크를 완화한다는 주장\",\n    \"각 work-item에 자동화 가능한 검증 케이스를 매핑할 수 있다는 주장\",\n    \"CI에서 tests/test_goal_acceptance.py를 실행할 수 있다는 주장\",\n    \"전체 work-item에 대해 시작일·종료일·critical path를 산정할 수 있다는 주장\",\n    \"마일스톤에 10~15% 버퍼를 설정하면 일정 변동 리스크를 완화할 수 있다는 주장\"\n  ],\n  \"strengths\": [\n    \"원본 goal이 모호하다는 핵심 문제를 정확히 식별했습니다.\",\n    \"work item마다 rationale, deliverables, acceptance_criteria, dependencies, risks를 구조화해 실행 계획 형태로 정리했습니다.\",\n    \"일부 acceptance criteria는 측정 가능하도록 작성되어 있습니다. 예: SMART 5요소 포함, 리스크 5건 이상, 대안 2개 이상 비교.\",\n    \"dependencies가 명시되어 있어 후속 일정 및 DAG 작성의 기초는 마련되어 있습니다.\"\n  ],\n  \"revision_instructions\": [\n    \"각 evidence_sources 항목을 실제 접근 가능한 파일 경로, 문서 버전, 로그 링크, 인터뷰 기록, 또는 명시적 사용자 입력으로 교체하십시오.\",\n    \"현재 artifact에서 사실로 단정한 내용과 향후 확인해야 할 가정을 분리하십시오. 예: assumptions 배열을 별도로 추가하십시오.\",\n    \"WI-002에 실제 대안 후보를 최소 2개 이상 직접 기재하고, 비용·리스크·효과 비교 근거를 포함하십시오.\",\n    \"내부 문서명인 Master_Blueprint.md, PROJECT_LOG.md, agents/*.yaml의 존재 여부와 관련성을 확인한 뒤 인용하십시오.\",\n    \"recency 검토를 위해 각 근거 자료의 작성일, 마지막 수정일, 적용 가능한 기준일을 추가하십시오.\",\n    \"goal이 'test goal'로만 제공된 상태에서는 WI-003 이후 항목을 확정 계획이 아니라 조건부 초안으로 표시하십시오.\"\n  ]\n}",
+    "event_timestamp": "2026-05-02T05:24:47.829Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-b690c4fd/.af_runtime/codex_home/sessions/2026/05/02/rollout-2026-05-02T14-24-25-019de725-28fc-7293-bd6b-e69875bab088.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

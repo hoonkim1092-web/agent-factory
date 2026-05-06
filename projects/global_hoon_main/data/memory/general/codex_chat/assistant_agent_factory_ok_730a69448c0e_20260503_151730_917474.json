@@ -1,0 +1,18 @@
+{
+  "key": "assistant AGENT_FACTORY_OK",
+  "value": "[assistant] AGENT_FACTORY_OK",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-03T15:17:30.917823+00:00",
+  "updated_at": "2026-05-03T15:17:30.917823+00:00",
+  "details": {
+    "text": "[assistant] AGENT_FACTORY_OK",
+    "event_timestamp": "2026-05-02T05:25:13.336Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/05/02/rollout-2026-05-02T14-24-53-019de725-95e3-7db0-b54f-0bc1f0199f99.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

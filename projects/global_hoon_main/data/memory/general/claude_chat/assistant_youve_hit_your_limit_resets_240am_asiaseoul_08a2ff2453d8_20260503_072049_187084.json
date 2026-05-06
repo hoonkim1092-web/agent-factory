@@ -1,0 +1,18 @@
+{
+  "key": "assistant Youve hit your limit  resets 240am AsiaSeoul",
+  "value": "[assistant] You've hit your limit · resets 2:40am (Asia/Seoul)",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-03T07:20:49.187192+00:00",
+  "updated_at": "2026-05-03T07:20:49.187192+00:00",
+  "details": {
+    "text": "[assistant] You've hit your limit · resets 2:40am (Asia/Seoul)",
+    "event_timestamp": "2026-05-01T16:56:00.518Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-runtime-project/f7c3a383-ab2c-424a-9fb5-573e17665b92.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Medium corefsa_looppy268  _evolution_failed_skills is checked globally so one failed evolution causes later ",
+  "value": "[assistant] - [Medium] core/fsa_loop.py:268 — `_evolution_failed_skills` is checked globally, so one failed evolution causes later Level 4 failures for different skills to skip evolution and jump to Level 5.",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:41:34.726139+00:00",
+  "updated_at": "2026-05-01T02:41:34.726139+00:00",
+  "details": {
+    "text": "[assistant] - [Medium] core/fsa_loop.py:268 — `_evolution_failed_skills` is checked globally, so one failed evolution causes later Level 4 failures for different skills to skip evolution and jump to Level 5.",
+    "event_timestamp": "2026-04-29T00:14:32.984Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T09-13-55-019dd695-cdc3-7cd2-8af5-3776aa1d682f.jsonl",
+    "session_line": 37,
+    "provider": "codex"
+  }
+}

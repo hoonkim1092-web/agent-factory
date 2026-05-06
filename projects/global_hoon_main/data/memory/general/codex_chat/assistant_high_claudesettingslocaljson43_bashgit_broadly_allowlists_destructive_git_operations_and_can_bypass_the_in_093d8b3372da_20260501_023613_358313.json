@@ -1,0 +1,18 @@
+{
+  "key": "assistant - High claudesettingslocaljson43  Bashgit  broadly allowlists destructive Git operations and can bypass the in",
+  "value": "[assistant] - [High] .claude/settings.local.json:43 — `Bash(git *)` broadly allowlists destructive Git operations and can bypass the intended command-level guard surface. - [High] .claude/settings.local.json:48 — `Bash(codex exec *)` permits arbitrary neste...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:36:13.358490+00:00",
+  "updated_at": "2026-05-01T02:36:13.358490+00:00",
+  "details": {
+    "text": "[assistant] - [High] .claude/settings.local.json:43 — `Bash(git *)` broadly allowlists destructive Git operations and can bypass the intended command-level guard surface.\n- [High] .claude/settings.local.json:48 — `Bash(codex exec *)` permits arbitrary nested Codex execution, creating an unrestricted command-execution path.\n- [Medium] .claude/settings.local.json:127 — hook commands hard-code `/Users/hoon/workTree/agent-factory`, so cloned/moved workspaces silently lose session bridge hooks.\n- [Medium] core/skill_quality_gate.py:136 — `_register_knowledge_skill()` returns when `meta.yaml` is absent, so SKILL.md-only knowledge skills still pass validation but are not registered.\n- [Low] .claude/settings.local.json:189 — missing trailing newline creates persistent diff noise.",
+    "event_timestamp": "2026-04-28T22:26:15.768Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/04/29/rollout-2026-04-29T07-25-31-019dd632-9178-7572-a6bc-56e43e9a72f1.jsonl",
+    "session_line": 47,
+    "provider": "codex"
+  }
+}

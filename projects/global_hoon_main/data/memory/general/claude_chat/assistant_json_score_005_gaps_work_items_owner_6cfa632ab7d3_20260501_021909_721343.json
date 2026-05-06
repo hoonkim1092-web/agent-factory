@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 005  gaps     work_items 배열이 비어 있음  실행 가능한 작업 항목이 하나도 없음    어떤 항목에도 owner담당자가 지정되지 않음    리스크 식별 및 ",
+  "value": "[assistant] ```json {   \"score\": 0.05,   \"gaps\": [     \"work_items 배열이 비어 있음 — 실행 가능한 작업 항목이 하나도 없음\",     \"어떤 항목에도 owner(담당자)가 지정되지 않음\",     \"리스크 식별 및 완화 전략이 전혀 없음\",     \"수락 기준(acceptance criteria)이 정의되지 않아 완료 여부를 검증할 수 없음\",     \"requested_role이 빈 문자열 — 실행...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:19:09.722175+00:00",
+  "updated_at": "2026-05-01T02:19:09.722175+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.05,\n  \"gaps\": [\n    \"work_items 배열이 비어 있음 — 실행 가능한 작업 항목이 하나도 없음\",\n    \"어떤 항목에도 owner(담당자)가 지정되지 않음\",\n    \"리스크 식별 및 완화 전략이 전혀 없음\",\n    \"수락 기준(acceptance criteria)이 정의되지 않아 완료 여부를 검증할 수 없음\",\n    \"requested_role이 빈 문자열 — 실행 주체가 명확하지 않음\",\n    \"route가 빈 객체 — 작업 흐름이나 경로 정보 없음\",\n    \"goal이 'test goal'로 실질적인 목표 내용이 없음\"\n  ],\n  \"strengths\": [\n    \"기본 스키마 구조(goal, work_items, project_brief)는 갖춰져 있음\",\n    \"generated_at 타임스탬프가 포함되어 생성 시각 추적 가능\"\n  ],\n  \"revision_instructions\": [\n    \"work_items에 최소 1개 이상의 구체적 작업 항목을 추가하고, 각 항목에 owner 필드를 포함할 것\",\n    \"각 work_item에 risks 배열을 추가하고, 각 리스크마다 mitigation 필드를 명시할 것\",\n    \"각 work_item에 acceptance_criteria 배열을 추가하고, 각 기준은 관찰 가능하고 테스트 가능한 형태(예: '○○ API가 200을 반환한다')로 작성할 것\",\n    \"goal을 실제 목표를 서술하는 문장으로 교체할 것 — 'test goal' 같은 플레이스홀더 사용 금지\",\n    \"requested_role에 실행 에이전트 역할을 명시할 것 (예: 'backend-dev-agent')\",\n    \"route에 작업 실행 흐름(단계·의존관계)을 정의할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-01T02:17:30.949Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-e1549161/1ab22e6a-803f-47c4-b98d-b63c327c408d.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

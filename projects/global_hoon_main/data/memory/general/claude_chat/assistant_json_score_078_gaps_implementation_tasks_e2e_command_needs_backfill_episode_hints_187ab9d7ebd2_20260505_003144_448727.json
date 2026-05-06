@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 078  gaps     모든 implementation-tasks e2e_command 필드가 needs_backfill 상태  episode hints가 명시적으로 이 경우",
+  "value": "[assistant] ```json {   \"score\": 0.78,   \"gaps\": [     \"모든 implementation-tasks e2e_command 필드가 '(needs_backfill)' 상태 — episode hints가 명시적으로 이 경우 PASS 처리 불가라고 경고하지만 어떤 태스크도 실제 명령어로 채워지지 않음\",     \"approval-gate.md approver 필드 공백, execution_open: false — 게이트가...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-05T00:31:44.449151+00:00",
+  "updated_at": "2026-05-05T00:31:44.449151+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.78,\n  \"gaps\": [\n    \"모든 implementation-tasks e2e_command 필드가 '(needs_backfill)' 상태 — episode hints가 명시적으로 이 경우 PASS 처리 불가라고 경고하지만 어떤 태스크도 실제 명령어로 채워지지 않음\",\n    \"approval-gate.md approver 필드 공백, execution_open: false — 게이트가 잠긴 상태로 구현 착수 불가. 문서 세트는 완성됐으나 실행은 차단됨\",\n    \"bug_fix_spec_status: review_pending 항목이 approval-gate에 존재하지만 bug_fix_spec 문서가 work-items 세트에 없음 — 유령 항목\",\n    \"AI 상대(opponent) 로직 모듈이 설계에 없음 — 가정 섹션이 '단일 플레이어 vs AI'를 언급하지만 M1~M5 어디에도 AI 모듈이 없으며 game.js 설계에도 AI 의사결정 인터페이스가 정의되지 않음\",\n    \"포커 변종(Texas Hold'em vs 5-card draw)이 implementation-design 시점까지 '구현 시 확정'으로 미결 — 핸드 평가 로직(evaluateHand)이 변종에 따라 카드 수·커뮤니티 카드 처리가 달라지므로 설계 단계에서 픽스되어야 함\",\n    \"AC-07 '구현 완료 전 체크리스트 작성'은 사후 관찰 불가 기준 — 타임스탬프·커밋 순서 없이는 완료 여부를 검증할 방법이 없음\",\n    \"단일 플레이어 쇼다운 로직 미설계 — determineWinner(hands)가 여러 플레이어를 가정하지만 AI 손패 생성 경로가 없으면 쇼다운에서 비교 대상이 존재하지 않음\"\n  ],\n  \"strengths\": [\n    \"모듈 인터페이스 계약(함수 시그니처 + 입출력 타입)이 모든 공개 함수에 대해 명시적으로 정의되어 있음 — QA Engineer가 rules.js를 UI 없이 독립 검증 가능한 구조\",\n    \"TC-01~TC-10 체크리스트가 실제 node -e 명령어와 함께 기술되어 stub-only 방지 원칙을 따름 — 특히 에이스 로우 스트레이트(TC-02)를 별도 케이스로 명시한 점이 규칙 평가 버그 리스크와 직결됨\",\n    \"Alternatives Considered(A1~A4)가 각 기각 이유를 NFR/AC 조항과 구체적으로 연결하여 과설계 방지 근거를 명확히 제시함\",\n    \"데이터 플로우 다이어그램이 정상 경로뿐 아니라 오류 경로(transition 실패 시 상태 비변경 → render 경고)까지 커버함\",\n    \"window.PokerGame 단일 네임스페이스 + crypto.getRandomValues 셔플 선택이 각각 전역 오염과 게임 공정성 리스크에 대한 구체적 완화책으로 연결됨\",\n    \"Safari file:// 제한을 script 태그 순서로 우회하는 결정이 호환성 매트릭스와 Alternatives에 모두 기록되어 추적 가능함\"\n  ],\n  \"revision_instructions\": [\n    \"implementation-tasks.md: 모든 needs_backfill e2e_command를 실제 명령어로 교체하라. scope 태스크는 'ls src/' 또는 파일 존재 확인, build 태스크는 'node -e' 또는 브라우저 열기 절차, verify 태스크는 TC-번호 참조로 채울 것. 빈 채 두면 PASS 처리 불가\",\n    \"approval-gate.md: approver 필드에 실제 승인자(역할명이라도)를 기입하고, execution_open을 true로 변경하거나 '승인 대기 중' 상태를 명시하여 구현 착수 가능 여부를 명확히 할 것. bug_fix_spec 항목은 해당 문서가 없으면 해당 행을 제거하라\",\n    \"implementation-design.md: 포커 변종을 5-card draw 또는 Texas Hold'em 중 하나로 픽스하고 그 선택이 evaluateHand 입력 카드 수와 GameState 구조에 미치는 영향을 명시하라. '구현 시 확정'은 설계 문서의 책임 방기다\",\n    \"implementation-design.md M3 또는 신규 M6: AI 상대 모듈 또는 'AI 없음(솔리테어 모드)'으로 범위를 명확히 선택하라. determineWinner가 비교할 두 번째 손패가 어디서 오는지 설계에 반드시 기술해야 함\",\n    \"feature-spec.md AC-07: '구현 완료 전 작성'을 관찰 가능 기준으로 대체하라. 예: 'TC-01~TC-05가 rules.js 첫 커밋 이전 커밋에 존재한다(git log --follow로 확인)' 또는 체크리스트 파일의 커밋 타임스탬프가 rules.js 초기 커밋보다 앞선다\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-05T00:31:43.759Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-f0d1ad09/318c752a-7603-4d39-8962-342bbb4e8127.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}

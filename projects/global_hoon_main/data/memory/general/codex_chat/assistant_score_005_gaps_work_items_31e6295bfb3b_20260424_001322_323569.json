@@ -1,0 +1,18 @@
+{
+  "key": "assistant   score 005  gaps     핵심 주장이나 판단을 뒷받침하는 출처가 전혀 없다    work_items가 비어 있어 목표를 수행하기 위한 구체적 실행 계획이 없다    대안 접근 우선순위",
+  "value": "[assistant] {   \"score\": 0.05,   \"gaps\": [     \"핵심 주장이나 판단을 뒷받침하는 출처가 전혀 없다.\",     \"`work_items`가 비어 있어 목표를 수행하기 위한 구체적 실행 계획이 없다.\",     \"대안 접근, 우선순위, 제약사항, 성공 기준이 검토되지 않았다.\",     \"`generated_at` 시각만 있고 내용 자체의 최신성 검토 근거는 없다.\"   ],   \"unsupported_claims\": [...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-04-24T00:13:22.324254+00:00",
+  "updated_at": "2026-04-24T00:13:22.324254+00:00",
+  "details": {
+    "text": "[assistant] {\n  \"score\": 0.05,\n  \"gaps\": [\n    \"핵심 주장이나 판단을 뒷받침하는 출처가 전혀 없다.\",\n    \"`work_items`가 비어 있어 목표를 수행하기 위한 구체적 실행 계획이 없다.\",\n    \"대안 접근, 우선순위, 제약사항, 성공 기준이 검토되지 않았다.\",\n    \"`generated_at` 시각만 있고 내용 자체의 최신성 검토 근거는 없다.\"\n  ],\n  \"unsupported_claims\": [\n    \"`goal`이 적절히 정의되었다는 암묵적 전제\",\n    \"빈 `work_items`로도 과업 산출물이 성립한다는 암묵적 전제\",\n    \"`project_brief`만으로 실행 가능한 계획이 되었다는 암묵적 전제\"\n  ],\n  \"strengths\": [\n    \"구조가 단순하고 필드 구성이 일관적이다.\",\n    \"요청 목표와 메타데이터가 중복 없이 최소한으로 정리되어 있다.\"\n  ],\n  \"revision_instructions\": [\n    \"각 핵심 항목에 근거 출처 또는 입력 근거를 추가하라.\",\n    \"`goal`을 검증 가능한 성공 기준과 함께 더 구체적으로 작성하라.\",\n    \"`work_items`를 최소 1개 이상 채우고, 각 항목에 목적, 담당 역할, 완료 조건을 포함하라.\",\n    \"가능한 대안 접근이나 제외된 선택지를 함께 기록하라.\",\n    \"최신성이 중요한 과업이면 기준 날짜와 최신성 검토 방법을 명시하라.\"\n  ]\n}",
+    "event_timestamp": "2026-04-24T00:13:22.039Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/tests/_tmp/af-test-0837e91e/.af_runtime/codex_home/sessions/2026/04/24/rollout-2026-04-24T09-13-06-019dbcd5-44ee-76a0-a896-d41c5a83e960.jsonl",
+    "session_line": 10,
+    "provider": "codex"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "user WorkspaceUsershoonworkTreeagent-factoryTaskYou are a senior code reviewer Review the following changes conciselyTas",
+  "value": "[user] [Workspace] /Users/hoon/workTree/agent-factory  [Task] You are a senior code reviewer. Review the following changes concisely.  [Task Context] execute task  [Changed Files (1383)] .claude/settings.local.json, core/fsa_loop.py, core/skill_creator.py,...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:34:28.071244+00:00",
+  "updated_at": "2026-05-02T04:34:28.071244+00:00",
+  "details": {
+    "text": "[user] [Workspace]\n/Users/hoon/workTree/agent-factory\n\n[Task]\nYou are a senior code reviewer. Review the following changes concisely.\n\n[Task Context]\nexecute task\n\n[Changed Files (1383)]\n.claude/settings.local.json, core/fsa_loop.py, core/skill_creator.py, core/skill_evolution_safety.py, core/skill_quality_gate.py, crash.log, data/skill-usage.jsonl, debug.log, docs/code_review/code-review.md, error.log, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_005b8e0f6e76_20260309_143912_881015.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_051a20b461b5_20260310_060825_354220.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_062674d712ea_20260310_104012_621453.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0_70907646defb_20260309_163142_505777.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0adc6eef5cfb_20260310_144545_422514.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0eee2b50a4df_20260309_143912_871841.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0f3698272690_20260310_060825_479078.json, projects/global_hoon_main/data/memory/general/codex_chat/assistant_0fc3190f9e60_20260310_102307_690163.json\n\n[Diff]\n\n\nProvide a brief review in this format:\n- [Severity] file:line — finding (one line each)\n\nSeverity levels: Critical, High, Medium, Low, Info\nFocus on: security issues, bugs, error handling gaps, performance problems.\nIf no issues found, write \"No issues found.\"\nKeep the review under 20 lines.",
+    "event_timestamp": "2026-04-29T00:05:40.972Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fdb1af89-91b6-4377-a316-96e4145fc838.jsonl",
+    "session_line": 4,
+    "provider": "claude"
+  }
+}

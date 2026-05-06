@@ -1,0 +1,18 @@
+{
+  "key": "assistant 코드 검토 완료---- Medium coreapproval_gatepy102  from coreeventsrun_event import RunEventType 임포트가 tryexcept 밖에 있어 ",
+  "value": "[assistant] 코드 검토 완료.  ---  - **Medium** `core/approval_gate.py:102` — `from core.events.run_event import RunEventType` 임포트가 `try/except` 밖에 있어, 모듈 미존재 시 `initialize()` 전체가 예외를 던진다. `_emit_approval_event` 내부는 보호되어 있지만 이 임포트는 노출됨. `approve():125`도 동일. - **Me...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-01T02:30:27.637724+00:00",
+  "updated_at": "2026-05-01T02:30:27.637724+00:00",
+  "details": {
+    "text": "[assistant] 코드 검토 완료.\n\n---\n\n- **Medium** `core/approval_gate.py:102` — `from core.events.run_event import RunEventType` 임포트가 `try/except` 밖에 있어, 모듈 미존재 시 `initialize()` 전체가 예외를 던진다. `_emit_approval_event` 내부는 보호되어 있지만 이 임포트는 노출됨. `approve():125`도 동일.\n- **Medium** `core/approval_gate.py:25` — `except Exception: pass` 가 모든 예외를 무음 처리. 운영 로그 없이 이벤트 발행 실패를 감지할 방법이 없다. 최소한 `logging.debug()` 수준의 기록 필요.\n- **Low** `.claude/settings.local.json:38` — `Bash(echo \"EXIT:$?\")` 가 기존 `Bash(echo \"exit=$?\")` 와 대소문자만 다른 중복 허용 항목. 의도적 구분이라면 주석 필요, 아니라면 제거 대상.\n- **Low** `.claude/settings.local.json:122` — 파일 끝 개행 제거(`\\ No newline at end of file`). POSIX 규범 위반이며 일부 툴에서 diff 노이즈 유발.\n- **Low** `.todo.md:14-16` — \"Game Logic Dev\" 역할 항목 3건이 메모리 필터 작업과 무관한 템플릿 잔류물로 보임. 실제 태스크인지 확인 필요.\n- **Info** `core/approval_gate.py:20` — `gate: \"ApprovalGate\"` 포워드 참조는 같은 파일 내 클래스이므로 문자열 없이 직접 타입 참조 가능 (Python 3.10+ 또는 `from __future__ import annotations`).",
+    "event_timestamp": "2026-04-26T14:24:17.984Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fe7a54c4-bd53-4a90-a923-02f492207d74.jsonl",
+    "session_line": 14,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant 작업 항목 문서들을 읽어 평가하겠습니다",
+  "value": "[assistant] 작업 항목 문서들을 읽어 평가하겠습니다.",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T15:13:29.067562+00:00",
+  "updated_at": "2026-05-04T15:13:29.067562+00:00",
+  "details": {
+    "text": "[assistant] 작업 항목 문서들을 읽어 평가하겠습니다.",
+    "event_timestamp": "2026-05-04T15:13:03.388Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-29e70745/bbbae426-81f1-41f4-afb1-6c5fbf06a656.jsonl",
+    "session_line": 9,
+    "provider": "claude"
+  }
+}

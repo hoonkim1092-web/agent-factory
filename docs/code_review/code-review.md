@@ -3926,3 +3926,23 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1639)**: `.claude/settings.local.json, AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml ... (+1624)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-05 00:16 — `2026-04-14-build-diet` (5bf0d569)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/researcher.py
+
+**Changed (81)**: `core/researcher.py, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_d48548877be8_20260309_143912_905644.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_df29ab435e3f_20260309_143912_925347.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_ebef098f877b_20260309_143912_911019.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_942d1248d0a7_20260309_094922_965871.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_v011pdf_264f7746d448_20260309_094922_955897.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d44fd61b2a1b_20260310_060825_393822.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d70d9e21d013_20260310_174038_011170.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d93d28d31b50_20260309_150354_746159.json, projects/global_hoon_main/data/memory/general/codex_chat/user_db6527603453_20260310_060825_408001.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcdd80eaeb0f_20260310_174037_955074.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcea84b69730_20260310_174037_946123.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dd164aa85d51_20260310_060825_413797.json ... (+66)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-05 09:06 — `2026-04-14-build-diet` (376c6eee)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/research_router.py
+
+**Changed (82)**: `core/research_router.py, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_d48548877be8_20260309_143912_905644.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_df29ab435e3f_20260309_143912_925347.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_ebef098f877b_20260309_143912_911019.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_942d1248d0a7_20260309_094922_965871.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_v011pdf_264f7746d448_20260309_094922_955897.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d44fd61b2a1b_20260310_060825_393822.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d70d9e21d013_20260310_174038_011170.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d93d28d31b50_20260309_150354_746159.json, projects/global_hoon_main/data/memory/general/codex_chat/user_db6527603453_20260310_060825_408001.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcdd80eaeb0f_20260310_174037_955074.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcea84b69730_20260310_174037_946123.json ... (+67)`
+
+_Review skipped (--no-llm or LLM unavailable)_

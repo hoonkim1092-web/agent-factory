@@ -1,0 +1,18 @@
+{
+  "key": "user Agent Factory 브랜치 2026-04-14-build-diet 코드 리뷰를 수행해주세요작업 디렉토리 UsershoonworkTreeagent-factory주요 변경 파일들을 자율 탐색하여 코드 품질",
+  "value": "[user] Agent Factory 브랜치 2026-04-14-build-diet 코드 리뷰를 수행해주세요.  작업 디렉토리: /Users/hoon/workTree/agent-factory  주요 변경 파일들을 자율 탐색하여 코드 품질, 일관성, Master_Blueprint.md와의 정합성을 검증해주세요: - core/memory_system/strategy_ledger.py - projects/lotto_mobile_web/server/app.py...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-02T04:35:19.587707+00:00",
+  "updated_at": "2026-05-02T04:35:19.587707+00:00",
+  "details": {
+    "text": "[user] Agent Factory 브랜치 2026-04-14-build-diet 코드 리뷰를 수행해주세요.\n\n작업 디렉토리: /Users/hoon/workTree/agent-factory\n\n주요 변경 파일들을 자율 탐색하여 코드 품질, 일관성, Master_Blueprint.md와의 정합성을 검증해주세요:\n- core/memory_system/strategy_ledger.py\n- projects/lotto_mobile_web/server/app.py  \n- projects/lotto_predictor_v2/src/lotto/cli.py\n- skills/registry.yaml\n\n각 피드백을 수용/기각/보류로 판정해주세요.",
+    "event_timestamp": "2026-04-18T14:26:10.230Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory/fca4846f-2bc3-4d8d-bd67-630c7e3a7e34/subagents/agent-af05e8bd6826e10ff.jsonl",
+    "session_line": 0,
+    "provider": "claude"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "key": "assistant - Medium skillsregistryyaml8  abc 스킬이 테스트 임시 디렉터리의 절대 경로를 active registry로 저장해 다른 환경이나 테스트 정리 후 스킬 로딩이 깨질 수 있습",
+  "value": "[assistant] - [Medium] skills/registry.yaml:8 — `abc` 스킬이 테스트 임시 디렉터리의 절대 경로를 active registry로 저장해, 다른 환경이나 테스트 정리 후 스킬 로딩이 깨질 수 있습니다. - [Medium] projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json:2 — 브리지 커서가 테스트 임시 세션 파일을 가리키도록...",
+  "category": "codex_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "codex_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-05T00:21:12.306590+00:00",
+  "updated_at": "2026-05-05T00:21:12.306590+00:00",
+  "details": {
+    "text": "[assistant] - [Medium] skills/registry.yaml:8 — `abc` 스킬이 테스트 임시 디렉터리의 절대 경로를 active registry로 저장해, 다른 환경이나 테스트 정리 후 스킬 로딩이 깨질 수 있습니다.\n- [Medium] projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json:2 — 브리지 커서가 테스트 임시 세션 파일을 가리키도록 갱신되어 실제 사용자 세션 동기화가 잘못된 위치에서 이어질 수 있습니다.\n- [Medium] projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json:2 — Codex 브리지 커서도 테스트 임시 runtime 경로를 가리켜 이후 메모리/세션 수집이 누락되거나 실패할 수 있습니다.",
+    "event_timestamp": "2026-05-01T02:41:32.997Z",
+    "session_file": "/Users/hoon/workTree/agent-factory/.af_runtime/codex_home/sessions/2026/05/01/rollout-2026-05-01T11-39-54-019de168-2daf-7b72-a3d6-d61ddd57fbbb.jsonl",
+    "session_line": 93,
+    "provider": "codex"
+  }
+}

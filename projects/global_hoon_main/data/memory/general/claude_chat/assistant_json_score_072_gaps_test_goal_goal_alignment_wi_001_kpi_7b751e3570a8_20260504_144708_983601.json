@@ -1,0 +1,18 @@
+{
+  "key": "assistant json  score 072  gaps     목표 자체가 플레이스홀더test goal로 실질적 goal alignment 평가 불가  WI-001 이후 모든 인수 기준이 KPI 공백 위험을 내포 ",
+  "value": "[assistant] ```json {   \"score\": 0.72,   \"gaps\": [     \"목표 자체가 플레이스홀더('test goal')로 실질적 goal alignment 평가 불가 — WI-001 이후 모든 인수 기준이 KPI 공백 위험을 내포\",     \"WI-005.route.parallel_with가 빈 배열이지만 execution_path에는 'WI-004 병렬' 명시 — 필드 불일치\",     \"requested_role이 빈 문자열...",
+  "category": "claude_chat",
+  "agent_id": "general",
+  "memory_scope": "global",
+  "source": "claude_session_bridge",
+  "global_user_key": "hoon_main",
+  "created_at": "2026-05-04T14:47:08.984593+00:00",
+  "updated_at": "2026-05-04T14:47:08.984593+00:00",
+  "details": {
+    "text": "[assistant] ```json\n{\n  \"score\": 0.72,\n  \"gaps\": [\n    \"목표 자체가 플레이스홀더('test goal')로 실질적 goal alignment 평가 불가 — WI-001 이후 모든 인수 기준이 KPI 공백 위험을 내포\",\n    \"WI-005.route.parallel_with가 빈 배열이지만 execution_path에는 'WI-004 병렬' 명시 — 필드 불일치\",\n    \"requested_role이 빈 문자열, route가 빈 객체임에도 6개 WI 전체를 기본 전체-스택으로 생성 — 역할 라우팅 근거 불투명\",\n    \"보안·규정 준수·개인정보 관련 리스크가 전체 6개 WI에서 단 한 건도 없음 — 시스템적 누락\",\n    \"WI-002에 예산 초과(budget overrun) 리스크 항목 없음\",\n    \"WI-003 인수 기준 '단위 테스트 커버리지 80%'에서 커버리지 유형(라인·브랜치·함수) 미명시 — 검증 기준 모호\",\n    \"병렬 트랙 조율 담당자 미명시 — WI-003↔WI-004, WI-004↔WI-005 경계 관리가 ownerless\",\n    \"WI-006이 WI-001의 KPI 정의에 의존하나 WI-001 자체가 목표 불명확으로 KPI 미확정 상태 — 순환 의존 리스크\"\n  ],\n  \"strengths\": [\n    \"WI-001이 플레이스홀더 목표를 즉시 인식하고 이해관계자 합의를 최우선 선행 조건으로 배치 — 맥락 인식 우수\",\n    \"KPI 추적성 종단 일관성: WI-001 정의 → WI-003 단위 검증 → WI-004 성능 검증 → WI-006 실측 비교\",\n    \"병렬 실행 경로가 route.parallel_with와 execution_path 양쪽에 명시되어 일정 단축 근거 가시화\",\n    \"모든 리스크 항목에 severity + mitigation이 빠짐없이 존재\",\n    \"인수 기준 대부분이 관찰 가능한 바이너리 조건(0건, 80% 이상, 5분 이내 등)으로 작성\",\n    \"WI-005 acceptance_criteria에 '배포 전 사전 검증 가능한 대리 기준' 주석 포함 — 실무 불확실성 완화\",\n    \"총 추정 공수 28일이 WI별 분해되어 계획 가시성 확보\"\n  ],\n  \"revision_instructions\": [\n    \"WI-005.route.parallel_with에 'WI-004(인프라 준비 단계)' 추가하여 execution_path 기술과 일치시킬 것\",\n    \"WI-003 인수 기준 '단위 테스트 커버리지 80% 이상'을 '브랜치 커버리지 80% 이상(pytest-cov --branch 기준)'으로 구체화할 것\",\n    \"WI-002에 '예산 초과(초기 견적 대비 20% 이상 편차)' 리스크와 미티게이션 항목을 추가할 것\",\n    \"보안·규정 준수 리스크를 해당 WI에 삽입: WI-003에 'OWASP Top 10 취약점 도입 위험', WI-005에 '운영 배포 시 자격증명 노출 위험'\",\n    \"WI-003 또는 WI-002에 병렬 트랙 조율 담당자(PM 또는 Tech Lead)를 명시적으로 지정할 것\",\n    \"WI-006 리스크에 'WI-001 KPI 미확정으로 인한 측정 지표 부재' 항목 추가 및 WI-001 완료를 hard 선행 조건으로 강조할 것\",\n    \"requested_role·route 값이 비어 있을 때 전체 스택 기본값을 사용하는 근거를 project_brief 또는 별도 필드에 명시하여 라우팅 투명성을 확보할 것\"\n  ]\n}\n```",
+    "event_timestamp": "2026-05-04T14:47:05.881Z",
+    "session_file": "/Users/hoon/.claude/projects/-Users-hoon-workTree-agent-factory-tests--tmp-af-test-f2a26114/31d054ea-1fe1-4789-984a-50322e9412b5.jsonl",
+    "session_line": 10,
+    "provider": "claude"
+  }
+}
