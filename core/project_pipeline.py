@@ -226,6 +226,51 @@ class ProjectPipeline:
             filename = SPEC_FILENAMES.get(key, f"{key}.md")
             (specs_dir / f"{slug}-{filename}").write_text(content, encoding="utf-8")
 
+    def _load_evidence(self, workspace: str, task_input: str) -> tuple[list[dict], list[dict]]:
+        """docs/research/<safe_id(task_input)[:40]>-evidence.json에서 claims/sources를 읽어 반환.
+
+        researcher.py:1069 와 동일한 slug 파생 (`safe_id(task_input)[:40]`) 사용.
+        """
+        import json
+        import logging
+        from pathlib import Path
+        evidence_slug = safe_id(task_input)[:40]
+        path = Path(workspace) / "docs" / "research" / f"{evidence_slug}-evidence.json"
+        if not path.exists():
+            return [], []
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data.get("claims") or [], data.get("sources") or []
+        except json.JSONDecodeError as exc:
+            logging.warning("[Pipeline] evidence JSON parse error (%s): %s", path, exc)
+            return [], []
+
+    def _save_adr(self, workspace: str, slug: str, adr_md: str) -> "Path":
+        """ADR을 docs/decisions/<slug>-rule-baseline.md 에 원자적으로 저장."""
+        import tempfile, os
+        from pathlib import Path
+        out_dir = Path(workspace) / "docs" / "decisions"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"{slug}-rule-baseline.md"
+        with tempfile.NamedTemporaryFile("w", dir=out_dir, delete=False, suffix=".tmp", encoding="utf-8") as fh:
+            fh.write(adr_md)
+            tmp = fh.name
+        os.replace(tmp, dest)
+        return dest
+
+    def _save_traceability(self, workspace: str, slug: str, trace_md: str) -> "Path":
+        """traceability를 docs/research/<slug>-traceability.md 에 원자적으로 저장."""
+        import tempfile, os
+        from pathlib import Path
+        out_dir = Path(workspace) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"{slug}-traceability.md"
+        with tempfile.NamedTemporaryFile("w", dir=out_dir, delete=False, suffix=".tmp", encoding="utf-8") as fh:
+            fh.write(trace_md)
+            tmp = fh.name
+        os.replace(tmp, dest)
+        return dest
+
     def _coverage_blocked(self, research_evidence: dict) -> bool:
         return bool((research_evidence.get("coverage_report") or {}).get("block"))
 
@@ -838,6 +883,7 @@ class ProjectPipeline:
 
         # -- Work Items --
         slug = slug_from_brief(project_brief)
+        _adr_path, _trace_path = None, None  # P2 C3+C4: domain 분기 내에서 설정
 
         # P2 C1: Domain Spec Gate — coverage BLOCK 시 work_item 생성 차단
         _domain = (project_brief.get("research_plan") or {}).get("domain", "")
@@ -846,6 +892,13 @@ class ProjectPipeline:
                 from core.spec_generator import SpecGenerator
                 _specs = SpecGenerator().generate(project_brief)
                 self._save_specs(_specs, target_workspace, slug)
+            # P2 C3+C4: ADR + traceability 자동 생성 (경로는 planning_files에 나중에 추가)
+            _claims, _sources = self._load_evidence(target_workspace, task_input)
+            from core.spec_generator import AdrGenerator, TraceabilityGenerator
+            _adr_md = AdrGenerator().generate(project_brief, _claims, _sources)
+            _adr_path = self._save_adr(target_workspace, slug, _adr_md) if _adr_md else None
+            _trace_md = TraceabilityGenerator().generate(project_brief, _claims, task_board)
+            _trace_path = self._save_traceability(target_workspace, slug, _trace_md) if _trace_md else None
             if self._coverage_blocked(research_evidence):
                 _cr = research_evidence.get("coverage_report") or {}
                 raise ResearchGateBlocked(
@@ -974,6 +1027,10 @@ class ProjectPipeline:
             to_portable_path(task_execution_plan_path),
             to_portable_path(todo_path),
         ] + [to_portable_path(p) for p in work_item_files.values()]
+        # P2 C3+C4: ADR/traceability 경로 추가 (domain 분기에서 생성된 경우만)
+        for _extra_path in (_adr_path, _trace_path):
+            if _extra_path is not None:
+                planning_files.append(to_portable_path(str(_extra_path)))
 
         prepared = PreparedProject(
             run_id=run_id,

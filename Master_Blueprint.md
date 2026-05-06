@@ -90,8 +90,8 @@
 | `core/model_router.py` | CLI 프로바이더 선택 | `ModelRouter` |
 | `core/policy_runtime.py` | 정책 런타임 래퍼 | `PolicyRuntime` |
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
-| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()` | `ProjectPipeline`, `ResearchGateBlocked` |
-| `core/spec_generator.py` | **P2 C2**: 포커 도메인 5종 명세 생성 (rules/state_machine/server_arch/event_protocol/client_view). `execute_document_prompt` LLM 호출 5회. 저장 위치: `docs/specs/<slug>-<filename>.md` | `SpecGenerator.generate()`, `SPEC_FILENAMES` |
+| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence(workspace, task_input)` (`safe_id(task_input)[:40]` slug), `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files에 추가) | `ProjectPipeline`, `ResearchGateBlocked` |
+| `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | `SpecGenerator`, `AdrGenerator`, `TraceabilityGenerator`, `_call_llm_raw`, `SPEC_FILENAMES` |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
 | `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지 | `prepare_cli_session()`, `handle_hook_event()` |
@@ -349,14 +349,18 @@ AgentRunner.run(agent, task_input, workspace)
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
 - **P0 A6** (2026-05-05): `prepare_brief()` → `docs/research/<slug>-project-brief.json` 보조 저장
 - **P2 C1** (2026-05-06): `prepare_documents()` Work Items 직전 Domain Spec Gate — `research_plan.domain` 감지 시 `_verify_domain_spec()` → 미존재면 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise
+- **P2 C3+C4** (2026-05-06): Domain 분기 내 ADR + traceability 자동 생성. `_load_evidence(workspace, task_input)` → `safe_id(task_input)[:40]` slug 사용(researcher.py 파일명 일치). `AdrGenerator.generate()` / `TraceabilityGenerator.generate()`. 생성 결과 `planning_files`에 추가.
 
 **예외:**
 - `ResearchGateBlocked(RuntimeError)`: coverage BLOCK 시 work_item 생성 차단
 
-**P2 C1 헬퍼:**
+**P2 헬퍼 (C1+C3+C4):**
 - `_verify_domain_spec(workspace, slug) → bool`: `docs/specs/<slug>-*.md` 존재 여부
 - `_save_specs(specs, workspace, slug)`: `SpecGenerator` 결과 → `docs/specs/<slug>-<filename>.md`
 - `_coverage_blocked(research_evidence) → bool`: `coverage_report.block` 필드
+- `_load_evidence(workspace, task_input) → (claims, sources)`: `safe_id(task_input)[:40]`-evidence.json. `json.JSONDecodeError` 협소 catch.
+- `_save_adr(workspace, slug, adr_md) → Path`: `docs/decisions/<slug>-rule-baseline.md` 원자 write
+- `_save_traceability(workspace, slug, trace_md) → Path`: `docs/research/<slug>-traceability.md` 원자 write
 
 ---
 
@@ -1291,6 +1295,7 @@ model_utils.py (독립 모듈)
 | 2026-05-04 | v1.2.22 | chore(skills+code-review): new_skill 승격 이벤트 1건 + 코드리뷰 로그 2건 자동 기록 — skill-usage.jsonl 18번째 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 항목 append, codex bridge session_cursor·skill-eval-report·skill-promotion·registry 메타데이터 동기화 |
 | 2026-05-04 | v1.2.22 | chore(skills+review): 스킬 promotion 이벤트 누적 + 코드리뷰 로그 동기화 — skill-usage.jsonl에 new_skill candidate 승급 이벤트 1건 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 append, skill-eval-report.json·skill-promotion.json·registry.yaml 메타데이터 갱신, codex bridge session_cursor 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills): new_skill 평가 자동화 산출물 갱신 — skill-promotion 18회차 후보 승급 로그 추가, skill-eval-report 재생성, registry.yaml 동기화, code-review.md 최근 커밋 2건 추가, codex bridge session_cursor 갱신 |
+| 2026-05-06 | (unreleased) | feat(pipeline+spec_generator): P2 C3+C4 — ADR + Traceability 자동 생성. **C3**: `AdrGenerator` — domain 감지 시 evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback(`_call_llm_raw` 실패→`""` sentinel, fallback 호출자 결정). `_save_adr()` 원자 write+Path 반환+planning_files 추가. `_load_evidence(workspace, task_input)` — `safe_id(task_input)[:40]` slug로 researcher.py 파일명 일치, `json.JSONDecodeError` 협소 catch+warning. **C4**: `TraceabilityGenerator` — claims=[] 시 `""` 반환(빈 파일 미생성), 휴리스틱 claim↔spec_section↔task_id 매핑. `_save_traceability()` 원자 write+Path 반환+planning_files 추가. 산출물: `docs/decisions/<slug>-rule-baseline.md`, `docs/research/<slug>-traceability.md`. 신규 테스트 7건(`TestC3AdrGenerator`, `TestC4TraceabilityGenerator`). 19 tests PASS. |
 | 2026-05-06 | (unreleased) | feat(pipeline+spec_generator): P2 C1+C2 — Domain Spec Gate + SpecGenerator 신규. **C1**: `prepare_documents()` Work Items 직전 `_domain` 감지 → `_verify_domain_spec()` 미존재 시 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise. `_coverage_blocked()` helper. **C2**: `core/spec_generator.py` 신규 — 포커 5종 명세 생성(rules/state_machine/server_arch/event_protocol/client_view), `execute_document_prompt` 5회, `SPEC_FILENAMES` 상수, `docs/specs/<slug>-*.md` 저장. **af.spec**: `core.spec_generator` hiddenimport 추가. 신규 테스트 4건(`TestC1DomainSpecGate`). 12 tests PASS. |
 | 2026-05-06 | (unreleased) | fix(researcher): P1 BLOCK 수정 2건 — **H1**: `_emit_evidence_files()`/`_emit_coverage_report()`에 `workspace` 파라미터 추가(os.getcwd() 하드코딩 → `Path(workspace or os.getcwd())` 변경). 호출부에서 `target_workspace` 전달. **H2**: `_emit_evidence_files()`에 `source_pack` 파라미터 추가 — `source_pack["sources"]` 의 `web_001` 포맷 ID를 재사용(`S001` 독립 생성 폐기). LLM 프롬프트 `source_ids=["web_001"]` 참조와 일치. 신규 테스트 `test_source_id_reuses_source_pack_format` 1건. 152 tests PASS. |
 | 2026-05-06 | (unreleased) | feat(researcher): P1 B1~B5 — Quality Gate + Evidence. **B1**: `collect_project_evidence()` else 분기를 RecoverySearchLoop로 교체(`_load_domain_manifest` + `_identify_unmet_gaps` + max_rounds 캡 deep=3/else=2, Tavily 미설정 시 LLM fallback 1회 후 탈출). `unmet_gaps` 반환 필드 추가. **B2**: `config/coverage_manifests/poker.yaml` 신규 — 8 required_fields + match_keywords + trigger 정의. **B3**: `_load_domain_manifest(domain)` helper — YAML 로딩, 없으면 None. **B4**: `_emit_evidence_files()` — `docs/research/<slug>-evidence.json` (claims↔sources 구조화). **B5**: `_emit_coverage_report()` — match_keywords 기반 matched/missing 계산 + `docs/research/<slug>-coverage.json/.md` 저장 + block 판정(match_rate<0.7 또는 missing≥3). 신규 테스트 `tests/test_research_p1_quality_gate.py` 11건. 150 tests PASS. |

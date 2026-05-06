@@ -405,5 +405,131 @@ class TestC1DomainSpecGate(unittest.TestCase):
             self.assertTrue((specs_dir / "myslug-state-machine.md").exists())
 
 
+class TestC3AdrGenerator(unittest.TestCase):
+    """P2 C3: AdrGenerator 단위 테스트."""
+
+    def _make_claims(self):
+        return [
+            {"claim_id": "C001", "claim": "WSOP rules define 8-player table provisions", "source_id": "S001"},
+            {"claim_id": "C002", "claim": "Side pot calculation is clearly specified", "source_id": "S001"},
+        ]
+
+    def _make_sources(self):
+        return [
+            {"source_id": "S001", "title": "WSOP 2024 Tournament Rules", "url": "https://example.com/wsop"},
+        ]
+
+    def test_c3_fallback_adr_structure(self):
+        """_fallback_adr가 필수 ADR 섹션(Date/Status/Decision/Alternatives/Rationale/Evidence)을 포함한다."""
+        from core.spec_generator import AdrGenerator
+        gen = AdrGenerator()
+        brief = {"research_plan": {"domain": "poker"}, "goal": "8인 포커"}
+        result = gen._fallback_adr("poker", "2026-05-06", self._make_claims(), self._make_sources())
+        self.assertIn("# Decision:", result)
+        self.assertIn("## Alternatives Considered", result)
+        self.assertIn("## Rationale", result)
+        self.assertIn("## Evidence References", result)
+        self.assertIn("C001", result)
+
+    def test_c3_generate_returns_empty_for_no_domain(self):
+        """domain="" → generate가 빈 문자열 반환."""
+        from core.spec_generator import AdrGenerator
+        gen = AdrGenerator()
+        brief = {"research_plan": {"domain": ""}, "goal": "general task"}
+        result = gen.generate(brief, [], [])
+        self.assertEqual(result, "")
+
+    def test_c3_save_adr_writes_file_atomically(self):
+        """_save_adr가 docs/decisions/<slug>-rule-baseline.md를 원자적으로 저장하고 Path를 반환한다."""
+        import tempfile
+        from pathlib import Path
+        from core.project_pipeline import ProjectPipeline
+        mr = MagicMock()
+        mr.config = {}
+        pipeline = ProjectPipeline(mr, MagicMock(), MagicMock(), MagicMock())
+        with tempfile.TemporaryDirectory() as ws:
+            result_path = pipeline._save_adr(ws, "myslug", "# Decision: test\n")
+            out = Path(ws) / "docs" / "decisions" / "myslug-rule-baseline.md"
+            self.assertTrue(out.exists())
+            self.assertIn("# Decision:", out.read_text())
+            self.assertEqual(result_path, out)
+
+
+class TestC4TraceabilityGenerator(unittest.TestCase):
+    """P2 C4: TraceabilityGenerator 단위 테스트."""
+
+    def _make_claims(self):
+        return [
+            {"claim_id": "C001", "claim": "hand ranking rules apply to showdown", "source_id": "S001"},
+            {"claim_id": "C002", "claim": "server state machine manages transitions", "source_id": "S001"},
+        ]
+
+    def _make_task_board(self):
+        return {
+            "tasks": [
+                {"task_id": "T001", "description": "Implement hand ranking rules", "name": "Hand Rankings"},
+                {"task_id": "T002", "description": "Build server state machine", "name": "State Machine"},
+            ]
+        }
+
+    def test_c4_generate_produces_markdown_table(self):
+        """generate가 claim_id/source_id/spec_section/task_id 컬럼이 있는 MD 표를 반환한다."""
+        from core.spec_generator import TraceabilityGenerator
+        gen = TraceabilityGenerator()
+        brief = {"research_plan": {"domain": "poker"}, "goal": "8인 포커"}
+        result = gen.generate(brief, self._make_claims(), self._make_task_board())
+        self.assertIn("# Traceability", result)
+        self.assertIn("| claim_id |", result)
+        self.assertIn("C001", result)
+        self.assertIn("C002", result)
+
+    def test_c4_empty_claims_returns_empty_string(self):
+        """claims=[] → "" 반환 (빈 traceability 파일을 쓰지 않는다)."""
+        from core.spec_generator import TraceabilityGenerator
+        gen = TraceabilityGenerator()
+        brief = {"goal": "poker"}
+        result = gen.generate(brief, [], {})
+        self.assertEqual(result, "")
+
+    def test_c4_save_traceability_writes_file_atomically(self):
+        """_save_traceability가 docs/research/<slug>-traceability.md를 원자적으로 저장하고 Path를 반환한다."""
+        import tempfile
+        from pathlib import Path
+        from core.project_pipeline import ProjectPipeline
+        mr = MagicMock()
+        mr.config = {}
+        pipeline = ProjectPipeline(mr, MagicMock(), MagicMock(), MagicMock())
+        with tempfile.TemporaryDirectory() as ws:
+            result_path = pipeline._save_traceability(ws, "myslug", "# Traceability\n")
+            out = Path(ws) / "docs" / "research" / "myslug-traceability.md"
+            self.assertTrue(out.exists())
+            self.assertIn("# Traceability", out.read_text())
+            self.assertEqual(result_path, out)
+
+    def test_c4_load_evidence_uses_safe_id_slug(self):
+        """_load_evidence가 safe_id(task_input)[:40] 으로 evidence.json 경로를 찾는다."""
+        import json, tempfile, os
+        from pathlib import Path
+        from core.utils import safe_id
+        from core.project_pipeline import ProjectPipeline
+        mr = MagicMock()
+        mr.config = {}
+        pipeline = ProjectPipeline(mr, MagicMock(), MagicMock(), MagicMock())
+        task_input = "build a poker game"
+        expected_slug = safe_id(task_input)[:40]
+        claims_data = [{"claim_id": "C001", "claim": "poker rule", "source_id": "S001"}]
+        sources_data = [{"source_id": "S001", "title": "WSOP Rules"}]
+        with tempfile.TemporaryDirectory() as ws:
+            research_dir = Path(ws) / "docs" / "research"
+            research_dir.mkdir(parents=True)
+            (research_dir / f"{expected_slug}-evidence.json").write_text(
+                json.dumps({"claims": claims_data, "sources": sources_data}), encoding="utf-8"
+            )
+            claims, sources = pipeline._load_evidence(ws, task_input)
+            self.assertEqual(len(claims), 1)
+            self.assertEqual(claims[0]["claim_id"], "C001")
+            self.assertEqual(len(sources), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
