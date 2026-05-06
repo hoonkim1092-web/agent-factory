@@ -3946,3 +3946,62 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (82)**: `core/research_router.py, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_d48548877be8_20260309_143912_905644.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_df29ab435e3f_20260309_143912_925347.json, projects/global_hoon_main/data/memory/general/codex_chat/user_codexcmd_login_device_auth_ebef098f877b_20260309_143912_911019.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_942d1248d0a7_20260309_094922_965871.json, projects/global_hoon_main/data/memory/general/codex_chat/user_cqa_tree_v011pdf_264f7746d448_20260309_094922_955897.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d44fd61b2a1b_20260310_060825_393822.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d70d9e21d013_20260310_174038_011170.json, projects/global_hoon_main/data/memory/general/codex_chat/user_d93d28d31b50_20260309_150354_746159.json, projects/global_hoon_main/data/memory/general/codex_chat/user_db6527603453_20260310_060825_408001.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcdd80eaeb0f_20260310_174037_955074.json, projects/global_hoon_main/data/memory/general/codex_chat/user_dcea84b69730_20260310_174037_946123.json ... (+67)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-06 15:09 — `2026-04-14-build-diet` (5d020004)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\core\researcher.py
+
+**Changed (5)**: `core/researcher.py, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextexecute_taskchanged_files_9cla_5cd8519161b9_20260409_024321_002878.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextreturn_agent_factory_okchanged_5123b91fc595_20260409_024321_007650.json`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-06 16:37 — `2026-04-14-build-diet` (808d072d)
+
+**Context**: feat(researcher): P1 B1~B5 — Quality Gate + Evidence (RecoverySearchLoop + Coverage)
+
+**Changed (5)**: `docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextexecute_taskchanged_files_9cla_5cd8519161b9_20260409_024321_002878.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextreturn_agent_factory_okchanged_5123b91fc595_20260409_024321_007650.json`
+
+### Findings
+
+```json
+{
+  "summary": "변경 파일 5개 모두 비코드(문서·세션 상태 JSON). 실제 researcher.py 변경분은 이 diff에 포함되지 않음.",
+  "findings": [
+    {
+      "severity": "Info",
+      "location": "projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json",
+      "note": "Mac 절대경로 → Windows 절대경로 교체. PC 이관 정상 반영."
+    },
+    {
+      "severity": "Info",
+      "location": "projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json",
+      "note": "동일 — Mac→Windows 경로 이관. written_last_run 0 리셋도 의도된 것으로 보임."
+    },
+    {
+      "severity": "Medium",
+      "location": "docs/code_review/code-review.md:3955",
+      "note": "커밋 메시지 컨텍스트는 'feat(researcher): P1 B1~B5'이나 리뷰 엔트리에는 'edit: researcher.py'만 기록됨. --no-llm 스킵 사유가 남아 실제 리뷰 내용 없음 — Quality Gate 통과 증거 미흡."
+    },
+    {
+      "severity": "Low",
+      "location": "session_cursor.json (양쪽)",
+      "note": "하드코딩 절대경로가 버전관리됨. 환경 이식성 문제 — 경로를 env-var 또는 상대 경로로 교체 검토 권장."
+    }
+  ],
+  "verdict": "이 diff 자체의 보안·버그 리스크는 없음. 단, 커밋 제목이 시사하는 researcher.py 핵심 변경분(RecoverySearchLoop·Coverage)이 diff에 빠져 있어 실질 검토 불가 — 해당 파일이 포함된 별도 커밋 리뷰 필요."
+}
+```
+
+---
+
+## 2026-05-06 17:10 — `2026-04-14-build-diet` (ee0f9d54)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\core\researcher.py
+
+**Changed (6)**: `core/researcher.py, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextexecute_taskchanged_files_9cla_5cd8519161b9_20260409_024321_002878.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextreturn_agent_factory_okchanged_5123b91fc595_20260409_024321_007650.json`
+
+_Review skipped (--no-llm or LLM unavailable)_

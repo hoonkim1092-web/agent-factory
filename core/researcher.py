@@ -630,32 +630,54 @@ Rules:
         slug: str,
         web_refs: list[dict],
         structured_evidence: dict,
+        source_pack: dict | None = None,
+        workspace: str | None = None,
     ) -> None:
         """B4: docs/research/<slug>-evidence.json 저장 (claims ↔ sources 구조화)."""
         from pathlib import Path
-        out_dir = Path(os.getcwd()) / "docs" / "research"
+        out_dir = Path(workspace or os.getcwd()) / "docs" / "research"
         out_dir.mkdir(parents=True, exist_ok=True)
-        sources = [
-            {
-                "source_id": f"S{i:03d}",
-                "url": ref.get("url") or "",
-                "title": ref.get("title") or "",
-                "trust_score": ref.get("trust_score", 0.0),
-                "retrieval_method": "tavily_search",
-                "fetched_at": now_iso(),
-            }
-            for i, ref in enumerate(web_refs, 1)
-        ]
+        # H2: source_pack의 web_001 포맷 ID 재사용 — LLM 프롬프트(source_ids=["web_001"])와 일치
+        _pack_web = [s for s in ((source_pack or {}).get("sources") or []) if s.get("source_type") == "web"]
+        if _pack_web:
+            sources = [
+                {
+                    "source_id": s["source_id"],
+                    "url": s.get("url", ""),
+                    "title": s.get("title", ""),
+                    "trust_score": round(float(s.get("relevance_score") or 0.0), 3),
+                    "retrieval_method": s.get("retrieval_method", "tavily_search"),
+                    "fetched_at": now_iso(),
+                }
+                for s in _pack_web
+            ]
+        else:
+            sources = [
+                {
+                    "source_id": f"web_{i:03d}",
+                    "url": ref.get("url") or "",
+                    "title": ref.get("title") or "",
+                    "trust_score": ref.get("trust_score", 0.0),
+                    "retrieval_method": "tavily_search",
+                    "fetched_at": now_iso(),
+                }
+                for i, ref in enumerate(web_refs, 1)
+            ]
         claims_raw = structured_evidence.get("source_backed_claims") or []
+        if not sources:
+            claims_raw = []
+        valid_source_ids = {s["source_id"] for s in sources}
         claims = []
         for i, claim_text in enumerate(claims_raw, 1):
+            fallback_sid = sources[min(i, len(sources)) - 1]["source_id"] if sources else ""
             if isinstance(claim_text, dict):
                 claim_str = str(claim_text.get("claim") or claim_text)
                 llm_source_ids = claim_text.get("source_ids") or []
-                sid = llm_source_ids[0] if llm_source_ids else (f"S{min(i, len(sources)):03d}" if sources else "")
+                candidate = llm_source_ids[0] if llm_source_ids else ""
+                sid = candidate if candidate in valid_source_ids else fallback_sid
             else:
                 claim_str = str(claim_text)
-                sid = f"S{min(i, len(sources)):03d}" if sources else ""
+                sid = fallback_sid
             claims.append({
                 "claim_id": f"C{i:03d}",
                 "claim": claim_str,
@@ -677,6 +699,7 @@ Rules:
         web_refs: list[dict],
         slug: str,
         rounds_used: int,
+        workspace: str | None = None,
     ) -> dict:
         """B5: docs/research/<slug>-coverage.json + .md 저장. block 여부 반환."""
         if not domain_checklist or not domain:
@@ -713,7 +736,7 @@ Rules:
             "match_rate": round(match_rate, 3),
             "block": block,
         }
-        out_dir = Path(os.getcwd()) / "docs" / "research"
+        out_dir = Path(workspace or os.getcwd()) / "docs" / "research"
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / f"{slug}-coverage.json").write_text(
             json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -1045,14 +1068,19 @@ Rules:
         # B4: evidence.json, B5: coverage report 저장 (hint_gaps 최종 결과에서만)
         _slug = safe_id(task_input)[:40]
         try:
-            self._emit_evidence_files(_slug, web_refs, structured_evidence)
+            self._emit_evidence_files(
+                _slug, web_refs, structured_evidence,
+                source_pack=source_pack,       # H2: web_001 포맷 ID 공유
+                workspace=target_workspace,    # H1: cwd 대신 실제 workspace 사용
+            )
             _coverage = self._emit_coverage_report(
                 research_plan.domain,
-                _domain_checklist,  # W4: 중복 로딩 제거, else 분기에서 할당된 값 재사용
+                _domain_checklist,
                 local_refs,
                 web_refs,
                 _slug,
                 rounds_used=_recovery_rounds,
+                workspace=target_workspace,    # H1
             )
             if _coverage:
                 initial_evidence["coverage_report"] = _coverage

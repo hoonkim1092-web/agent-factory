@@ -157,15 +157,41 @@ class TestB4EmitEvidenceFiles(unittest.TestCase):
             "source_backed_claims": ["No-Limit Hold'em uses blind structure"]
         }
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("os.getcwd", return_value=tmpdir):
-                self.r._emit_evidence_files("test_slug", web_refs, structured_evidence)
-                evidence_path = os.path.join(tmpdir, "docs", "research", "test_slug-evidence.json")
-                self.assertTrue(os.path.exists(evidence_path))
-                data = json.loads(open(evidence_path, encoding="utf-8").read())
-                self.assertIn("claims", data)
-                self.assertIn("sources", data)
-                self.assertEqual(len(data["sources"]), 1)
-                self.assertEqual(len(data["claims"]), 1)
+            self.r._emit_evidence_files("test_slug", web_refs, structured_evidence, workspace=tmpdir)
+            evidence_path = os.path.join(tmpdir, "docs", "research", "test_slug-evidence.json")
+            self.assertTrue(os.path.exists(evidence_path))
+            data = json.loads(open(evidence_path, encoding="utf-8").read())
+            self.assertIn("claims", data)
+            self.assertIn("sources", data)
+            self.assertEqual(len(data["sources"]), 1)
+            self.assertEqual(len(data["claims"]), 1)
+
+    def test_source_id_reuses_source_pack_format(self):
+        """H2: source_pack이 있을 때 web_001 포맷 ID를 재사용해야 함."""
+        source_pack = {
+            "sources": [
+                {"source_id": "web_001", "source_type": "web", "url": "https://wsop.com",
+                 "title": "WSOP Rules", "relevance_score": 0.9, "retrieval_method": "tavily_search"},
+            ]
+        }
+        structured_evidence = {
+            "source_backed_claims": [{"claim": "blind structure rule", "source_ids": ["web_001"]}]
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.r._emit_evidence_files("slug2", [], structured_evidence, source_pack=source_pack, workspace=tmpdir)
+            data = json.loads(open(os.path.join(tmpdir, "docs", "research", "slug2-evidence.json"), encoding="utf-8").read())
+            self.assertEqual(data["sources"][0]["source_id"], "web_001")
+            self.assertEqual(data["claims"][0]["source_id"], "web_001")
+
+    def test_no_sources_yields_no_claims(self):
+        """H3: sources=[] 시 LLM이 claims를 반환해도 하드 가드로 빈 배열 저장."""
+        structured_evidence = {
+            "source_backed_claims": [{"claim": "orphan claim", "source_ids": ["web_999"]}]
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.r._emit_evidence_files("slug3", [], structured_evidence, workspace=tmpdir)
+            data = json.loads(open(os.path.join(tmpdir, "docs", "research", "slug3-evidence.json"), encoding="utf-8").read())
+            self.assertEqual(data["claims"], [], "sources=[] 시 claims도 []이어야 함")
 
 
 # ---------------------------------------------------------------------------
@@ -186,20 +212,20 @@ class TestB5EmitCoverageReport(unittest.TestCase):
         web_refs = [{"excerpt": "showdown kicker comparison", "title": "Poker Rules", "heading": ""}]
         local_refs = [{"excerpt": "blind small blind big blind", "heading": "", "title": ""}]
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("os.getcwd", return_value=tmpdir):
-                report = self.r._emit_coverage_report(
-                    "poker", self.checklist, local_refs, web_refs, "test_slug", rounds_used=1
-                )
-                self.assertIn("matched", report)
-                self.assertIn("missing", report)
-                self.assertIn("match_rate", report)
-                self.assertIn("block", report)
-                # coverage.json 존재
-                json_path = os.path.join(tmpdir, "docs", "research", "test_slug-coverage.json")
-                self.assertTrue(os.path.exists(json_path))
-                # coverage.md 존재
-                md_path = os.path.join(tmpdir, "docs", "research", "test_slug-coverage.md")
-                self.assertTrue(os.path.exists(md_path))
+            report = self.r._emit_coverage_report(
+                "poker", self.checklist, local_refs, web_refs, "test_slug", rounds_used=1,
+                workspace=tmpdir,
+            )
+            self.assertIn("matched", report)
+            self.assertIn("missing", report)
+            self.assertIn("match_rate", report)
+            self.assertIn("block", report)
+            # coverage.json 존재
+            json_path = os.path.join(tmpdir, "docs", "research", "test_slug-coverage.json")
+            self.assertTrue(os.path.exists(json_path))
+            # coverage.md 존재
+            md_path = os.path.join(tmpdir, "docs", "research", "test_slug-coverage.md")
+            self.assertTrue(os.path.exists(md_path))
 
     def test_no_domain_returns_empty(self):
         report = self.r._emit_coverage_report("", None, [], [], "slug", rounds_used=0)
