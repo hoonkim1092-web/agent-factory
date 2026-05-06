@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-06 KST — **P1 B1~B5 완료** (커밋 `808d072d`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-06 KST — **P1 B1~B5 + H3 하드 가드 완료** (커밋 `90c23761`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -20,6 +20,12 @@
 > ⚠️ P1 Advisory(미수정 3건): (1) `_identify_unmet_gaps` / `_is_sufficient` match_keywords 불일치 (max_rounds 무의미 소진 위험), (2) requires_web 분기에서 coverage 미생성 (설계 의도 미명시), (3) `포커게임` 합성어 false-negative (토큰셋 보강 검토)
 
 ---
+
+## ✅ 완료 (2026-05-06 세션 3회차) — P1 H3 하드 가드 + 14 tests 완전 PASS
+
+| 커밋 | 내용 |
+|------|------|
+| `90c23761` | feat(researcher): P1 H3 — sources=[] 하드 가드 + test_no_sources_yields_no_claims. 3-tier PASS. 14 tests. |
 
 ## ✅ 완료 (2026-05-06 세션 2회차) — P1 B1~B5 Quality Gate + Evidence
 
