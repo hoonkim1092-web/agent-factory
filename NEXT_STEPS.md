@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-04 21:30 KST — **P5 G4 병렬화 완료** (ThreadPoolExecutor local+secondary 병렬, 7/7 PASS). 브랜치: `2026-04-14-build-diet`. 직전 커밋 `31057abf`.
+> 마지막 업데이트: 2026-05-06 KST — **P0 전체 완료** (`_detect_domain` BLOCK 최종 수정 포함, 커밋 `8046bc67`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -10,17 +10,22 @@
 > python start_db.py agent-factory         # Supabase 메모리 pull
 > ```
 >
-> `--ff-only`가 reject되면 origin이 force-update된 흔적 — `git fetch && git status`로 분기 확인 후 결정. 본 세션에서 이걸 건너뛰어 hook 분기 이슈 진단이 늦어졌음.
+> `--ff-only`가 reject되면 origin이 force-update된 흔적 — `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업** (P0 전체 완료, 커밋 `deb9195d`):
+> ✅ **다음 세션 최우선 작업** (P0 완전 종료):
 >   ① P0 자기검증 — 포커 build prompt 실행: `project_brief["original_request"]` byte-for-byte + `docs/research/<slug>-project-brief.json` 파일 존재 + plan.md References 자기참조 노이즈 없음 + web_refs 상위 4건 중 권위 도메인 ≥ 1건 (Tavily 환경)
->   ② P1 진입 준비 — 설계문서 §5.2 B1(Evidence Matrix/RecoverySearchLoop) 검토
->   ③ codex 회복(2026-05-05 15:37 KST↑) 후 fan-out cross-review 1회
-> ⚠️ **hook auto-amend 분기 이슈** (이번 세션 30회 amend chain 관찰 + 15:41 origin forced-update): hook 체인이 push 직후 워킹트리에 chore 변경 추가 → 자동 `--amend` 또는 별도 chore commit + force-push로 SHA 갈아끼움. 다른 PC에서도 같은 패턴 작동 중 (오늘 origin forced-update가 그 증거). 다중 PC 작업 시 분기 위험 ↑.
-> ⚠️ codex/gemini auth_expired (2026-05-05 15:37 KST↑ codex 회복 예정). af-cross-review는 Claude 단독 검증.
+>   ② P1 진입 준비 — 설계문서 §5.2 B1(Evidence Matrix/RecoverySearchLoop) 검토 후 구현
+> ⚠️ **hook auto-amend 분기 이슈** (이번 세션 30회 amend chain 관찰 + 15:41 origin forced-update): hook 체인이 push 직후 워킹트리에 chore 변경 추가 → 자동 `--amend` 또는 별도 chore commit + force-push로 SHA 갈아끼움. 다른 PC에서도 같은 패턴 작동 중.
+> ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.
 > ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
 
 ---
+
+## ✅ 완료 (2026-05-06 세션) — P0 _detect_domain BLOCK 최종 수정
+
+| 커밋 | 내용 |
+|------|------|
+| `8046bc67` | fix(research_router): `_detect_domain` word-boundary fix (`re.findall`). false-positive 제거 + compound 토큰 보존. 139 tests PASS. |
 
 ## ✅ 완료 (2026-05-05 세션) — P0 전체 (A1~A6)
 
