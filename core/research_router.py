@@ -260,8 +260,9 @@ class ResearchRouter:
 
     def _detect_domain(self, request: str) -> str:
         """A5: 요청 텍스트에서 도메인을 감지. 현재 포커만 지원."""
-        text = (request or "").lower()
-        if any(tok in text for tok in self._POKER_TOKENS):
+        import re
+        words = set(re.findall(r"[\w']+(?:-[\w']+)*", (request or "").lower()))
+        if any(tok in words for tok in self._POKER_TOKENS):
             return "poker"
         return ""
 
