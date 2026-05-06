@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-06 KST — **P2 자기검증 PASS + P3 정적 진단 완료**. 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-07 KST — **P3 D1 완료** (`cef06534`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -13,20 +13,17 @@
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
 > ✅ **다음 세션 최우선 작업**:
->   ① **P3 D1**: spec 파일 → work_item_generator 주입 (G1 ⑥⑨ + G3 개선 핵심)
->      - `core/project_pipeline.py` `_save_specs()` 후 spec 경로를 `planning_files`에 추가
->      - 또는 `project_brief["domain_specs_summary"]` 필드로 spec 내용 요약 주입
->      - 작업 위치: `project_pipeline.py:894` (`_save_specs` 직후) + `planning_files` 조립(line 1022)
+>   ① ~~**P3 D1**: spec 파일 → work_item_generator 주입~~ ✅ 완료 (`cef06534`)
+>      - `project_brief["domain_specs_summary"]` 주입 + `planning_files` spec 경로 추가
 >   ② **P3 D2**: G1 ⑦ 시뮬레이션 문서 — implementation-design.md에 "Event Sequence / Phase Flow" 섹션 추가
 >      - `work_item_generator.py` `_generate_implementation_design` 프롬프트에 6 phase sequence 지시 추가
 >   ③ **P3 D3**: live run으로 G1/G2/G3 실측 (D1+D2 완료 후)
 >
-> ℹ️ **P3 정적 진단 결과** (2026-05-06):
->   - G1: 4-5/9 FAIL — ⑥⑨ spec 미주입, ⑦ 시뮬레이션 미대응
+> ℹ️ **P3 정적 진단 결과** (2026-05-06, D1 이전 기준):
+>   - G1: 4-5/9 FAIL — ⑥⑨ spec 미주입(→D1으로 수정), ⑦ 시뮬레이션 미대응(→D2)
 >   - G2: UNCERTAIN (6-7/8 추정) — live run 필요
->   - G3: 0.47 평균 FAIL (목표 0.70) — spec→work_item 단절이 핵심 원인
->   - 핵심 코드 갭: `_save_specs()` 결과가 `planning_files`/`project_brief`에 미포함 → D1으로 수정
->   - C2 테스트 갭: `test_c1_save_specs_writes_files`가 2종만 assert (5종 전체 미검증) — WARN
+>   - G3: 0.47 평균 FAIL (목표 0.70) — D1 수정으로 개선 기대, D3에서 실측
+>   - D1 수정: `_save_specs()` list 반환 + spec→`domain_specs_summary` 주입 + planning_files 추가
 >
 > ℹ️ **Advisory (선택 수정)**:
 >   - `_is_sufficient` / `_identify_unmet_gaps` match_keywords 불일치 → 통일하면 RecoveryLoop 효율 개선
