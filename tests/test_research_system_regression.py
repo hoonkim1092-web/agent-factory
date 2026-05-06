@@ -388,7 +388,7 @@ class TestC1DomainSpecGate(unittest.TestCase):
         self.assertFalse(pipeline._coverage_blocked({"coverage_report": {"block": False}}))
 
     def test_c1_save_specs_writes_files(self):
-        """_save_specs가 docs/specs/<slug>-*.md 파일을 디스크에 저장한다."""
+        """_save_specs가 docs/specs/<slug>-*.md 파일을 디스크에 저장하고 Path 리스트를 반환한다."""
         import tempfile
         from pathlib import Path
         from core.project_pipeline import ProjectPipeline
@@ -399,10 +399,75 @@ class TestC1DomainSpecGate(unittest.TestCase):
             "state_machine": "# State Machine\ncontent",
         }
         with tempfile.TemporaryDirectory() as ws:
-            pipeline._save_specs(specs, ws, "myslug")
+            paths = pipeline._save_specs(specs, ws, "myslug")
             specs_dir = Path(ws) / "docs" / "specs"
             self.assertTrue((specs_dir / "myslug-rules-spec.md").exists())
             self.assertTrue((specs_dir / "myslug-state-machine.md").exists())
+            # D1: 반환값이 Path 리스트인지 확인
+            self.assertIsInstance(paths, list)
+            self.assertEqual(len(paths), 2)
+            self.assertTrue(all(p.exists() for p in paths))
+
+    def test_d1_domain_specs_injected_into_project_brief(self):
+        """D1: _specs_dict가 project_brief['domain_specs_summary']로 주입된다."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch, MagicMock
+        from core.project_pipeline import ProjectPipeline
+
+        pipeline = self._make_pipeline()
+        mock_specs = {
+            "rules": "# Rules spec content",
+            "state_machine": "# State Machine content",
+        }
+        brief = {"research_plan": {"domain": "poker"}, "goal": "poker game"}
+
+        with tempfile.TemporaryDirectory() as ws:
+            with patch("core.spec_generator.SpecGenerator.generate", return_value=mock_specs):
+                # _verify_domain_spec → False (빈 디렉토리)
+                self.assertFalse(pipeline._verify_domain_spec(ws, "slug"))
+                # D1 로직 직접 실행
+                _specs_dict: dict = {}
+                if not pipeline._verify_domain_spec(ws, "slug"):
+                    from core.spec_generator import SpecGenerator
+                    _specs_dict = SpecGenerator().generate(brief)
+                    pipeline._save_specs(_specs_dict, ws, "slug")
+                if _specs_dict:
+                    brief["domain_specs_summary"] = _specs_dict
+                # brief에 주입됐는지 검증
+                self.assertIn("domain_specs_summary", brief)
+                self.assertIn("rules", brief["domain_specs_summary"])
+                self.assertEqual(brief["domain_specs_summary"]["rules"], "# Rules spec content")
+
+    def test_d1_existing_specs_loaded_into_brief(self):
+        """D1: 기존 spec 파일이 있으면 디스크에서 읽어 project_brief에 주입한다."""
+        import tempfile
+        from pathlib import Path
+        from core.project_pipeline import ProjectPipeline
+
+        pipeline = self._make_pipeline()
+        slug = "myslug"
+        with tempfile.TemporaryDirectory() as ws:
+            # 기존 spec 파일 미리 생성
+            specs_dir = Path(ws) / "docs" / "specs"
+            specs_dir.mkdir(parents=True)
+            (specs_dir / f"{slug}-rules-spec.md").write_text("# Pre-existing Rules", encoding="utf-8")
+
+            self.assertTrue(pipeline._verify_domain_spec(ws, slug))
+
+            # else 분기 로직 직접 실행
+            from core.spec_generator import SPEC_FILENAMES as _SFN
+            _key_by_fn = {v: k for k, v in _SFN.items()}
+            _spec_paths = []
+            _specs_dict: dict = {}
+            for _p in (Path(ws) / "docs" / "specs").glob(f"{slug}-*.md"):
+                _spec_paths.append(_p)
+                _fn = _p.name[len(slug) + 1:]
+                _specs_dict[_key_by_fn.get(_fn, _fn)] = _p.read_text(encoding="utf-8")
+
+            self.assertEqual(len(_spec_paths), 1)
+            self.assertIn("rules", _specs_dict)
+            self.assertEqual(_specs_dict["rules"], "# Pre-existing Rules")
 
 
 class TestC3AdrGenerator(unittest.TestCase):

@@ -216,15 +216,19 @@ class ProjectPipeline:
         from pathlib import Path
         return any((Path(workspace) / "docs" / "specs").glob(f"{slug}-*.md"))
 
-    def _save_specs(self, specs: dict, workspace: str, slug: str) -> None:
-        """SpecGenerator 출력을 docs/specs/<slug>-<filename> 에 저장."""
+    def _save_specs(self, specs: dict, workspace: str, slug: str) -> list:
+        """SpecGenerator 출력을 docs/specs/<slug>-<filename> 에 저장. 저장된 Path 리스트 반환."""
         from pathlib import Path
         from core.spec_generator import SPEC_FILENAMES
         specs_dir = Path(workspace) / "docs" / "specs"
         specs_dir.mkdir(parents=True, exist_ok=True)
+        saved = []
         for key, content in specs.items():
             filename = SPEC_FILENAMES.get(key, f"{key}.md")
-            (specs_dir / f"{slug}-{filename}").write_text(content, encoding="utf-8")
+            p = specs_dir / f"{slug}-{filename}"
+            p.write_text(content, encoding="utf-8")
+            saved.append(p)
+        return saved
 
     def _load_evidence(self, workspace: str, task_input: str) -> tuple[list[dict], list[dict]]:
         """docs/research/<safe_id(task_input)[:40]>-evidence.json에서 claims/sources를 읽어 반환.
@@ -884,14 +888,30 @@ class ProjectPipeline:
         # -- Work Items --
         slug = slug_from_brief(project_brief)
         _adr_path, _trace_path = None, None  # P2 C3+C4: domain 분기 내에서 설정
+        _spec_paths: list = []  # D1: planning_files 주입용
 
         # P2 C1: Domain Spec Gate — coverage BLOCK 시 work_item 생성 차단
         _domain = (project_brief.get("research_plan") or {}).get("domain", "")
         if _domain:
+            _specs_dict: dict = {}
             if not self._verify_domain_spec(target_workspace, slug):
                 from core.spec_generator import SpecGenerator
-                _specs = SpecGenerator().generate(project_brief)
-                self._save_specs(_specs, target_workspace, slug)
+                _specs_dict = SpecGenerator().generate(project_brief)
+                _spec_paths = self._save_specs(_specs_dict, target_workspace, slug)
+            else:
+                from pathlib import Path as _Path
+                from core.spec_generator import SPEC_FILENAMES as _SFN
+                _key_by_fn = {v: k for k, v in _SFN.items()}
+                for _p in (_Path(target_workspace) / "docs" / "specs").glob(f"{slug}-*.md"):
+                    _spec_paths.append(_p)
+                    try:
+                        _fn = _p.name[len(slug) + 1:]
+                        _specs_dict[_key_by_fn.get(_fn, _fn)] = _p.read_text(encoding="utf-8")
+                    except Exception:
+                        pass
+            # D1: work_item_generator 프롬프트에 spec 내용이 보이도록 project_brief에 주입
+            if _specs_dict:
+                project_brief["domain_specs_summary"] = _specs_dict
             # P2 C3+C4: ADR + traceability 자동 생성 (경로는 planning_files에 나중에 추가)
             _claims, _sources = self._load_evidence(target_workspace, task_input)
             from core.spec_generator import AdrGenerator, TraceabilityGenerator
@@ -1031,6 +1051,9 @@ class ProjectPipeline:
         for _extra_path in (_adr_path, _trace_path):
             if _extra_path is not None:
                 planning_files.append(to_portable_path(str(_extra_path)))
+        # D1: spec 파일 경로 추가
+        for _sp in _spec_paths:
+            planning_files.append(to_portable_path(str(_sp)))
 
         prepared = PreparedProject(
             run_id=run_id,
