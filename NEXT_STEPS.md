@@ -12,20 +12,41 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업**:
->   ① ~~**P3 D1**: spec 파일 → work_item_generator 주입~~ ✅ 완료 (`cef06534`)
->      - `project_brief["domain_specs_summary"]` 주입 + `planning_files` spec 경로 추가
->   ② ~~**P3 D2**: G1 ⑦ 시뮬레이션 문서~~ ✅ 완료 (`800622d3`)
->      - `_generate_implementation_design` 프롬프트 + fallback에 Event Sequence / Phase Flow 섹션 추가
->   ③ **P3 D3**: live run으로 G1/G2/G3 실측 (D1+D2 완료 → 지금 진입 가능)
->      - `af run "8인 포커 게임 구현"` 실행 후 생성된 work-item 문서 품질 측정
->      - G1 체크리스트 재채점, G3 점수 측정 (목표 0.70)
+> ✅ **다음 세션 최우선 작업 — P3 D3 (live run 실측)**:
 >
-> ℹ️ **P3 정적 진단 결과** (2026-05-06, D1 이전 기준):
->   - G1: 4-5/9 FAIL — ⑥⑨ spec 미주입(→D1으로 수정), ⑦ 시뮬레이션 미대응(→D2)
->   - G2: UNCERTAIN (6-7/8 추정) — live run 필요
->   - G3: 0.47 평균 FAIL (목표 0.70) — D1 수정으로 개선 기대, D3에서 실측
->   - D1 수정: `_save_specs()` list 반환 + spec→`domain_specs_summary` 주입 + planning_files 추가
+> **Step 1 — 실행**:
+> ```bash
+> python run_factory_cli.py --task "8인 포커 게임 구현" --workspace /tmp/d3-poker-test
+> ```
+> *(실행 중 LLM 호출 발생. 완료까지 2-5분 소요 예상)*
+>
+> **Step 2 — G1 재채점** (생성된 work-item docs 기준):
+> - ①② research coverage: `docs/research/*-coverage.json` match_rate 확인
+> - ③④ role plan + task board: `planning/role_plan.json` / `planning/task_board.json` 존재 확인
+> - ⑤ feature-spec.md 존재 + 분량(>300자)
+> - ⑥ **domain_specs_summary**: `planning/project_brief.json`에 필드 있는지 확인
+> - ⑦ **Event Sequence / Phase Flow**: `docs/work-items/*/implementation-design.md`에 섹션 있는지 확인
+> - ⑧ implementation-tasks.md 존재 + T-번호 형식
+> - ⑨ spec 파일 5종: `docs/specs/*-rules-spec.md` 등 존재 확인
+> - 목표: 7/9 이상 PASS
+>
+> **Step 3 — G3 점수 측정**:
+> ```bash
+> python -c "
+> import json, pathlib
+> brief = json.loads(pathlib.Path('/tmp/d3-poker-test/planning/project_brief.json').read_text())
+> specs = brief.get('domain_specs_summary', {})
+> print('domain_specs_summary keys:', list(specs.keys()))
+> print('G3 spec→brief 연결:', 'PASS' if specs else 'FAIL')
+> "
+> ```
+> - G3 목표: 0.70 (D1 이전 0.47)
+>
+> ℹ️ **D1+D2 수정 요약** (이번 세션):
+>   - D1: `project_brief["domain_specs_summary"]` 주입 + `_save_specs()` → list + planning_files 추가
+>   - D2: `_generate_implementation_design` + fallback에 Event Sequence / Phase Flow 섹션 추가
+>   - G1 기대: ⑥⑦⑨ 3항목 개선 → 7-8/9 달성 가능
+>   - G3 기대: spec→brief 연결 복원 → 0.70+ 달성 가능
 >
 > ℹ️ **Advisory (선택 수정)**:
 >   - `_is_sufficient` / `_identify_unmet_gaps` match_keywords 불일치 → 통일하면 RecoveryLoop 효율 개선
