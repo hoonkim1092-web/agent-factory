@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-06 KST — **P1 전체 완료** (H1/H2/H3 BLOCK 수정 + 14 tests PASS, 최신 커밋 `d32c1276`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-06 KST — **P2 C1+C2 완료** (Domain Spec Gate + SpecGenerator, 12 tests PASS, 최신 커밋 `7b0e188d`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -13,18 +13,27 @@
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
 > ✅ **다음 세션 최우선 작업**:
->   ① P1 자기검증 — 포커 build prompt 실제 실행: `collect_project_evidence(domain="poker")` 호출 → `docs/research/<slug>-coverage.md` 생성 확인 + `match_rate ≥ 0.70` 검증
->   ② P2 진입 판단 — `docs/2026-05-04-af-research-quality-gate-design.md` §5.3 C1 검토 (`prepare_documents` 앞에 coverage 게이트 추가 여부)
+>   ① P2 C3 — ADR 자동 생성: `docs/decisions/<slug>-rule-baseline.md` (설계문서 §5.3 C3)
+>   ② P2 C4 — traceability.md 자동 생성: `docs/research/<slug>-traceability.md` (설계문서 §5.3 C4)
+>   ③ P2 자기검증 — 포커 build prompt → `_verify_domain_spec` 게이트 발화 + spec 5종 생성 확인
 >
 > ℹ️ **Advisory (선택 수정)**:
 >   - `_is_sufficient` / `_identify_unmet_gaps` match_keywords 불일치 → 통일하면 RecoveryLoop 효율 개선
 >   - `requires_web` 분기 coverage 미생성 → 설계 의도 명시 or 생성 추가
 >   - `포커게임` 합성어 false-negative → 토큰화 또는 키워드 보강
+>   - `_save_specs` non-atomic write_text (af-critic WARN) → tempfile+os.replace 패턴 적용 가능
+>   - `test_c1_spec_generation_triggered` 테스트가 prepare_documents 직접 호출 안 함 (af-critic WARN)
 >
 > ⚠️ **hook auto-amend 분기 이슈**: hook 체인이 push 직후 chore 변경 추가 → auto-amend/force-push로 SHA 갈아끼움. 다른 PC 진입 시 `git pull --ff-only` 먼저 필수.
 > ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.
 
 ---
+
+## ✅ 완료 (2026-05-06 세션 4회차) — P2 C1+C2 Domain Spec Gate + SpecGenerator
+
+| 커밋 | 내용 |
+|------|------|
+| `7b0e188d` | feat(pipeline+spec_generator): P2 C1+C2 — Domain Spec Gate + SpecGenerator. 12 tests PASS. 3-tier WARN-only. |
 
 ## ✅ 완료 (2026-05-06 세션 3회차) — P1 H3 하드 가드 + 14 tests 완전 PASS
 
