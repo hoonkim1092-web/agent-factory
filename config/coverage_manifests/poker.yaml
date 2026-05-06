@@ -1,0 +1,32 @@
+# config/coverage_manifests/poker.yaml
+domain: poker
+version: "1.0"
+description: |
+  Poker (Texas Hold'em variants) build prompt에서 evidence/spec 둘 중 한 곳에라도
+  다음 8개 항목이 매칭되어야 work-item 생성 게이트 통과.
+  매칭 임계: match_rate ≥ 0.70 (6/8+) AND missing < 3. 코드 판정 기준과 일치.
+
+required_fields:
+  - hand_ranking            # 족보 (Royal Flush ~ High Card)
+  - blind_structure         # SB/BB, button rotation, 토너먼트 시 blind 증가
+  - betting_rules           # No-Limit / Pot-Limit / Fixed-Limit, 4 betting rounds
+  - side_pot                # all-in 발생 시 사이드팟 처리
+  - all_in                  # all-in 시점 검증, 콜 가능액 계산
+  - showdown                # 동률 처리, kicker 비교
+  - server_authoritative_events  # 서버가 검증해야 할 이벤트 목록 (deal/raise/fold/showdown 등)
+  - client_hidden_state     # 클라이언트에 노출 금지 정보 (다른 플레이어의 hole cards 등)
+
+match_keywords:
+  hand_ranking: ["hand ranking", "족보", "royal flush", "straight flush", "kicker"]
+  blind_structure: ["blind", "small blind", "big blind", "button", "blinds increase"]
+  betting_rules: ["no-limit", "pot-limit", "fixed-limit", "betting round", "preflop", "flop", "turn", "river"]
+  side_pot: ["side pot", "사이드팟", "main pot"]
+  all_in: ["all-in", "all in", "올인"]
+  showdown: ["showdown", "쇼다운", "tie", "split pot"]
+  server_authoritative_events: ["server authoritative", "server-side validation", "권위 서버", "deal event", "betting event"]
+  client_hidden_state: ["hidden state", "private state", "hole cards", "client-side hidden", "정보 비대칭"]
+
+# 매니페스트 활성 조건
+trigger:
+  domain: poker
+  min_research_depth: normal  # shallow일 때는 매니페스트 미적용

@@ -595,6 +595,140 @@ Rules:
             return ""
         return self._compact_text(insight, limit=1200)
 
+    def _load_domain_manifest(self, domain: str) -> list[str] | None:
+        """B3: domain → required_fields list 로드. 파일 없거나 domain="" → None."""
+        if not domain:
+            return None
+        from pathlib import Path
+        import yaml
+        path = Path(__file__).parent.parent / "config" / "coverage_manifests" / f"{domain}.yaml"
+        if not path.exists():
+            return None
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            return data.get("required_fields") or []
+        except Exception:
+            return None
+
+    def _identify_unmet_gaps(
+        self,
+        local_refs: list[dict],
+        web_refs: list[dict],
+        checklist: list[str] | None,
+    ) -> list[str]:
+        """B1 helper: checklist 항목 중 refs 텍스트에 매칭 안 된 항목 반환."""
+        if not checklist:
+            return []
+        joined = " ".join(
+            (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
+            for r in local_refs + web_refs
+        ).lower()
+        return [item for item in checklist if item.replace("_", " ") not in joined and item.lower() not in joined]
+
+    def _emit_evidence_files(
+        self,
+        slug: str,
+        web_refs: list[dict],
+        structured_evidence: dict,
+    ) -> None:
+        """B4: docs/research/<slug>-evidence.json 저장 (claims ↔ sources 구조화)."""
+        from pathlib import Path
+        out_dir = Path(os.getcwd()) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        sources = [
+            {
+                "source_id": f"S{i:03d}",
+                "url": ref.get("url") or "",
+                "title": ref.get("title") or "",
+                "trust_score": ref.get("trust_score", 0.0),
+                "retrieval_method": "tavily_search",
+                "fetched_at": now_iso(),
+            }
+            for i, ref in enumerate(web_refs, 1)
+        ]
+        claims_raw = structured_evidence.get("source_backed_claims") or []
+        claims = []
+        for i, claim_text in enumerate(claims_raw, 1):
+            if isinstance(claim_text, dict):
+                claim_str = str(claim_text.get("claim") or claim_text)
+                llm_source_ids = claim_text.get("source_ids") or []
+                sid = llm_source_ids[0] if llm_source_ids else (f"S{min(i, len(sources)):03d}" if sources else "")
+            else:
+                claim_str = str(claim_text)
+                sid = f"S{min(i, len(sources)):03d}" if sources else ""
+            claims.append({
+                "claim_id": f"C{i:03d}",
+                "claim": claim_str,
+                "source_id": sid,
+                "authority": "secondary",
+                "confidence": 0.7,
+                "applies_to": [],
+            })
+        (out_dir / f"{slug}-evidence.json").write_text(
+            json.dumps({"claims": claims, "sources": sources}, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    def _emit_coverage_report(
+        self,
+        domain: str,
+        domain_checklist: list[str] | None,
+        local_refs: list[dict],
+        web_refs: list[dict],
+        slug: str,
+        rounds_used: int,
+    ) -> dict:
+        """B5: docs/research/<slug>-coverage.json + .md 저장. block 여부 반환."""
+        if not domain_checklist or not domain:
+            return {}
+        from pathlib import Path
+        import yaml
+        manifest_path = Path(__file__).parent.parent / "config" / "coverage_manifests" / f"{domain}.yaml"
+        match_keywords: dict = {}
+        if manifest_path.exists():
+            try:
+                data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+                match_keywords = data.get("match_keywords") or {}
+            except Exception:
+                pass
+        joined = " ".join(
+            (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
+            for r in local_refs + web_refs
+        ).lower()
+        matched, missing = [], []
+        for field in domain_checklist:
+            keywords = match_keywords.get(field, [field.replace("_", " ")])
+            if any(kw.lower() in joined for kw in keywords):
+                matched.append(field)
+            else:
+                missing.append(field)
+        match_rate = len(matched) / len(domain_checklist) if domain_checklist else 1.0
+        block = match_rate < 0.7 or len(missing) >= 3
+        report = {
+            "domain": domain,
+            "manifest_version": "1.0",
+            "rounds": rounds_used,
+            "matched": matched,
+            "missing": missing,
+            "match_rate": round(match_rate, 3),
+            "block": block,
+        }
+        out_dir = Path(os.getcwd()) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / f"{slug}-coverage.json").write_text(
+            json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        md_lines = [
+            f"# Coverage Report — {slug}",
+            "",
+            f"Domain: `{domain}` | Rounds: {rounds_used} | Match rate: {match_rate:.1%} | Block: {block}",
+            "",
+            "| Field | Status |",
+            "|-------|--------|",
+        ] + [f"| {f} | matched |" for f in matched] + [f"| {f} | missing |" for f in missing]
+        (out_dir / f"{slug}-coverage.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
+        return report
+
     def _is_sufficient(
         self,
         local_refs: list[dict],
@@ -766,6 +900,8 @@ Rules:
         web_refs: list[dict] = []
         llm_prior_refs: list[dict] = []
         sufficient: bool = True  # requires_web/fast_synthesis 분기에선 gate 미사용
+        _recovery_rounds = 0  # B1: RecoverySearchLoop 라운드 카운터
+        _domain_checklist: list[str] | None = None  # B1: else 분기에서 할당, 이후 재사용
 
         if research_plan.requires_web:
             # fresh_lookup/deep/live: local + secondary 병렬 수집 (sufficiency gate 무시)
@@ -789,14 +925,26 @@ Rules:
             # fast_synthesis + no secondary: 순차, 웹 수집 없음
             local_refs = self._collect_local_references(task_input, target_workspace)
         else:
-            # archive_research 또는 기타: sufficiency gate 유지 (순차)
+            # archive_research 또는 기타: RecoverySearchLoop (B1)
+            _domain_checklist = self._load_domain_manifest(research_plan.domain)
+            _max_rounds = 3 if research_plan.research_depth == "deep" else 2
             local_refs = self._collect_local_references(task_input, target_workspace)
-            sufficient = self._is_sufficient(local_refs, task_input)
-            if not sufficient:
-                if os.getenv("TAVILY_API_KEY"):
-                    web_refs = self._collect_web_references(task_input)
-                else:
-                    llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+            _recovery_rounds = 0
+            while _recovery_rounds < _max_rounds:
+                sufficient = self._is_sufficient(local_refs, task_input, domain_checklist=_domain_checklist)
+                if sufficient:
+                    break
+                _unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
+                if not _unmet or not os.getenv("TAVILY_API_KEY"):
+                    # 갭 없거나 Tavily 미설정 → 기존 1회 escalation 후 탈출
+                    if os.getenv("TAVILY_API_KEY"):
+                        web_refs = self._collect_web_references(task_input)
+                    else:
+                        llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+                    break
+                for gap in _unmet:
+                    web_refs.extend(self._collect_web_references(f"{task_input} {gap}", limit=2))
+                _recovery_rounds += 1
 
         # -- virtual chunk 인덱싱 (Unified RAG) --
         # _collect_local_references가 캐싱한 pipeline에 직접 올려야 동일 인덱스에서 검색 가능
@@ -861,6 +1009,11 @@ Rules:
                 task_input, mode, source_pack
             )
 
+        # B1: RecoverySearchLoop 최종 상태 (_domain_checklist는 else 분기에서 할당됨)
+        _final_unmet: list[str] = []
+        if _domain_checklist:
+            _final_unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
+
         initial_evidence = {
             "workspace_notes": workspace_notes,
             "local_references": local_refs,
@@ -872,6 +1025,7 @@ Rules:
             "research_plan": research_plan.to_dict(),
             "source_pack": source_pack,
             "structured_evidence": structured_evidence,
+            "unmet_gaps": _final_unmet,  # B1
         }
 
         # §4.4.5 router gap detection — hint_gaps is None = first call only (max 1 retry)
@@ -887,6 +1041,23 @@ Rules:
                     comparison_mode=comparison_mode,
                     hint_gaps=router_gaps,
                 )
+
+        # B4: evidence.json, B5: coverage report 저장 (hint_gaps 최종 결과에서만)
+        _slug = safe_id(task_input)[:40]
+        try:
+            self._emit_evidence_files(_slug, web_refs, structured_evidence)
+            _coverage = self._emit_coverage_report(
+                research_plan.domain,
+                _domain_checklist,  # W4: 중복 로딩 제거, else 분기에서 할당된 값 재사용
+                local_refs,
+                web_refs,
+                _slug,
+                rounds_used=_recovery_rounds,
+            )
+            if _coverage:
+                initial_evidence["coverage_report"] = _coverage
+        except Exception:
+            pass
 
         return initial_evidence
 
