@@ -1,23 +1,23 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-06 KST — **P0 전체 완료** (`_detect_domain` BLOCK 최종 수정 포함, 커밋 `8046bc67`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-06 KST — **P0 완전 종료 + 전체 미커밋 동기화 완료** (최종 커밋 `ecc79d78`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
 > ```bash
-> git pull --ff-only                       # origin 흡수 (hook이 자동 amend 후 force-push했을 수 있음 — 이 PC에서도 다른 PC에서도 발생 중)
+> git pull --ff-only                       # origin 흡수
 > python start_db.py agent-factory         # Supabase 메모리 pull
 > ```
 >
-> `--ff-only`가 reject되면 origin이 force-update된 흔적 — `git fetch && git status`로 분기 확인 후 결정.
+> `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업** (P0 완전 종료):
+> ✅ **다음 세션 최우선 작업**:
 >   ① P0 자기검증 — 포커 build prompt 실행: `project_brief["original_request"]` byte-for-byte + `docs/research/<slug>-project-brief.json` 파일 존재 + plan.md References 자기참조 노이즈 없음 + web_refs 상위 4건 중 권위 도메인 ≥ 1건 (Tavily 환경)
->   ② P1 진입 준비 — 설계문서 §5.2 B1(Evidence Matrix/RecoverySearchLoop) 검토 후 구현
-> ⚠️ **hook auto-amend 분기 이슈** (이번 세션 30회 amend chain 관찰 + 15:41 origin forced-update): hook 체인이 push 직후 워킹트리에 chore 변경 추가 → 자동 `--amend` 또는 별도 chore commit + force-push로 SHA 갈아끼움. 다른 PC에서도 같은 패턴 작동 중.
+>   ② P1 진입 — 설계문서 `docs/2026-05-04-af-research-quality-gate-design.md` §5.2 B1(Evidence Matrix/RecoverySearchLoop) 검토 후 구현
+> ⚠️ **hook auto-amend 분기 이슈**: hook 체인이 push 직후 chore 변경 추가 → auto-amend/force-push로 SHA 갈아끼움. 다른 PC 진입 시 `git pull --ff-only` 먼저 필수.
 > ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.
-> ⚠️ docs/reviews/* 는 git untracked — review 파일은 PC 로컬에만 존재
+> ⚠️ P0 Advisory(미수정): `포커게임` 합성어 false-negative (현재 동작 무관, P1 진입 전 토큰셋 보강 권장)
 
 ---
 
