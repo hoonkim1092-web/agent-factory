@@ -38,12 +38,16 @@
 > - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
->    - 현황: pre_commit_review.py 2단계(본문 참조 파일 mtime) 체크만 있음
->    - 계획: 1단계(직접 수정 파일) + 2단계 순차 검사로 강화
+> 1. **review_gate.py referenced file 감지 강화** (중간 복잡도):
+>    - 현황: review_gate.py는 직접 수정 파일만 체크 (line 211). pre_commit_review.py는 referenced file 모두 완성
+>    - 계획: `_extract_referenced_files()` + mtime 체크를 review_gate.py로 이식 (pre_commit_review.py 로직 참고)
+>    - 이점: review_gate.py의 stale 판정이 complete해짐
 > 2. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 머신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
 >    - DEFAULT_EXCLUDE_GLOBS 제외만으로 우선 안정화, 필요시 later phase에서 구현
-> 3. **TestB1MaxRoundsCapPreventsInfiniteLoop 추적**: recovery loop 웹 호출 148 vs expected ≤16 (기존 결함, 별도 추적)
+> 3. **TestB1MaxRoundsCapPreventsInfiniteLoop 근본 원인 추적** (디버깅):
+>    - 증상: recovery loop 웹 호출 148 vs expected ≤16
+>    - 의심처: quality contract 경로 / recovery escalation 루프
+>    - 우선순위: 중간 (cross-review에서 별도 추적 권장)
 >
 > ⚠️ **운영 메모**:
 > - `codex_cli` 인증됨 (이번 세션에서 ping 명령 fix 후 AVAILABLE 확인). gemini는 여전히 AUTH_EXPIRED
