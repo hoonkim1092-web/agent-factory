@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST 21:35 — **메모리 payload fix + P4 검증 + research_router 의미론 정합성 3가지 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-07 KST — **3-Tier Quality Gate 구현 완료**. 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,7 +12,18 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **이번 세션 (2026-05-07) 완료 작업**:
+> ✅ **이번 세션 (2026-05-07) 추가 완료 작업**:
+> - **3-Tier Quality Gate 구현**: 설계 → 구현 완료 (7개 파일 + 1개 신규 yaml)
+>   - `core/review_runner.py`: detect_providers → provider_detect 위임 + detect_blocked_providers 추가
+>   - `core/review_report.py`: AUTH_EXPIRED 선행 BLOCK, SKIP verdict, enterprise 게이팅 제거
+>   - `core/project_pipeline.py`: T1 QA gate(_load_doc_contents + run_structural_gate("work_item_doc_set") + 1회 retry), SKIP 통과 처리
+>   - `core/rubric_compiler.py`: rule 핸들러 5종(doc_set_present/covers_deliverables/keyword_count_min/phase_count_match/task_section_ref_ratio)
+>   - `core/pipeline_quality.py`: SKIP=1.0 매핑
+>   - `rubrics/work_item_doc_set.yaml`: 신규 (pass=4.0/warn=3.0)
+>   - `skills/evaluator/doc_qa/skill.py`: SKIP 패치
+>   - **미완료**: §5 테스트 9개 (Provider 0/1/2+, AUTH_EXPIRED, T1 retry 등)
+>
+✅ **이번 세션 (2026-05-07) 완료 작업**:
 > - **research_router.py WARN 해결** (`1227fbb2`): domain 필드 의미론 정합성 + false-positive 방지
 >   - Finding 1 (High): domain = hard gate 의미 명확화 (project_pipeline spec generation 조건)
 >   - Finding 2 (Medium): 하이브리드 매칭 — CJK substring + 영문 word-boundary
