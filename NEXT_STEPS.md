@@ -1,7 +1,14 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **3-Tier Gate live run 완료 (포커 게임)**. 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-08 KST — **3-Tier Gate live run + work-item 병렬 생성 조사 진입 대기**. 브랜치: `2026-04-14-build-diet`.
+>
+> ## 🔥 다음 세션 진입 시 (`/clear` 직후) 우선 작업
+> **work-item 5종 병렬 생성 가능성 검증** — 핸드오프 문서 먼저 읽기:
+> ```bash
+> cat docs/2026-05-08-work-item-parallel-generation-investigation.md
+> ```
+> 검증 절차 §4 Step 1~3 순서대로 진행. 결정 기준 §5 참고.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
