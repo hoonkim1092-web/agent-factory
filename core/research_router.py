@@ -215,7 +215,7 @@ class ResearchRouter:
         """§4.2.1 알고리즘으로 request → ResearchPlan."""
         scores = self._compute_signal_scores(request)
         result = self._select_mode(scores)
-        result.domain = self._detect_domain(request)  # A5: request 텍스트에서 도메인 감지
+        result.domain = self._detect_domain_hints(request)  # A5: domain hint (overlay 선택 보조, gate 아님)
         return result
 
     def detect_complexity_gaps(
@@ -258,12 +258,19 @@ class ResearchRouter:
         "allin", "flop", "turn", "river", "ante", "showdown",
     })
 
-    def _detect_domain(self, request: str) -> str:
-        """A5: 요청 텍스트에서 도메인을 감지. 현재 포커만 지원."""
+    def _detect_domain_hints(self, request: str) -> str:
+        """A5: 요청 텍스트에서 도메인 힌트 감지 (overlay 선택 보조, quality gate 결정 아님).
+
+        반환값이 ""이어도 QualityContractBuilder는 base/artifact/capability 패키지를 적용한다.
+        """
         text_lower = (request or "").lower()
         if any(tok in text_lower for tok in self._POKER_TOKENS):
             return "poker"
         return ""
+
+    def _detect_domain(self, request: str) -> str:
+        """Deprecated: _detect_domain_hints()를 사용하세요."""
+        return self._detect_domain_hints(request)
 
     def _compute_signal_scores(self, request: str) -> dict[str, int]:
         """§4.2 7개 신호 점수화. plan()과 detect_complexity_gaps() 공유."""

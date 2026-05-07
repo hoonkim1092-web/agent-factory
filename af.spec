@@ -28,6 +28,7 @@ a = Analysis(
         ('skills', 'skills'),
         ('config', 'config'),
         ('policy.yaml', '.'),
+        ('core/research/packs', 'core/research/packs'),
     ],
     hiddenimports=[
         # ── core ──
@@ -58,6 +59,10 @@ a = Analysis(
         'core.evolution_ledger',
         'core.executor',
         'core.failure_classifier',
+        'core.research',
+        'core.research.work_spec',
+        'core.research.quality_contract',
+        'core.research.checklist_merger',
         'core.research_router',
         'core.researcher',
         'core.research_verifier',

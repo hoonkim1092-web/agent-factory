@@ -1,0 +1,28 @@
+items:
+  - id: game_loop
+    title: Game loop design
+    required: true
+    priority: high
+    acceptance: Evidence describes the main game loop, turn/round structure, and state transitions.
+    match_keywords: [game loop, turn, round, phase, 게임 루프, 턴, 라운드]
+
+  - id: game_state_model
+    title: Game state model
+    required: true
+    priority: high
+    acceptance: Evidence defines what constitutes the game state and how it is managed.
+    match_keywords: [game state, state machine, 게임 상태, state model]
+
+  - id: action_validation
+    title: Action validation
+    required: true
+    priority: high
+    acceptance: Evidence explains how player actions are validated for legality.
+    match_keywords: [action validation, valid action, illegal move, 액션 검증]
+
+  - id: win_loss_condition
+    title: Win/loss condition
+    required: true
+    priority: high
+    acceptance: Evidence defines how the game ends and how winners are determined.
+    match_keywords: [win condition, lose condition, 승리 조건, 패배 조건, game over, 게임 종료]

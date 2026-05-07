@@ -1,0 +1,14 @@
+items:
+  - id: rule_enforcement
+    title: Rule enforcement
+    required: true
+    priority: high
+    acceptance: Evidence describes how game rules are enforced and violations are rejected.
+    match_keywords: [rule enforcement, rules engine, 규칙 엔진, game rules, 게임 룰]
+
+  - id: edge_case_rules
+    title: Edge case rules coverage
+    required: false
+    priority: medium
+    acceptance: Evidence addresses unusual rule interactions and edge cases.
+    match_keywords: [edge case, corner case, exception rule, 예외 규칙]

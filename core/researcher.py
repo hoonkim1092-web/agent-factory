@@ -595,6 +595,28 @@ Rules:
             return ""
         return self._compact_text(insight, limit=1200)
 
+    def _build_quality_contract(self, task_input: str, research_plan) -> "QualityContract | None":
+        """Phase 5: WorkSpec → QualityContract 빌드. 실패 시 None (fallback to _load_domain_manifest)."""
+        import logging
+        _log = logging.getLogger(__name__)
+        try:
+            from core.research.work_spec import WorkSpecExtractor
+            from core.research.quality_contract import QualityContractBuilder
+            from core.research.checklist_merger import ChecklistMerger
+
+            domain_hint = getattr(research_plan, "domain", "") or ""
+            extractor = WorkSpecExtractor()
+            work_spec = extractor.extract(
+                task_input,
+                domain_hints=[domain_hint] if domain_hint else [],
+            )
+            contract = QualityContractBuilder().build(work_spec)
+            contract.checklist = ChecklistMerger().merge(contract.checklist)
+            return contract
+        except Exception as e:
+            _log.debug("_build_quality_contract fallback: %s", e)
+            return None
+
     def _load_domain_manifest(self, domain: str) -> list[str] | None:
         """B3: domain → required_fields list 로드. 파일 없거나 domain="" → None."""
         if not domain:
@@ -948,8 +970,16 @@ Rules:
             # fast_synthesis + no secondary: 순차, 웹 수집 없음
             local_refs = self._collect_local_references(task_input, target_workspace)
         else:
-            # archive_research 또는 기타: RecoverySearchLoop (B1)
-            _domain_checklist = self._load_domain_manifest(research_plan.domain)
+            # archive_research 또는 기타: RecoverySearchLoop (B1 → Phase 5 QualityContract)
+            _quality_contract = self._build_quality_contract(task_input, research_plan)
+            _domain_checklist = (
+                [item.id.replace("_", " ") for item in _quality_contract.checklist]
+                if _quality_contract
+                else self._load_domain_manifest(research_plan.domain)
+            )
+            if not _domain_checklist:
+                # Phase 5: 체크리스트 없음 = 통과 아님 → degraded evidence로 처리
+                _domain_checklist = ["requirements_coverage", "architecture_rationale"]
             _max_rounds = 3 if research_plan.research_depth == "deep" else 2
             local_refs = self._collect_local_references(task_input, target_workspace)
             _recovery_rounds = 0
@@ -959,13 +989,12 @@ Rules:
                     break
                 _unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
                 if not _unmet or not os.getenv("TAVILY_API_KEY"):
-                    # 갭 없거나 Tavily 미설정 → 기존 1회 escalation 후 탈출
                     if os.getenv("TAVILY_API_KEY"):
                         web_refs = self._collect_web_references(task_input)
                     else:
                         llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
                     break
-                for gap in _unmet:
+                for gap in _unmet[:8]:  # 라운드당 최대 8개 갭 검색 (예산 캡)
                     web_refs.extend(self._collect_web_references(f"{task_input} {gap}", limit=2))
                 _recovery_rounds += 1
 
