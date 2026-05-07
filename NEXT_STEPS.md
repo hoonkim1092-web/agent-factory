@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST 18:55 — **P4 QualityContract + 게이트/프로바이더 인프라 fix 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-07 KST 21:15 — **메모리 push 페이로드 폭주 근본 fix 완료 + P4 인프라**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -13,6 +13,9 @@
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
 > ✅ **이번 세션 (2026-05-07) 완료 작업**:
+> - **메모리 push 페이로드 폭주 근본 fix** (`d848439f`): `scripts/project_context_sync.py`
+>   - DEFAULT_EXCLUDE_GLOBS에 chat 폴더 추가: `data/memory/general/claude_chat/**`, `codex_chat/**`
+>   - 효과: 19k 파일 / 93MB → 17MB payload 축소, 5xx timeout 해결
 > - **P4 QualityContract 구현** (`10c5879b`): core/research/ 서브패키지 + 6 YAML 팩 + 30 tests PASS
 >   - WorkSpec, WorkSpecExtractor, QualityContractBuilder, ChecklistMerger
 >   - frozen build guard, path traversal 방지, recovery loop 8개/라운드 캡
@@ -25,19 +28,13 @@
 > - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **🔥 [긴급] memory push 페이로드 폭주 근본 fix**: `scripts/project_context_sync.py` `collect_global_snapshot()` 결함
->    - 증상: 매 세션마다 push payload가 누적 → 5xx (Cloudflare upstream timeout) 반복 → 메모리 동기화 실패
->    - 원인: `data/memory/general/claude_chat/` + `codex_chat/` 폴더에 chat history 파일이 정리 없이 영구 누적 (이번 세션 기준 19,767개 / 93MB)
->    - 임시 우회 (이번 세션 적용): 24h 이상 chat 파일 16,679개 삭제 → payload 17MB로 축소 → push 성공
->    - 근본 fix 방향:
->      a) `collect_global_snapshot()`에 max-size cap (예: 25MB) 추가 + 큰 폴더 스킵/요약
->      b) chat 폴더에 자동 TTL (e.g., 7일 후 삭제 또는 압축 아카이브)
->      c) chat 폴더를 push collector에서 통째로 제외 (chat은 PC-local로 유지)
-> 2. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
+> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
 >    - `python run_factory_cli.py --research-only "8인 네트워크 포커게임"` 으로 검증
-> 3. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
+> 2. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
 >    - `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
-> 4. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
+> 3. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
+> 4. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 매신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
+>    - DEFAULT_EXCLUDE_GLOBS 제외만으로 우선 안정화, 필요시 later phase에서 구현
 >
 > ⚠️ **운영 메모**:
 > - `codex_cli` 인증됨 (이번 세션에서 ping 명령 fix 후 AVAILABLE 확인). gemini는 여전히 AUTH_EXPIRED
