@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **P3 D1+D2 완료** (`800622d3`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-07 KST — **P3 D3+D3b 완료** (`da6740d0`). 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,41 +12,35 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업 — P3 D3 (live run 실측)**:
+> ✅ **다음 세션 최우선 작업 — P3 D3 최종 검증 (live run 재실행)**:
 >
-> **Step 1 — 실행**:
+> D3+D3b 수정 후 live run 재실행으로 G1 ⑥⑨ 실제 PASS 확인 필요:
+>
+> **실행**:
 > ```bash
-> python run_factory_cli.py --task "8인 포커 게임 구현" --workspace /tmp/d3-poker-test
+> python run_factory_cli.py --project d3-verify --projects-root /tmp --task "8인 포커 게임 구현" --pipeline project --fsa
 > ```
-> *(실행 중 LLM 호출 발생. 완료까지 2-5분 소요 예상)*
+> *(완료까지 15-20분 소요)*
 >
-> **Step 2 — G1 재채점** (생성된 work-item docs 기준):
-> - ①② research coverage: `docs/research/*-coverage.json` match_rate 확인
-> - ③④ role plan + task board: `planning/role_plan.json` / `planning/task_board.json` 존재 확인
-> - ⑤ feature-spec.md 존재 + 분량(>300자)
-> - ⑥ **domain_specs_summary**: `planning/project_brief.json`에 필드 있는지 확인
-> - ⑦ **Event Sequence / Phase Flow**: `docs/work-items/*/implementation-design.md`에 섹션 있는지 확인
-> - ⑧ implementation-tasks.md 존재 + T-번호 형식
-> - ⑨ spec 파일 5종: `docs/specs/*-rules-spec.md` 등 존재 확인
-> - 목표: 7/9 이상 PASS
->
-> **Step 3 — G3 점수 측정**:
+> **G1 채점**:
 > ```bash
-> python -c "
+> python3 -c "
 > import json, pathlib
-> brief = json.loads(pathlib.Path('/tmp/d3-poker-test/planning/project_brief.json').read_text())
+> brief = json.loads(pathlib.Path('/tmp/d3-verify/planning/project_brief.json').read_text())
 > specs = brief.get('domain_specs_summary', {})
-> print('domain_specs_summary keys:', list(specs.keys()))
-> print('G3 spec→brief 연결:', 'PASS' if specs else 'FAIL')
+> rp = brief.get('research_plan', {})
+> print('domain:', rp.get('domain'))
+> print('G1-6 domain_specs_summary:', 'PASS' if specs else 'FAIL', list(specs.keys()))
 > "
+> find /tmp/d3-verify/docs/specs -type f 2>/dev/null | sort && echo 'G1-9: PASS' || echo 'G1-9: FAIL (no specs)'
 > ```
-> - G3 목표: 0.70 (D1 이전 0.47)
+> - 목표: G1 ⑥⑨ 모두 PASS (D3+D3b 효과 검증)
 >
-> ℹ️ **D1+D2 수정 요약** (이번 세션):
->   - D1: `project_brief["domain_specs_summary"]` 주입 + `_save_specs()` → list + planning_files 추가
->   - D2: `_generate_implementation_design` + fallback에 Event Sequence / Phase Flow 섹션 추가
->   - G1 기대: ⑥⑦⑨ 3항목 개선 → 7-8/9 달성 가능
->   - G3 기대: spec→brief 연결 복원 → 0.70+ 달성 가능
+> ℹ️ **D3+D3b 수정 요약** (이번 세션):
+>   - D3: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함)
+>   - D3b: researcher.py escalation 경로에서 `research_plan=None` 진입 시 domain 유실 버그 수정
+>   - D3 live run 1차: G1 3/9 → 근본 원인 발견 (domain="" 두 가지 경로)
+>   - 137 tests PASS
 >
 > ℹ️ **Advisory (선택 수정)**:
 >   - `_is_sufficient` / `_identify_unmet_gaps` match_keywords 불일치 → 통일하면 RecoveryLoop 효율 개선
