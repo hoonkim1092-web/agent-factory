@@ -951,6 +951,8 @@ git commit → .githooks/pre-commit
   ├─ Blueprint 스테이징 체크 (기존)
   └─ scripts/pre_commit_review.py (결과 확인 전용, claude 미호출)
        ├─ docs/reviews/ 에서 파일별 최신 리뷰 수집
+       ├─ Verdict 추출: BLOCK만 severity 카운트, WARN/PASS는 0 (advisory)
+       ├─ stale 판정 강화: 트리거 파일 + 본문 참조 파일 mtime 모두 검사
        ├─ severity 집계 (Critical/High/Medium/Low)
        └─ 판정: PASS(exit 0) / WARN(exit 0) / BLOCK(exit 1)
 ```

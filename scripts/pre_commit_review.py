@@ -103,29 +103,96 @@ def _find_latest_review(stem: str, workspace: str) -> str | None:
     return max(matches, key=os.path.getmtime)
 
 
+# 리뷰 본문에서 참조되는 소스 파일 경로 추출 패턴
+# 예: "core/research/quality_contract.py:67", "`af.spec`", "core/research_router.py"
+_REFERENCED_FILE_PATTERN = re.compile(
+    r"(?:core/[\w/]+\.py|[\w/]+\.spec|model_utils\.py|run_factory_cli\.py|version\.py)",
+)
+
+# Final Verdict 추출 — "### Verdict: BLOCK" / "### Verdict: WARN" / "### Verdict: PASS"
+_VERDICT_PATTERN = re.compile(r"^###?\s*Verdict:\s*(BLOCK|WARN|PASS)", re.MULTILINE | re.IGNORECASE)
+
+
+def _read_review(review_path: str) -> str:
+    try:
+        with open(review_path, encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+
+def _extract_verdict(review_content: str) -> str:
+    """리뷰 본문에서 최상위 Verdict(BLOCK/WARN/PASS) 추출. 없으면 'UNKNOWN'."""
+    m = _VERDICT_PATTERN.search(review_content)
+    return m.group(1).upper() if m else "UNKNOWN"
+
+
+def _extract_referenced_files(review_content: str) -> set[str]:
+    """리뷰 본문이 지적한 소스 파일 경로 집합 추출 (중복 제거)."""
+    return {p for p in _REFERENCED_FILE_PATTERN.findall(review_content)}
+
+
 def _is_stale(review_path: str, source_path: str, workspace: str) -> bool:
-    """리뷰 결과가 소스 파일보다 오래됐으면 True."""
-    abs_source = os.path.join(workspace, source_path)
-    if not os.path.exists(abs_source):
-        return False  # 소스가 없으면 (삭제된 파일) stale 아님
+    """리뷰가 stale인지 판정.
+
+    조건 (둘 중 하나라도 충족 시 stale):
+      A) 트리거 소스 파일(source_path) mtime > review mtime
+      B) 리뷰 본문이 참조한 다른 소스 파일들이 모두 review mtime 이후 수정됨
+         (= 리뷰가 지적한 결함이 모두 수정 시도됨)
+    """
     try:
         review_mtime = os.path.getmtime(review_path)
-        source_mtime = os.path.getmtime(abs_source)
-        return review_mtime < source_mtime
     except OSError:
         return True
 
+    # A) 트리거 파일 자체 변경
+    abs_source = os.path.join(workspace, source_path)
+    if os.path.exists(abs_source):
+        try:
+            if os.path.getmtime(abs_source) > review_mtime:
+                return True
+        except OSError:
+            pass
+
+    # B) 본문 참조 파일들이 모두 review 이후 변경됐다면 stale
+    content = _read_review(review_path)
+    refs = _extract_referenced_files(content)
+    refs.discard(source_path)  # 트리거 파일은 위에서 처리
+    if refs:
+        all_newer = True
+        any_exists = False
+        for ref in refs:
+            abs_ref = os.path.join(workspace, ref)
+            if not os.path.exists(abs_ref):
+                continue
+            any_exists = True
+            try:
+                if os.path.getmtime(abs_ref) <= review_mtime:
+                    all_newer = False
+                    break
+            except OSError:
+                all_newer = False
+                break
+        if any_exists and all_newer:
+            return True
+
+    return False
+
 
 def _parse_severity(review_path: str) -> dict[str, int]:
-    """리뷰 파일에서 severity별 건수를 추출한다."""
+    """리뷰 파일에서 severity별 건수를 추출한다.
+
+    Verdict가 BLOCK이 아니면 (WARN/PASS) 모든 건수를 0으로 보고한다 — advisory 정책.
+    """
     counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    try:
-        with open(review_path, encoding="utf-8") as f:
-            content = f.read()
-        for severity, pattern in _SEVERITY_PATTERNS.items():
-            counts[severity] = len(pattern.findall(content))
-    except Exception:
-        pass
+    content = _read_review(review_path)
+    if not content:
+        return counts
+    verdict = _extract_verdict(content)
+    if verdict != "BLOCK":
+        return counts  # WARN/PASS/UNKNOWN → 자동 차단 안 함
+    for severity, pattern in _SEVERITY_PATTERNS.items():
+        counts[severity] = len(pattern.findall(content))
     return counts
 
 
