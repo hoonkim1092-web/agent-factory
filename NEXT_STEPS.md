@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **3-Tier Quality Gate 구현 완료**. 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-08 KST — **3-Tier Gate live run 완료 (포커 게임)**. 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,7 +12,15 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **이번 세션 (2026-05-07) 추가 완료 작업**:
+> ✅ **이번 세션 (2026-05-08) 완료 작업**:
+> - **포커 게임 전체 파이프라인 실행 성공**: `projects/poker-game-test/` 완전 생성
+>   - ADR 1개, 도메인 스펙 5개(client-view/event-protocol/rules-spec/server-arch/state-machine)
+>   - work-item 5종 문서 (feature-plan/feature-spec/implementation-design/implementation-tasks/approval-gate)
+>   - claude_cli 120s/300s 타임아웃 → codex_cli 자동 failover 확인 (CLI 순차 호출 동작 검증)
+> - **3-Tier Gate 설계 문서 교차검증 결과** 2건 추가 (`docs/reviews/2026-05-07-*`)
+> - **미완료**: §5 테스트 9개 (Provider 0/1/2+, AUTH_EXPIRED, T1 retry)
+>
+✅ **이번 세션 (2026-05-07) 추가 완료 작업**:
 > - **3-Tier Quality Gate 구현**: 설계 → 구현 완료 (7개 파일 + 1개 신규 yaml)
 >   - `core/review_runner.py`: detect_providers → provider_detect 위임 + detect_blocked_providers 추가
 >   - `core/review_report.py`: AUTH_EXPIRED 선행 BLOCK, SKIP verdict, enterprise 게이팅 제거
