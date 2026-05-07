@@ -4005,3 +4005,33 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (6)**: `core/researcher.py, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextexecute_taskchanged_files_9cla_5cd8519161b9_20260409_024321_002878.json, projects/global_hoon_main/data/memory/general/codex_chat/user_taskyou_are_a_senior_code_reviewer_review_the_following_changes_conciselytask_contextreturn_agent_factory_okchanged_5123b91fc595_20260409_024321_007650.json`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 00:06 — `2026-04-14-build-diet` (deb9d43b)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py
+
+**Changed (3)**: `core/project_pipeline.py, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 00:36 — `2026-04-14-build-diet` (a7b91646)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/work_item_generator.py
+
+**Changed (9)**: `core/work_item_generator.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 02:22 — `2026-04-14-build-diet` (87dcf487)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/project_pipeline.py
+
+**Changed (9)**: `core/project_pipeline.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+_Review skipped (--no-llm or LLM unavailable)_
