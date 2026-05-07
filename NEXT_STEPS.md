@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST 21:25 — **메모리 payload fix + P4 WorkSpecExtractor 검증 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-07 KST 21:35 — **메모리 payload fix + P4 검증 + research_router 의미론 정합성 3가지 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -13,6 +13,11 @@
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
 > ✅ **이번 세션 (2026-05-07) 완료 작업**:
+> - **research_router.py WARN 해결** (`1227fbb2`): domain 필드 의미론 정합성 + false-positive 방지
+>   - Finding 1 (High): domain = hard gate 의미 명확화 (project_pipeline spec generation 조건)
+>   - Finding 2 (Medium): 하이브리드 매칭 — CJK substring + 영문 word-boundary
+>   - False-positive 방지: "delivery" → "river" 미감지, "antecedent" → "ante" 미감지
+>   - 132 테스트 PASS (102 research_router + 30 quality_contract)
 > - **P4 Phase 4 WorkSpecExtractor 검증** (`--research-only "8인 네트워크 포커게임"`): 실제 LLM 추출 정확도 확인
 >   - WorkSpecExtractor: goal/constraints/skills/tech-stack/data-model/user-flows 46개 필드 추출 성공
 >   - Domain detection: "포커게임" 복합어 정확히 "poker" 도메인 식별
@@ -33,14 +38,12 @@
 > - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
->    - 현황: `ResearchPlan.domain` = "" 또는 포커는 정상, 하지만 docstring/validation 모호
->    - 선택: `ResearchPlan.domain_hint` 분리 (값/null 구분) 또는 docstring 명확화
-> 2. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
+> 1. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
 >    - 현황: pre_commit_review.py 2단계(본문 참조 파일 mtime) 체크만 있음
 >    - 계획: 1단계(직접 수정 파일) + 2단계 순차 검사로 강화
-> 3. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 매신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
+> 2. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 머신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
 >    - DEFAULT_EXCLUDE_GLOBS 제외만으로 우선 안정화, 필요시 later phase에서 구현
+> 3. **TestB1MaxRoundsCapPreventsInfiniteLoop 추적**: recovery loop 웹 호출 148 vs expected ≤16 (기존 결함, 별도 추적)
 >
 > ⚠️ **운영 메모**:
 > - `codex_cli` 인증됨 (이번 세션에서 ping 명령 fix 후 AVAILABLE 확인). gemini는 여전히 AUTH_EXPIRED
