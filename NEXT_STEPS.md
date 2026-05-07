@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **P3 D3 substring 패치 종결 + P4 researcher LLM 재설계 예정**. 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-07 KST — **P4 QualityContract 구현 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,31 +12,19 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업 — P4 researcher LLM-driven 재설계**:
+> ✅ **P4 QualityContract 구현 완료** (커밋 `d47509c6`):
+> - `core/research/` 서브패키지: WorkSpec, WorkSpecExtractor, QualityContractBuilder, ChecklistMerger
+> - YAML 팩 6개: base, game, multiplayer, realtime, rules_engine, poker domain overlay
+> - `researcher.py`: RecoverySearchLoop → QualityContract item ID 기반 gap check (8개/라운드 캡)
+> - `research_router.py`: `_detect_domain_hints()` 리네임 + substring 패치
+> - frozen build guard + path traversal 방지
+> - 30개 테스트 전체 통과 (`test_quality_contract.py`)
 >
-> **배경**: P3 D3 live run 검증 과정에서 `_detect_domain()` 설계 결함 발견.
-> - `포커게임` 합성어 false-negative (regex word-boundary 한계)
-> - 더 근본적으로: domain 감지 실패 시 무조건 통과 → 99% 케이스에서 품질 게이트 무용지물
-> - Manus AI 비교: LLM-driven 방식이 훨씬 우월 (hardcoded 토큰셋 불필요)
->
-> **P3 D3 종결 결정**: `_detect_domain()` substring 패치(1줄)로 포커 합성어 감지 fix → D3 검증 종결.
-> 근본 재설계는 P4로 이관. D3 full pipeline live run은 더 이상 진행하지 않음.
->
-> **P4 재설계 방향** (새 브랜치 `2026-05-XX-researcher-llm-redesign`):
-> ```
-> 요청 → LLM: domain / project type / critical requirements / risk areas 추출
->      → dynamic checklist 생성 (LLM이 항상 생성, domain="" 허용 안 함)
->      → optional static overlay 적용 (poker.yaml → 고신뢰 도메인 보조 힌트로 강등)
->      → RecoverySearchLoop: dynamic checklist + overlay 기준 gap check
-> ```
-> - 핵심: `checklist is None` = 버그 신호. 통과 아님.
-> - YAML overlay: 삭제 아님, "LLM 기본 + static 보조" 구조로 재정의
-> - 출력 schema 먼저 정의 후 구현 (다운스트림 SpecGenerator/work_item_generator 호환)
->
-> ℹ️ **D3+D3b+D3c 수정 요약**:
->   - D3: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함)
->   - D3b: researcher.py escalation 경로에서 `research_plan=None` 진입 시 domain 유실 버그 수정
->   - D3c: `_detect_domain()` substring 매칭으로 교체 (합성어 false-negative 수정)
+> 📋 **다음 세션 작업 후보**:
+> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor LLM 통합 검증 (live run으로 추출 정확도 확인)
+> 2. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
+>    → `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
+> 3. **P3 D3 최종 검증**: `--research-only` 플래그로 포커게임 live run → domain 감지 확인
 >
 > ⚠️ **hook auto-amend 분기 이슈**: hook 체인이 push 직후 chore 변경 추가 → auto-amend/force-push로 SHA 갈아끼움. 다른 PC 진입 시 `git pull --ff-only` 먼저 필수.
 > ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.
