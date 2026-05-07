@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST 21:15 — **메모리 push 페이로드 폭주 근본 fix 완료 + P4 인프라**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-07 KST 21:25 — **메모리 payload fix + P4 WorkSpecExtractor 검증 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -13,6 +13,11 @@
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
 > ✅ **이번 세션 (2026-05-07) 완료 작업**:
+> - **P4 Phase 4 WorkSpecExtractor 검증** (`--research-only "8인 네트워크 포커게임"`): 실제 LLM 추출 정확도 확인
+>   - WorkSpecExtractor: goal/constraints/skills/tech-stack/data-model/user-flows 46개 필드 추출 성공
+>   - Domain detection: "포커게임" 복합어 정확히 "poker" 도메인 식별
+>   - Quality contract integration: D3 위험 식별 + 검증 전략 포함
+>   - Source backing: Manus AI 시뮬레이션 + codex 설계문서 자동 추적 완료
 > - **메모리 push 페이로드 폭주 근본 fix** (`d848439f`): `scripts/project_context_sync.py`
 >   - DEFAULT_EXCLUDE_GLOBS에 chat 폴더 추가: `data/memory/general/claude_chat/**`, `codex_chat/**`
 >   - 효과: 19k 파일 / 93MB → 17MB payload 축소, 5xx timeout 해결
@@ -28,12 +33,13 @@
 > - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
->    - `python run_factory_cli.py --research-only "8인 네트워크 포커게임"` 으로 검증
-> 2. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
->    - `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
-> 3. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
-> 4. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 매신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
+> 1. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
+>    - 현황: `ResearchPlan.domain` = "" 또는 포커는 정상, 하지만 docstring/validation 모호
+>    - 선택: `ResearchPlan.domain_hint` 분리 (값/null 구분) 또는 docstring 명확화
+> 2. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
+>    - 현황: pre_commit_review.py 2단계(본문 참조 파일 mtime) 체크만 있음
+>    - 계획: 1단계(직접 수정 파일) + 2단계 순차 검사로 강화
+> 3. **chat 폴더 자동 TTL 추가** (선택사항): 로컬 매신 chat 파일 자동 정리 (7일 후 삭제 또는 압축)
 >    - DEFAULT_EXCLUDE_GLOBS 제외만으로 우선 안정화, 필요시 later phase에서 구현
 >
 > ⚠️ **운영 메모**:
