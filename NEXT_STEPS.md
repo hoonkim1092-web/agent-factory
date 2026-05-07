@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **P4 QualityContract 구현 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-07 KST 18:55 — **P4 QualityContract + 게이트/프로바이더 인프라 fix 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,22 +12,30 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **P4 QualityContract 구현 완료** (커밋 `d47509c6`):
-> - `core/research/` 서브패키지: WorkSpec, WorkSpecExtractor, QualityContractBuilder, ChecklistMerger
-> - YAML 팩 6개: base, game, multiplayer, realtime, rules_engine, poker domain overlay
-> - `researcher.py`: RecoverySearchLoop → QualityContract item ID 기반 gap check (8개/라운드 캡)
-> - `research_router.py`: `_detect_domain_hints()` 리네임 + substring 패치
-> - frozen build guard + path traversal 방지
-> - 30개 테스트 전체 통과 (`test_quality_contract.py`)
+> ✅ **이번 세션 (2026-05-07) 완료 작업**:
+> - **P4 QualityContract 구현** (`10c5879b`): core/research/ 서브패키지 + 6 YAML 팩 + 30 tests PASS
+>   - WorkSpec, WorkSpecExtractor, QualityContractBuilder, ChecklistMerger
+>   - frozen build guard, path traversal 방지, recovery loop 8개/라운드 캡
+> - **codex_cli ping fix** (`6b062bf9`/`206c3c1d`): `exec -s read-only ok` → `--version` (stdin hang 수정)
+>   - 결과: `codex_cli AVAILABLE` 정상 감지 → 다음 커밋부터 실제 2-provider 크로스 리뷰 동작
+> - **review-gate stale 판정 강화** (`2e4598d3`): pre_commit_review.py
+>   - Verdict 인식: BLOCK 리뷰만 카운트, WARN/PASS는 0 (advisory 정책 일관)
+>   - 본문 참조 파일 mtime 검사: 옛 리뷰가 다른 파일 결함 지적해도 그 파일들이 모두 fix되면 stale 처리
+> - **.gitignore 정리** (`1a1387c2`): `.a/`, `.tmp_af_fsa_publish/`, `dist/`, `*.egg-info/` 제외
+> - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor LLM 통합 검증 (live run으로 추출 정확도 확인)
+> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
+>    - `python run_factory_cli.py --research-only "8인 네트워크 포커게임"` 으로 검증
 > 2. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
->    → `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
-> 3. **P3 D3 최종 검증**: `--research-only` 플래그로 포커게임 live run → domain 감지 확인
+>    - `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
+> 3. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
 >
-> ⚠️ **hook auto-amend 분기 이슈**: hook 체인이 push 직후 chore 변경 추가 → auto-amend/force-push로 SHA 갈아끼움. 다른 PC 진입 시 `git pull --ff-only` 먼저 필수.
-> ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.
+> ⚠️ **운영 메모**:
+> - `codex_cli` 인증됨 (이번 세션에서 ping 명령 fix 후 AVAILABLE 확인). gemini는 여전히 AUTH_EXPIRED
+> - `tests/test_*` 4개 (Sprint 1 F4~F7) **로컬 보존, 커밋 안 함** — 1개 production 미구현으로 fail
+> - `docs/KakaoTalk_*.mp4` 사용자 직접 삭제 대기
+> - `AF_PRE_COMMIT_REVIEW=0` 우회 사용 이력 있음 (P4 커밋 시) — review-gate fix로 다음부터 자동 통과 기대
 
 ---
 

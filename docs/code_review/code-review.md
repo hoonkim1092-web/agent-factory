@@ -4447,3 +4447,25 @@ _Review skipped (--no-llm or LLM unavailable)_
   }
 }
 ```
+
+---
+
+## 2026-05-07 18:48 — `2026-05-07-memory-gitignore-cleanup` (1a1387c2)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\scripts\pre_commit_review.py
+
+**Changed (1)**: `scripts/pre_commit_review.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 18:49 — `2026-05-07-memory-gitignore-cleanup` (2e4598d3)
+
+**Context**: fix(pre_commit_review): stale 판정 + Verdict 인식 강화 — 구 리뷰 허위 BLOCK 방지
+
+**Changed (1)**: `docs/code_review/code-review.md`
+
+### Findings
+
+No issues found.
