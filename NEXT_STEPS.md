@@ -25,17 +25,26 @@
 > - **docs/skills 동기화 완료**: docs/Manus, docs/참고, docs/research, docs/reviews 46건, skills/dp/, dp/skill-spec.yaml
 >
 > 📋 **다음 세션 작업 후보**:
-> 1. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
+> 1. **🔥 [긴급] memory push 페이로드 폭주 근본 fix**: `scripts/project_context_sync.py` `collect_global_snapshot()` 결함
+>    - 증상: 매 세션마다 push payload가 누적 → 5xx (Cloudflare upstream timeout) 반복 → 메모리 동기화 실패
+>    - 원인: `data/memory/general/claude_chat/` + `codex_chat/` 폴더에 chat history 파일이 정리 없이 영구 누적 (이번 세션 기준 19,767개 / 93MB)
+>    - 임시 우회 (이번 세션 적용): 24h 이상 chat 파일 16,679개 삭제 → payload 17MB로 축소 → push 성공
+>    - 근본 fix 방향:
+>      a) `collect_global_snapshot()`에 max-size cap (예: 25MB) 추가 + 큰 폴더 스킵/요약
+>      b) chat 폴더에 자동 TTL (e.g., 7일 후 삭제 또는 압축 아카이브)
+>      c) chat 폴더를 push collector에서 통째로 제외 (chat은 PC-local로 유지)
+> 2. **P4 Phase 4 (LLM additions)**: WorkSpecExtractor live run 검증 (실제 LLM 추출 정확도 확인)
 >    - `python run_factory_cli.py --research-only "8인 네트워크 포커게임"` 으로 검증
-> 2. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
+> 3. **research_router.py WARN 해결**: `domain` 필드 advisory vs. hard-gate 불일치 정리
 >    - `ResearchPlan.domain_hint` 분리 또는 docstring 정정 중 선택
-> 3. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
+> 4. **review_gate.py 1단계 강화 검토**: 본문 참조 파일이 변경되면 stale-review BLOCK 발화 (지금은 2단계만 체크)
 >
 > ⚠️ **운영 메모**:
 > - `codex_cli` 인증됨 (이번 세션에서 ping 명령 fix 후 AVAILABLE 확인). gemini는 여전히 AUTH_EXPIRED
 > - `tests/test_*` 4개 (Sprint 1 F4~F7) **로컬 보존, 커밋 안 함** — 1개 production 미구현으로 fail
 > - `docs/KakaoTalk_*.mp4` 사용자 직접 삭제 대기
 > - `AF_PRE_COMMIT_REVIEW=0` 우회 사용 이력 있음 (P4 커밋 시) — review-gate fix로 다음부터 자동 통과 기대
+> - **Supabase 메모리 push 성공 확인 (2026-05-07 19:25)**: chat 정리 후 17MB payload로 정상 동기화 완료. Mac 진입 시 `start_db.py agent-factory` 정상 동작 예상
 
 ---
 
