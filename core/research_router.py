@@ -88,7 +88,7 @@ class ResearchPlan:
     risk_level: str = "normal"
     # A5: Quality Gate 3종 플래그
     requires_research: bool = False      # deep_source_research / live_project_analysis 또는 external_stack_score >= 2
-    domain: str = ""                     # "" | "poker" | <future>
+    domain: str = ""                     # "" | "poker" | <future> — hard gate, project_pipeline에서 spec generation 활성화 조건
     research_depth: str = "shallow"      # shallow | normal | deep
 
     @classmethod
@@ -215,7 +215,7 @@ class ResearchRouter:
         """§4.2.1 알고리즘으로 request → ResearchPlan."""
         scores = self._compute_signal_scores(request)
         result = self._select_mode(scores)
-        result.domain = self._detect_domain_hints(request)  # A5: domain hint (overlay 선택 보조, gate 아님)
+        result.domain = self._detect_domain_hints(request)  # A5: domain (hard gate) — project_pipeline에서 spec generation 활성화 조건
         return result
 
     def detect_complexity_gaps(
@@ -259,13 +259,33 @@ class ResearchRouter:
     })
 
     def _detect_domain_hints(self, request: str) -> str:
-        """A5: 요청 텍스트에서 도메인 힌트 감지 (overlay 선택 보조, quality gate 결정 아님).
+        """A5: 요청 텍스트에서 도메인 감지 (project_pipeline에서 hard gate).
 
-        반환값이 ""이어도 QualityContractBuilder는 base/artifact/capability 패키지를 적용한다.
+        반환: "poker" | ""
+        - "" 반환: domain spec generation 스킵, base/artifact/capability 패키지만 적용
+        - "poker" 반환: domain spec generation 활성화 → SpecGenerator + ADR + coverage gate
+
+        매칭 전략:
+        - CJK 토큰 (포커, 홀덤): substring 매칭 (CJK는 word boundary 미지원)
+        - 영문 토큰 (poker, blind, flop 등): word-boundary 매칭으로 false-positive 방지
+          * "delivery" → "river" 미감지
+          * "antecedent" → "ante" 미감지
         """
+        import re
         text_lower = (request or "").lower()
-        if any(tok in text_lower for tok in self._POKER_TOKENS):
-            return "poker"
+
+        # CJK 토큰 (substring matching)
+        cjk_tokens = {"포커", "홀덤"}
+        for tok in cjk_tokens:
+            if tok in text_lower:
+                return "poker"
+
+        # 영문 토큰 (word-boundary matching)
+        eng_tokens = self._POKER_TOKENS - cjk_tokens
+        for tok in eng_tokens:
+            if re.search(r'\b' + re.escape(tok) + r'\b', text_lower):
+                return "poker"
+
         return ""
 
     def _detect_domain(self, request: str) -> str:
