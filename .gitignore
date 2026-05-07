@@ -53,6 +53,11 @@ build/
 # --- Session resume brief (auto-regenerated every turn, volatile) ---
 /resume_brief.md
 
+# --- Project memory data (synced via Supabase start_db/end_db, not git) ---
+# All files under data/memory/ are auto-generated runtime data.
+# Cross-PC sync is handled by project_context_sync.py → Supabase.
+projects/*/data/memory/
+
 # --- System-generated runtime logs & traces (auto-regenerated, machine-local) ---
 .system_generated/logs/
 .system_generated/cache/
