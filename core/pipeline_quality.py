@@ -59,7 +59,7 @@ class AggregatedVerdict:
         "cross_verification": 0.14,
     }
 
-    _VERDICT_SCORE_MAP = {"PASS": 1.0, "WARN": 0.6, "BLOCK": 0.2}
+    _VERDICT_SCORE_MAP = {"PASS": 1.0, "SKIP": 1.0, "WARN": 0.6, "BLOCK": 0.2}
 
     def evaluate(
         self,

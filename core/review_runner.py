@@ -35,12 +35,34 @@ _AUTONOMOUS_PROVIDERS = {"codex", "gemini"}
 # ── 프로바이더 탐지 ──────────────────────────────────────────────────────────
 
 def detect_providers() -> list[str]:
-    """설치된 CLI 프로바이더 목록 반환."""
-    available = []
-    for name, cmd in CLI_COMMANDS.items():
-        if shutil.which(cmd):
-            available.append(name)
-    return available
+    """AVAILABLE 상태 provider만 반환. 반환 순서는 CLI_COMMANDS 순서(claude→codex→gemini) 보존."""
+    try:
+        from core.provider_detect import detect_provider_states, ProviderState
+        states = detect_provider_states()
+        id_to_key = {"claude_cli": "claude", "codex_cli": "codex", "gemini_cli": "gemini"}
+        avail = {id_to_key[pid] for pid, r in states.items()
+                 if r.state == ProviderState.AVAILABLE and pid in id_to_key}
+        return [k for k in ("claude", "codex", "gemini") if k in avail]
+    except Exception:
+        # provider_detect 사용 불가 시 기존 shutil.which fallback
+        available = []
+        for name, cmd in CLI_COMMANDS.items():
+            if shutil.which(cmd):
+                available.append(name)
+        return available
+
+
+def detect_blocked_providers() -> list[str]:
+    """AUTH_EXPIRED 상태 provider 목록 반환 — DocumentReviewSession BLOCK 메시지용."""
+    try:
+        from core.provider_detect import detect_provider_states, ProviderState
+        states = detect_provider_states()
+        id_to_key = {"claude_cli": "claude", "codex_cli": "codex", "gemini_cli": "gemini"}
+        blocked = {id_to_key[pid] for pid, r in states.items()
+                   if r.state == ProviderState.AUTH_EXPIRED and pid in id_to_key}
+        return [k for k in ("claude", "codex", "gemini") if k in blocked]
+    except Exception:
+        return []
 
 
 def select_review_pair(providers: list[str]) -> tuple[str, str]:

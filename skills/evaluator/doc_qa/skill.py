@@ -45,7 +45,7 @@ class DocQASkill:
                 project_brief: dict — 원천 데이터 (선택)
 
         Returns:
-            verdict: "PASS" | "WARN" | "BLOCK"
+            verdict: "PASS" | "WARN" | "BLOCK" | "SKIP"
             report_path: str
             findings: list[dict]
             confidence: float
@@ -98,7 +98,7 @@ class DocQASkill:
             final_report = report
             verdict = report.judge.verdict if report.judge else "PASS"
 
-            if verdict == "PASS":
+            if verdict in ("PASS", "SKIP"):
                 break
             if verdict == "WARN" or round_num == session.max_rounds:
                 break
@@ -129,7 +129,7 @@ class DocQASkill:
             "verdict": final_report.judge.verdict,
             "report_path": report_path,
             "findings": [],  # 상세 findings는 보고서 파일에 기록
-            "confidence": 1.0 if final_report.judge.verdict == "PASS" else 0.6,
+            "confidence": 1.0 if final_report.judge.verdict in ("PASS", "SKIP") else 0.6,
         }
 
     def _load_documents(self, workspace: str, slug: str) -> dict[str, str]:

@@ -334,7 +334,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-05-06 -->
+<!-- last_updated: 2026-05-07 -->
 
 **클래스:** `ProjectPipeline`
 
@@ -354,17 +354,22 @@ AgentRunner.run(agent, task_input, workspace)
 - **P0 A6** (2026-05-05): `prepare_brief()` → `docs/research/<slug>-project-brief.json` 보조 저장
 - **P2 C1** (2026-05-06): `prepare_documents()` Work Items 직전 Domain Spec Gate — `research_plan.domain` 감지 시 `_verify_domain_spec()` → 미존재면 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise
 - **P2 C3+C4** (2026-05-06): Domain 분기 내 ADR + traceability 자동 생성. `_load_evidence(workspace, task_input)` → `safe_id(task_input)[:40]` slug 사용(researcher.py 파일명 일치). `AdrGenerator.generate()` / `TraceabilityGenerator.generate()`. 생성 결과 `planning_files`에 추가.
+- **3-Tier Quality Gate** (2026-05-07): `prepare_documents()` work-item 생성 직후 3단계 품질 게이트.
+  - T1: `run_structural_gate({documents, project_brief}, "work_item_doc_set")` — RubricCompiler로 4종 문서 구조 검사. FAIL 시 `_refine_document`로 1회 보완 후 재평가.
+  - T2/T3: `DocumentReviewSession.run_review()` — provider 수에 따라 critic(1+)·cross(2+)·judge(2+) 실행. provider 0개면 SKIP 반환(통과 간주). AUTH_EXPIRED 1개 이상이면 BLOCK + 재인증 안내.
+  - SKIP verdict는 PASS와 동일하게 통과 처리. `pipeline_quality._VERDICT_SCORE_MAP["SKIP"] = 1.0`.
 
 **예외:**
 - `ResearchGateBlocked(RuntimeError)`: coverage BLOCK 시 work_item 생성 차단
 
-**P2 헬퍼 (C1+C3+C4):**
+**헬퍼 (P2 C1+C3+C4 + 3-Tier):**
 - `_verify_domain_spec(workspace, slug) → bool`: `docs/specs/<slug>-*.md` 존재 여부
 - `_save_specs(specs, workspace, slug) → list`: `SpecGenerator` 결과 → `docs/specs/<slug>-<filename>.md`, 저장된 Path 리스트 반환. **P3 D1**: 기존 spec 존재 시 glob 로드 분기 추가, `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가
 - `_coverage_blocked(research_evidence) → bool`: `coverage_report.block` 필드
 - `_load_evidence(workspace, task_input) → (claims, sources)`: `safe_id(task_input)[:40]`-evidence.json. `json.JSONDecodeError` 협소 catch.
 - `_save_adr(workspace, slug, adr_md) → Path`: `docs/decisions/<slug>-rule-baseline.md` 원자 write
 - `_save_traceability(workspace, slug, trace_md) → Path`: `docs/research/<slug>-traceability.md` 원자 write
+- `_load_doc_contents(work_item_files) → dict[str, str]`: `{name: path}` → `{name: content}`. OSError 시 빈 문자열.
 
 ---
 
@@ -1296,6 +1301,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-07 | (unreleased) | feat(pipeline): 3-Tier Quality Gate 통합 — **D1**: `core/review_runner.detect_providers()`를 `core/provider_detect.py`에 위임(auth ping + 1h 캐시). `detect_blocked_providers()` 신규. **D2**: `DocumentReviewSession.run_review()` enterprise 게이팅 제거 — cross/judge 활성화 조건을 `level=="enterprise"`에서 `len(providers)>=2`로 변경. AUTH_EXPIRED 선행 체크(BLOCK), provider 0개는 PASS→SKIP 분리. **D3**: T1 QA에 work-item 문서 세트 검사 추가 — `_load_doc_contents()` 헬퍼 + `run_structural_gate({documents, project_brief}, "work_item_doc_set")`(FAIL 시 `_refine_document` 1회 retry). **D4**: `pipeline_quality._VERDICT_SCORE_MAP["SKIP"]=1.0` 추가(미검증 통과 메트릭 오염 방지). SKIP verdict 하위 호환: `project_pipeline.py:1011` + `doc_qa/skill.py:99,132` 패치. `rubrics/work_item_doc_set.yaml` 신규(5 dimensions, pass=4.0/warn=3.0). `core/rubric_compiler._run_check()` rule 핸들러 5종 추가(doc_set_present/covers_deliverables/keyword_count_min/phase_count_match/task_section_ref_ratio). |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적(21→22회) — skill-usage.jsonl 프로모션 이벤트 3건 추가, skill-eval-report.json 피드백 카운트 갱신, skills/dp/meta.yaml 메타데이터 동기화, code-review.md 리뷰 내용 업데이트 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 및 스킬 메타 갱신 — skill-usage.jsonl 프로모션 이벤트 3건 추가(feedback_total 20→22), skill-eval-report.json 갱신, skills/registry.yaml 업데이트, code-review.md 리뷰 내용 갱신, dp/meta.yaml 메타 수정 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 업데이트 — skill-usage.jsonl feedback_total_events 21→22 추가, skill-eval-report.json 갱신, skill-promotion.json 갱신, skills/dp/meta.yaml 수정, skills/registry.yaml 수정 |

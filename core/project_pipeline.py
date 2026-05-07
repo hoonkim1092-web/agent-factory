@@ -280,6 +280,17 @@ class ProjectPipeline:
 
     # ── Structural Gate (Rubric-based) ─────────────────────────────────
 
+    def _load_doc_contents(self, work_item_files: dict[str, str]) -> dict[str, str]:
+        """{name: path} → {name: content} 변환. 읽기 실패 시 빈 문자열."""
+        out: dict[str, str] = {}
+        for name, path in work_item_files.items():
+            try:
+                with open(path, encoding="utf-8") as f:
+                    out[name] = f.read()
+            except OSError:
+                out[name] = ""
+        return out
+
     def run_structural_gate(self, artifact: dict, artifact_type: str = "architecture_plan") -> dict:
         """Rubric Compiler를 사용해 artifact를 평가하고 gate 결과를 반환.
 
@@ -980,6 +991,38 @@ class ProjectPipeline:
         except Exception as _gate_err:
             _safe_print(f"[Pipeline] structural gate skipped: {_gate_err}")
 
+        # -- T1 QA: work-item 문서 세트 구조 검사 --
+        try:
+            _wi_doc_contents = self._load_doc_contents(work_item_files)
+            _wi_doc_gate = self.run_structural_gate(
+                {"documents": _wi_doc_contents, "project_brief": project_brief},
+                "work_item_doc_set",
+            )
+            if not _wi_doc_gate.get("pass"):
+                _safe_print(f"[Pipeline] T1 QA work-item gate failed: {_wi_doc_gate.get('errors')}")
+                # T1 retry: 1회, _refine_document로 문서 보완
+                try:
+                    from core.work_item_generator import _refine_document
+                    _t1_feedback = "; ".join(_wi_doc_gate.get("errors") or ["구조적 품질 기준 미달"])
+                    for _dname in list(_wi_doc_contents):
+                        _wi_doc_contents[_dname] = _refine_document(
+                            original=_wi_doc_contents[_dname],
+                            feedback=_t1_feedback,
+                            project_brief=project_brief,
+                        )
+                        if _dname in work_item_files:
+                            from core.file_io import write_text
+                            write_text(work_item_files[_dname], _wi_doc_contents[_dname])
+                    _wi_doc_gate = self.run_structural_gate(
+                        {"documents": _wi_doc_contents, "project_brief": project_brief},
+                        "work_item_doc_set",
+                    )
+                    _safe_print(f"[Pipeline] T1 QA retry: {_wi_doc_gate.get('status')}")
+                except Exception as _t1_retry_err:
+                    _safe_print(f"[Pipeline] T1 QA retry skipped: {_t1_retry_err}")
+        except Exception as _wi_gate_err:
+            _safe_print(f"[Pipeline] T1 QA work-item gate skipped: {_wi_gate_err}")
+
         # -- 문서 교차검증 QA --
         cross_review_result = None
         try:
@@ -1010,10 +1053,10 @@ class ProjectPipeline:
                         )
                         _verdict = (_report.judge.verdict if _report.judge else "PASS")
 
-                        if _verdict == "PASS":
-                            _rpath = _report.save(target_workspace)
+                        if _verdict in ("PASS", "SKIP"):
+                            _rpath = _report.save(target_workspace) if _verdict == "PASS" else ""
                             cross_review_result = {
-                                "verdict": "PASS",
+                                "verdict": _verdict,
                                 "confidence": 1.0,
                                 "report_path": _rpath,
                             }
