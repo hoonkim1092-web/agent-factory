@@ -1294,6 +1294,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적(21→22회) — skill-usage.jsonl 프로모션 이벤트 3건 추가, skill-eval-report.json 피드백 카운트 갱신, skills/dp/meta.yaml 메타데이터 동기화, code-review.md 리뷰 내용 업데이트 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 및 스킬 메타 갱신 — skill-usage.jsonl 프로모션 이벤트 3건 추가(feedback_total 20→22), skill-eval-report.json 갱신, skills/registry.yaml 업데이트, code-review.md 리뷰 내용 갱신, dp/meta.yaml 메타 수정 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 업데이트 — skill-usage.jsonl feedback_total_events 21→22 추가, skill-eval-report.json 갱신, skill-promotion.json 갱신, skills/dp/meta.yaml 수정, skills/registry.yaml 수정 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 — skill-usage.jsonl 프로모션 이벤트 3건 추가(feedback_total_events 21→22→23), skill-eval-report.json·skill-promotion.json 갱신, skills/registry.yaml 및 skills/dp/meta.yaml 메타데이터 동기화, code-review.md 리뷰 내용 업데이트 |

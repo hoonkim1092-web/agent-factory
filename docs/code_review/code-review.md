@@ -4045,3 +4045,362 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (8)**: `core/researcher.py, data/skill-usage.jsonl, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 16:41 — `2026-05-07-memory-gitignore-cleanup` (21265c53)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\run_factory_cli.py
+
+**Changed (1)**: `run_factory_cli.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 17:12 — `2026-05-07-memory-gitignore-cleanup` (19c95f6f)
+
+**Context**: fix(research_router): P3 D3c — _detect_domain substring 매칭 + 홀덤 토큰 추가
+
+**Changed (1)**: `docs/code_review/code-review.md`
+
+### Findings
+
+No issues found.
+
+The diff is a documentation-only append to `code-review.md` — a skipped-review log entry with no code logic, security surface, or error handling to evaluate.
+
+---
+
+## 2026-05-07 17:58 — `2026-05-07-memory-gitignore-cleanup` (106f8f3a)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- **Medium** `data/skill-usage.jsonl:21-23` — 신규 항목의 `report_path`/`promotion_path`가 Windows 절대 경로(`D:\\hoonProJect\\...`)로 하드코딩됨. 이전 항목들은 Unix 경로(`/Users/hoon/...`). 경로가 머신 종속적이어서 다른 PC에서 재현 불가.
+- **Medium** `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`인 상태에서 `draft → candidate` 프로모션이 반복 발생(이벤트 #18~22). 평가 지표가 전부 0인데도 `external_eval_passed` 사유로 승격되는 것은 프로모션 게이트 로직 결함 가능성.
+- **Low** `data/skill-usage.jsonl` — `feedback_total_events`만 18→22로 증가하고 `historical_score`는 52에서 고정. 동일 조건으로 동일 결과를 반복 기록하는 중복 이벤트로 보임 — 이벤트 중복 방지(idempotency) 체크 부재.
+- **Low** `data/skill-usage.jsonl:23` — diff 마지막 줄이 잘려 있음(`"installable": false,` 이후 누락). 파일이 JSON Lines 형식이므로 불완전 행이 파서 오류를 유발할 수 있음.
+- **Info** `docs/code_review/code-review.md`, `skill-eval-report.json` 등 — diff 내용 미제공으로 해당 파일은 검토 불가.
+
+**요약**: 핵심 우려는 하드코딩 경로(머신 종속)와 평가 지표 전부 0인 상태에서의 반복 프로모션이다. 프로모션 게이트가 실제 pass rate를 검사하고 있는지 확인 필요.
+
+---
+
+## 2026-05-07 17:59 — `2026-05-07-memory-gitignore-cleanup` (f347451b)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- **[High]** `data/skill-usage.jsonl:21-23` — `report_path`/`promotion_path`에 하드코딩된 절대 경로 (`D:\\hoonProJect\\worktrees\\...`). 이전 항목은 macOS 경로(`/Users/hoon/...`), 신규 항목은 Windows 경로 — 머신 종속 경로가 영구 로그에 기록됨. 상대 경로 또는 경로 제거 필요.
+- **[Medium]** `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`인 상태로 `draft → candidate` 승격이 반복됨. 평가 지표 전부 0인 스킬이 승격되는 것은 승격 게이트 로직 결함을 시사함.
+- **[Medium]** `data/skill-usage.jsonl` — `historical_score: 52`가 이벤트 18~22 전 구간에서 동일. 점수가 피드백 누적에도 변하지 않으면 계산이 실제로 실행되지 않거나 고정값을 반환하는 것임.
+- **[Low]** diff 마지막 줄이 잘림 — 파일 끝에 불완전한 JSON 라인이 있을 수 있음. 파싱 오류 위험.
+- **[Info]** 나머지 6개 파일(docs/, skills/) diff 내용이 제공되지 않아 해당 파일은 검토 불가.
+
+---
+
+## 2026-05-07 17:59 — `2026-05-07-memory-gitignore-cleanup` (b2b2f0cd)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl:22 — 신규 이벤트 2건의 report_path/promotion_path가 Windows 절대경로(D:\\\\hoonProJect\\\\...)로 하드코딩. 기존 항목은 Unix 경로(/Users/hoon/...). 경로가 머신 종속적으로 기록되면 다른 PC에서 경로 역참조 시 FileNotFoundError 발생.",
+    "- [High] data/skill-usage.jsonl — contract_pass_rate=0.0, hidden_pass_rate=0.0, shadow_cases=0 상태에서 reason='external_eval_passed'로 candidate 승격. 평가 근거가 전무한 승격이 데이터 무결성 관점에서 잘못된 신호를 남김. 승격 조건 검증 로직 확인 필요.",
+    "- [Medium] data/skill-usage.jsonl — 마지막 추가 항목이 diff에서 잘려 있음(truncated). 불완전한 JSON 행이 파일에 기록됐을 경우 JSONL 파서 에러 유발.",
+    "- [Low] data/skill-usage.jsonl — feedback_total_events가 18→19→20→21→22로 단순 증가하는데 runtime_success_rate는 계속 0.0. 이벤트 카운터만 올라가고 실제 실행이 없다면 historical_score(52) 계산 기반 재검토 필요.",
+    "- [Info] 변경된 7개 파일 중 5개(code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/*, skills/registry.yaml)는 diff에 포함되지 않아 내용 미검증."
+  ]
+}
+```
+
+---
+
+## 2026-05-07 18:00 — `2026-05-07-memory-gitignore-cleanup` (f2bc00c6)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] `data/skill-usage.jsonl:22-24` — 절대 경로(`D:\\hoonProJect\\worktrees\\...`)가 데이터 파일에 하드코딩되어 커밋됨. 기존 항목은 `/Users/hoon/...` macOS 경로. 머신 종속 경로가 버전 관리되면 다른 PC에서 경로 불일치 발생.
+- [High] `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`, `runtime_success_rate: 0.0` 전부 0인데 `reason: "external_eval_passed"` + `recommended_stage: "candidate"` 로 승격. 평가 지표와 승격 판정이 모순됨.
+- [Medium] `data/skill-usage.jsonl` — 동일 스킬(`new_skill`)이 `draft→candidate`로 이벤트 18~22회 반복 승격. 이미 `candidate`인데 `from_stage: draft`가 계속 기록 — 상태 머신 전환이 멱등하지 않거나 상태가 실제 반영되지 않음.
+- [Medium] `data/skill-usage.jsonl` — `historical_score`가 18~22 이벤트 전체에 걸쳐 52로 고정. 반복 평가에도 점수 변화 없으면 평가 루프가 실제 실행되지 않는 것으로 의심.
+- [Low] `data/skill-usage.jsonl` — `run_id: ""`, `agent_role: ""`가 모든 항목에 공란. 추적성 부재 — 어떤 실행에서 발생한 이벤트인지 식별 불가.
+
+---
+
+## 2026-05-07 18:00 — `2026-05-07-memory-gitignore-cleanup` (d47509c6)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] `data/skill-usage.jsonl:22-24` — 신규 항목에 절대 OS 경로 하드코딩 (`D:\\hoonProJect\\worktrees\\...`). 이전 항목은 `/Users/hoon/...` 형태로, 기기 간 이식성 없는 경로가 로그에 영구 기록됨. `report_path`/`promotion_path`는 상대경로 또는 프로젝트 루트 기준 상대값으로 정규화해야 함.
+
+- [Medium] `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0`인 상태에서 `reason: "external_eval_passed"`로 candidate 승격 반복. 승격 조건이 pass rate와 무관하게 작동하는지 확인 필요. `historical_score: 52` 단독으로 승격을 정당화하는 로직이 의도된 것인지 명시되지 않음.
+
+- [Medium] `data/skill-usage.jsonl` — diff 마지막 항목이 잘린 채로 커밋됨 (`"installable": false,`에서 중단). JSONL 파일이 불완전한 JSON 행을 포함하면 파서 오류 발생.
+
+- [Low] `data/skill-usage.jsonl` — `feedback_total_events`가 18→22로 증가하는 동안 `historical_score`가 52로 고정. 이벤트 누적이 점수에 반영되지 않으면 지표 의미 없음.
+
+- [Info] `data/skill-usage.jsonl` — `run_id: ""`, `agent_role: ""`이 모든 항목에서 비어있음. 추적 목적의 필드라면 채워지지 않는 이유를 확인.
+
+---
+
+## 2026-05-07 18:01 — `2026-05-07-memory-gitignore-cleanup` (10c5879b)
+
+**Context**: feat(research): P4 QualityContract — WorkSpec + pack layers + ChecklistMerger
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl:22 — report_path/promotion_path에 Windows 절대경로 하드코딩 (`D:\\hoonProJect\\...`). 이전 항목들은 Unix 경로(`/Users/hoon/...`). 경로는 런타임 동적 해석이어야 하며 JSONL 로그에 머신별 절대경로가 영구 기록되면 크로스 플랫폼 재현 불가.",
+    "- [Medium] data/skill-usage.jsonl — contract_pass_rate: 0.0, hidden_pass_rate: 0.0, runtime_total: 0 임에도 `reason: external_eval_passed`로 candidate 승격 반복. 승격 조건 게이트가 실질적으로 비어 있음. historical_score 52가 21→22 이벤트 전반 고정 — 승격 조건 재검토 필요.",
+    "- [Low] data/skill-usage.jsonl — diff 끝이 truncated 상태. 마지막 JSON 라인이 불완전할 경우 JSONL 파서 오류 발생 가능. 커밋 전 파일 무결성 확인 필요.",
+    "- [Info] 변경된 7개 파일 중 실제 diff가 제공된 것은 skill-usage.jsonl 하나. code-review.md, registry.yaml, meta.yaml, skill-eval-report.json, skill-promotion.json 변경 내용 미포함 — 해당 파일 리뷰 불가."
+  ]
+}
+```
+
+---
+
+## 2026-05-07 18:17 — `2026-05-07-memory-gitignore-cleanup` (5ded4f52)
+
+**Context**: edit: D:\hoonProJect\worktrees\agent-factory\core\provider_detect.py
+
+**Changed (8)**: `core/provider_detect.py, data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 18:19 — `2026-05-07-memory-gitignore-cleanup` (f2355a45)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "verdict": "WARN",
+  "findings": [
+    {
+      "severity": "High",
+      "file": "data/skill-usage.jsonl",
+      "line": "새 항목들",
+      "note": "커밋 메시지(provider_detect.py ping 교체)와 실제 변경 파일이 불일치. provider_detect.py 수정분이 diff에 없음 — 실제 버그픽스가 이 커밋에 포함됐는지 확인 필요."
+    },
+    {
+      "severity": "Medium",
+      "file": "data/skill-usage.jsonl",
+      "line": "21~23번 신규 항목",
+      "note": "report_path/promotion_path가 절대 경로(D:\\\\hoonProJect\\\\...) 하드코딩. 이전 항목은 macOS 경로(/Users/hoon/...). 경로는 런타임에 동적으로 결정되어야 하며 JSONL에 기록할 경우 워크스페이스 루트 기준 상대 경로 사용 권장."
+    },
+    {
+      "severity": "Low",
+      "file": "data/skill-usage.jsonl",
+      "line": "전체 new_skill 항목",
+      "note": "contract_pass_rate=0, hidden_pass_rate=0, runtime_success_rate=0, shadow_cases=0인 상태로 21~22회 반복 승격. 실평가 없이 external_eval_passed 사유로 candidate 유지 중 — 평가 파이프라인 미연결 의심."
+    },
+    {
+      "severity": "Info",
+      "file": "data/skill-usage.jsonl",
+      "line": "23번 항목",
+      "note": "diff가 잘림(truncated). 마지막 항목이 완전히 표시되지 않아 전체 내용 검증 불가."
+    }
+  ]
+}
+```
+
+**요약**: 실제 버그픽스(`provider_detect.py`) 코드가 diff에 없는 것이 가장 큰 문제입니다. 절대 경로 하드코딩은 CI/다른 PC에서 깨질 수 있으니 상대 경로로 전환 권장합니다.
+
+---
+
+## 2026-05-07 18:19 — `2026-05-07-memory-gitignore-cleanup` (5f00fbff)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Critical] data/skill-usage.jsonl — 커밋 메시지가 fix(provider_detect)를 명시하나 diff에 provider_detect.py 변경이 없음. 실제 핵심 수정이 스테이지되지 않았거나 누락됐을 가능성.",
+    "- [High] data/skill-usage.jsonl:latest — report_path/promotion_path에 머신 종속 절대 경로 하드코딩 (D:\\hoonProJect\\...). CI 또는 타 PC에서 경로 참조 시 실패. 상대 경로 또는 프로젝트 루트 기준 경로로 교체 필요.",
+    "- [Medium] data/skill-usage.jsonl — 이전 항목은 macOS 경로(/Users/hoon/...), 신규 항목은 Windows 경로 혼재. 로그 일관성 파괴, 경로 기반 집계·분석 시 오분류 유발.",
+    "- [Low] data/skill-usage.jsonl — contract_pass_rate, shadow_delta, runtime_success_rate가 22개 이벤트 내내 0.0 고정. 실제 평가가 실행되지 않거나 결과가 기록되지 않는 구조적 문제 의심.",
+    "- [Info] data/skill-usage.jsonl — historical_score=52가 21→22 이벤트 동안 변화 없음. 점수 계산 로직이 feedback_total_events 증가를 반영하는지 확인 필요."
+  ]
+}
+```
+
+---
+
+## 2026-05-07 18:20 — `2026-05-07-memory-gitignore-cleanup` (9143acc6)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] data/skill-usage.jsonl:22-24 — `report_path`/`promotion_path`가 Windows 절대경로(`D:\\hoonProJect\\...`)로 하드코딩됨. 이전 항목은 macOS 경로(`/Users/hoon/...`). 경로는 상대경로 또는 project-root 기준으로 정규화해야 다른 환경에서 재현 가능.
+
+- [Medium] data/skill-usage.jsonl — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`인 상태에서 `candidate`로 22회 반복 승격. 테스트 커버리지 없이 promotion이 계속 발화되는 로직 결함 가능성. `external_eval_passed` 트리거 조건 재검토 필요.
+
+- [Low] data/skill-usage.jsonl — 커밋 메시지(`fix(provider_detect): codex_cli ping 명령 교체`)와 실제 diff 내용(data/스킬 메타 파일만 변경)이 불일치. `core/provider_detect.py` 변경분이 diff에 없음 — 실제 픽스가 이 커밋에 포함됐는지 확인 필요.
+
+- [Info] diff 잘림(truncated) — diff 끝이 잘려 `skills/new_skill/skill-eval-report.json`, `skills/registry.yaml` 등 나머지 파일 변경 내용을 검토하지 못했음. 전체 diff 제공 시 추가 검토 가능.
+
+---
+
+## 2026-05-07 18:20 — `2026-05-07-memory-gitignore-cleanup` (ff186022)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl — 커밋 메시지(fix provider_detect codex_cli ping)와 변경 파일 7개가 불일치. core/provider_detect.py가 diff에 없음. 실제 수정이 스테이징됐는지 확인 필요.",
+    "- [Medium] data/skill-usage.jsonl:21-23 — report_path/promotion_path에 절대 경로 하드코딩(D:\\hoonProJect\\worktrees\\...). 이전 항목들은 /Users/hoon/... macOS 경로. 머신 종속 경로가 버전관리 데이터에 혼재.",
+    "- [Medium] data/skill-usage.jsonl — diff 마지막 줄이 잘림(항목 불완전). jsonl 파싱 시 마지막 레코드 오류 가능.",
+    "- [Low] data/skill-usage.jsonl — contract_pass_rate, hidden_pass_rate, runtime_success_rate 전부 0.0, shadow_cases=0 상태로 21회 이상 candidate 승격 반복. 실제 검증 없이 promoted 상태 누적."
+  ]
+}
+```
+
+**핵심 지적**: 커밋 메시지가 `provider_detect` 수정을 명시하지만 diff에 해당 파일이 없습니다. 올바른 파일이 스테이징됐는지 `git diff --staged core/provider_detect.py` 로 확인이 필요합니다.
+
+---
+
+## 2026-05-07 18:21 — `2026-05-07-memory-gitignore-cleanup` (de76f84e)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "verdict": "WARN",
+  "findings": [
+    {
+      "severity": "High",
+      "file": "data/skill-usage.jsonl",
+      "line": "new entries",
+      "note": "report_path / promotion_path에 머신 종속 절대경로 하드코딩 (D:\\\\hoonProJect\\\\worktrees\\\\...). 이전 항목은 macOS 경로(/Users/hoon/...)로 혼재 — 다른 PC에서 재실행 시 경로 불일치로 파일 로드 실패 가능"
+    },
+    {
+      "severity": "Medium",
+      "file": "data/skill-usage.jsonl",
+      "line": "모든 신규 항목",
+      "note": "contract_pass_rate=0.0, hidden_pass_rate=0.0, runtime_success_rate=0.0인데도 reason=external_eval_passed로 기록. 평가 지표가 모두 0인 상태의 승격 근거가 불명확 — 로직 버그 가능성"
+    },
+    {
+      "severity": "Medium",
+      "file": "커밋 메시지",
+      "line": "N/A",
+      "note": "커밋 메시지는 fix(provider_detect): codex_cli ping 교체인데, 실제 변경 파일은 skill-usage.jsonl, code-review.md, skill-eval-report.json 등 — 커밋 범위와 메시지 불일치"
+    },
+    {
+      "severity": "Low",
+      "file": "data/skill-usage.jsonl",
+      "line": "신규 항목",
+      "note": "historical_score가 18→22 이벤트 동안 52에서 고정 — 스코어 업데이트 로직이 실제로 동작하는지 확인 필요"
+    },
+    {
+      "severity": "Info",
+      "file": "diff 끝 부분",
+      "line": "마지막 줄",
+      "note": "diff가 잘려 있어 세 번째 신규 항목 전체 내용 미확인 — 검토 불완전"
+    }
+  ]
+}
+```
+
+---
+
+## 2026-05-07 18:22 — `2026-05-07-memory-gitignore-cleanup` (6b062bf9)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl:22-24 — report_path/promotion_path에 Windows 절대경로 하드코딩 (D:\\\\hoonProJect\\\\worktrees\\\\...). 이전 항목들은 Unix 경로(/Users/hoon/...). 경로는 상대경로 또는 경로 없이 skill_id만 저장해야 크로스플랫폼 이식성 유지됨.",
+    "- [Medium] data/skill-usage.jsonl — 커밋 메시지 'fix(provider_detect)' 와 실제 변경 파일 불일치. provider_detect.py 변경이 diff에 없고 JSONL/YAML/JSON 데이터 파일만 포함됨. 실제 버그픽스 코드가 이 커밋에 포함됐는지 확인 필요.",
+    "- [Low] data/skill-usage.jsonl — feedback_events 21→22 증가에도 historical_score가 52로 고정, contract/hidden/runtime pass rate 전부 0.0. 스코어링 로직이 실제로 동작 중인지 점검 필요 (데이터 이슈 vs 로직 버그).",
+    "- [Info] 변경된 7개 파일 모두 데이터/메타/문서 파일이며 .py 파일 없음 — Review-Gate Tier 1 적용 대상."
+  ]
+}
+```
+
+---
+
+## 2026-05-07 18:22 — `2026-05-07-memory-gitignore-cleanup` (e23ff481)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{"review": "- [Medium] data/skill-usage.jsonl:22-24 — `report_path`/`promotion_path`에 절대 경로(Windows `D:\\hoonProJect\\...`)가 하드코딩됨. 이전 항목들은 `/Users/hoon/workTree/...` Mac 경로였는데, 이번 커밋부터 Windows 경로로 바뀜. 환경 이식성 없음 — 경로는 상대 경로나 프로젝트 루트 기준으로 정규화해야 함.\n- [Low] data/skill-usage.jsonl — 커밋 제목(provider_detect ping 교체)과 변경 파일(skill-usage.jsonl, registry.yaml 등 스킬 데이터)이 불일치. `provider_detect.py` diff가 포함되지 않았거나, 데이터 파일이 다른 커밋에 번들됨. 추적성 저하.\n- [Info] skills/new_skill/skill-eval-report.json, skill-promotion.json — `contract_pass_rate: 0.0`, `runtime_success_rate: 0.0`, `runtime_ready_for_active: false`인 채로 `candidate` 승격이 반복됨(21→22회). `historical_score: 52` 고정. 실제 평가 없이 승격만 반복되는 구조적 문제 가능성.\n- [Info] docs/code_review/code-review.md, skills/registry.yaml, skills/dp/meta.yaml — diff 미제공으로 내용 확인 불가."}
+```
+
+---
+
+## 2026-05-07 18:22 — `2026-05-07-memory-gitignore-cleanup` (5037cc33)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] data/skill-usage.jsonl:21-23 — 절대 경로 하드코딩(`D:\\hoonProJect\\worktrees\\agent-factory\\...`). 이전 항목(Mac 경로 `/Users/hoon/...`)과 혼재. 로그가 머신 종속 경로를 포함하면 재현성·이식성이 없음. `report_path`/`promotion_path`는 상대 경로 또는 프로젝트 루트 기준 경로로 기록해야 함.",
+    "- [Medium] data/skill-usage.jsonl — `contract_pass_rate`, `hidden_pass_rate`, `runtime_success_rate` 모두 0.0이고 `shadow_cases`=0인 상태에서 `external_eval_passed` 이유로 `draft→candidate` 승격 반복. 평가 근거 없는 자동 승격이 스킬 품질 게이트를 무력화할 수 있음. 승격 조건 검증 로직 점검 필요.",
+    "- [Low] data/skill-usage.jsonl — `historical_score`=52가 21~23번 이벤트 내내 변화 없음. 이벤트 누적에도 점수가 갱신되지 않는다면 스코어링 파이프라인이 실제로 호출되지 않고 있을 가능성 있음.",
+    "- [Info] data/skill-usage.jsonl — 변경된 파일 7개 중 실제 커밋 제목(`fix(provider_detect): codex_cli ping 명령 교체`)과 관련된 파일이 하나도 없음. 스킬 로그·메타·레지스트리 변경이 `provider_detect` 픽스와 같은 커밋에 묶인 이유 불명확 — 관심사 분리 필요.",
+    "No issues found in docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml (diff 미포함 또는 내용 무관)."
+  ]
+}
+```
