@@ -51,7 +51,7 @@ _PING_DEFAULT_EXEC: dict[str, str] = {
 _PING_SUFFIX: dict[str, list[str]] = {
     "claude_cli": ["-p", "ok", "--output-format", "text"],
     "gemini_cli": ["-p", "ok"],
-    "codex_cli": ["exec", "-s", "read-only", "ok"],
+    "codex_cli": ["--version"],
 }
 
 
