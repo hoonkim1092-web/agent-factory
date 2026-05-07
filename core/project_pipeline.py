@@ -890,6 +890,12 @@ class ProjectPipeline:
         _adr_path, _trace_path = None, None  # P2 C3+C4: domain 분기 내에서 설정
         _spec_paths: list = []  # D1: planning_files 주입용
 
+        # D3: research_evidence.research_plan → project_brief 주입 (domain 감지용)
+        if not project_brief.get("research_plan") and research_evidence:
+            _rp_from_ev = research_evidence.get("research_plan") or {}
+            if _rp_from_ev:
+                project_brief["research_plan"] = _rp_from_ev
+
         # P2 C1: Domain Spec Gate — coverage BLOCK 시 work_item 생성 차단
         _domain = (project_brief.get("research_plan") or {}).get("domain", "")
         if _domain:
