@@ -4469,3 +4469,47 @@ _Review skipped (--no-llm or LLM unavailable)_
 ### Findings
 
 No issues found.
+
+---
+
+## 2026-05-07 21:37 — `2026-05-07-memory-gitignore-cleanup` (9719b5a9)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/scripts/project_context_sync.py
+
+**Changed (1)**: `scripts/project_context_sync.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 21:42 — `2026-05-07-memory-gitignore-cleanup` (1226b66a)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/research_router.py
+
+**Changed (2)**: `core/research_router.py, docs/code_review/code-review.md`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 23:21 — `2026-05-07-memory-gitignore-cleanup` (5afc01bc)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/pipeline_quality.py
+
+**Changed (71)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+56)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 23:37 — `2026-05-07-memory-gitignore-cleanup` (86e3ed83)
+
+**Context**: feat(pipeline): 3-Tier Quality Gate 통합 — provider_detect 위임 + SKIP verdict + work-item rubric
+
+**Changed (70)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+55)`
+
+### Findings
+
+No issues found.
+
+The diff shows only trailing-whitespace normalization across documentation and markdown files — no logic, security surface, or error-handling paths are affected.
