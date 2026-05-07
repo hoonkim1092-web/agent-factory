@@ -906,7 +906,7 @@ Rules:
             escalated_mode = gap_to_mode(hint_gaps)
             if escalated_mode and (research_plan is None or research_plan.mode != escalated_mode):
                 # for_mode()으로 모든 파생 필드를 atomic하게 재계산 (partial mutation 방지)
-                prev_domain = research_plan.domain if research_plan else ""
+                prev_domain = (research_plan.domain if research_plan else None) or ResearchRouter()._detect_domain(task_input)
                 research_plan = ResearchPlan.for_mode(escalated_mode)
                 research_plan.domain = prev_domain  # A5: escalation 후 기존 도메인 감지 결과 유지
 
