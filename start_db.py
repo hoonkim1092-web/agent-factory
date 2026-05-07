@@ -83,6 +83,17 @@ def main() -> None:
         if rc != 0:
             print(f"[MEMORY SYNC] WARNING: memory sync failed (rc={rc}), continuing")
 
+    # git 훅 경로 자동 설정 (개발 환경 전용 — EXE 배포 환경은 git repo 아님)
+    _git_dir = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        capture_output=True, cwd=REPO_ROOT,
+    )
+    if _git_dir.returncode == 0:
+        subprocess.run(
+            ["git", "config", "core.hooksPath", ".githooks"],
+            cwd=REPO_ROOT, capture_output=True,
+        )
+
     print("[SYNC START] done.")
 
 
