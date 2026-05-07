@@ -4404,3 +4404,46 @@ _Review skipped (--no-llm or LLM unavailable)_
   ]
 }
 ```
+
+---
+
+## 2026-05-07 18:23 — `2026-05-07-memory-gitignore-cleanup` (206c3c1d)
+
+**Context**: fix(provider_detect): codex_cli ping 명령 교체 — exec stdin hang → --version
+
+**Changed (7)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/dp/meta.yaml, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl:22+` — `report_path` / `promotion_path`에 머신별 절대 경로(`D:\\hoonProJect\\...`) 하드코딩. 다른 PC에서 경로가 깨짐. 상대 경로 또는 프로젝트 루트 기준 경로로 교체 필요.
+- [Low] `data/skill-usage.jsonl` — 마지막 줄이 diff에서 잘려있어 JSON이 불완전하게 보임. 파일 자체가 올바른지 확인 필요.
+- [Low] `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`이 21회 이벤트 내내 0인데 `candidate`로 반복 승격. 승격 기준에 pass_rate 최솟값 검증이 빠져 있는지 확인 필요.
+- [Info] diff에 `core/provider_detect.py`가 없음 — 커밋 메시지의 실제 버그픽스(exec stdin hang → `--version` 교체) 변경분이 이 diff에 포함되지 않았음. 리뷰 대상 파일 목록과 커밋 내용이 불일치.
+
+---
+
+## 2026-05-07 18:23 — `2026-05-07-memory-gitignore-cleanup` (f5e79593)
+
+**Context**: chore(skills): 스킬 평가 이벤트 누적 및 메타데이터 동기화
+
+**Changed (1)**: `docs/code_review/code-review.md`
+
+### Findings
+
+```json
+{
+  "review": {
+    "commit": "206c3c1d",
+    "files_reviewed": ["docs/code_review/code-review.md"],
+    "findings": [
+      {
+        "severity": "Info",
+        "location": "docs/code_review/code-review.md:4418",
+        "note": "커밋 메시지 대상(core/provider_detect.py)이 Changed Files 목록에 없음 — 리뷰 문서 자체가 그 불일치를 [Info]로 기록함. 문서 내용은 정확."
+      }
+    ],
+    "summary": "변경 내용은 코드 리뷰 문서에 새 섹션 추가뿐. 로직·보안·에러핸들링 영향 없음. 문서 내 지적(절대 경로 하드코딩, pass_rate 0 승격)은 실제 data/ 파일의 잠재적 문제이며 이 diff 범위 밖. 현재 diff 자체는 이상 없음.",
+    "verdict": "PASS"
+  }
+}
+```
