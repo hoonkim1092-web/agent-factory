@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-07 KST — **P3 D3+D3b 완료** (`da6740d0`). 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-07 KST — **P3 D3 substring 패치 종결 + P4 researcher LLM 재설계 예정**. 브랜치: `2026-04-14-build-diet`.
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
@@ -12,41 +12,31 @@
 >
 > `--ff-only`가 reject되면 `git fetch && git status`로 분기 확인 후 결정.
 >
-> ✅ **다음 세션 최우선 작업 — P3 D3 최종 검증 (live run 재실행)**:
+> ✅ **다음 세션 최우선 작업 — P4 researcher LLM-driven 재설계**:
 >
-> D3+D3b 수정 후 live run 재실행으로 G1 ⑥⑨ 실제 PASS 확인 필요:
+> **배경**: P3 D3 live run 검증 과정에서 `_detect_domain()` 설계 결함 발견.
+> - `포커게임` 합성어 false-negative (regex word-boundary 한계)
+> - 더 근본적으로: domain 감지 실패 시 무조건 통과 → 99% 케이스에서 품질 게이트 무용지물
+> - Manus AI 비교: LLM-driven 방식이 훨씬 우월 (hardcoded 토큰셋 불필요)
 >
-> **실행**:
-> ```bash
-> python run_factory_cli.py --project d3-verify --projects-root /tmp --task "8인 포커 게임 구현" --pipeline project --fsa
+> **P3 D3 종결 결정**: `_detect_domain()` substring 패치(1줄)로 포커 합성어 감지 fix → D3 검증 종결.
+> 근본 재설계는 P4로 이관. D3 full pipeline live run은 더 이상 진행하지 않음.
+>
+> **P4 재설계 방향** (새 브랜치 `2026-05-XX-researcher-llm-redesign`):
 > ```
-> *(완료까지 15-20분 소요)*
->
-> **G1 채점**:
-> ```bash
-> python3 -c "
-> import json, pathlib
-> brief = json.loads(pathlib.Path('/tmp/d3-verify/planning/project_brief.json').read_text())
-> specs = brief.get('domain_specs_summary', {})
-> rp = brief.get('research_plan', {})
-> print('domain:', rp.get('domain'))
-> print('G1-6 domain_specs_summary:', 'PASS' if specs else 'FAIL', list(specs.keys()))
-> "
-> find /tmp/d3-verify/docs/specs -type f 2>/dev/null | sort && echo 'G1-9: PASS' || echo 'G1-9: FAIL (no specs)'
+> 요청 → LLM: domain / project type / critical requirements / risk areas 추출
+>      → dynamic checklist 생성 (LLM이 항상 생성, domain="" 허용 안 함)
+>      → optional static overlay 적용 (poker.yaml → 고신뢰 도메인 보조 힌트로 강등)
+>      → RecoverySearchLoop: dynamic checklist + overlay 기준 gap check
 > ```
-> - 목표: G1 ⑥⑨ 모두 PASS (D3+D3b 효과 검증)
+> - 핵심: `checklist is None` = 버그 신호. 통과 아님.
+> - YAML overlay: 삭제 아님, "LLM 기본 + static 보조" 구조로 재정의
+> - 출력 schema 먼저 정의 후 구현 (다운스트림 SpecGenerator/work_item_generator 호환)
 >
-> ℹ️ **D3+D3b 수정 요약** (이번 세션):
+> ℹ️ **D3+D3b+D3c 수정 요약**:
 >   - D3: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함)
 >   - D3b: researcher.py escalation 경로에서 `research_plan=None` 진입 시 domain 유실 버그 수정
->   - D3 live run 1차: G1 3/9 → 근본 원인 발견 (domain="" 두 가지 경로)
->   - 137 tests PASS
->
-> ℹ️ **Advisory (선택 수정)**:
->   - `_is_sufficient` / `_identify_unmet_gaps` match_keywords 불일치 → 통일하면 RecoveryLoop 효율 개선
->   - `requires_web` 분기 coverage 미생성 → 설계 의도 명시 or 생성 추가
->   - `포커게임` 합성어 false-negative → 토큰화 또는 키워드 보강
->   - `test_c1_spec_generation_triggered` 테스트가 prepare_documents 직접 호출 안 함 (af-critic WARN)
+>   - D3c: `_detect_domain()` substring 매칭으로 교체 (합성어 false-negative 수정)
 >
 > ⚠️ **hook auto-amend 분기 이슈**: hook 체인이 push 직후 chore 변경 추가 → auto-amend/force-push로 SHA 갈아끼움. 다른 PC 진입 시 `git pull --ff-only` 먼저 필수.
 > ⚠️ codex/gemini auth_expired. af-cross-review는 Claude 단독 검증.

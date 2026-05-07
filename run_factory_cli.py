@@ -575,6 +575,7 @@ def main(argv: list[str] | None = None):
     parser.add_argument("--no-cli-auto-install", action="store_true", help="Disable missing CLI auto install")
     parser.add_argument("--pipeline", choices=["auto", "single", "project"], default="auto", help="Pipeline mode")
     parser.add_argument("--chat", action="store_true", help="Interactive chat mode (continuous conversation)")
+    parser.add_argument("--research-only", action="store_true", help="Research + Brief 단계만 실행 후 중단")
     # WARN-1 fix: argv가 아닌 effective_argv를 전달해 단일 진실원천 유지.
     args = parser.parse_args(effective_argv)
 
@@ -666,6 +667,15 @@ def main(argv: list[str] | None = None):
 
     try:
         factory = AgentFactory()
+        if getattr(args, "research_only", False):
+            brief = factory.project_pipeline.prepare_brief(
+                task_input=task,
+                workspace=project_root,
+            )
+            print(f"\n[research-only] 완료")
+            print(f"  research_evidence : {brief.research_evidence_path}")
+            print(f"  project_brief     : {brief.project_brief_path}")
+            return
         if args.workflow:
             roles = [item.strip() for item in (args.agents or "").split(",") if item.strip()]
             factory.run_workflow(task_input=task, workflow_path=args.workflow, role_specs=roles)

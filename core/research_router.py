@@ -254,15 +254,14 @@ class ResearchRouter:
 
     # A5: 포커 도메인 토큰셋 (D4 결정)
     _POKER_TOKENS: frozenset[str] = frozenset({
-        "포커", "poker", "hold'em", "holdem", "blind", "blinds", "all-in",
+        "포커", "홀덤", "poker", "hold'em", "holdem", "blind", "blinds", "all-in",
         "allin", "flop", "turn", "river", "ante", "showdown",
     })
 
     def _detect_domain(self, request: str) -> str:
         """A5: 요청 텍스트에서 도메인을 감지. 현재 포커만 지원."""
-        import re
-        words = set(re.findall(r"[\w']+(?:-[\w']+)*", (request or "").lower()))
-        if any(tok in words for tok in self._POKER_TOKENS):
+        text_lower = (request or "").lower()
+        if any(tok in text_lower for tok in self._POKER_TOKENS):
             return "poker"
         return ""
 
