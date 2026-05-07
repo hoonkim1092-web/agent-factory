@@ -4035,3 +4035,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (9)**: `core/project_pipeline.py, data/skill-usage.jsonl, docs/code_review/code-review.md, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-07 15:18 — `2026-04-14-build-diet` (0ecf54a9)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/researcher.py
+
+**Changed (8)**: `core/researcher.py, data/skill-usage.jsonl, projects/global_hoon_main/data/memory/claude/_bridge_state/session_cursor.json, projects/global_hoon_main/data/memory/codex/_bridge_state/session_cursor.json, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+_Review skipped (--no-llm or LLM unavailable)_
