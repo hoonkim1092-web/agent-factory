@@ -125,7 +125,7 @@
 | `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **P3 D2**: `_generate_implementation_design()` 프롬프트 + `_fallback_impl_design()`에 `## Event Sequence / Phase Flow` 섹션 추가 (domain_specs_summary.state_machine 우선 반영, fallback 4-phase 템플릿) | `generate_work_items()`, `_generate_and_refine()`, `_generate_doc_with_llm()` |
 | `core/cli_session_cleanup.py` | `.af_runtime/cli_sessions/` 하위 30일 초과 CLI 세션 파일 TTL 정리 (Phase A, v2 finding #2) | `cleanup_stale_sessions(workspace, days=30)` |
 | `core/work_item_telemetry.py` | work-item 생성 텔레메트리 — T1 retry 횟수 atomic JSON 기록 (Phase A, v2 finding #8) | `update_t1_refine_attempts(workspace, slug, doc_name, increment=1)` |
-| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성 | `execute_requirement_prompt()`, `execute_document_prompt()` |
+| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성. **Phase C**: `_call_anthropic/openai/google_api`에 `return_usage=False` 옵션, `execute_document_prompt` 응답에 `elapsed_sec`+`usage_tokens` 추가 | `execute_requirement_prompt()`, `execute_document_prompt()` |
 | `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
 | `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
 
@@ -1303,6 +1303,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 공백 정규화 — AGENTS.md·GEMINI.md 등 85개 파일의 연속 빈 줄(이중 개행) → 단일 개행으로 일괄 치환, 에이전트 프로필 YAML(himari·iguro_obanai·lilith 등) 동일 적용, 내용 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 줄바꿈 정규화 — 이중 공백줄→단일 공백줄 일괄 변환, 대상 85개 파일(AGENTS.md·GEMINI.md·agents/*.yaml 등), 내용 변경 없이 공백 정리만 적용 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 줄바꿈 정규화 — AGENTS.md·GEMINI.md 등 85개 파일 이중 개행 → 단일 개행 변환, 에이전트 profile·YAML 파일 공백 정리 포함, memory/.gitignore 브랜치 연동 작업 일환 |
+| 2026-05-08 | v1.2.22 | chore(repo): 전체 85개 파일 줄말 공백 일괄 제거 — AGENTS.md·GEMINI.md·agent YAML/profile 등 문서 전반 trailing whitespace 정리, 내용 변경 없음 |
 | 2026-05-08 | v1.2.22 | You've hit your limit · resets 6:30pm (Asia/Seoul) |
 | 2026-05-08 | v1.2.22 | chore(docs/agents): 문서·에이전트 파일 전체 공백 일괄 정규화 — 이중 빈 줄→단일 빈 줄 85개 파일 치환, AGENTS.md·GEMINI.md·README.md 포함, agents/*.yaml 및 profile.md 대상 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 후행 공백 일괄 제거 — AGENTS.md·GEMINI.md·README.md 등 85개 파일 빈 줄 trailing whitespace 정규화, 에이전트 YAML·profile.md 포함, 콘텐츠 변경 없음 |
@@ -1331,6 +1335,7 @@ model_utils.py (독립 모듈)
 | 2026-05-04 | v1.2.22 | chore(skills+code-review): new_skill 승격 이벤트 1건 + 코드리뷰 로그 2건 자동 기록 — skill-usage.jsonl 18번째 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 항목 append, codex bridge session_cursor·skill-eval-report·skill-promotion·registry 메타데이터 동기화 |
 | 2026-05-04 | v1.2.22 | chore(skills+review): 스킬 promotion 이벤트 누적 + 코드리뷰 로그 동기화 — skill-usage.jsonl에 new_skill candidate 승급 이벤트 1건 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 append, skill-eval-report.json·skill-promotion.json·registry.yaml 메타데이터 갱신, codex bridge session_cursor 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills): new_skill 평가 자동화 산출물 갱신 — skill-promotion 18회차 후보 승급 로그 추가, skill-eval-report 재생성, registry.yaml 동기화, code-review.md 최근 커밋 2건 추가, codex bridge session_cursor 갱신 |
+| 2026-05-08 | (unreleased) | feat(phase-c): Work-Item 병렬화 v2 Phase C LLM 보강 — `core/requirement_llm.py`: `_call_anthropic/openai/google_api`에 `return_usage=False` kwarg 추가(True 시 `(str, dict)` 반환, dict는 `{prompt, completion, total}` 토큰 수). `execute_document_prompt`에 per-candidate `time.monotonic()` 래핑 + CLI path `usage = result.get("usage") or {}` + API path `return_usage=True` 언패킹, 성공/실패 응답 모두에 `elapsed_sec`+`usage_tokens` 키 포함. finding #6 해소. 3-tier PASS. |
 | 2026-05-08 | (unreleased) | feat(phase-b): Work-Item 병렬화 v2 Phase B boundary — `core/work_item_generator.py`: `DocGenerationResult` dataclass 신규(12필드: doc_type/content/provider_id/model/elapsed_sec/used_fallback/timeout_fallback/placeholder_refine_attempts/t1_refine_attempts/errors/run_id/usage_tokens). `_generate_doc_with_llm` → `DocGenerationResult` 반환(except 블록 내 fallback return, UnboundLocalError 수정). 4개 generator keyword-only kwargs(`prev_plan/prev_spec/prev_design/run_id/timeout_sec/workspace`) + `DocGenerationResult` 반환. `_generate_and_refine` introspection 제거 + explicit kwargs dispatch + `placeholder_refine_attempts` 갱신. `generate_work_items` → `.content` 추출 패턴. 3-tier PASS/PASS/WARN(advisory 3건, BLOCK 0). |
 | 2026-05-08 | (unreleased) | feat(phase-a): Work-Item 병렬화 v2 Phase A 인프라 — `core/cli_session_cleanup.py` 신규: `cleanup_stale_sessions(workspace, days=30)`, `.af_runtime/cli_sessions/` 경로 정정(v2 finding #2 해소). `core/work_item_telemetry.py` 신규: `update_t1_refine_attempts()` `locked_file()` atomic T1 retry 카운터(finding #8 해소). `af.spec` hiddenimports에 두 모듈 추가(M4). 3-tier PASS. §0 빠른참조 2행 추가. |
 | 2026-05-07 | (unreleased) | fix(research_router): P3 D3c — `_detect_domain()` regex word-boundary → substring 매칭 교체. `"포커게임"` 같은 한국어 합성어 false-negative 수정. `_POKER_TOKENS`에 `"홀덤"` 추가. `run_factory_cli.py` `--research-only` 플래그 추가(research+brief 단계만 실행). NEXT_STEPS: D3 substring 패치로 종결, P4 researcher LLM 재설계 방향 기록. 132 tests PASS. |

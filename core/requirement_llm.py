@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
 from dataclasses import dataclass
 
@@ -70,7 +71,7 @@ def _extract_openai_text(response) -> str:
     return "\n".join(parts).strip()
 
 
-def _call_google_api(model: str, prompt: str) -> str:
+def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("google") or get_configured_engine_api_key("google")
     if not api_key:
         raise RuntimeError("missing_google_api_key")
@@ -78,10 +79,19 @@ def _call_google_api(model: str, prompt: str) -> str:
 
     client = genai.Client(api_key=api_key)
     response = generate_content_with_self_heal(client, normalize_model_name(model), prompt)
-    return str(getattr(response, "text", "") or "").strip()
+    text = str(getattr(response, "text", "") or "").strip()
+    if not return_usage:
+        return text
+    meta = getattr(response, "usage_metadata", None)
+    usage: dict = {}
+    if meta:
+        prompt_t = getattr(meta, "prompt_token_count", 0) or 0
+        completion_t = getattr(meta, "candidates_token_count", 0) or 0
+        usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+    return text, usage
 
 
-def _call_openai_api(model: str, prompt: str) -> str:
+def _call_openai_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("openai") or get_configured_engine_api_key("openai")
     if not api_key:
         raise RuntimeError("missing_openai_api_key")
@@ -89,10 +99,19 @@ def _call_openai_api(model: str, prompt: str) -> str:
         raise RuntimeError("openai_package_unavailable")
     client = OpenAI(api_key=api_key)
     response = client.responses.create(model=model, input=prompt)
-    return _extract_openai_text(response)
+    text = _extract_openai_text(response)
+    if not return_usage:
+        return text
+    raw = getattr(response, "usage", None)
+    usage: dict = {}
+    if raw:
+        prompt_t = getattr(raw, "input_tokens", 0) or 0
+        completion_t = getattr(raw, "output_tokens", 0) or 0
+        usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+    return text, usage
 
 
-def _call_anthropic_api(model: str, prompt: str) -> str:
+def _call_anthropic_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("anthropic") or get_configured_engine_api_key("anthropic")
     if not api_key:
         raise RuntimeError("missing_anthropic_api_key")
@@ -121,7 +140,14 @@ def _call_anthropic_api(model: str, prompt: str) -> str:
             value = str(item.get("text", "") or "").strip()
             if value:
                 parts.append(value)
-    return "\n".join(parts).strip()
+    text = "\n".join(parts).strip()
+    if not return_usage:
+        return text
+    raw = data.get("usage") or {}
+    prompt_t = raw.get("input_tokens", 0) or 0
+    completion_t = raw.get("output_tokens", 0) or 0
+    usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+    return text, usage
 
 
 def _cli_model_for_provider(provider_id: str, cli_providers: list[str]) -> str:
@@ -183,6 +209,7 @@ def execute_document_prompt(
     errors: list[str] = []
 
     for candidate in list_requirement_candidates():
+        t_start = time.monotonic()
         try:
             if candidate.transport == "cli":
                 result = execute_cli_chat(
@@ -197,19 +224,22 @@ def execute_document_prompt(
                     )
                 )
                 text = str(result.get("text") or result.get("stdout") or "").strip()
+                usage: dict = result.get("usage") or {}
                 if not result.get("ok"):
                     raise RuntimeError(str(result.get("reason") or "cli_document_failed"))
             else:
                 effective_prompt = f"{_DOCUMENT_SYSTEM_PROMPT}\n\n{str(prompt or '').strip()}".strip()
                 if candidate.provider_id == "anthropic_api":
-                    text = _call_anthropic_api(candidate.model, effective_prompt)
+                    text, usage = _call_anthropic_api(candidate.model, effective_prompt, return_usage=True)
                 elif candidate.provider_id == "openai_api":
-                    text = _call_openai_api(candidate.model, effective_prompt)
+                    text, usage = _call_openai_api(candidate.model, effective_prompt, return_usage=True)
                 else:
-                    text = _call_google_api(candidate.model, effective_prompt)
+                    text, usage = _call_google_api(candidate.model, effective_prompt, return_usage=True)
         except Exception as exc:
             errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
             continue
+
+        elapsed = time.monotonic() - t_start
 
         if text:
             return {
@@ -217,6 +247,8 @@ def execute_document_prompt(
                 "provider_id": candidate.provider_id,
                 "model": candidate.model,
                 "text": text,
+                "elapsed_sec": elapsed,
+                "usage_tokens": usage,
                 "errors": errors,
             }
         errors.append(f"{candidate.provider_id}:{candidate.model}:empty_response")
@@ -226,6 +258,8 @@ def execute_document_prompt(
         "provider_id": "",
         "model": "",
         "text": "",
+        "elapsed_sec": 0.0,
+        "usage_tokens": {},
         "errors": errors,
     }
 
