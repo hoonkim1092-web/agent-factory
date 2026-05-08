@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -17,6 +18,7 @@ from core.destructive_guard import (
     merge_claude_destructive_guard,
     write_gemini_destructive_policy,
 )
+from core.file_lock import locked_file
 from scripts.session_bridge import run_bridge
 
 
@@ -281,26 +283,27 @@ def _merge_named_hook_group(
 def _write_claude_settings(workspace: str, run_id: str) -> Path:
     repo_root = _repo_root()
     settings_path = Path(workspace).resolve() / ".claude" / "settings.local.json"
-    data = _load_json(settings_path)
-    if not isinstance(data, dict):
-        data = {}
-    hooks = data.get("hooks", {})
-    if not isinstance(hooks, dict):
-        hooks = {}
+    with locked_file(str(settings_path), timeout=5):
+        data = _load_json(settings_path)
+        if not isinstance(data, dict):
+            data = {}
+        hooks = data.get("hooks", {})
+        if not isinstance(hooks, dict):
+            hooks = {}
 
-    command = _hook_command("claude", workspace, run_id, repo_root)
-    for event_name in ("SessionStart", "UserPromptSubmit", "PreCompact", "Stop", "SessionEnd"):
-        hook_name = f"agent_factory_claude_{event_name.lower()}"
-        hooks[event_name] = _merge_named_hook_group(
-            hooks.get(event_name, []),
-            hook_name,
-            command,
-            "claude",
-        )
+        command = _hook_command("claude", workspace, run_id, repo_root)
+        for event_name in ("SessionStart", "UserPromptSubmit", "PreCompact", "Stop", "SessionEnd"):
+            hook_name = f"agent_factory_claude_{event_name.lower()}"
+            hooks[event_name] = _merge_named_hook_group(
+                hooks.get(event_name, []),
+                hook_name,
+                command,
+                "claude",
+            )
 
-    data["hooks"] = hooks
-    data = merge_claude_destructive_guard(data)
-    _save_json(settings_path, data)
+        data["hooks"] = hooks
+        data = merge_claude_destructive_guard(data)
+        _save_json(settings_path, data)
     return settings_path
 
 
@@ -472,7 +475,12 @@ def prepare_cli_session(request, command: list[str]) -> dict[str, Any]:
     # PyInstaller 번들 환경에서는 sys.executable이 Python이 아닌 af.exe이므로
     # hook 명령이 올바르게 실행되지 않는다 — hook 등록을 건너뜀
     if spec.provider_id == "claude_cli" and not _is_frozen():
-        settings_path = _write_claude_settings(workspace, run_id)
+        try:
+            settings_path = _write_claude_settings(workspace, run_id)
+        except TimeoutError as exc:
+            logging.getLogger(__name__).warning(
+                "_write_claude_settings lock timeout — settings 미작성으로 계속: %s", exc
+            )
     elif spec.provider_id == "gemini_cli" and not _is_frozen():
         settings_path, guard_path = _write_gemini_defaults(
             workspace,
