@@ -1,25 +1,36 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **Phase A~E + simplify 완료. Phase F (검증) 진행 예정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-09 KST — **Phase F 검증 완료. 병렬화 효과 확정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
-> ## 🔥 다음 세션 진입 시 우선 작업 — Phase F (검증)
-> **C-3stages smoke 검증** (Sonnet으로 진행):
-> ```
-> /clear
-> /model claude-sonnet-4-6
-> ```
-> ### Phase F Step 0~5 (설계 §14 기준)
-> - **Step 0**: minesweeper-baseline 프로젝트로 `generate_work_items` N≥3회 smoke 실행
->   - 진입점: `python run_factory_cli.py --task "minesweeper work items" --project minesweeper-baseline`
->   - 텔레메트리 결과: `runtime/work_item_telemetry/<slug>.json` 확인
-> - **Step 1**: elapsed_sec 수집 (plan/spec/design/tasks 각각)
-> - **Step 2**: v1(sequential) baseline과 비교
->   - v1 실측 1회: plan=62.9s, spec=84.9s, design=267.4s, tasks=fallback
->   - v1 total wall-clock ≈ 415s
-> - **Step 3**: frozen build 검증 (`python build_exe.py` → `dist/af-*.zip` 생성 확인)
-> - **Step 4**: N≥5 비교표 작성 (v1 vs v2, wall-clock + 각 stage elapsed)
-> - **Step 5**: 의사결정 임계 — v2 wall-clock ≤ v1 × (1/1.2) 이상이면 병렬화 효과 확정
+> ## ✅ Phase F 검증 완료 — 다음 세션: PR 머지 또는 다음 피처
+>
+> ### Phase F Step 0~5 결과 (2026-05-09)
+>
+> **Step 0~1**: smoke 3회 실행 + elapsed_sec 수집 완료
+>   - 진입점: `/tmp/smoke_v2.py <run_number>` (generate_work_items 직접 호출, projects/minesweeper-smoke-v2-{01~03})
+>
+> **Step 2**: v1 vs v2 비교표
+>
+> | run | version | plan(s) | spec(s) | design(s) | tasks(s) | wall-clock(s) | tasks완료? |
+> |-----|---------|---------|---------|-----------|----------|--------------|----------|
+> | v1-1 | sequential | 62.9 | 84.9 | 267.4 | fallback | ~415 | ❌ |
+> | v2-1 | C-3stages  | 52.3 | 104.2 | 82.6 | 126.1 | **285.4** | ✅ |
+> | v2-2 | C-3stages  | 56.7 | 108.5 | 97.0 | 129.8 | **297.9** | ✅ |
+> | v2-3 | C-3stages  | 60.6 | 78.8  | 101.1 | 118.2 | **283.6** | ✅ |
+> | **v2 avg** | | 56.5 | 97.2 | 93.6 | 124.7 | **289.0** | ✅ |
+>
+> **Step 3**: frozen build `dist/af-1.2.22.zip` (46.5 MB) 생성 확인 ✅
+>
+> **Step 4~5 의사결정**:
+> - 임계: v2 wall-clock ≤ v1 × (1/1.2) = 415 × 0.833 = **345.8s**
+> - v2 avg = **289.0s ≤ 345.8s** → **병렬화 효과 확정 ✅**
+> - Stage 2 (spec+design) 병렬 speedup: 352.3s → 97.2+93.6=병렬max≈100.4s = **3.5x**
+> - 추가: v2는 tasks까지 완주 (v1은 doc_gen_deadline 300s 초과로 tasks fallback)
+>
+> ### 다음 작업 후보
+> 1. **PR 머지**: `2026-05-07-memory-gitignore-cleanup` → `main` (Phase A~F 전체 완료)
+> 2. **doc_gen_deadline 조정**: 현재 300s → 500s+ (design 2 refine에도 tasks가 fallback 안 되게)
 >
 > ### 최근 커밋 요약 (참고용)
 > - `d72b0509` refactor(simplify): _make_usage 헬퍼, write_initial_record, dead var 삭제, 모듈레벨 import
