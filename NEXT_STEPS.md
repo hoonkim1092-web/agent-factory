@@ -1,14 +1,45 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **3-Tier Gate live run + work-item 병렬 생성 조사 진입 대기**. 브랜치: `2026-04-14-build-diet`.
+> 마지막 업데이트: 2026-05-08 KST — **핸드오프 문서 BLOCK 2건 수정 완료 → 측정 실행 준비 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
-> ## 🔥 다음 세션 진입 시 (`/clear` 직후) 우선 작업
-> **work-item 5종 병렬 생성 가능성 검증** — 핸드오프 문서 먼저 읽기:
-> ```bash
-> cat docs/2026-05-08-work-item-parallel-generation-investigation.md
+> ## 🔥 다음 세션 진입 시 우선 작업 (Sonnet)
+> **Work-Item 병렬화 사전 측정** — Sonnet으로 진행:
 > ```
-> 검증 절차 §4 Step 1~3 순서대로 진행. 결정 기준 §5 참고.
+> /clear
+> /model sonnet
+> ```
+> 핸드오프 먼저 읽기:
+> ```bash
+> cat docs/2026-05-08-work-item-parallel-measurement-handoff.md
+> ```
+> 1. §3 임시 패치(`_generate_and_refine`에 timing dump) 적용 (커밋 X)
+> 2. `python3 -c "import core.work_item_generator"` 로 import 검증
+> 3. `python3 run_factory_cli.py --task "8x8 minesweeper game with mines" --project minesweeper-baseline --mode fsa`
+> 4. `runtime/timing/minesweeper-baseline_baseline.jsonl` 내용 보고
+> 5. `git restore core/work_item_generator.py` — 패치 원복
+> 6. 결과 보고 후 `/model` 전환 안내 (설계 v2는 Opus)
+>
+> ✅ **이번 세션 (2026-05-08 오전) 완료 작업**:
+> - **핸드오프 문서 cross-review BLOCK 2건 수정** (`docs/2026-05-08-work-item-parallel-measurement-handoff.md`):
+>   - #1 High: Entry Point 명령어 수정 (`core.project_pipeline` 없음 → `run_factory_cli.py --task/--project`)
+>   - #2 High: 수집 불가 필드 제거 (`provider_id/model/used_fallback` — generator가 메타데이터 버림)
+>   - 측정 스키마 확정: `elapsed_sec`, `refine_attempts`, `output_chars`, `ts` 4개
+>
+> ⚠️ 본 세션 결정 사항:
+> - **Stage 구조**: C-3stages (`plan → [spec, design] → tasks`) — finding #4 흡수
+> - **run_id 격리**: (D) `{base}_{doc_type}_{pid}_{ts}`
+> - **prev_doc 합성**: B3 (tasks가 spec 섹션 목차만 받음)
+> - **deadline**: C3 (Stage별 + carry-over)
+> - **executor**: D3 (per-future timeout + 폴백)
+> - **state cleanup**: 30일 TTL
+> - **설계 v1 BLOCK**: 11건 ACCEPT, 측정 완료 후 v2 작성 → cross-review 2라운드 (Opus)
+>
+> 📁 관련 파일:
+> - `docs/2026-05-08-work-item-parallel-measurement-handoff.md` ← 측정 핸드오프 (Sonnet 진입용)
+> - `docs/2026-05-08-work-item-parallel-option-c-design.md` ← v1 (BLOCK, v2로 수정 예정)
+> - `docs/2026-05-08-work-item-parallel-generation-investigation.md` ← 최초 조사
+> - `docs/reviews/2026-05-08-012548-...-design-review.md` ← 직전 BLOCK 리포트 (10건 ACCEPT)
 >
 > ## 🔑 진입 시 무조건 첫 동작 (PC 바꾼 경우 / 시간 공백 4h+ / 직전 세션이 hook 발화 후 종료된 경우 모두 해당)
 >
