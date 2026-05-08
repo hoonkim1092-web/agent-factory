@@ -1303,6 +1303,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 줄바꿈 정규화 — 84개 파일 trailing whitespace 제거, CRLF→LF 변환, 에이전트 profile·yaml 포함, AGENTS.md·GEMINI.md·README.md 등 문서 공백 통일 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 중복 빈 줄 제거, agents/ YAML·profile.md whitespace 정리, 마크다운 렌더링 일관성 확보 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 후행 공백 제거 — AGENTS.md·GEMINI.md·README.md 등 84개 마크다운/YAML 파일 trailing whitespace 일괄 정리 |
 | 2026-05-08 | v1.2.22 | chore(docs): 마크다운·YAML 전체 여분 빈 줄 일괄 제거 — AGENTS.md·GEMINI.md 줄 간 이중 공백 정규화, agents/*.yaml 프로필 파일 공백 정리, README·SYNC_GUIDE 등 문서 포맷 일괄 정리, PROJECT_LOG·Parallelization_plan 등 84개 파일 줄바꿈 정규화 |
