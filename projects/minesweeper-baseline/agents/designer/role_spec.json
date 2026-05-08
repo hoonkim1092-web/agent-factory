@@ -1,0 +1,22 @@
+{
+  "role_id": "designer",
+  "name": "Product Designer",
+  "objective": "정보 구조와 화면 흐름, 비주얼 방향을 설계한다.",
+  "required_skills": [
+    "cli_io_design"
+  ],
+  "owned_modules": [
+    "designer_module_7"
+  ],
+  "feature_slices": [
+    "정보 구조와 화면 흐름, 비주얼 방향을 설계한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-05-08T11:20:51"
+}

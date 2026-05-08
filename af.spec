@@ -74,6 +74,8 @@ a = Analysis(
         'core.external_skill_sources',
         'core.file_io',
         'core.file_lock',
+        'core.cli_session_cleanup',
+        'core.work_item_telemetry',
         'core.fsa_loop',
         'core.lineage_ledger',
         'core.git_manager',

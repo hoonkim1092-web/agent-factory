@@ -1,0 +1,22 @@
+{
+  "role_id": "backend_dev",
+  "name": "Backend Dev",
+  "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+  "required_skills": [
+    "grid_data_structure"
+  ],
+  "owned_modules": [
+    "backend_dev_module_5"
+  ],
+  "feature_slices": [
+    "서버, 데이터, 외부 연동 레이어를 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-05-08T11:20:51"
+}

@@ -1,0 +1,141 @@
+{
+  "workspace_notes": [],
+  "local_references": [
+    {
+      "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+      "heading": "# 방법 A: 직접 실행",
+      "excerpt": "# 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+      "score": 1.0
+    },
+    {
+      "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+      "heading": "# 방법 B: af CLI alias (설치된 경우)",
+      "excerpt": "# 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+      "score": 0.3208
+    },
+    {
+      "path": "docs/codex/2026-05-08-af-productization-application-guide.md",
+      "heading": "### 권장 강제 매핑",
+      "excerpt": "### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer",
+      "score": 0.1262
+    },
+    {
+      "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+      "heading": "### Brief 선택: **minesweeper** (가벼움)",
+      "excerpt": "### Brief 선택: **minesweeper** (가벼움) 직전 세션 \"포커 게임 live run\" 보다 가벼운 케이스 선택. Web 미요구, 단순 게임 로직.",
+      "score": 0.1244
+    },
+    {
+      "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+      "heading": "## 5. 결과 형식",
+      "excerpt": "## 5. 결과 형식 `runtime/timing/minesweeper-baseline_baseline.jsonl` 예상 출력: ```jsonl {\"doc_type\":\"plan\",\"work_item\":\"minesweeper-baseline\",\"elapsed_sec\":58.2,\"refine_attempts\":0,\"output_chars\":3200,\"ts\":1746700000} {\"doc_type\":\"spec\",\"work_item\":\"minesweeper-ba...",
+      "score": 0.097
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "evidence_summary": [
+    "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+    "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+    "Local reference: docs/codex/2026-05-08-af-productization-application-guide.md -> ### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer"
+  ],
+  "sufficiency_gate_passed": true,
+  "research_plan": {
+    "mode": "fast_synthesis",
+    "secondary_modes": [],
+    "scores": {
+      "freshness_score": 0,
+      "external_stack_score": 0,
+      "operational_risk_score": 0,
+      "data_pipeline_score": 0,
+      "live_project_score": 0,
+      "deep_decision_score": 0,
+      "archive_score": 0
+    },
+    "reason": "",
+    "requires_web": false,
+    "requires_tavily_extract": false,
+    "requires_notebooklm": false,
+    "requires_deep_source_pack": false,
+    "risk_level": "normal",
+    "requires_research": false,
+    "domain": "",
+    "research_depth": "shallow"
+  },
+  "source_pack": {
+    "sources": [
+      {
+        "source_id": "local_001",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "excerpt": "# 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+        "content_full": "# 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+        "authority_level": "primary",
+        "relevance_score": 1.0,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_002",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "excerpt": "# 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+        "content_full": "# 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+        "authority_level": "primary",
+        "relevance_score": 0.3208,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_003",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/codex/2026-05-08-af-productization-application-guide.md",
+        "excerpt": "### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer",
+        "content_full": "### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer",
+        "authority_level": "primary",
+        "relevance_score": 0.1262,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_004",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "excerpt": "### Brief 선택: **minesweeper** (가벼움) 직전 세션 \"포커 게임 live run\" 보다 가벼운 케이스 선택. Web 미요구, 단순 게임 로직.",
+        "content_full": "### Brief 선택: **minesweeper** (가벼움) 직전 세션 \"포커 게임 live run\" 보다 가벼운 케이스 선택. Web 미요구, 단순 게임 로직.",
+        "authority_level": "primary",
+        "relevance_score": 0.1244,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_005",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "excerpt": "## 5. 결과 형식 `runtime/timing/minesweeper-baseline_baseline.jsonl` 예상 출력: ```jsonl {\"doc_type\":\"plan\",\"work_item\":\"minesweeper-baseline\",\"elapsed_sec\":58.2,\"refine_attempts\":0,\"output_chars\":3200,\"ts\":1746700000} {\"doc_type\":\"spec\",\"work_item\":\"minesweeper-ba...",
+        "content_full": "## 5. 결과 형식 `runtime/timing/minesweeper-baseline_baseline.jsonl` 예상 출력: ```jsonl {\"doc_type\":\"plan\",\"work_item\":\"minesweeper-baseline\",\"elapsed_sec\":58.2,\"refine_attempts\":0,\"output_chars\":3200,\"ts\":1746700000} {\"doc_type\":\"spec\",\"work_item\":\"minesweeper-ba...",
+        "authority_level": "primary",
+        "relevance_score": 0.097,
+        "selected_reason": "local_rag_result"
+      }
+    ]
+  },
+  "structured_evidence": {},
+  "unmet_gaps": [],
+  "_verification": {
+    "score": 0.706,
+    "status": "pass",
+    "gaps": [
+      "no_external_evidence",
+      "evidence_summary_shallow (3 items, need 4+)"
+    ],
+    "attempt": 0
+  }
+}
