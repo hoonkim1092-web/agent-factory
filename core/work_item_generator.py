@@ -3,12 +3,14 @@ Generate work-item markdown documents from planning artifacts.
 """
 from __future__ import annotations
 
+import concurrent.futures as cf
 import json
 import logging
 import os
 import re
 import shutil
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -19,6 +21,21 @@ from core.utils import now_iso
 
 _LOGGER = logging.getLogger(__name__)
 _PLACEHOLDER_REFINE_MAX = 2
+
+TOTAL_BUDGET = 600.0  # v1 300s → v2 600s
+STAGE_BUDGET: dict[int, float] = {
+    1: 90.0,   # plan: 실측 63s → 90s
+    2: 400.0,  # spec+design 병렬: 실측 352s → 400s
+    3: 110.0,  # tasks: 미측정, plan 수준 + α
+}
+
+_SECTION_HEADER_RE = re.compile(r"^\s*##\s+(.+?)\s*$")
+_TOC_PATTERNS = ("toc", "table of contents", "목차")
+
+
+def _build_full_run_id(base_run_id: str, doc_type: str) -> str:
+    nonce = uuid.uuid4().hex[:8]
+    return f"{base_run_id or 'claude_cli_run'}_{doc_type}_{os.getpid()}_{time.time_ns()}_{nonce}"
 
 
 @dataclass
@@ -738,11 +755,17 @@ def _generate_implementation_tasks(
     task_board: dict[str, Any],
     *,
     prev_design: str = "",
+    prev_spec_outline: str = "",
     run_id: str = "",
     timeout_sec: int = 120,
     workspace: str = "",
 ) -> DocGenerationResult:
     brief = project_brief if isinstance(project_brief, dict) else {}
+
+    spec_outline_block = (
+        f"- Feature Spec Outline (refer with §N for traceability):\n{prev_spec_outline}\n"
+        if prev_spec_outline else ""
+    )
 
     prompt = (
         "You are a technical project manager creating an implementation task breakdown.\n\n"
@@ -750,6 +773,7 @@ def _generate_implementation_tasks(
         f"- Role Plan:\n{json.dumps(role_plan, ensure_ascii=False)}\n"
         f"- Task Board:\n{json.dumps(task_board, ensure_ascii=False)}\n"
         + (f"- Implementation Design:\n{prev_design}\n" if prev_design else "")
+        + spec_outline_block
         + f"- Brief:\n{json.dumps(brief, ensure_ascii=False)}\n\n"
         "## Output Format\nReturn a complete markdown document:\n\n"
         "# Implementation Tasks\n\n"
@@ -767,6 +791,7 @@ def _generate_implementation_tasks(
         "- \"(edit required)\" 사용 금지\n"
         "- 모든 태스크에 depends_on 포함 (없으면 빈 리스트)\n"
         "- acceptance는 검증 가능한 문장\n"
+        "- Acceptance Criteria entries should reference spec §N when relevant\n"
         "- 태스크 순서: scope → build → integrate → verify\n"
         "- 태스크 ID는 T-001부터 순차 부여"
     )
@@ -776,6 +801,102 @@ def _generate_implementation_tasks(
 
     return _generate_doc_with_llm(prompt, _fb, doc_type="tasks",
                                    run_id=run_id, timeout_sec=timeout_sec, workspace=workspace)
+
+
+def _extract_section_outline(markdown: str, expected_count: int = 12) -> str:
+    """## 헤더만 뽑아 §N 형식 목차 반환. finding #12 해소."""
+    lines = []
+    section_idx = 0
+    for raw in markdown.splitlines():
+        m = _SECTION_HEADER_RE.match(raw)
+        if not m:
+            continue
+        title = m.group(1)
+        title = re.sub(r"[*_`]+", "", title).strip()
+        title = re.sub(r"\s+", " ", title)
+        if not title or title.lower() in _TOC_PATTERNS:
+            continue
+        section_idx += 1
+        lines.append(f"§{section_idx} {title}")
+    if section_idx != expected_count:
+        _LOGGER.warning(
+            "spec_outline section count mismatch: got=%d expected=%d", section_idx, expected_count,
+        )
+    return "\n".join(lines)
+
+
+def _resolve_future_or_fallback(
+    future: cf.Future,
+    done_set: set,
+    doc_type: str,
+    fallback_factory,
+) -> DocGenerationResult:
+    if future in done_set:
+        try:
+            return future.result(timeout=0)
+        except Exception as exc:
+            return DocGenerationResult(
+                doc_type=doc_type,
+                content=fallback_factory(),
+                used_fallback=True,
+                errors=[f"{type(exc).__name__}:{exc}"],
+            )
+    return DocGenerationResult(
+        doc_type=doc_type,
+        content=fallback_factory(),
+        used_fallback=True,
+        timeout_fallback=True,
+        errors=["stage2_deadline_exceeded"],
+    )
+
+
+def _exec_stage2(
+    deadline: float,
+    plan_content: str,
+    work_item_id: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    task_board: dict[str, Any],
+    base_run_id: str,
+    workspace: str,
+) -> tuple[DocGenerationResult, DocGenerationResult]:
+    """spec / design 병렬 생성. 절대 deadline까지 기다리고, 미완료는 fallback으로 채움."""
+    remaining = max(1.0, deadline - time.monotonic())
+    llm_timeout = max(1, int(remaining) - 5)
+
+    executor = cf.ThreadPoolExecutor(max_workers=2, thread_name_prefix="wi-stage2")
+    try:
+        fut_spec = executor.submit(
+            _generate_and_refine, "spec", _generate_feature_spec,
+            work_item_id, project_brief, role_plan, task_board,
+            prev_plan=plan_content, run_id=base_run_id,
+            timeout_sec=llm_timeout, workspace=workspace,
+        )
+        fut_design = executor.submit(
+            _generate_and_refine, "design", _generate_implementation_design,
+            work_item_id, project_brief, role_plan,
+            prev_plan=plan_content, run_id=base_run_id,
+            timeout_sec=llm_timeout, workspace=workspace,
+        )
+
+        done, _ = cf.wait(
+            {fut_spec, fut_design},
+            timeout=remaining,
+            return_when=cf.ALL_COMPLETED,
+        )
+
+        spec_result = _resolve_future_or_fallback(
+            fut_spec, done, "spec",
+            lambda: _fallback_feature_spec(work_item_id, project_brief, role_plan, task_board),
+        )
+        design_result = _resolve_future_or_fallback(
+            fut_design, done, "design",
+            lambda: _fallback_impl_design(work_item_id, project_brief, role_plan),
+        )
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    return spec_result, design_result
 
 
 def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) -> str:
@@ -852,75 +973,91 @@ def generate_work_items(
     work_item_id = slug
 
     episode_hints_section = _build_episode_hints_section(project_brief, workspace)
-    # 5a는 deadline 미적용 — 최소 1개 문서는 LLM으로 생성. 5b~5d는 초과 시 fallback.
-    doc_gen_deadline = time.time() + 300
+    t_total_start = time.monotonic()
 
-    # Step 5a: feature-plan (no prev)
+    # --- Stage 1: plan (sequential) ---
+    deadline_1 = t_total_start + STAGE_BUDGET[1]
+    llm_timeout_1 = max(1, int(STAGE_BUDGET[1]) - 5)
     plan_result = _generate_and_refine(
         "plan", _generate_feature_plan, work_item_id, project_brief, role_plan,
-        run_id=run_id, workspace=workspace,
+        run_id=run_id, timeout_sec=llm_timeout_1, workspace=workspace,
     )
-    plan_content = plan_result.content
     if episode_hints_section:
-        plan_content = plan_content + "\n" + episode_hints_section
-        plan_result.content = plan_content
+        plan_result.content = plan_result.content + "\n" + episode_hints_section
+    plan_content = plan_result.content
     plan_path = os.path.join(work_dir, "feature-plan.md")
     write_text(plan_path, plan_content)
     files["feature-plan.md"] = plan_path
 
-    # Step 5b: feature-spec (prev=plan)
-    if time.time() < doc_gen_deadline:
-        spec_result = _generate_and_refine(
-            "spec", _generate_feature_spec, work_item_id, project_brief,
-            role_plan, task_board,
-            prev_plan=plan_content, run_id=run_id, workspace=workspace,
-        )
-    else:
-        spec_result = DocGenerationResult(
-            doc_type="spec",
-            content=_fallback_feature_spec(work_item_id, project_brief, role_plan, task_board),
-            used_fallback=True, timeout_fallback=True,
-        )
+    elapsed_1 = time.monotonic() - t_total_start
+    carry_over_1 = max(0.0, STAGE_BUDGET[1] - elapsed_1)
+    if plan_result.used_fallback:
+        _LOGGER.warning("Stage 1 fallback — Stage 2/3는 fallback plan을 prev로 사용")
+
+    # --- Stage 2: spec + design (병렬) ---
+    t_stage2_start = time.monotonic()
+    budget_2 = STAGE_BUDGET[2] + carry_over_1
+    deadline_2 = t_stage2_start + budget_2
+    spec_result, design_result = _exec_stage2(
+        deadline=deadline_2,
+        plan_content=plan_content,
+        work_item_id=work_item_id,
+        project_brief=project_brief,
+        role_plan=role_plan,
+        task_board=task_board,
+        base_run_id=run_id,
+        workspace=workspace,
+    )
     spec_content = spec_result.content
     spec_path = os.path.join(work_dir, "feature-spec.md")
     write_text(spec_path, spec_content)
     files["feature-spec.md"] = spec_path
 
-    # Step 5c: implementation-design (prev=spec)
-    if time.time() < doc_gen_deadline:
-        design_result = _generate_and_refine(
-            "design", _generate_implementation_design, work_item_id, project_brief,
-            role_plan,
-            prev_spec=spec_content, run_id=run_id, workspace=workspace,
-        )
-    else:
-        design_result = DocGenerationResult(
-            doc_type="design",
-            content=_fallback_impl_design(work_item_id, project_brief, role_plan),
-            used_fallback=True, timeout_fallback=True,
-        )
     design_content = design_result.content
     design_path = os.path.join(work_dir, "implementation-design.md")
     write_text(design_path, design_content)
     files["implementation-design.md"] = design_path
 
-    # Step 5d: implementation-tasks (prev=design)
-    if time.time() < doc_gen_deadline:
-        tasks_result = _generate_and_refine(
-            "tasks", _generate_implementation_tasks, work_item_id, project_brief,
-            role_plan, task_board,
-            prev_design=design_content, run_id=run_id, workspace=workspace,
-        )
-    else:
-        tasks_result = DocGenerationResult(
-            doc_type="tasks",
-            content=_fallback_impl_tasks(work_item_id, project_brief, role_plan, task_board),
-            used_fallback=True, timeout_fallback=True,
-        )
+    elapsed_2 = time.monotonic() - t_stage2_start
+    carry_over_2 = max(0.0, budget_2 - elapsed_2)
+
+    # --- Stage 3: tasks (sequential) ---
+    t_stage3_start = time.monotonic()
+    budget_3 = STAGE_BUDGET[3] + carry_over_2
+    llm_timeout_3 = max(1, int(budget_3) - 5)
+    spec_outline = _extract_section_outline(spec_content)
+    tasks_result = _generate_and_refine(
+        "tasks", _generate_implementation_tasks, work_item_id, project_brief,
+        role_plan, task_board,
+        prev_design=design_content,
+        prev_spec_outline=spec_outline,
+        run_id=run_id, timeout_sec=llm_timeout_3, workspace=workspace,
+    )
     tasks_content = tasks_result.content
     tasks_path = os.path.join(work_dir, "implementation-tasks.md")
     write_text(tasks_path, tasks_content)
     files["implementation-tasks.md"] = tasks_path
+
+    # --- 텔레메트리 dump ---
+    try:
+        from pathlib import Path
+        tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"
+        tele_dir.mkdir(parents=True, exist_ok=True)
+        tele_path = tele_dir / f"{slug}.json"
+        tele_data: dict[str, Any] = {"docs": {}}
+        for result in (plan_result, spec_result, design_result, tasks_result):
+            tele_data["docs"][result.doc_type] = {
+                "elapsed_sec": result.elapsed_sec,
+                "used_fallback": result.used_fallback,
+                "timeout_fallback": result.timeout_fallback,
+                "placeholder_refine_attempts": result.placeholder_refine_attempts,
+                "provider_id": result.provider_id,
+                "model": result.model,
+                "t1_refine_attempts": 0,
+            }
+        tele_path.write_text(json.dumps(tele_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as _te:
+        _LOGGER.debug("telemetry dump skip: %s", _te)
 
     # e2e_command 누락 태스크 경고
     tasks_list = [t for t in (task_board.get("tasks") or []) if isinstance(t, dict)]
@@ -951,14 +1088,17 @@ def _generate_and_refine(
     prev_plan: str = "",
     prev_spec: str = "",
     prev_design: str = "",
+    prev_spec_outline: str = "",
     run_id: str = "",
     timeout_sec: int = 120,
     workspace: str = "",
 ) -> DocGenerationResult:
     """문서 생성 후 금지 토큰 스캔, 발견 시 LLM 보강 루프(최대 2회)를 수행한다."""
     import inspect as _inspect
-    import os as _os
-    placeholder_refine = _os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
+    placeholder_refine = os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
+
+    # 설계 §3: doc_type별 run_id 격리 (병렬 스레드 세션 파일 충돌 방지)
+    full_run_id = _build_full_run_id(run_id, doc_type)
 
     # explicit kwargs dispatch — introspection은 파라미터 존재 확인에만 사용 (마지막 인수 위치 가정 제거)
     sig_params = set(_inspect.signature(generator_fn).parameters)
@@ -969,15 +1109,17 @@ def _generate_and_refine(
         prev_kwargs["prev_spec"] = prev_spec
     if "prev_design" in sig_params and prev_design:
         prev_kwargs["prev_design"] = prev_design
+    if "prev_spec_outline" in sig_params and prev_spec_outline:
+        prev_kwargs["prev_spec_outline"] = prev_spec_outline
 
     result: DocGenerationResult = generator_fn(
         work_item_id, project_brief, *extra_args,
         **prev_kwargs,
-        run_id=run_id,
+        run_id=full_run_id,
         timeout_sec=timeout_sec,
         workspace=workspace,
     )
-    result.run_id = run_id
+    result.run_id = full_run_id
     result.doc_type = doc_type
 
     if not placeholder_refine:
