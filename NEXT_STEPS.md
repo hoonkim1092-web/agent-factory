@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **Phase A/B/C 완료. Phase D 진행 중**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-08 KST — **Phase A/B/C/D 완료. Phase E (병렬화 핵심) 진행 예정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔥 다음 세션 진입 시 우선 작업 (Sonnet)
 > **Work-Item 병렬화 본 구현** — C-3stages (Sonnet으로 진행):
@@ -14,13 +14,14 @@
 >    - ✅ **Phase A (인프라)**: `core/cli_session_cleanup.py` 신규, `core/work_item_telemetry.py` 신규, `af.spec` hiddenimports 추가
 >    - ✅ **Phase B (boundary)**: `DocGenerationResult` dataclass, `_generate_doc_with_llm` → `DocGenerationResult` 반환, 4개 generator keyword-only kwargs + `DocGenerationResult` 반환
 >    - ✅ **Phase C (LLM 보강)**: `core/requirement_llm.py` `execute_document_prompt` + `_call_*_api(return_usage=True)` — `elapsed_sec`+`usage_tokens` 추가. 3-tier PASS.
->    - **Phase D (lock)**: `core/providers/session_adapter.py` `_write_claude_settings` 본문을 `locked_file()`로 wrap
+>    - ✅ **Phase D (lock)**: `core/providers/session_adapter.py` `_write_claude_settings` `locked_file(timeout=5)` wrap + `prepare_cli_session` TimeoutError catch. 3-tier BLOCK→WARN(advisory).
 >    - **Phase E (병렬화)**: `_generate_and_refine` 시그니처 + introspection 제거 + explicit kwargs dispatch, `generate_work_items` 본문을 C-3stages로 재구성 (Stage 2 `concurrent.futures.wait(ALL_COMPLETED)` + `cancel_futures=True`), Stage 1 fallback cascade 정책, `cleanup_stale_sessions(workspace, days=30)` 진입 시 호출
 >    - **Phase F (검증)**: §14 Step 0~5 실행 — N≥3 minesweeper smoke + N≥5 prev_doc 측정 + frozen build 양쪽 + Step 4 비교표 + Step 5 의사결정 임계 (단축 ≥ 1.2×)
 > 3. 각 Phase 완료 시 af-test-runner → af-critic → af-cross-review 3-tier 게이트 (Tier 2~3 파일이므로)
 > 4. Phase E 완료 시 `Master_Blueprint.md §3, §10, §11, §12` 업데이트 같은 커밋
 >
 > ✅ **이번 세션 (2026-05-08 저녁 2) 완료 작업**:
+> - **Phase D 완료** (`a0445a08`): `core/providers/session_adapter.py` — `_write_claude_settings` locked_file wrap, `TimeoutError` catch. finding #11 해소. 3-tier BLOCK→WARN.
 > - **Phase C 완료** (`b8fd768f`): `core/requirement_llm.py` — `_call_*_api(return_usage=False)` 옵션, `execute_document_prompt`에 `elapsed_sec`+`usage_tokens`. finding #6 해소. 3-tier PASS.
 >
 > ✅ **이번 세션 (2026-05-08 저녁) 완료 작업**:

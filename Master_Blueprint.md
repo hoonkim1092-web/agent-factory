@@ -1303,6 +1303,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | chore(whitespace): 전체 문서·에이전트 파일 줄 끝 및 이중 공백 정규화 — AGENTS.md·GEMINI.md 등 85개 파일 `\r\n` → `\n` 통일, 에이전트 YAML(deadbyte·himari·iguro_obanai 등) 및 profile.md 이중 빈 줄 제거, 문서 파일(NEXT_STEPS·PROJECT_LOG·README 등) 포함 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 후행 공백 정규화 — 빈 줄의 후행 스페이스 제거(84개 파일), AGENTS.md·GEMINI.md 등 루트 문서 포함, agents/*.yaml 및 agents/*/profile.md 동일 처리, 콘텐츠 변경 없음 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 trailing whitespace 일괄 제거 — 84개 파일 줄 끝 공백 정규화, AGENTS.md·GEMINI.md·README.md 포함, agents/ YAML·profile.md 동일 적용, artifacts·docs 하위 파일 전체 반영 |
 | 2026-05-08 | v1.2.22 | chore(docs/agents): 전체 문서·에이전트 파일 후행 공백 일괄 제거 — AGENTS.md·GEMINI.md·README.md 등 84개 파일 trailing whitespace 정리, agent profile YAML/md 포맷 통일, 내용 변경 없이 공백만 제거 |
