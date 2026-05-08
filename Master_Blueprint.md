@@ -1303,6 +1303,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서 줄바꿈·공백 일괄 정규화 — 84개 파일 이중 빈줄→단일 빈줄, agents/ YAML·profile.md 포함, README·SYNC_GUIDE·PROJECT_LOG 적용, 내용 변경 없음` |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운 파일 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 연속 빈 줄 제거, agents/ YAML·profile.md 공백 일괄 정리, artifacts/·docs/ 문서 동일 적용 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·설정 파일 공백 정규화 — 빈 줄 후행 공백 84개 파일 일괄 제거, agents/*.yaml·artifacts/*.md·docs/*.md 포함 |
 | 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 불필요 빈 줄 일괄 정규화 — AGENTS.md·GEMINI.md 등 마크다운 84개 파일 연속 공백 제거, agents/*.yaml 및 agents/*/profile.md 포함, 내용 변경 없음 |

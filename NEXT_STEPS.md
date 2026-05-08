@@ -1,24 +1,34 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **Phase A~E 완료. Phase F (검증) 진행 예정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-08 KST — **Phase A~E + simplify 완료. Phase F (검증) 진행 예정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
-> ## 🔥 다음 세션 진입 시 우선 작업 (Sonnet)
-> **Work-Item 병렬화 본 구현** — C-3stages (Sonnet으로 진행):
+> ## 🔥 다음 세션 진입 시 우선 작업 — Phase F (검증)
+> **C-3stages smoke 검증** (Sonnet으로 진행):
 > ```
 > /clear
 > /model claude-sonnet-4-6
 > ```
-> 1. v2 설계 읽기: `docs/2026-05-08-work-item-parallel-option-c-design-v2.md`
-> 2. 구현 순서 (의존도 낮은 것부터):
->    - ✅ **Phase A (인프라)**: `core/cli_session_cleanup.py` 신규, `core/work_item_telemetry.py` 신규, `af.spec` hiddenimports 추가
->    - ✅ **Phase B (boundary)**: `DocGenerationResult` dataclass, `_generate_doc_with_llm` → `DocGenerationResult` 반환, 4개 generator keyword-only kwargs + `DocGenerationResult` 반환
->    - ✅ **Phase C (LLM 보강)**: `core/requirement_llm.py` `execute_document_prompt` + `_call_*_api(return_usage=True)` — `elapsed_sec`+`usage_tokens` 추가. 3-tier PASS.
->    - ✅ **Phase D (lock)**: `core/providers/session_adapter.py` `_write_claude_settings` `locked_file(timeout=5)` wrap + `prepare_cli_session` TimeoutError catch. 3-tier BLOCK→WARN(advisory).
->    - ✅ **Phase E (병렬화)**: `generate_work_items` C-3stages 재구성. `_exec_stage2` ThreadPoolExecutor×2. `_build_full_run_id` 격리. `_extract_section_outline` + tasks prev_spec_outline. 텔레메트리 dump. 3-tier BLOCK→PASS(WARN 2 advisory). 커밋: `99cb58e5`
->    - **Phase F (검증)**: §14 Step 0~5 실행 — N≥3 minesweeper smoke + N≥5 prev_doc 측정 + frozen build 양쪽 + Step 4 비교표 + Step 5 의사결정 임계 (단축 ≥ 1.2×)
-> 3. 각 Phase 완료 시 af-test-runner → af-critic → af-cross-review 3-tier 게이트 (Tier 2~3 파일이므로)
-> 4. Phase E 완료 시 `Master_Blueprint.md §3, §10, §11, §12` 업데이트 같은 커밋
+> ### Phase F Step 0~5 (설계 §14 기준)
+> - **Step 0**: minesweeper-baseline 프로젝트로 `generate_work_items` N≥3회 smoke 실행
+>   - 진입점: `python run_factory_cli.py --task "minesweeper work items" --project minesweeper-baseline`
+>   - 텔레메트리 결과: `runtime/work_item_telemetry/<slug>.json` 확인
+> - **Step 1**: elapsed_sec 수집 (plan/spec/design/tasks 각각)
+> - **Step 2**: v1(sequential) baseline과 비교
+>   - v1 실측 1회: plan=62.9s, spec=84.9s, design=267.4s, tasks=fallback
+>   - v1 total wall-clock ≈ 415s
+> - **Step 3**: frozen build 검증 (`python build_exe.py` → `dist/af-*.zip` 생성 확인)
+> - **Step 4**: N≥5 비교표 작성 (v1 vs v2, wall-clock + 각 stage elapsed)
+> - **Step 5**: 의사결정 임계 — v2 wall-clock ≤ v1 × (1/1.2) 이상이면 병렬화 효과 확정
+>
+> ### 최근 커밋 요약 (참고용)
+> - `d72b0509` refactor(simplify): _make_usage 헬퍼, write_initial_record, dead var 삭제, 모듈레벨 import
+> - `99cb58e5` feat(phase-e): generate_work_items C-3stages 병렬화
+> - `49ed755c` feat(phase-d): session_adapter locked_file wrap
+> - `b8fd768f` feat(phase-c): requirement_llm elapsed_sec+usage_tokens
+>
+> ✅ **이번 세션 (2026-05-08 저녁 3) 완료 작업**:
+> - **simplify 완료** (`d72b0509`): Phase C~E /simplify 후처리. `_make_usage` 헬퍼, `write_initial_record`, 모듈레벨 import 이동, dead vars 삭제. 3-tier PASS (16 tests).
 >
 > ✅ **이번 세션 (2026-05-08 저녁 2) 완료 작업**:
 > - **Phase E 완료** (`99cb58e5`): C-3stages 병렬화 핵심 구현. `generate_work_items` sequential→C-3stages. `_exec_stage2` ThreadPoolExecutor×2. `_build_full_run_id` §3 격리. spec_outline→tasks. 텔레메트리 dump. 3-tier BLOCK→PASS.
