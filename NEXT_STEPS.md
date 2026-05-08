@@ -1,12 +1,67 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-09 KST — **Phase A~F 전체 완료. 병렬화 효과 확정**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-09 KST — **Phase A~F 완료. 다음: Warning Registry & Gate Escalation 설계**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
-> ## ✅ Phase A~F 전체 완료 — 다음 세션: main 덮어쓰기 또는 신규 피처
-> - `main` 브랜치 덮어쓰기는 추후 결정 (현재 main과 이 브랜치는 크게 diverge됨)
-> - 당장 할 작업 없음. 신규 피처 필요 시 이 브랜치 기반으로 새 브랜치 생성
-> - 선택적 소개선: `STAGE_BUDGET[3]` 110s → 150s (실측 125s 대비 여유 확보용, 낮은 우선순위)
+> ## 🔥 다음 세션 진입 시 우선 작업 — Warning Registry & Gate Escalation 설계
+>
+> **모델 전환**: 설계 단계이므로 Opus 권장
+> ```
+> /clear
+> /model claude-opus-4-7
+> ```
+>
+> ### 배경 (2026-05-09 codex 문서 분석 결론)
+> docs/codex/2026-05-08-af-productization-application-guide.md 분석 결과:
+> - **방향성 옳음**: AF는 "문서 생성기 → 계약-검증-승인 시스템"으로 진화해야 함 (§8)
+> - **거부**: 포커 도메인 특화 제안(§3 필수 이벤트, §6 simulation.md)을 코어 게이트로 박는 흐름
+> - **메타 문제 발견**: 현재 AF는 "WARN을 못 찾는다"가 아니라 **"WARN이 BLOCK으로 승격되지 않는다"**
+>   - 데이터 증거: minesweeper-baseline에서 e2e_command 21/21 결측, owner 3/7 미스배정 → 모두 WARN으로 남고 파이프라인 통과
+>
+> ### 결정된 6단계 우선순위 (확정)
+>
+> | Phase | 패키지 | 내용 |
+> |-------|--------|------|
+> | **P1** | warning registry v0 + 기존 WARN 마이그레이션 1차 + 표준 저장 위치 + decision report | 한 패키지로 출시 (분리 시 schema 추상화 과잉 위험) |
+> | **P2** | e2e_command phase-aware BLOCK | build/test/verify/integration만 강제, scope/design은 exempt, 가짜 command 패턴 모니터링 |
+> | **P3** | Owner Lint WARN + measurement | mismatch 누적, false positive 분포 측정 (BLOCK 아직 X) |
+> | **P4** | escalation v1 | P2/P3 데이터로 일부 rule을 BLOCK 승격, 결정 근거를 decision report에 기록 |
+> | **P5** | contract drift 측정기 | brief 기존 필드(data_model/tech_stack/non_goals) 보존율 grep 측정. contract_terms 신설은 데이터 후 결정 |
+> | **P6** | (조건부) domain-specific gates | 기존 `_domain` 분기에 activation condition 1줄. "pack" 추상화 미도입 |
+>
+> ### P1 패키지에 들어갈 것 (한 PR로 출시)
+> 1. **WarningRecord schema** (필드: severity, count, affected_phase, repeat_count, baseline_delta, false_positive_override, rule_id, project_slug, ts)
+> 2. **기존 WARN 4~5개 마이그레이션**:
+>    - `e2e_command_missing` (work_item_generator.py:1056 _LOGGER.warning 자리)
+>    - `owner_role_mismatch` (신규, role_plan 검증 시점)
+>    - `coverage_low` (research_evidence)
+>    - `plan_verifier_block` (plan_verifier 출력)
+>    - `doc_consistency_drift` (P5 측정기 자리)
+> 3. **표준 저장 위치**:
+>    - `runtime/warnings/<slug>/<rule_id>.jsonl` — per-rule 누적
+>    - `runtime/warnings/<slug>/_summary.json` — 프로젝트 합본
+>    - `runtime/warnings/_global/<rule_id>.jsonl` — 프로젝트 간 history (escalation 판단용)
+> 4. **Gate Decision Report**: `runtime/warnings/<slug>/_decision.md` — WARN→BLOCK 승격 시 *왜 승격됐는지* markdown으로 기록, approval_gate.md와 같은 위계로 노출
+> 5. **escalation policy v0**: 어떤 조건이 BLOCK 후보인가 (단순 시작 — 예: count > N or repeat_count >= 3)
+>
+> ### 설계 문서 acceptance (Opus 진입 시 작성할 문서)
+> 파일명: `docs/2026-05-09-warning-registry-and-gate-escalation-design.md`
+>
+> 다뤄야 할 항목:
+> 1. WarningRecord schema (필드명/타입/필수 여부)
+> 2. 기존 WARN → registry 매핑 표 (4~5건 1차)
+> 3. 표준 저장 위치 명세
+> 4. escalation policy v0 (BLOCK 후보 조건)
+> 5. decision report 포맷 + 사용자 노출 경로 (approval_gate.md 통합 여부)
+> 6. P2~P6의 의존성 다이어그램
+>
+> 작성 후 단일 설계문서이므로 **af-cross-review 1라운드 자동 발화** (CLAUDE.md 규칙).
+>
+> ### 거부된 제안 (재논의 시에만 다시 검토)
+> - 포커 도메인 키 하드코딩(`starting_stack`, `SB/BB`)을 코어 config에 박는 것
+> - Event Protocol 필수 이벤트 리스트(`join_room` 등)를 코어 게이트로 강제하는 것
+> - simulation.md 자동 생성을 모든 프로젝트에 강제하는 것
+> - 4주 안에 SSOT+protocol+owner+AC+simulation 다 처리 (각 1~2주씩)
 >
 > ### Phase F Step 0~5 결과 (2026-05-09)
 >
