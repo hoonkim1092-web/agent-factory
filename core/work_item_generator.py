@@ -4,6 +4,7 @@ Generate work-item markdown documents from planning artifacts.
 from __future__ import annotations
 
 import concurrent.futures as cf
+import inspect as _inspect
 import json
 import logging
 import os
@@ -12,12 +13,14 @@ import shutil
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from core.approval_gate import ApprovalGate
 from core.document_policy import parse_frontmatter_exempt, scan_forbidden_tokens
 from core.file_io import write_text
 from core.utils import now_iso
+from core.work_item_telemetry import write_initial_record
 
 _LOGGER = logging.getLogger(__name__)
 _PLACEHOLDER_REFINE_MAX = 2
@@ -976,7 +979,6 @@ def generate_work_items(
     t_total_start = time.monotonic()
 
     # --- Stage 1: plan (sequential) ---
-    deadline_1 = t_total_start + STAGE_BUDGET[1]
     llm_timeout_1 = max(1, int(STAGE_BUDGET[1]) - 5)
     plan_result = _generate_and_refine(
         "plan", _generate_feature_plan, work_item_id, project_brief, role_plan,
@@ -1022,7 +1024,6 @@ def generate_work_items(
     carry_over_2 = max(0.0, budget_2 - elapsed_2)
 
     # --- Stage 3: tasks (sequential) ---
-    t_stage3_start = time.monotonic()
     budget_3 = STAGE_BUDGET[3] + carry_over_2
     llm_timeout_3 = max(1, int(budget_3) - 5)
     spec_outline = _extract_section_outline(spec_content)
@@ -1040,22 +1041,7 @@ def generate_work_items(
 
     # --- 텔레메트리 dump ---
     try:
-        from pathlib import Path
-        tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"
-        tele_dir.mkdir(parents=True, exist_ok=True)
-        tele_path = tele_dir / f"{slug}.json"
-        tele_data: dict[str, Any] = {"docs": {}}
-        for result in (plan_result, spec_result, design_result, tasks_result):
-            tele_data["docs"][result.doc_type] = {
-                "elapsed_sec": result.elapsed_sec,
-                "used_fallback": result.used_fallback,
-                "timeout_fallback": result.timeout_fallback,
-                "placeholder_refine_attempts": result.placeholder_refine_attempts,
-                "provider_id": result.provider_id,
-                "model": result.model,
-                "t1_refine_attempts": 0,
-            }
-        tele_path.write_text(json.dumps(tele_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_initial_record(workspace, slug, [plan_result, spec_result, design_result, tasks_result])
     except Exception as _te:
         _LOGGER.debug("telemetry dump skip: %s", _te)
 
@@ -1094,10 +1080,9 @@ def _generate_and_refine(
     workspace: str = "",
 ) -> DocGenerationResult:
     """문서 생성 후 금지 토큰 스캔, 발견 시 LLM 보강 루프(최대 2회)를 수행한다."""
-    import inspect as _inspect
     placeholder_refine = os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
 
-    # 설계 §3: doc_type별 run_id 격리 (병렬 스레드 세션 파일 충돌 방지)
+    # 설계 §3: 병렬 스레드 세션 파일 충돌 방지
     full_run_id = _build_full_run_id(run_id, doc_type)
 
     # explicit kwargs dispatch — introspection은 파라미터 존재 확인에만 사용 (마지막 인수 위치 가정 제거)

@@ -38,3 +38,36 @@ def update_t1_refine_attempts(workspace: str, slug: str, doc_name: str, incremen
             except OSError:
                 pass
             raise
+
+
+def write_initial_record(workspace: str, slug: str, results: list) -> None:
+    """DocGenerationResult 리스트를 텔레메트리 파일에 atomic 기록 (초기 dump)."""
+    tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"
+    tele_dir.mkdir(parents=True, exist_ok=True)
+    tele_path = tele_dir / f"{slug}.json"
+
+    data: dict = {"docs": {}}
+    for r in results:
+        data["docs"][r.doc_type] = {
+            "elapsed_sec": r.elapsed_sec,
+            "used_fallback": r.used_fallback,
+            "timeout_fallback": r.timeout_fallback,
+            "placeholder_refine_attempts": r.placeholder_refine_attempts,
+            "provider_id": r.provider_id,
+            "model": r.model,
+            "t1_refine_attempts": 0,
+        }
+
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    with locked_file(str(tele_path), timeout=5):
+        fd, tmp = tempfile.mkstemp(dir=str(tele_dir), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(payload)
+            os.replace(tmp, str(tele_path))
+        except Exception:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise

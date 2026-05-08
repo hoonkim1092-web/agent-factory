@@ -21,6 +21,8 @@ from core.destructive_guard import (
 from core.file_lock import locked_file
 from scripts.session_bridge import run_bridge
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def _safe_slug(text: str, fallback: str = "item") -> str:
     raw = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(text or "").strip())
@@ -478,7 +480,7 @@ def prepare_cli_session(request, command: list[str]) -> dict[str, Any]:
         try:
             settings_path = _write_claude_settings(workspace, run_id)
         except TimeoutError as exc:
-            logging.getLogger(__name__).warning(
+            _LOGGER.warning(
                 "_write_claude_settings lock timeout — settings 미작성으로 계속: %s", exc
             )
     elif spec.provider_id == "gemini_cli" and not _is_frozen():

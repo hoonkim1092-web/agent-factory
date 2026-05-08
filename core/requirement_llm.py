@@ -71,6 +71,10 @@ def _extract_openai_text(response) -> str:
     return "\n".join(parts).strip()
 
 
+def _make_usage(prompt_t: int, completion_t: int) -> dict:
+    return {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+
+
 def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("google") or get_configured_engine_api_key("google")
     if not api_key:
@@ -87,7 +91,7 @@ def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
     if meta:
         prompt_t = getattr(meta, "prompt_token_count", 0) or 0
         completion_t = getattr(meta, "candidates_token_count", 0) or 0
-        usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+        usage = _make_usage(prompt_t, completion_t)
     return text, usage
 
 
@@ -107,7 +111,7 @@ def _call_openai_api(model: str, prompt: str, *, return_usage: bool = False):
     if raw:
         prompt_t = getattr(raw, "input_tokens", 0) or 0
         completion_t = getattr(raw, "output_tokens", 0) or 0
-        usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+        usage = _make_usage(prompt_t, completion_t)
     return text, usage
 
 
@@ -146,7 +150,7 @@ def _call_anthropic_api(model: str, prompt: str, *, return_usage: bool = False):
     raw = data.get("usage") or {}
     prompt_t = raw.get("input_tokens", 0) or 0
     completion_t = raw.get("output_tokens", 0) or 0
-    usage = {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+    usage = _make_usage(prompt_t, completion_t)
     return text, usage
 
 

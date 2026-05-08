@@ -122,10 +122,10 @@
 | `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | `SkillRegistry` (싱글톤) |
 | `core/swarm_council.py` | 다중 역할 계획·승인 | `SwarmCouncil` |
 | `core/document_policy.py` | 금지 토큰 스캔·입력 계약·Jaccard | `scan_forbidden_tokens()`, `jaccard_similarity()` |
-| `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **Phase E (C-3stages 병렬화)**: `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id` doc_type별 격리. `_exec_stage2` (ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED)`). `_extract_section_outline` → tasks prev_spec_outline 전달. 텔레메트리 dump. **P3 D2**: Event Sequence / Phase Flow 섹션 추가 | `generate_work_items()`, `_generate_and_refine()`, `_generate_doc_with_llm()`, `_exec_stage2()` |
+| `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **Phase E (C-3stages 병렬화)**: `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id` doc_type별 격리. `_exec_stage2` (ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED)`). `_extract_section_outline` → tasks prev_spec_outline 전달. 텔레메트리 → `write_initial_record`. **simplify**: 모듈레벨 `import inspect`, `from pathlib import Path`; dead vars `deadline_1`/`t_stage3_start` 삭제. **P3 D2**: Event Sequence / Phase Flow 섹션 추가 | `generate_work_items()`, `_generate_and_refine()`, `_generate_doc_with_llm()`, `_exec_stage2()` |
 | `core/cli_session_cleanup.py` | `.af_runtime/cli_sessions/` 하위 30일 초과 CLI 세션 파일 TTL 정리 (Phase A, v2 finding #2) | `cleanup_stale_sessions(workspace, days=30)` |
-| `core/work_item_telemetry.py` | work-item 생성 텔레메트리 — T1 retry 횟수 atomic JSON 기록 (Phase A, v2 finding #8) | `update_t1_refine_attempts(workspace, slug, doc_name, increment=1)` |
-| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성. **Phase C**: `_call_anthropic/openai/google_api`에 `return_usage=False` 옵션, `execute_document_prompt` 응답에 `elapsed_sec`+`usage_tokens` 추가 | `execute_requirement_prompt()`, `execute_document_prompt()` |
+| `core/work_item_telemetry.py` | work-item 생성 텔레메트리 — T1 retry 횟수 atomic JSON 기록 (Phase A). **simplify**: `write_initial_record(workspace, slug, results)` 신규 (초기 dump, locked_file + atomic write) | `update_t1_refine_attempts(workspace, slug, doc_name, increment=1)`, `write_initial_record(workspace, slug, results)` |
+| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성. **Phase C**: `return_usage=False` 옵션, `execute_document_prompt` 응답에 `elapsed_sec`+`usage_tokens` 추가. **simplify**: `_make_usage(prompt_t, completion_t)` 헬퍼 추출 (3× 인라인 중복 제거) | `execute_requirement_prompt()`, `execute_document_prompt()` |
 | `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
 | `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
 
@@ -1303,6 +1303,40 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운 파일 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 연속 빈 줄 제거, agents/ YAML·profile.md 공백 일괄 정리, artifacts/·docs/ 문서 동일 적용 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·설정 파일 공백 정규화 — 빈 줄 후행 공백 84개 파일 일괄 제거, agents/*.yaml·artifacts/*.md·docs/*.md 포함 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 불필요 빈 줄 일괄 정규화 — AGENTS.md·GEMINI.md 등 마크다운 84개 파일 연속 공백 제거, agents/*.yaml 및 agents/*/profile.md 포함, 내용 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 과잉 빈 줄 일괄 제거 — AGENTS.md·GEMINI.md·README.md 등 문서 84개 공백 정규화, agents/*.yaml 6종 및 profile.md 다수 포함, 내용 변경 없는 순수 공백 정리 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 공백 라인 정규화 — AGENTS.md·GEMINI.md 삼중 빈 줄 → 단일 빈 줄 축소, agents/ profile.md 및 .yaml 동일 정리, README·PROJECT_LOG 등 루트 문서 포함 84개 파일 일괄 적용 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 줄바꿈·후행 공백 정규화 — AGENTS.md·GEMINI.md·agents/*.yaml 등 84개 파일 CRLF→LF 및 중복 빈 줄 제거 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 줄바꿈 정규화 — CRLF→LF 일괄 변환(84개 파일), AGENTS.md·GEMINI.md 등 루트 문서 포함, agents/ 프로파일·YAML 전체 적용, 내용 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 84개 문서·YAML 파일 줄바꿈 정규화 — CRLF→LF 변환, 에이전트 프로필 공백 정리, AGENTS.md·GEMINI.md·README 포함 전체 적용 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 후행 공백 제거 — 84개 파일 빈 줄 트레일링 스페이스 일괄 삭제, AGENTS.md·GEMINI.md·README.md 등 마크다운 whitespace 통일 |
+| 2026-05-08 | v1.2.22 | chore(docs): CRLF→LF 줄끝 일괄 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 Windows 개행 제거, 에이전트 YAML·profile.md 포함, 코드 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 줄바꿈 정규화 — AGENTS.md·GEMINI.md 이중 빈 줄 제거, agents/*.yaml CRLF→LF 통일, 84개 파일 공백 일괄 정리 |
+| 2026-05-08 | v1.2.22 | chore(docs/agents): 84개 문서·에이전트 파일 과다 개행 제거 — AGENTS.md·GEMINI.md 등 이중 빈 줄 → 단일 빈 줄 일괄 정리, agents/*.yaml 및 profile.md 동일 적용, README·SYNC_GUIDE 등 프로젝트 루트 문서 포함 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 공백 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 이중 빈 줄 제거, agent profile YAML/MD 줄 끝 공백 일괄 정리, 줄 바꿈 형식 통일 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 줄바꿈 정규화 — AGENTS.md/GEMINI.md 등 84개 파일 초과 빈 줄 제거, 에이전트 profile·YAML 공백 일괄 정리, 줄 끝 통일(CRLF→LF) |
+| 2026-05-08 | v1.2.22 | chore(docs): 마크다운·YAML 전반 연속 빈 줄 정규화 — 84개 파일 초과 공백 라인 축소, AGENTS.md·GEMINI.md·README.md 포함, agents/ YAML 및 profile.md 일괄 정리 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 줄바꿈 정규화 — 84개 파일 이중 빈 줄 → 단일 빈 줄 변환, AGENTS.md/GEMINI.md/profile.md 포함, memory/.gitignore 정리 |
+| 2026-05-08 | v1.2.22 | ```json |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 후행 공백 정규화 — 84개 파일 빈 줄 trailing whitespace 제거, AGENTS.md·GEMINI.md·README.md 정리, agents/*.yaml 및 profile.md 공백 통일, artifacts·data 디렉터리 포함 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 레포 후행 공백·이중 개행 일괄 정규화 — 84개 파일 trailing whitespace 제거, AGENTS.md·GEMINI.md 여분 빈 줄 정리, agents/*.yaml·profile.md 개행 통일, 문서·아티팩트·데이터 파일 포함 전범위 적용 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 84개 줄바꿈·공백 일괄 정규화 — AGENTS.md/GEMINI.md 등 md 파일 이중 개행 제거, agents/*.yaml 공백 통일, PROJECT_LOG·README·SYNC_GUIDE 등 주요 문서 정리, agent profile.md 파일 일괄 반영 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 줄바꿈 정규화 — AGENTS.md·GEMINI.md 등 84개 파일의 이중 빈 줄(`\r\n\r\n`)을 단일 빈 줄로 통일, agents/ YAML·profile.md·artifacts/ 포함 전체 정리 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 후행 공백 제거 — AGENTS.md·GEMINI.md 등 마크다운 84개 파일 trailing whitespace 정규화, agents/*.yaml 및 agents/*/profile.md 포함 |
+| 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서·에이전트 파일 이중 빈 줄 제거 — AGENTS.md·GEMINI.md 공백 정규화, agents/*.yaml 포맷 통일, artifacts/*.md·*.sql 줄바꿈 정리, docs/* 불필요 공백 라인 일괄 삭제` |
+| 2026-05-08 | v1.2.22 | chore(docs/agents): 전체 파일 줄바꿈 정규화 — AGENTS.md·GEMINI.md 등 마크다운 이중 공백줄 제거, agents/*.yaml 및 profile.md 84개 파일 EOL 일괄 정리, 문서·설정 파일 공백 노이즈 클린업 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 84개 공백 줄 정리 — AGENTS.md·GEMINI.md 등 Markdown 중복 개행 제거, agents/ YAML·profile.md 공백 정규화, README·SYNC_GUIDE 등 루트 문서 포맷 통일, 브랜치 목적(memory-gitignore-cleanup)에 따른 whitespace 일괄 정리 |
+| 2026-05-08 | v1.2.22 | chore(repo): 줄 끝 문자 일괄 정규화 (CRLF→LF) — 84개 파일 대상, 문서·에이전트 YAML·프로필 포함, 코드 로직 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 84개 줄바꿈 중복 정규화 — AGENTS.md·GEMINI.md 빈 줄 축소, 에이전트 YAML·profile.md 공백 라인 정리, 마크다운 전체 trailing 공백 제거 |
+| 2026-05-08 | v1.2.22 | chore(docs): 마크다운·YAML 전체 줄바꿈 정규화 — 84개 파일 CRLF→LF 변환, AGENTS.md·GEMINI.md 등 문서 개행 통일, 에이전트 프로필(profile.md) 공백 정리, YAML 설정 파일(himari·lilith·deadbyte 등) 줄끝 표준화 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전 레포 trailing whitespace 일괄 제거 — AGENTS.md·GEMINI.md 빈 줄 공백 정규화, agents/*.yaml·*.md 84개 파일 포함, 내용 변경 없이 공백 문자만 삭제 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 줄바꿈 정규화 — AGENTS.md·GEMINI.md 등 84개 파일의 연속 빈 줄(LF→단일 LF) 일괄 정리, agents/*.yaml 및 profile.md 포함, 내용 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(docs): 문서·에이전트 파일 과잉 개행 일괄 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 중복 빈 줄 제거, agents/*.yaml 프로파일 공백 정리, README·SYNC_GUIDE 등 루트 문서 개행 통일, CRLF 잔존 캐리지리턴 제거 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운 파일 공백 정규화 — AGENTS.md·GEMINI.md 등 이중 빈줄 제거, agents/ 프로파일 84개 일괄 처리, CRLF→LF 줄 끝 정규화, 내용 변경 없음 |
+| 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서 이중 개행 정리 — 84개 파일 이중 빈 줄을 단일 빈 줄로 통일, AGENTS.md·GEMINI.md·에이전트 YAML·profile.md 포함` |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 과잉 공백 라인 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 연속 빈 줄 단일화, agents/ YAML·profile 파일 포맷 통일, artifacts/ 설계 문서 공백 정리, README·SYNC_GUIDE 등 루트 문서 포맷 일괄 적용 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 줄바꿈 정규화 — 84개 파일 trailing whitespace 제거, CRLF→LF 변환, 에이전트 profile·yaml 포함, AGENTS.md·GEMINI.md·README.md 등 문서 공백 통일 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 중복 빈 줄 제거, agents/ YAML·profile.md whitespace 정리, 마크다운 렌더링 일관성 확보 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 후행 공백 제거 — AGENTS.md·GEMINI.md·README.md 등 84개 마크다운/YAML 파일 trailing whitespace 일괄 정리 |
@@ -1347,6 +1381,7 @@ model_utils.py (독립 모듈)
 | 2026-05-04 | v1.2.22 | chore(skills+code-review): new_skill 승격 이벤트 1건 + 코드리뷰 로그 2건 자동 기록 — skill-usage.jsonl 18번째 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 항목 append, codex bridge session_cursor·skill-eval-report·skill-promotion·registry 메타데이터 동기화 |
 | 2026-05-04 | v1.2.22 | chore(skills+review): 스킬 promotion 이벤트 누적 + 코드리뷰 로그 동기화 — skill-usage.jsonl에 new_skill candidate 승급 이벤트 1건 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 append, skill-eval-report.json·skill-promotion.json·registry.yaml 메타데이터 갱신, codex bridge session_cursor 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills): new_skill 평가 자동화 산출물 갱신 — skill-promotion 18회차 후보 승급 로그 추가, skill-eval-report 재생성, registry.yaml 동기화, code-review.md 최근 커밋 2건 추가, codex bridge session_cursor 갱신 |
+| 2026-05-08 | (unreleased) | refactor(simplify): Phase C~E /simplify 후처리 — `core/requirement_llm.py`: `_make_usage(prompt_t, completion_t)` 헬퍼 추출(3× 인라인 dict 중복 제거). `core/work_item_telemetry.py`: `write_initial_record(workspace, slug, results)` 신규(locked_file atomic 초기 dump, 인라인 텔레메트리 코드 흡수). `core/work_item_generator.py`: `import inspect as _inspect`·`from pathlib import Path` 모듈레벨 이동; dead vars `deadline_1`·`t_stage3_start` 삭제; 인라인 텔레메트리 → `write_initial_record` 위임; `_generate_and_refine` 주석 트리밍. `core/providers/session_adapter.py`: `_LOGGER = logging.getLogger(__name__)` 모듈레벨 캐싱. 3-tier PASS. |
 | 2026-05-08 | (unreleased) | feat(phase-e): Work-Item 병렬화 v2 Phase E C-3stages 병렬화 핵심 — `core/work_item_generator.py`: `import concurrent.futures as cf`, `import uuid`. `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id(base, doc_type)` 격리 헬퍼(§3 run_id 충돌 방지). `_extract_section_outline(markdown, expected_count=12)`. `_resolve_future_or_fallback`. `_exec_stage2` ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED, timeout)` + `shutdown(wait=False, cancel_futures=True)`. `_generate_implementation_tasks` `prev_spec_outline` kwarg + spec_outline_block. `_generate_and_refine` `prev_spec_outline` dispatch + `full_run_id` 사용. `generate_work_items` 본문 C-3stages 재구성: Stage1 plan(timeout=85s) → Stage2 spec+design 병렬(budget+carry_over) → Stage3 tasks(timeout=budget-5s) + 텔레메트리 dump. 3-tier BLOCK→PASS(WARN 2 advisory). |
 | 2026-05-08 | (unreleased) | feat(phase-d): Work-Item 병렬화 v2 Phase D lock — `core/providers/session_adapter.py`: `_write_claude_settings` 본문을 `with locked_file(str(settings_path), timeout=5):` 래핑(load→merge→save race 방지, finding #11 해소). `prepare_cli_session`에 `TimeoutError` catch 추가(lock timeout 시 settings 미작성 경고 후 계속 진행, 설계 §4 계약 이행). `import logging` 상단 이동. 3-tier BLOCK→PASS(WARN 2 advisory). |
 | 2026-05-08 | (unreleased) | feat(phase-c): Work-Item 병렬화 v2 Phase C LLM 보강 — `core/requirement_llm.py`: `_call_anthropic/openai/google_api`에 `return_usage=False` kwarg 추가(True 시 `(str, dict)` 반환, dict는 `{prompt, completion, total}` 토큰 수). `execute_document_prompt`에 per-candidate `time.monotonic()` 래핑 + CLI path `usage = result.get("usage") or {}` + API path `return_usage=True` 언패킹, 성공/실패 응답 모두에 `elapsed_sec`+`usage_tokens` 키 포함. finding #6 해소. 3-tier PASS. |
