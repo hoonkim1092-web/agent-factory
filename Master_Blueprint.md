@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-07 | version: v1.2.22 -->
+<!-- last_updated: 2026-05-08 | version: v1.2.22 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1303,6 +1303,13 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | You've hit your limit · resets 6:30pm (Asia/Seoul) |
+| 2026-05-08 | v1.2.22 | chore(docs/agents): 문서·에이전트 파일 전체 공백 일괄 정규화 — 이중 빈 줄→단일 빈 줄 85개 파일 치환, AGENTS.md·GEMINI.md·README.md 포함, agents/*.yaml 및 profile.md 대상 |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 후행 공백 일괄 제거 — AGENTS.md·GEMINI.md·README.md 등 85개 파일 빈 줄 trailing whitespace 정규화, 에이전트 YAML·profile.md 포함, 콘텐츠 변경 없음 |
+| 2026-05-08 | v1.2.22 | chore(repo): 전체 파일 줄바꿈 정규화 — 85개 파일 이중 공백행 제거, AGENTS.md·GEMINI.md·agents/*.yaml 불필요 공백 일괄 정리, 내용 변경 없음(whitespace-only) |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 줄바꿈 정규화 — 85개 파일 CRLF→LF 변환, AGENTS.md·GEMINI.md·에이전트 YAML·프로필 md 포함 |
+| 2026-05-08 | v1.2.22 | ```json |
+| 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·에이전트 파일 후행 공백 일괄 제거 — AGENTS.md·GEMINI.md 등 85개 파일 줄 말미 중복 공백 정규화, agents/*.yaml 및 profile.md 동일 적용, 내용 변경 없이 포맷만 정리 |
 | 2026-05-07 | (unreleased) | feat(pipeline): 3-Tier Quality Gate 통합 — **D1**: `core/review_runner.detect_providers()`를 `core/provider_detect.py`에 위임(auth ping + 1h 캐시). `detect_blocked_providers()` 신규. **D2**: `DocumentReviewSession.run_review()` enterprise 게이팅 제거 — cross/judge 활성화 조건을 `level=="enterprise"`에서 `len(providers)>=2`로 변경. AUTH_EXPIRED 선행 체크(BLOCK), provider 0개는 PASS→SKIP 분리. **D3**: T1 QA에 work-item 문서 세트 검사 추가 — `_load_doc_contents()` 헬퍼 + `run_structural_gate({documents, project_brief}, "work_item_doc_set")`(FAIL 시 `_refine_document` 1회 retry). **D4**: `pipeline_quality._VERDICT_SCORE_MAP["SKIP"]=1.0` 추가(미검증 통과 메트릭 오염 방지). SKIP verdict 하위 호환: `project_pipeline.py:1011` + `doc_qa/skill.py:99,132` 패치. `rubrics/work_item_doc_set.yaml` 신규(5 dimensions, pass=4.0/warn=3.0). `core/rubric_compiler._run_check()` rule 핸들러 5종 추가(doc_set_present/covers_deliverables/keyword_count_min/phase_count_match/task_section_ref_ratio). |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적(21→22회) — skill-usage.jsonl 프로모션 이벤트 3건 추가, skill-eval-report.json 피드백 카운트 갱신, skills/dp/meta.yaml 메타데이터 동기화, code-review.md 리뷰 내용 업데이트 |
 | 2026-05-07 | v1.2.22 | chore(skills): new_skill 평가 이벤트 누적 및 스킬 메타 갱신 — skill-usage.jsonl 프로모션 이벤트 3건 추가(feedback_total 20→22), skill-eval-report.json 갱신, skills/registry.yaml 업데이트, code-review.md 리뷰 내용 갱신, dp/meta.yaml 메타 수정 |
@@ -1324,6 +1331,7 @@ model_utils.py (독립 모듈)
 | 2026-05-04 | v1.2.22 | chore(skills+code-review): new_skill 승격 이벤트 1건 + 코드리뷰 로그 2건 자동 기록 — skill-usage.jsonl 18번째 이벤트 추가, code-review.md에 c52e79f1·c55fa99e 항목 append, codex bridge session_cursor·skill-eval-report·skill-promotion·registry 메타데이터 동기화 |
 | 2026-05-04 | v1.2.22 | chore(skills+review): 스킬 promotion 이벤트 누적 + 코드리뷰 로그 동기화 — skill-usage.jsonl에 new_skill candidate 승급 이벤트 1건 추가, code-review.md에 c52e79f1·c55fa99e 리뷰 항목 append, skill-eval-report.json·skill-promotion.json·registry.yaml 메타데이터 갱신, codex bridge session_cursor 갱신 |
 | 2026-05-04 | v1.2.22 | chore(skills): new_skill 평가 자동화 산출물 갱신 — skill-promotion 18회차 후보 승급 로그 추가, skill-eval-report 재생성, registry.yaml 동기화, code-review.md 최근 커밋 2건 추가, codex bridge session_cursor 갱신 |
+| 2026-05-08 | (unreleased) | feat(phase-b): Work-Item 병렬화 v2 Phase B boundary — `core/work_item_generator.py`: `DocGenerationResult` dataclass 신규(12필드: doc_type/content/provider_id/model/elapsed_sec/used_fallback/timeout_fallback/placeholder_refine_attempts/t1_refine_attempts/errors/run_id/usage_tokens). `_generate_doc_with_llm` → `DocGenerationResult` 반환(except 블록 내 fallback return, UnboundLocalError 수정). 4개 generator keyword-only kwargs(`prev_plan/prev_spec/prev_design/run_id/timeout_sec/workspace`) + `DocGenerationResult` 반환. `_generate_and_refine` introspection 제거 + explicit kwargs dispatch + `placeholder_refine_attempts` 갱신. `generate_work_items` → `.content` 추출 패턴. 3-tier PASS/PASS/WARN(advisory 3건, BLOCK 0). |
 | 2026-05-08 | (unreleased) | feat(phase-a): Work-Item 병렬화 v2 Phase A 인프라 — `core/cli_session_cleanup.py` 신규: `cleanup_stale_sessions(workspace, days=30)`, `.af_runtime/cli_sessions/` 경로 정정(v2 finding #2 해소). `core/work_item_telemetry.py` 신규: `update_t1_refine_attempts()` `locked_file()` atomic T1 retry 카운터(finding #8 해소). `af.spec` hiddenimports에 두 모듈 추가(M4). 3-tier PASS. §0 빠른참조 2행 추가. |
 | 2026-05-07 | (unreleased) | fix(research_router): P3 D3c — `_detect_domain()` regex word-boundary → substring 매칭 교체. `"포커게임"` 같은 한국어 합성어 false-negative 수정. `_POKER_TOKENS`에 `"홀덤"` 추가. `run_factory_cli.py` `--research-only` 플래그 추가(research+brief 단계만 실행). NEXT_STEPS: D3 substring 패치로 종결, P4 researcher LLM 재설계 방향 기록. 132 tests PASS. |
 | 2026-05-07 | (unreleased) | fix(researcher): P3 D3b — `collect_project_evidence()` hint_gaps escalation 경로에서 `research_plan=None` 진입 시 `prev_domain=""` → domain 유실 버그 수정. `prev_domain = (research_plan.domain if research_plan else None) or ResearchRouter()._detect_domain(task_input)` — escalation 전 domain이 없으면 독립 감지 후 보존. D3 live run에서 2차 실행 시 mode=fresh_lookup+domain="" 패턴이 재현돼 추가 수정. |
