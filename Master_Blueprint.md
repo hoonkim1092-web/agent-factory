@@ -1303,6 +1303,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-08 | v1.2.22 | chore(docs): 85개 파일 빈 줄 이중 → 단일 일괄 정규화 — AGENTS.md·GEMINI.md 마크다운 줄바꿈 정리, agents/ YAML 및 profile.md 공백 통일, artifacts·docs 문서 포함 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 파일 공백 정규화 — AGENTS.md·GEMINI.md 등 85개 파일의 연속 빈 줄(이중 개행) → 단일 개행으로 일괄 치환, 에이전트 프로필 YAML(himari·iguro_obanai·lilith 등) 동일 적용, 내용 변경 없음 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운·YAML 줄바꿈 정규화 — 이중 공백줄→단일 공백줄 일괄 변환, 대상 85개 파일(AGENTS.md·GEMINI.md·agents/*.yaml 등), 내용 변경 없이 공백 정리만 적용 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서 줄바꿈 정규화 — AGENTS.md·GEMINI.md 등 85개 파일 이중 개행 → 단일 개행 변환, 에이전트 profile·YAML 파일 공백 정리 포함, memory/.gitignore 브랜치 연동 작업 일환 |

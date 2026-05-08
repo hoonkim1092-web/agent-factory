@@ -1,24 +1,69 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-08 KST — **핸드오프 문서 BLOCK 2건 수정 완료 → 측정 실행 준비 완료**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-08 KST — **Phase A/B/C 완료. Phase D 진행 중**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
 > ## 🔥 다음 세션 진입 시 우선 작업 (Sonnet)
-> **Work-Item 병렬화 사전 측정** — Sonnet으로 진행:
+> **Work-Item 병렬화 본 구현** — C-3stages (Sonnet으로 진행):
 > ```
 > /clear
-> /model sonnet
+> /model claude-sonnet-4-6
 > ```
-> 핸드오프 먼저 읽기:
-> ```bash
-> cat docs/2026-05-08-work-item-parallel-measurement-handoff.md
-> ```
-> 1. §3 임시 패치(`_generate_and_refine`에 timing dump) 적용 (커밋 X)
-> 2. `python3 -c "import core.work_item_generator"` 로 import 검증
-> 3. `python3 run_factory_cli.py --task "8x8 minesweeper game with mines" --project minesweeper-baseline --mode fsa`
-> 4. `runtime/timing/minesweeper-baseline_baseline.jsonl` 내용 보고
-> 5. `git restore core/work_item_generator.py` — 패치 원복
-> 6. 결과 보고 후 `/model` 전환 안내 (설계 v2는 Opus)
+> 1. v2 설계 읽기: `docs/2026-05-08-work-item-parallel-option-c-design-v2.md`
+> 2. 구현 순서 (의존도 낮은 것부터):
+>    - ✅ **Phase A (인프라)**: `core/cli_session_cleanup.py` 신규, `core/work_item_telemetry.py` 신규, `af.spec` hiddenimports 추가
+>    - ✅ **Phase B (boundary)**: `DocGenerationResult` dataclass, `_generate_doc_with_llm` → `DocGenerationResult` 반환, 4개 generator keyword-only kwargs + `DocGenerationResult` 반환
+>    - ✅ **Phase C (LLM 보강)**: `core/requirement_llm.py` `execute_document_prompt` + `_call_*_api(return_usage=True)` — `elapsed_sec`+`usage_tokens` 추가. 3-tier PASS.
+>    - **Phase D (lock)**: `core/providers/session_adapter.py` `_write_claude_settings` 본문을 `locked_file()`로 wrap
+>    - **Phase E (병렬화)**: `_generate_and_refine` 시그니처 + introspection 제거 + explicit kwargs dispatch, `generate_work_items` 본문을 C-3stages로 재구성 (Stage 2 `concurrent.futures.wait(ALL_COMPLETED)` + `cancel_futures=True`), Stage 1 fallback cascade 정책, `cleanup_stale_sessions(workspace, days=30)` 진입 시 호출
+>    - **Phase F (검증)**: §14 Step 0~5 실행 — N≥3 minesweeper smoke + N≥5 prev_doc 측정 + frozen build 양쪽 + Step 4 비교표 + Step 5 의사결정 임계 (단축 ≥ 1.2×)
+> 3. 각 Phase 완료 시 af-test-runner → af-critic → af-cross-review 3-tier 게이트 (Tier 2~3 파일이므로)
+> 4. Phase E 완료 시 `Master_Blueprint.md §3, §10, §11, §12` 업데이트 같은 커밋
+>
+> ✅ **이번 세션 (2026-05-08 저녁 2) 완료 작업**:
+> - **Phase C 완료** (`b8fd768f`): `core/requirement_llm.py` — `_call_*_api(return_usage=False)` 옵션, `execute_document_prompt`에 `elapsed_sec`+`usage_tokens`. finding #6 해소. 3-tier PASS.
+>
+> ✅ **이번 세션 (2026-05-08 저녁) 완료 작업**:
+> - **v2 설계 작성 완료**: `docs/2026-05-08-work-item-parallel-option-c-design-v2.md`
+>   - v1 BLOCK 14건 + Critic Missing 5건 모두 흡수 (자기보고 19/19 정합)
+>   - Stage budget 실측 재산정: Stage1 90s + Stage2 400s + Stage3 110s = TOTAL 600s (v1 360s 대비 +240s)
+>   - 핵심 변경 19건 §0 표 명시 (Critical 2건/High 6건/Medium 5건/Low 6건)
+> - **cross-review 1라운드 → WARN** (BLOCK 0건):
+>   - codex Critical 5건 + High 4건은 "설계=미구현=결함" 메타 오해로 REJECTED
+>   - 진짜 결함 1건 ACCEPT Medium: §9 import 경로 (`core.workspace_paths` → `core.continuity.runtime_paths`) — 수정 완료
+>   - advisory 3건 (마진 표현 / placeholder 컬럼 주석 / R6 cascade 위험) — 수정 완료
+>   - WARN-only no-fire 규칙으로 추가 라운드 자동 발화 안 함 (`max_rounds=2` 캡)
+> - 리뷰 리포트: `docs/reviews/...-work-item-parallel-option-c-design-v2-design-review.md` (cross-review agent 출력)
+>
+> ### 📊 측정 결과 (2026-05-08 minesweeper baseline, 1회 실측)
+> | 단계 | elapsed_sec | refine_attempts | output_chars |
+> |------|-------------|-----------------|-------------|
+> | plan | **62.9s** | 0 | 202 |
+> | spec | **84.9s** | 0 | 6,539 |
+> | design | **267.4s** | **2** | 5,277 |
+> | tasks | — (fallback) | — | — |
+>
+> **핵심 발견**:
+> - `doc_gen_deadline = time.time() + 300` (`core/work_item_generator.py:766`) — plan+spec+design 합계 415.2s가 300s를 초과 → tasks는 `_fallback_impl_tasks` 경로 (`_generate_and_refine` 미경유, 측정 불가)
+> - **v1 설계 BLOCK #1 실증**: design 단독 267s가 v1 Stage 2 budget(180s) 90s 초과 → 산술 모순 확정
+> - refine_attempts 합계: 2건 (전량 design)
+> - timeout 발생: 없음 (개별 stage는 stage budget이 아닌 전체 deadline에서 fallback 트리거)
+>
+> ### v2 Stage budget 재산정 참고치
+> - **Stage 1 (plan)**: 65s 실측 → budget **90s** 적정
+> - **Stage 2 (spec+design)**: 85+267=352s → budget **400s** 또는 spec/design 분리 후 각각 130s/300s
+> - **doc_gen_deadline**: 현재 300s → 최소 **500s+**로 조정 필요 (design 2 refine만으로도 초과)
+>
+> ### 📌 추가 작업 백로그 (우선순위 낮음)
+> - **에스컬레이션 Level 3→4 최적화** (`core/fsa_loop.py:417-424`):
+>   - 현재: `is_fundamental` 시 무조건 재설계(Level 3) 후 skill 진화(Level 4)
+>   - 개선 제안: `is_fundamental && has_skill_failure()` 동시 충족 시 Level 4 직행
+>   - 선행 조건: Level 3→4 전이 비율, skill false-positive 비율 측정 후 결정
+>
+> ✅ **이번 세션 (2026-05-08 오후) 완료 작업**:
+> - **Sonnet baseline 측정 1회 완료** — 위 표 + 파이프라인은 build phase 진입 후 Lilith 오케스트레이션 진행 중
+> - **타이밍 패치 원복 완료** (`git restore core/work_item_generator.py` — 측정 코드 미커밋)
+> - 측정 raw 파일 보존: `runtime/timing/...minesweeper..._baseline.jsonl` (gitignore 안됨, untracked 상태로 유지)
 >
 > ✅ **이번 세션 (2026-05-08 오전) 완료 작업**:
 > - **핸드오프 문서 cross-review BLOCK 2건 수정** (`docs/2026-05-08-work-item-parallel-measurement-handoff.md`):
