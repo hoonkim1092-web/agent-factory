@@ -4,16 +4,17 @@
 - 작성 모델: Claude Opus 4.7 (1M context)
 - 브랜치: `2026-05-07-memory-gitignore-cleanup`
 - 분류: 단일 설계문서 (CLAUDE.md 규칙 → af-cross-review 1라운드 자동 발화)
-- 상태: **Draft v3 — v2 자동 cross-review BLOCK 5건 (High 2 / Medium 3) 반영 완료**
+- 상태: **Draft v4 — v3 자동 cross-review BLOCK 6건 (High 3 / Medium 3) 반영 완료. baseline 분리 정직 모델링.**
 - 선행 분석: `docs/codex/2026-05-08-af-productization-application-guide.md`
 - v1 리뷰 리포트: `docs/reviews/2026-05-09-094340-2026-05-09-warning-registry-and-gate-escalation-design-review.md`
-- v2 리뷰 리포트 (최신): `docs/reviews/2026-05-09-095135-2026-05-09-warning-registry-and-gate-escalation-design-design-review.md`
+- v2 리뷰 리포트: `docs/reviews/2026-05-09-095135-2026-05-09-warning-registry-and-gate-escalation-design-design-review.md`
+- v3 리뷰 리포트 (최신 2건): `docs/reviews/2026-05-09-100406-...-design-review.md`, `docs/reviews/2026-05-09-100614-...-design-review.md`
 
 ---
 
 ## §0 한 줄 요약
 
-AF의 메타 결함은 "WARN을 못 찾는다"가 아니라 **"WARN이 BLOCK으로 승격되지 않는다"**. 본 P1 패키지는 (a) WarningRecord schema, (b) 기존 산발 WARN 4종 마이그레이션, (c) 표준 저장 위치, (d) escalation policy v0, (e) decision report 포맷, (f) P2~P6 의존성 다이어그램을 한 PR에 묶어 출시한다. **BLOCK 활성화 rollout 정책 (확정)**: P1은 schema/저장/policy 데이터만 수립하고 실제 차단은 일으키지 않는다(severity는 `warn`만). **P2에서 e2e_command_missing 한 rule만 phase-aware BLOCK으로 활성**한다(build/verify/code_review/cross_validate phase에서 발생 시). **P4에서 P2/P3 측정 데이터를 근거로 owner_role_mismatch / evidence_quality_warn 등 다른 rule을 BLOCK으로 점진 확장**한다. P3/P5는 record만 누적, BLOCK 활성화 없음.
+AF의 메타 결함은 "WARN을 못 찾는다"가 아니라 **"WARN이 BLOCK으로 승격되지 않는다"**. 본 P1 패키지는 (a) WarningRecord schema, (b) 기존 산발 WARN 4종 마이그레이션, (c) 표준 저장 위치, (d) escalation policy v0, (e) decision report 포맷, (f) P2~P6 의존성 다이어그램을 한 PR에 묶어 출시한다. **BLOCK 활성화 rollout 정책 (확정)**: P1은 schema/저장/policy 데이터만 수립하고 실제 차단은 일으키지 않는다(severity는 `warn`만). **P2에서 e2e_command_missing 한 rule만 phase-aware BLOCK으로 활성**한다(build/integrate/code_review/cross_validate/verify phase에서 발생 시 — §5.1 정책과 정합, baseline `_PHASE_ORDER` 6개 중 scope만 exempt). **P4에서 P2/P3 측정 데이터를 근거로 owner_role_mismatch / evidence_quality_warn 등 다른 rule을 BLOCK으로 점진 확장**한다. P3/P5는 record만 누적, BLOCK 활성화 없음.
 
 ---
 
@@ -59,6 +60,7 @@ class WarningRecord:
     severity: str           # "warn" | "block_candidate" | "block"
     project_slug: str       # 예: "minesweeper-smoke-v2-01"
     ts: str                 # ISO 8601, now_iso() 사용
+    record_id: str          # v4 — idempotency key. f"{slug}:{rule_id}:{ts}:{hash6(payload)}" (Finding 100614 #3)
 
     # ─── Localization (필수) ───
     # baseline taxonomy: core/project_task_board.py:17 _PHASE_ORDER
@@ -109,7 +111,7 @@ P1 단계에서는 `warn`만 발화하고, `block_candidate`/`block` 분기는 P
 | # | rule_id | 현재 발화 위치 (파일:줄) | 현재 동작 | P1 동작 (마이그레이션 후) |
 |---|---------|------------------------|---------|------------------------|
 | 1 | `e2e_command_missing` | `core/work_item_generator.py:1048-1056` | `_LOGGER.warning(...)` 단발 로그 (task list 전체 집계) | task별 `phase` 필드(`core/work_item_generator.py:166` `_clean(item.get("phase") or "build")` 참조)로 그룹화한 뒤, **phase 그룹별 record 분할 발화**: 예) build phase 결측 16건 → 1 record (`affected_phase="build"`, `count=16`), scope phase 결측 5건 → 1 record (`affected_phase="scope"`, `count=5`). 기존 `_LOGGER.warning` 단일 로그는 유지. 정책의 phase-exempt가 정상 분기되도록 record 단위가 phase별로 분리되어야 한다. |
-| 2 | `owner_role_mismatch` | `core/project_task_board.py:227-249` `detect_owner_drift` | `bool` 반환만 (호출처 `core/project_pipeline.py:1402` `logger.warning("strategy ledger skip — owner drift 감지 ...")`) | **시그니처 확장 (옵션 a)**: `detect_owner_drift(...) -> list[tuple[str,str]]`로 변경 (mismatched task_id, task_owner 페어 목록 반환). 빈 리스트는 falsy로 판정 가능 → 기존 `if detect_owner_drift(...):` 호출처 회귀 없음. 호출처(`core/project_pipeline.py:1401-1406`)에서 `mismatches = detect_owner_drift(...); if mismatches: ...` 후 `WarningRegistry.record(rule_id="owner_role_mismatch", count=len(mismatches), affected_phase="build", affected_ids=[mid] + [tid for tid,_ in mismatches])`. phase 값은 baseline taxonomy 중 `build`(module 실행 phase)로 통일. |
+| 2 | `owner_role_mismatch` | `core/project_task_board.py:227-249` `detect_owner_drift` | `bool` 반환만 (호출처 `core/project_pipeline.py:1402` `logger.warning("strategy ledger skip — owner drift 감지 ...")`) | **v4 시그니처 (Finding 100614 #5 ACCEPT — expected_owner 보존)**: `detect_owner_drift(...) -> list[tuple[str, str, str]]`로 변경. 각 tuple은 `(task_id, expected_owner, actual_owner)` (baseline에서 이미 `mod_owner` / `task_owner` 분리 — `core/project_task_board.py:230,244` 참조 → 둘 다 그대로 노출). 빈 리스트는 falsy → 기존 `if detect_owner_drift(...):` 호출처 회귀 없음. 호출처(`core/project_pipeline.py:1401-1406`)에서 `mismatches = detect_owner_drift(...); if mismatches: WarningRegistry(workspace=target_workspace).record(project_slug=slug, rule_id="owner_role_mismatch", count=len(mismatches), affected_phase="build", affected_ids=[mid] + [tid for tid, _, _ in mismatches], extra={"mismatches": [{"task_id": tid, "expected": exp, "actual": act} for tid, exp, act in mismatches]})`. phase 값은 baseline taxonomy 중 `build`(module 실행 phase). |
 | 3 | `evidence_quality_warn` | **호출처: `core/project_pipeline.py:756-774`** (verifier 자체는 `core/research_verifier.py:362-366`에서 `_warnings` append만 유지) | `evidence._warnings.append("evidence_quality_warn: score=%s, gaps=%s")` (현재 동작 유지) | **v3 변경 (Finding #5 ACCEPT)**: `core/research_verifier.py`에는 record 호출을 넣지 **않는다** (`ResearchVerifier()`는 slug/workspace를 모름 — `core/project_pipeline.py:725` 인스턴스화 시 인자 없음, `core/project_pipeline.py:756`의 `verify_with_retry(evidence_fn, task_input)`도 workspace 미수신). 대신 호출처(`core/project_pipeline.py`)에서 `_vr` 반환 직후 `if _vr.status != "pass": WarningRegistry(workspace=target_workspace).record(project_slug=slug, rule_id="evidence_quality_warn", affected_phase="scope", count=len(_vr.gaps), severity="warn", extra={"score": _vr.score, "gaps": _vr.gaps})`. 이 위치는 `slug` (메서드 인자), `target_workspace` (이미 지역변수, `core/project_pipeline.py:725` 위 `_collect_kwargs`)이 모두 가용. 기존 `_warnings` append와 병행 (이중 기록). |
 | 4 | `plan_verifier_warn` | `core/plan_verifier.py:42-80` `PlanVerifyResult.passed=False` 흐름 | gate에서 `passed=False` 시 advisory만 (파이프라인 통과) | 호출처(`core/project_pipeline.py:959-` `from core.plan_verifier import PlanVerifier`)에서 `passed=False`면 `WarningRegistry.record(rule_id="plan_verifier_warn", affected_phase="scope", count=len(result.issues), extra={"score": result.score})` (plan 검증은 scope phase). |
 
@@ -133,37 +135,67 @@ P1에서는 **rule_id 예약**만 하고, 실제 발화 코드는 P5에서 추�
 
 ## §4 표준 저장 위치 명세 (Acceptance #3)
 
-### 4.0 path ownership 계약 (v3 신설 — Finding #1 ACCEPT)
+### 4.0 path ownership 계약 (v4 — workspace/doc_root 분리 정직 모델링, v3 100614 #1 + 100406 #3 ACCEPT)
 
-**규칙**: `runtime/warnings/`는 항상 **`workspace` 하위**에 위치한다 (doc_root, cwd 아님).
+**근본 원칙**: baseline은 이미 `workspace` (AF 운영 데이터 루트)와 `doc_root` (사용자 산출물 루트)를 분리한다. v4는 이걸 **무시하지 않고 정직하게 모델링**한다.
 
-baseline 분리 사실 (코드 인용):
-- `core/work_item_generator.py:948` — `doc_root = abspath(target_path) if (...) else workspace` — 사용자 산출물(implementation-tasks.md 등)은 target_path가 있으면 doc_root에 쓴다.
+baseline 분리 사실 (코드 인용 — 검증됨):
+- `core/work_item_generator.py:948` — `doc_root = abspath(target_path) if (target_path and abs) else workspace` — 사용자 산출물 (implementation-tasks.md, approval-gate.md 등)은 target_path가 있으면 doc_root에 쓴다.
 - `core/work_item_generator.py:1042` — `write_initial_record(workspace, slug, ...)` — telemetry는 항상 workspace에 쓴다.
-- `core/project_pipeline.py:946` — `doc_root = abspath(_raw_target) if (...) else target_workspace` — pipeline도 동일 분기.
+- `core/work_item_generator.py:1061` — `gate = ApprovalGate(doc_root, slug)` — **gate는 doc_root에 위치** (사용자 산출물).
+- `core/project_pipeline.py:87-95` — `gate() -> ApprovalGate(self._effective_doc_root(), ...)` — pipeline도 동일.
+- `core/approval_gate.py:78` — `def __init__(self, workspace: str, slug: str)` — **인자명이 `workspace`이지만 실제 전달값은 `doc_root`** (네이밍 혼란 — v4에서 별도 명시).
 
-**결정**: `runtime/warnings/`는 telemetry와 같은 성격 (운영 메타데이터, 사용자 노출 산출물 아님) → **workspace 하위**로 통일. 이 결정은 multi-PC 동기화 (`end_db.py`/`start_db.py` Supabase) 및 `target_path` 분리 모드 모두에서 path 결정을 단일화한다.
+**결정 (4가지 path 정책)**:
 
-API 시그니처 (워크스페이스를 명시 인자로 강제):
+| 데이터 | 위치 | 이유 |
+|--------|------|------|
+| `runtime/warnings/<slug>/<rule>.jsonl` (record SoT) | **workspace** 하위 | 운영 메타데이터, telemetry와 동급, multi-PC sync 대상 통일 |
+| `runtime/warnings/_summary.json`, `_global/` (cache) | **workspace** 하위 | record로부터 재생성 가능, 동일 storage root |
+| `runtime/warnings/<slug>/_decision.md` (사용자 노출) | **workspace** 하위 | _summary와 같은 위치 (재생성 가능) |
+| `approval-gate.md` (사용자 산출물) | **doc_root** 하위 (baseline 그대로) | 사용자 PR review 영역, 변경 없음 |
+
+**핵심 wiring**: gate(doc_root)에서 _decision.md(workspace)로 가는 링크는 **두 path가 다를 수 있으므로** ApprovalGate가 양쪽 path를 모두 알아야 한다 → §6.3 `ApprovalGate(doc_root, slug, runtime_workspace=...)` 시그니처 확장 (Finding 100614 #1 옵션 A 채택).
+
+API 시그니처:
 
 ```python
 class WarningRegistry:
     def __init__(self, workspace: str) -> None:
-        """workspace는 AF 운영 데이터 루트. doc_root와 분리."""
+        """workspace는 AF 운영 데이터 루트 (doc_root 아님). 절대경로로 정규화."""
+        if not workspace:
+            raise ValueError("WarningRegistry requires explicit workspace; cwd/doc_root fallback forbidden")
         self.workspace = os.path.abspath(workspace)
         self.warnings_root = os.path.join(self.workspace, "runtime", "warnings")
 
-    def record(self, *, project_slug: str, **fields) -> None:
-        """jsonl append. workspace는 생성자 인자, project_slug만 record-level."""
+    def record(self, *, project_slug: str, rule_id: str, **fields) -> None:
+        """jsonl append. workspace는 생성자 인자, project_slug+rule_id만 record-level."""
 
     def summarize(self, *, project_slug: str) -> dict:
-        """<workspace>/runtime/warnings/<slug>/_summary.json 갱신·로드."""
+        """<workspace>/runtime/warnings/<slug>/_summary.json 갱신·반환 (rebuild 가능 cache)."""
 
     def load_global(self, *, rule_id: str) -> list[dict]:
         """<workspace>/runtime/warnings/_global/<rule_id>.jsonl 로드."""
+
+    def rebuild_caches(self, *, project_slug: str) -> None:
+        """SoT(<slug>/<rule>.jsonl)로부터 _summary.json + _global/<rule>.jsonl 재생성 (Finding 100614 #3 ACCEPT — partial-write 복구)."""
 ```
 
-**호출처는 항상 `WarningRegistry(workspace=target_workspace)` 패턴**으로 인스턴스화 (Finding #5 fix와 정합). cwd fallback 금지.
+**호출처는 항상 `WarningRegistry(workspace=target_workspace)` 패턴**. cwd / doc_root / env fallback 모두 금지 (`ValueError` 즉시 발생).
+
+### 4.0a SoT vs cache 분리 (Finding 100614 #3 ACCEPT — partial-write recovery)
+
+| 파일 | 역할 | rebuild 가능 | record_id 필요 |
+|------|------|------------|-------------|
+| `<slug>/<rule_id>.jsonl` | **SoT (source of truth)** — append-only | ❌ (원본) | ✅ idempotency key |
+| `_summary.json` | cache (by_rule + by_phase 집계) | ✅ SoT 재스캔으로 재생성 | — |
+| `_global/<rule_id>.jsonl` | cache (프로젝트 간 누적) | ✅ 모든 SoT를 union해 재생성 | — |
+| `_index.json` | 등록된 rule_id 목록 (commit) | 수동 갱신 (코드 변경과 동기) | — |
+
+**partial-write 복구 절차**:
+- record() 호출은 `<slug>/<rule>.jsonl` append → `_summary` 갱신 → `_global/<rule>` append 순. 중간 단계 실패 시 SoT만 일관 보장.
+- 사용자가 `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` 실행하면 SoT로부터 `_summary` + `_global` 전부 재생성.
+- 신규 record는 `record_id = f"{slug}:{rule_id}:{ts}:{hash6}"` (idempotency key) — repair 또는 retry 시 중복 append 검출.
 
 ### 4.1 디렉토리 구조
 
@@ -220,11 +252,25 @@ class WarningRegistry:
 - `_summary.json` 갱신은 read-modify-write이므로 동일 lock으로 직렬화.
 - 동시 다른 프로젝트 record는 다른 디렉토리 → 충돌 없음.
 
-### 4.5 .gitignore 정책
+### 4.5 .gitignore 정책 (v4 — Finding 100614 #4 ACCEPT, 정확한 글로브 패턴)
 
-- `runtime/warnings/<slug>/` — gitignore (프로젝트별 일시 데이터)
-- `runtime/warnings/_global/` — gitignore (escalation 판단 캐시; 재구성 가능)
-- `runtime/warnings/_index.json` — **commit 대상** (등록된 rule_id 목록은 코드와 함께 추적해야 escalation policy가 의미 있음)
+기존 `.gitignore`에는 `**/.af_runtime/`만 있고 `runtime/` 룰 없음 (v3에서 누락 — 동적 slug는 nested glob으로 작성 불가). v4 P1 PR에서 다음 5줄 추가:
+
+```gitignore
+# Warning registry — workspace 운영 데이터 (record SoT + cache)
+/runtime/warnings/*
+!/runtime/warnings/
+!/runtime/warnings/.gitkeep
+!/runtime/warnings/_index.json
+/runtime/warnings/_global/
+```
+
+**해석**:
+- 1행 `*`: 기본은 `runtime/warnings/` 직속 모든 것 ignore (모든 `<slug>/` 디렉토리 포함).
+- 2-4행 `!`: 디렉토리 자체 / `.gitkeep` / `_index.json`은 trackable로 unignore.
+- 5행 `_global/`: `_global/` 하위 (cache) 별도 ignore (1행만으로는 unignore된 디렉토리 안의 cache 파일이 다시 잡힐 수 있어 명시).
+
+P1 PR 머지 후 검증: `git check-ignore -v runtime/warnings/<slug>/<rule>.jsonl` → 1행 매치, `git check-ignore -v runtime/warnings/_index.json` → 매치 없음 (trackable).
 
 ---
 
@@ -362,17 +408,54 @@ rules:
 - 2026-05-09T01:23:45: e2e_command_missing → WARN (initial)
 ```
 
-### 6.3 approval-gate.md와의 통합
+### 6.3 approval-gate.md와의 통합 (v4 — Finding 100614 #1 + 100406 #3 ACCEPT)
 
-approval-gate.md `## Review Notes` 섹션에 다음 라인을 P1에서 자동 추가:
+**근본 결함 (v3에서 잘못 가정)**: v3는 "approval-gate.md가 workspace 하위에 있으니 링크는 workspace 기준 상대경로"라고 단정했다. 그러나 baseline은 `core/work_item_generator.py:1061` `gate = ApprovalGate(doc_root, slug)` — gate는 **doc_root 하위**에 위치한다 (target_path 분리 모드에서 workspace ≠ doc_root). v3의 상대경로 링크는 `<doc_root>/runtime/warnings/<slug>/_decision.md`로 해석되어 깨진다.
+
+**v4 해소 (옵션 A 채택)**: `ApprovalGate` 시그니처 확장 + 링크는 절대경로.
+
+ApprovalGate API 변경:
+
+```python
+# core/approval_gate.py:78 (P1 PR에서 변경)
+class ApprovalGate:
+    def __init__(self, doc_root: str, slug: str, *, runtime_workspace: str | None = None):
+        """
+        doc_root: gate 파일 자체가 위치할 루트 (사용자 산출물 영역, baseline 그대로).
+        runtime_workspace: warning registry / decision report가 위치한 운영 데이터 루트.
+                            None이면 doc_root와 동일하게 가정 (단일 workspace 모드).
+        """
+        self.doc_root = os.path.abspath(doc_root)
+        self.slug = slug
+        self.runtime_workspace = os.path.abspath(runtime_workspace) if runtime_workspace else self.doc_root
+```
+
+**기존 인자명 정정**: 현 baseline의 `__init__(self, workspace: str, slug: str)`은 실제로는 doc_root를 받지만 인자명이 `workspace`로 혼란을 유발 — v4에서 `doc_root`로 rename (호출처 2곳: `core/work_item_generator.py:1061`, `core/project_pipeline.py:91`).
+
+**호출처 수정** (target_workspace를 명시 전달):
+
+```python
+# core/work_item_generator.py:1061 (변경 후)
+gate = ApprovalGate(doc_root, slug, runtime_workspace=workspace)
+
+# core/project_pipeline.py:87-95 (변경 후)
+def gate(self) -> ApprovalGate:
+    return ApprovalGate(self._effective_doc_root(), self.work_item_slug,
+                         runtime_workspace=self.workspace)
+```
+
+**Review Notes 링크 (절대경로 정책)**:
 
 ```
-- gate_decision_report: runtime/warnings/<slug>/_decision.md
+- gate_decision_report: <runtime_workspace>/runtime/warnings/<slug>/_decision.md
 ```
 
-**경로 의미 (v3 명시 — Finding #1 ACCEPT)**: 위 경로는 **workspace 기준** 상대 경로다. approval-gate.md 자체가 workspace 하위(`<workspace>/...projects/.../approval-gate.md` 등)에 있으므로, 링크 해석 시 workspace 루트 기준으로 `<workspace>/runtime/warnings/<slug>/_decision.md`를 가리킨다 (§4.0과 정합). doc_root(target_path)는 사용자 산출물 영역이므로 운영 메타데이터인 _decision.md가 그쪽에 가지 않는다.
+링크 렌더링 시 `_render()`에서 `runtime_workspace`로 절대경로 expand. 이유:
+1. workspace ≠ doc_root인 경우 상대경로 계산 부담 + 사용자 가독성 저하 (`../../../../runtime/warnings/...`).
+2. 절대경로는 multi-PC 동기화 시 path가 달라져도 _decision.md 자체가 workspace에 있으니 해당 PC 환경에서 그대로 클릭 가능 (사용자가 PC 옮길 때 git pull → start_db.py로 workspace 정합 보장).
+3. baseline `_render()` / `_parse()` 정규식은 `## Review Notes` 본문의 plain text 라인이므로 절대경로 추가가 회귀 유발 없음 (`core/approval_gate.py:42-50` 5섹션 정규식 무관).
 
-**통합 여부 결정**: 본문 통합 아닌 **링크 참조** 방식 채택.
+**통합 여부 결정**: 본문 통합 아닌 **링크 참조** 방식 유지 (v3 결정 그대로).
 
 이유:
 1. approval-gate.md는 `_render()`/`_parse()`가 정해진 5섹션 포맷 (`core/approval_gate.py:42-50`)에 강하게 의존 — 본문 통합 시 파싱 정규식 수정 필요 (회귀 위험 큼).
@@ -434,20 +517,27 @@ P1에서 `core/approval_gate.py`에 추가할 변경 (최소):
 | **P5** | contract drift 측정기 (brief 보존율 grep, doc_consistency_drift record만 누적, BLOCK 없음) | `core/doc_consistency_meter.py` (신설) | P1 |
 | **P6** | (조건부) domain-specific gates (포커 등) | 기존 `_domain` 분기에 activation 1줄, pack 추상화 미도입 | P1, P4 |
 
-### 7.3 P1 PR scope (한 PR로 출시)
+### 7.3 P1 PR scope (v4 갱신 — 한 PR로 출시)
 
-- [ ] `core/warning_registry.py` 신설 — `WarningRegistry(workspace: str)` 클래스(§4.0) + `record(*, project_slug, **fields)` / `summarize(*, project_slug)` / `load_global(*, rule_id)`
-- [ ] `core/escalation_evaluator.py` stub 신설 — **`EscalationDecision` dataclass(§5.4: `block, severity, reason, rule_id, activate_at`) + `evaluate(record) -> EscalationDecision`이 항상 `EscalationDecision(block=False, severity="warn", reason="inactive_phase")` 반환** (Finding #2)
-- [ ] `config/escalation_policy.yaml` v0 작성 (§5.1, `activate_at` 필드 포함)
-- [ ] 4건 WARN 마이그레이션 (§3.1) — row 3 evidence_quality_warn은 호출처(`project_pipeline.py:756-774`)에서 record (Finding #5)
-- [ ] approval-gate.md `_decision.md` 링크 wiring — link 경로는 **workspace 기준** `runtime/warnings/<slug>/_decision.md` (§4.0, §6.3)
-- [ ] `runtime/warnings/.gitkeep` + `runtime/warnings/_index.json` 초기 커밋 (workspace 하위)
-- [ ] `.gitignore` 갱신 (`runtime/warnings/_global/`, `runtime/warnings/<slug>/`)
-- [ ] **`af.spec` hiddenimports 갱신 (Finding #4 ACCEPT)** — `af.spec:33-` 블록의 hiddenimports 리스트에 `'core.warning_registry'`, `'core.escalation_evaluator'` 추가 (기존 `core.work_item_telemetry`(line 78) / `core.plan_verifier`(line 148)과 동일 패턴). `config/escalation_policy.yaml`은 `af.spec:29` `('config', 'config')` data 매핑이 이미 포함하므로 별도 항목 불필요 — yaml 경로는 `config/` 하위 유지 명시.
+- [ ] `core/warning_registry.py` 신설 — `WarningRegistry(workspace: str)` 클래스(§4.0). 메서드: `record(*, project_slug, rule_id, **fields)` / `summarize(*, project_slug)` / `load_global(*, rule_id)` / `rebuild_caches(*, project_slug)`. `WarningRecord` dataclass에 **`record_id` 필수 필드** (§2.1, idempotency).
+- [ ] `core/escalation_evaluator.py` stub 신설 — `EscalationDecision` dataclass(§5.4: `block, severity, reason, rule_id, activate_at`) + `evaluate(record) -> EscalationDecision`이 항상 `EscalationDecision(block=False, severity="warn", reason="inactive_phase")` 반환 (v3 Finding #2 ACCEPT 유지).
+- [ ] `config/escalation_policy.yaml` v0 작성 (§5.1, `activate_at` 필드 포함).
+- [ ] **`core/approval_gate.py` 시그니처 확장 (v4 신규 — Finding 100614 #1)** — `ApprovalGate(doc_root, slug, *, runtime_workspace=None)`. 기존 `workspace` 인자명을 `doc_root`로 rename (실제 전달값과 정합). `_render()`에서 `runtime_workspace`가 있으면 `## Review Notes`에 `gate_decision_report: <abs_path>` 절대경로 라인 추가. 호출처 2곳 수정: `core/work_item_generator.py:1061` `ApprovalGate(doc_root, slug, runtime_workspace=workspace)`, `core/project_pipeline.py:87-95` `ApprovalGate(self._effective_doc_root(), self.work_item_slug, runtime_workspace=self.workspace)`.
+- [ ] 4건 WARN 마이그레이션 (§3.1):
+  - row 1 e2e_command_missing — phase 그룹별 분할 record
+  - row 2 owner_role_mismatch — `detect_owner_drift -> list[tuple[task_id, expected, actual]]` (v4 — Finding 100614 #5)
+  - row 3 evidence_quality_warn — `project_pipeline.py:756-774` 호출처에서 record (v3 ACCEPT 유지)
+  - row 4 plan_verifier_warn — `project_pipeline.py:959-` 호출처에서 record
+- [ ] `runtime/warnings/.gitkeep` + `runtime/warnings/_index.json` 초기 커밋 (workspace 하위, §4.0)
+- [ ] **`.gitignore` 갱신 (v4 — Finding 100614 #4)** — §4.5의 정확한 5줄 패턴 추가. `git check-ignore` 검증 acceptance 포함.
+- [ ] **`af.spec` hiddenimports 갱신 (v3 ACCEPT 유지)** — `af.spec:33-` 블록에 `'core.warning_registry'`, `'core.escalation_evaluator'` 추가. `config/escalation_policy.yaml`은 `af.spec:29` `('config', 'config')` data 매핑으로 자동 포함.
+- [ ] **CLI 명령 (v4 — Finding 100614 #2)** — `python -m core.warning_registry summary --workspace=<path> --slug=<slug>` + `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` (§8.3). `--workspace` 필수 (argparse error on missing).
 - [ ] tests:
-  - `tests/test_warning_registry.py` (4 케이스): record / summarize (by_phase 포함) / lock 동시성 / IOError 격리
-  - `tests/test_warning_registry_migration_callsites.py` (4 케이스): 4건 호출처에서 record 호출 검증 (mock)
-- [ ] Master_Blueprint.md §3 (warning_registry 신규 섹션) + §12 변경 이력 갱신
+  - `tests/test_warning_registry.py` (6 케이스): record / summarize (by_phase 포함) / lock 동시성 / IOError 격리 / record_id idempotency / rebuild_caches 정합 (Finding 100614 #3)
+  - `tests/test_warning_registry_migration_callsites.py` (4 케이스): 4건 호출처에서 record 호출 검증 (mock). owner_role_mismatch는 새 3-tuple 시그니처 mock 검증.
+  - `tests/test_approval_gate_runtime_workspace.py` (3 케이스, v4 신규): (a) workspace == doc_root 단일 모드, (b) target_path 분리 모드 (workspace ≠ doc_root)에서 절대경로 링크 정확, (c) `_render()`/`_parse()` 5섹션 정규식 회귀 없음 (Finding 100614 #1).
+  - `tests/test_warning_registry_cli.py` (2 케이스, v4 신규): summary --workspace 미지정 시 argparse error / repair가 cache 재생성 정확.
+- [ ] Master_Blueprint.md §3 (warning_registry 신규 섹션) + §12 변경 이력 갱신.
 
 ---
 
@@ -465,10 +555,14 @@ P1에서 `core/approval_gate.py`에 추가할 변경 (최소):
 - 기존 `evidence._warnings` 리스트 유지.
 - approval-gate.md `_render`/`_parse` 정규식 수정 없음 (링크는 review_notes 본문에 plain text로).
 
-### 8.3 관측 가능성
+### 8.3 관측 가능성 (v4 — Finding 100614 #2 ACCEPT, CLI workspace 명시)
 
 - registry record 시 RunEvent 발행 (옵션, P1에선 placeholder만).
-- `python -m core.warning_registry summary --slug=<slug>` CLI 추가 (P1).
+- CLI 추가 (P1, `--workspace` 필수):
+  - `python -m core.warning_registry summary --workspace=<path> --slug=<slug>` — `_summary.json` 출력 (`by_rule.<rule>.by_phase` 분포 포함).
+  - `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` — SoT(`<slug>/<rule>.jsonl`)로부터 `_summary.json` + `_global/<rule>.jsonl` 재생성 (Finding #3 ACCEPT — partial-write 복구).
+- `--workspace` 미지정 시 `argparse`가 즉시 `error: --workspace is required` 출력 + exit 2. cwd / `AF_WORKSPACE` env / doc_root fallback 모두 금지 (§4.0과 정합).
+- v0.1+에서 사용자 요청 있으면 `AF_WORKSPACE` env fallback 추가 검토 (현재는 over-design 회피 — CLAUDE.md "Simplicity First").
 
 ---
 
@@ -500,7 +594,13 @@ P1 머지 후 다음이 모두 충족되어야 다음 단계(P2) 진입:
 8. P1 단계에서 `escalation_evaluator.evaluate(record)`가 모든 record에 대해 `EscalationDecision(block=False, severity="warn", reason="inactive_phase")` 인스턴스를 반환한다 (None 아님 — Finding #2). P2 진입 후엔 동일 시그니처에서 body만 교체되어 `affected_phase="scope"`는 `block=False`, `affected_phase="build"`는 `block=True`로 분기.
 9. **registry 인스턴스화는 항상 `WarningRegistry(workspace=target_workspace)`** 패턴 (Finding #1). cwd 또는 doc_root fallback 사용 호출처가 발견되면 acceptance 미충족.
 10. **`af.spec` hiddenimports에 `core.warning_registry`, `core.escalation_evaluator`가 등록되어 있고**, `python build_exe.py`로 frozen build (`dist/af-{version}/af.exe`) 생성 후 work_item 생성 시 ImportError 없음 (Finding #4).
-11. `_summary.json`의 `by_rule.<rule>.by_phase` 필드가 phase별 count 분포를 정확히 dump한다 (Finding #3 — acceptance #2와 정합).
+11. `_summary.json`의 `by_rule.<rule>.by_phase` 필드가 phase별 count 분포를 정확히 dump한다 (v3 Finding #3 — acceptance #2와 정합).
+12. **(v4 Finding 100614 #1)** target_path 분리 모드(`workspace ≠ doc_root`)에서 approval-gate.md `## Review Notes`의 `gate_decision_report:` 라인이 **절대경로**로 렌더링되고, 클릭 시 `<runtime_workspace>/runtime/warnings/<slug>/_decision.md`를 정확히 가리킨다.
+13. **(v4 Finding 100614 #2)** `python -m core.warning_registry summary --slug=<slug>`이 `--workspace` 인자 없으면 `argparse error: the following arguments are required: --workspace` exit 2로 실패한다.
+14. **(v4 Finding 100614 #3)** `<slug>/<rule>.jsonl` SoT만 보존하고 `_summary.json` + `_global/` 삭제 후 `repair --workspace=... --slug=...` 실행 시 두 cache가 SoT와 정합하게 재생성된다. record_id 중복 시 append 1회로 idempotent.
+15. **(v4 Finding 100614 #4)** `.gitignore` 갱신 후 `git check-ignore -v runtime/warnings/<slug>/<rule>.jsonl`은 매치, `git check-ignore -v runtime/warnings/_index.json`은 매치 없음 (trackable).
+16. **(v4 Finding 100614 #5)** `detect_owner_drift()`가 `list[tuple[task_id, expected_owner, actual_owner]]`를 반환하고, `extra["mismatches"]`에 dict 구조도 보존된다.
+17. **(v4 Finding 100406 #5)** `_PHASE_ORDER` 6개 phase 중 `scope`만 exempt — §0 / §5.1 / §7.2의 phase 리스트가 모두 `build/integrate/code_review/cross_validate/verify` 5개로 일치한다 (텍스트 grep 검증).
 
 ---
 
@@ -534,3 +634,15 @@ P1 PR 작성 시:
   - **§7.3 PR scope 갱신**: `WarningRegistry(workspace)` 명시 / EscalationDecision dataclass 필드 명시 / af.spec 항목 추가 / approval-gate 링크의 workspace 기준 명시.
   - **§6.3 (Finding #1 보강)**: `gate_decision_report:` 링크의 의미를 "workspace 기준 상대 경로"로 명시. doc_root는 사용자 산출물용이므로 _decision.md가 그쪽에 가지 않는다는 결정 근거 추가.
   - **§10 acceptance**: 8건 → 11건. #8을 P1 stub 시맨틱(EscalationDecision 인스턴스 반환)으로 명확화. #9(workspace 인자 강제) / #10(af.spec hiddenimports + frozen build smoke) / #11(by_phase 분포 dump) 추가.
+- 2026-05-09 v4: v3 자동 cross-review 2건(100406, 100614) BLOCK 6건 (High 3 / Medium 3) 모두 반영 (Opus 4.7). **근본 원칙 재정립: baseline의 workspace/doc_root 분리를 정직하게 모델링**.
+  - **§4.0 재작성 (Finding 100614 #1 + 100406 #3 ACCEPT, High)**: v3가 "warnings는 workspace, gate도 workspace"로 단정한 것을 정정. baseline은 `core/work_item_generator.py:1061` `gate = ApprovalGate(doc_root, slug)` — gate는 doc_root에 위치. v4는 4가지 path 정책표 명시: warnings(SoT+cache+_decision.md)는 workspace / approval-gate.md는 doc_root / 둘이 다를 수 있으므로 ApprovalGate가 양쪽 path 모두 인지. baseline 분리 의도 (workspace=AF 운영 / doc_root=사용자 산출물) 보존.
+  - **§4.0a 신설 (Finding 100614 #3 ACCEPT, High — partial-write recovery)**: SoT vs cache 분리 명시. `<slug>/<rule>.jsonl` SoT, `_summary.json` / `_global/<rule>.jsonl` rebuildable cache. record_id idempotency key + `rebuild_caches()` API + `repair` CLI 추가.
+  - **§2.1 (Finding 100614 #3 ACCEPT)**: `WarningRecord`에 `record_id` 필수 필드 추가 (`f"{slug}:{rule_id}:{ts}:{hash6}"`).
+  - **§3.1 row 2 (Finding 100614 #5 ACCEPT, Medium)**: `detect_owner_drift -> list[tuple[str,str]]` → `list[tuple[str, str, str]]` ((task_id, expected_owner, actual_owner)). baseline의 `mod_owner` / `task_owner` 분리(`core/project_task_board.py:230,244`) 보존. `extra["mismatches"]`에 dict 구조도 동시 기록.
+  - **§4.5 재작성 (Finding 100614 #4 ACCEPT, Medium)**: `.gitignore` 패턴을 동적 slug에 작동 가능한 정확한 5줄 글로브로 명시 (`/runtime/warnings/*` + 3개 `!` unignore + `/runtime/warnings/_global/`). `git check-ignore` 검증 추가.
+  - **§6.3 재작성 (Finding 100614 #1 ACCEPT, High)**: `ApprovalGate(doc_root, slug, *, runtime_workspace=None)` 시그니처 확장. 기존 인자명 `workspace`를 `doc_root`로 rename (실제 전달값과 일치). `_render()`에서 `gate_decision_report:` 라인을 절대경로로 렌더링. 호출처 2곳(work_item_generator:1061, project_pipeline:87-95) 수정 명시.
+  - **§8.3 재작성 (Finding 100614 #2 ACCEPT, High)**: CLI 시그니처에 `--workspace` 필수 인자 강제. `summary` + `repair` 두 명령. cwd / env / doc_root fallback 모두 금지.
+  - **§0 (Finding 100406 #5 ACCEPT, Medium)**: P2 활성 phase 리스트가 §0(`build/verify/code_review/cross_validate` 4개)과 §5.1(`build/integrate/code_review/cross_validate/verify` 5개) 사이 불일치 → `integrate` 추가해 5개로 통일.
+  - **§7.3 PR scope**: `core/approval_gate.py` 시그니처 확장 항목 추가 / `repair` CLI 추가 / `record_id` 필드 추가 / 정확한 .gitignore 패턴 / 신규 테스트 2개 (`test_approval_gate_runtime_workspace.py`, `test_warning_registry_cli.py`) 추가.
+  - **§10 acceptance**: 11건 → 17건. #12-17은 v4 6건 finding의 검증 케이스 (절대경로 링크 / CLI argparse error / repair idempotency / git check-ignore / drift 3-tuple / phase enum 텍스트 일치).
+  - **OBSOLETE finding (v3가 이미 fix)**: 100406 #1 (evidence_quality_warn 호출처 이동, v3 §3.1 row 3) / 100406 #2 (af.spec hiddenimports, v3 §7.3) / 100406 #4 (by_phase 추가, v3 §4.3 — 100406 제안한 nested schema {scope: {count, severity}}는 advisory로 분류, v4는 v3의 평면 schema {scope: 5} 유지 — acceptance #2 충족 가능).
