@@ -1,11 +1,11 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-09 KST — **P1 BLOCK 수정 완료. `_record_ledger_outcomes(project_slug: str = "")` 시그니처 추가. 테스트 25 PASS. push 완료 (`b685dba6`). 다음: PR 머지 또는 P2 설계 시작. 브랜치: `2026-05-07-memory-gitignore-cleanup`.**
+> 마지막 업데이트: 2026-05-10 KST — **P2 설계 v4.1 PASS (Tier 3 WARN). `docs/2026-05-09-p2-e2e-command-block-activation-design.md`. 다음: P2 코드 구현 시작. 브랜치: `2026-05-07-memory-gitignore-cleanup`.**
 >
-> ## 🔥 다음 세션 진입 시 우선 작업 — PR 머지 후 P2 시작
+> ## 🔥 다음 세션 진입 시 우선 작업 — P2 코드 구현 (§10 PR file list 순서)
 >
-> ### 구현 완료 목록
+> ### P1 구현 완료 목록
 > - `core/warning_registry.py` ✅ (WarningRecord + WarningRegistry)
 > - `core/escalation_evaluator.py` ✅ (EscalationDecision stub)
 > - `config/escalation_policy.yaml` ✅ (v0 정책)
@@ -14,17 +14,25 @@
 > - CLI ✅ (warning-summary / warning-repair)
 > - 테스트 25 케이스 PASS ✅
 > - Master_Blueprint.md §3.8 + §12 갱신 ✅ (v1.2.23 + v1.2.24)
-> - **BLOCK fix**: `_record_ledger_outcomes(project_slug)` ✅ (`b685dba6`)
 >
-> ### 다음 할 일
-> 1. PR 머지 (`2026-05-07-memory-gitignore-cleanup` → `main`)
-> 2. P2 (e2e_command_missing BLOCK 활성화) 설계 및 구현 시작
+> ### P2 설계 완료
+> - `docs/2026-05-09-p2-e2e-command-block-activation-design.md` v4.1 ✅
+> - Tier 3 cross-review WARN (BLOCK 0건) ✅ (`c4d599a3`)
 >
-> **모델 전환**: 코드 구현 단계 (메모리: 설계는 Opus, 구현은 Sonnet).
-> ```
-> /clear
-> /model claude-sonnet-4-6
-> ```
+> ### 다음 할 일 (P2 구현 — §10 PR file list 순서)
+> 1. `core/escalation_evaluator.py` — stub → body 재작성 + `load_policy()` + `compute_run_decision` + `RunDecision`
+> 2. `core/escalation_decision_report.py` — 신규: `write_decision_report` + `write_error_decision` (md+json)
+> 3. `core/warning_overrides.py` — 신규: load/upsert/remove/is_overridden + locked_file
+> 4. `core/warning_registry.py` — `summarize()` 끝 decision 트리거 + `_build_summary` any_override + repeat_count_max
+> 5. `core/approval_gate.py` — `import json` + `read_block_decision()` 추가
+> 6. `core/project_pipeline.py` — `execute()` block 체크 추가
+> 7. `core/project_task_board.py` — `_task_template` build/verify `# TODO:` 마커 + `inject_review_tasks` 동일
+> 8. `core/work_item_generator.py` — LLM prompt 강화 + `_is_e2e_missing` + summarize() 호출 + `_backfill_e2e_from_tasks_md`
+> 9. `run_factory_cli.py` — `warning-override` 서브커맨드 추가
+> 10. `af.spec` — hiddenimports 2개 추가
+> 11. 테스트 28 케이스 + Master_Blueprint.md §3 + §12
+>
+> **모델**: 코드 구현 단계 → Sonnet 유지.
 >
 > ### 진입 시 무조건 첫 동작
 > ```
@@ -34,7 +42,7 @@
 >
 > ### 첫 메시지 (그대로 입력해도 됨)
 > ```
-> NEXT_STEPS.md 읽고 P1 코드 구현 진행해. v6 §7.3 PR scope 그대로.
+> NEXT_STEPS.md 읽고 P2 코드 구현 진행해. docs/2026-05-09-p2-e2e-command-block-activation-design.md v4.1 §10 PR file list 순서대로.
 > ```
 >
 > ### 첫 읽을 문서 (순서)
