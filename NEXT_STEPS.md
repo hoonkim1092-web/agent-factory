@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P2 코드 구현 완료 + Review-Gate PASS (af-test-runner 64케이스 + af-critic + af-cross-review). `v1.2.25`. 브랜치: `2026-05-07-memory-gitignore-cleanup`. 다음: git commit + push → PR.**
+> 마지막 업데이트: 2026-05-10 KST — **P2 코드 구현 완료 + push 완료. commit `fa04d35d`. `v1.2.25`. 브랜치: `2026-05-07-memory-gitignore-cleanup`. 다음: PR 생성 or P3 설계.**
 >
 > ## ✅ P2 구현 완료 상태
 >
