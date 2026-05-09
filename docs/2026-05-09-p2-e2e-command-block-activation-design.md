@@ -4,7 +4,7 @@
 - 모델: Opus 4.7 (1M)
 - 의존: `docs/2026-05-09-warning-registry-and-gate-escalation-design.md` (v6, P1)
 - 브랜치: `2026-05-07-memory-gitignore-cleanup` (또는 P2 전용 후속 브랜치)
-- 상태: v4 (v3.1 cross-review BLOCK 10건 수용 — 설계 정합 재확인 완료)
+- 상태: v4.1 (v4 cross-review WARN advisory 1건 흡수 — §7.4 backfill regex를 splitlines() 기반으로 교정)
 - 이력:
   - v1 (2026-05-09 KST 16:30) — 초안
   - v2 (2026-05-09 KST 17:30) — Tier 3 BLOCK 5건 수용
@@ -702,19 +702,35 @@ def _backfill_e2e_from_tasks_md(tasks_content: str, task_board: dict) -> dict:
     """implementation-tasks.md의 'e2e_command:' 라인을 추출해 task_board에 반영.
     
     파서 계약:
-    - 패턴: `^[\\-\\*]\\s+e2e_command:\\s+(.+)$` (multiline)
-    - task_id 매칭: 해당 e2e_command 라인 **직전**의 `task_id: T-NNN` 라인을 탐색 (최대 5줄 위로)
+    - e2e_command 라인 패턴: `^[-*]\\s+e2e_command:\\s+(.+)$` (re.MULTILINE)
+    - task_id 매칭: 해당 e2e_command 라인 **직전 최대 5줄**에서 `task_id: T-NNN` 탐색
+      → splitlines() 기반 line-window 접근 (regex .*?+DOTALL은 줄 수 제한 불가)
     - 같은 task_id가 여러 번 등장하면 **첫 번째** 매칭만 사용 (중복 무시)
     - task_id 매칭 실패 → 해당 항목 silent skip
     - 추출값이 `# TODO` 로 시작하면 → 기존 마커 그대로 (덮어쓰지 않음)
     - 파싱 전체 실패(예외) → 기존 task_board 반환 (silent skip)
     """
     import re
-    pattern = re.compile(
-        r"(?:^[-*]\s+task_id:\s*(T-\d+).*?^[-*]\s+e2e_command:\s+(.+?)$"
-        r"|^[-*]\s+e2e_command:\s+(.+?)$)",
-        re.MULTILINE | re.DOTALL,
-    )
+    _E2E_RE = re.compile(r'^[-*]\s+e2e_command:\s+(.+)$')
+    _TID_RE = re.compile(r'^[-*]\s+task_id:\s*(T-\d+)')
+    lines = tasks_content.splitlines()
+    result = {}  # task_id → e2e_command
+    for i, line in enumerate(lines):
+        m = _E2E_RE.match(line.strip())
+        if not m:
+            continue
+        e2e_val = m.group(1).strip()
+        if e2e_val.startswith("# TODO"):
+            continue  # 기존 마커 → 덮어쓰지 않음
+        # 직전 최대 5줄에서 task_id 탐색
+        task_id = None
+        for j in range(max(0, i - 5), i):
+            tm = _TID_RE.match(lines[j].strip())
+            if tm:
+                task_id = tm.group(1)
+        if task_id and task_id not in result:
+            result[task_id] = e2e_val  # 첫 번째 매칭만 사용
+    # task_board tasks에 반영
     ...
 ```
 
@@ -1051,6 +1067,8 @@ def is_overridden(overrides: dict, rule_id: str) -> bool: ...
 
 ## §15 변경 이력
 
+- **v4.1 (2026-05-10)** — v4 cross-review WARN advisory 1건 흡수
+  - §7.4 backfill regex — `re.DOTALL + .*?` 대신 `splitlines()` + 5-line window 접근으로 교체. "최대 5줄" 계약을 pseudo-code에서 정확히 구현
 - **v4 (2026-05-10)** — v3.1 cross-review BLOCK 10건 수용
   - §0.1 — "첫 실행 미차단" 모순 해소: Policy B 채택. `# TODO:` BLOCK은 의도된 동작으로 명시
   - §3.1 — summarize() 트리거 위치를 `work_item_generator.py` (record loop 직후) 로 명시. `ApprovalGate.initialize()`는 변경 없음
@@ -1092,4 +1110,4 @@ def is_overridden(overrides: dict, rule_id: str) -> bool: ...
 
 ---
 
-**상태**: v4 — v3.1 cross-review BLOCK 10건 수용 완료. **cross-review 재실행 대기** (§7.3.3 LLM prompt 타겟 교정, §3.1/§5.4 summarize wiring 명시, phase 호환 규칙 등 실질 설계 변경 포함 → 재리뷰 필요).
+**상태**: v4.1 — Tier 3 cross-review **WARN (BLOCK 0건, Advisory Medium 1건 흡수)**. P2 단일 PR 구현 진입 가능. Sonnet으로 모델 전환 후 §10 PR file list 순서대로 작업 (CLAUDE.md "단계별 모델 선호" — 코드 구현은 Sonnet).
