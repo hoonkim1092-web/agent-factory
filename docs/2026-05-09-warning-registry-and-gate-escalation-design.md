@@ -4,11 +4,12 @@
 - 작성 모델: Claude Opus 4.7 (1M context)
 - 브랜치: `2026-05-07-memory-gitignore-cleanup`
 - 분류: 단일 설계문서 (CLAUDE.md 규칙 → af-cross-review 1라운드 자동 발화)
-- 상태: **Draft v4 — v3 자동 cross-review BLOCK 6건 (High 3 / Medium 3) 반영 완료. baseline 분리 정직 모델링.**
+- 상태: **Draft v5 — v4 통합 cross-review (102321, claude+codex+judge) 11 finding 중 ACCEPT 9 / HOLD 1 / 반박 2 모두 처리 완료**
 - 선행 분석: `docs/codex/2026-05-08-af-productization-application-guide.md`
 - v1 리뷰 리포트: `docs/reviews/2026-05-09-094340-2026-05-09-warning-registry-and-gate-escalation-design-review.md`
 - v2 리뷰 리포트: `docs/reviews/2026-05-09-095135-2026-05-09-warning-registry-and-gate-escalation-design-design-review.md`
-- v3 리뷰 리포트 (최신 2건): `docs/reviews/2026-05-09-100406-...-design-review.md`, `docs/reviews/2026-05-09-100614-...-design-review.md`
+- v3 리뷰 리포트 (2건): `docs/reviews/2026-05-09-100406-...-design-review.md`, `docs/reviews/2026-05-09-100614-...-design-review.md`
+- v4 리뷰 리포트 (최신 통합): `docs/reviews/2026-05-09-102321-2026-05-09-warning-registry-and-gate-escalation-design-design-review.md` — claude critic + codex cross + judge=claude, BLOCK, 11 finding
 
 ---
 
@@ -61,6 +62,7 @@ class WarningRecord:
     project_slug: str       # 예: "minesweeper-smoke-v2-01"
     ts: str                 # ISO 8601, now_iso() 사용
     record_id: str          # v4 — idempotency key. f"{slug}:{rule_id}:{ts}:{hash6(payload)}" (Finding 100614 #3)
+    schema_version: int = 1 # v5 — open schema (Finding 102321 #10). P4 schema 변경 시 bump.
 
     # ─── Localization (필수) ───
     # baseline taxonomy: core/project_task_board.py:17 _PHASE_ORDER
@@ -86,11 +88,44 @@ class WarningRecord:
 |------|---------|------|
 | `rule_id`, `severity`, `project_slug`, `ts` | 필수 | jsonl append 시 식별·정렬 키 |
 | `affected_phase`, `count` | 필수 | P2 phase-aware BLOCK과 P4 escalation 임계 판정 입력 |
-| `repeat_count` | 선택 | jsonl 누적 후 P4가 계산. 첫 record는 1 |
+| `repeat_count` | 필수 (v5) | **`record()` 내부에서 계산 후 persist** (v5 — Finding 102321 #6 ACCEPT). 새 record append 직전 SoT(`<slug>/<rule>.jsonl`)를 풀스캔해 `count(rule_id == 자기) + 1`로 채움. P4 `evaluate(record)`는 `record.repeat_count`만 보면 됨 (history 인자 불필요). 첫 record는 1. |
 | `baseline_delta` | 선택 | P5 contract drift 측정기에서만 채움 |
 | `false_positive_override` | 선택 | 사용자 승인 후 BLOCK escalation 차단용 |
 | `rationale` | 선택 권장 | decision report 자동 생성 시 사용 |
 | `affected_ids`, `source_path`, `extra` | 선택 | 디버깅/리포트 가독성 |
+
+### 2.2a phase 정규화 정책 (v5 — Finding 102321 #4 ACCEPT, High)
+
+`affected_phase`는 baseline `_PHASE_ORDER` (`core/project_task_board.py:17`) 6개 (`scope`, `build`, `integrate`, `code_review`, `cross_validate`, `verify`) 중 하나여야 한다. LLM 출력이 비표준 값(`"design"`, `"test"`, `"integration"` 등)을 반환할 수 있으므로 `record()`는 다음 정규화 정책을 적용한다:
+
+```python
+_PHASE_ALIAS = {
+    "design": "scope",        # 설계는 scope phase에 흡수
+    "test": "verify",         # test는 verify phase에 흡수
+    "integration": "integrate",
+}
+
+def _normalize_phase(raw: str) -> tuple[str, str | None]:
+    """returns (canonical_phase, original_if_aliased)"""
+    if raw in _PHASE_ORDER:
+        return raw, None
+    if raw in _PHASE_ALIAS:
+        return _PHASE_ALIAS[raw], raw
+    return "build", raw  # unknown은 build로 fallback + extra.original_phase 보존
+```
+
+`record()` 내부에서 `affected_phase`를 정규화하고, alias/unknown 변환이 발생하면 `extra["original_phase"]`에 원본 보존. 이 정책이 §5.1 `affected_phase_in: [...]` 매칭에서 silent skip을 방지한다 (baseline 외 phase가 record에 들어가도 정책이 인식 가능한 6개 중 하나로 매핑됨).
+
+### 2.4 open schema 정책 (v5 — Finding 102321 #10 ACCEPT, Medium)
+
+P4에서 신규 severity / 필드가 추가되어도 P1 jsonl이 깨지지 않도록 다음 정책을 명시:
+
+1. **append-only**: 기존 record는 절대 mutate하지 않음. 새 정보는 새 record로 append.
+2. **unknown field tolerance**: deserialize 시 dataclass에 없는 키는 `extra` 딕셔너리로 흡수 (silent ignore 금지 — 보존).
+3. **missing field default**: 신버전이 추가한 필드가 구버전 record에 없으면 `dataclass.field(default_factory=...)` 또는 `Optional` default로 채움.
+4. **schema_version**: `WarningRecord`에 `schema_version: int = 1` 추가 (v5 신규). P4가 schema 변경 시 bump하고 deserializer가 분기.
+
+테스트: `tests/test_warning_registry_schema_evolution.py` (1 케이스): v0.1 record에 v0.2 신규 필드를 추가한 후 round-trip 성공.
 
 ### 2.3 severity 값의 의미
 
@@ -175,10 +210,12 @@ class WarningRegistry:
         """<workspace>/runtime/warnings/<slug>/_summary.json 갱신·반환 (rebuild 가능 cache)."""
 
     def load_global(self, *, rule_id: str) -> list[dict]:
-        """<workspace>/runtime/warnings/_global/<rule_id>.jsonl 로드."""
+        """v5 — P1에서는 stub. P4 활성 시 _global/<rule>.jsonl 로드 (Finding 102321 #7)."""
+        raise NotImplementedError("global aggregation activates at P4")
 
     def rebuild_caches(self, *, project_slug: str) -> None:
-        """SoT(<slug>/<rule>.jsonl)로부터 _summary.json + _global/<rule>.jsonl 재생성 (Finding 100614 #3 ACCEPT — partial-write 복구)."""
+        """SoT(<slug>/<rule>.jsonl)로부터 _summary.json 재생성 (v5 — _global P4 이연, Finding 102321 #7).
+           실질적으로 summarize(project_slug=...)와 동일 (read-on-demand 단일화, §4.4 Finding 102321 #5)."""
 ```
 
 **호출처는 항상 `WarningRegistry(workspace=target_workspace)` 패턴**. cwd / doc_root / env fallback 모두 금지 (`ValueError` 즉시 발생).
@@ -197,20 +234,22 @@ class WarningRegistry:
 - 사용자가 `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` 실행하면 SoT로부터 `_summary` + `_global` 전부 재생성.
 - 신규 record는 `record_id = f"{slug}:{rule_id}:{ts}:{hash6}"` (idempotency key) — repair 또는 retry 시 중복 append 검출.
 
-### 4.1 디렉토리 구조
+### 4.1 디렉토리 구조 (v5 — Finding 102321 #7 ACCEPT, _global P4 이연)
 
 ```
 <workspace>/runtime/                 # ← workspace 하위로 고정 (§4.0)
 ├── timing/                          # 기존 (Phase F)
 └── warnings/                        # 신설 (P1)
-    ├── _global/
-    │   └── <rule_id>.jsonl          # 프로젝트 간 누적 (escalation 판단용)
-    ├── _index.json                  # 등록된 rule_id 목록 + 메타 (선택)
+    ├── _index.json                  # 등록된 rule_id 목록 + 메타 (commit 대상)
     └── <project_slug>/
-        ├── <rule_id>.jsonl          # 이 프로젝트의 rule_id별 누적
-        ├── _summary.json            # 이 프로젝트의 합본 (severity별 카운트, 최신 ts)
+        ├── <rule_id>.jsonl          # SoT — append-only (lock + tempfile 의무, §4.4)
+        ├── _summary.json            # cache — read-on-demand 재생성 (§4.4)
         └── _decision.md             # WARN→BLOCK 승격 시 markdown 보고서 (P4부터 채움)
 ```
+
+**v5 변경 (Finding 102321 #7 ACCEPT — P1 scope 단순화)**: `_global/<rule_id>.jsonl` 디렉토리는 **P4로 이연**. 이유: (1) P1 acceptance 검증에 _global이 필요 없음 (모든 phase-aware BLOCK은 단일 slug 내 record로 결정), (2) producer API가 §4.0 `record(slug별)` 외에 별도 wiring이 필요해 scope 비대화. P4가 활성될 때 `WarningRegistry.rebuild_global(*, rule_id)` 추가 + 모든 SoT를 union 해 재생성. P1에서는 `_global/` 디렉토리 자체를 만들지 않음.
+
+`load_global(rule_id)` API도 P4로 이연 (P1 stub은 `NotImplementedError("global 누적은 P4에서 활성")`)— §4.0 코드 블록 갱신.
 
 ### 4.2 jsonl 레코드 1줄 예시
 
@@ -246,11 +285,43 @@ class WarningRegistry:
 
 **`by_phase` 필드**: 해당 rule의 record들을 `affected_phase`별로 합산한 `{phase: count}` 딕셔너리. acceptance #2 (`python -m core.warning_registry summary --slug=<slug>`이 `by_rule.<rule>.by_phase` 분포 출력)와 정합. CLI 출력은 이 필드를 그대로 dump하면 된다. P2의 phase-aware BLOCK 평가도 이 분포로 빠르게 의사결정 가능.
 
-### 4.4 동시성 / append 안전성
+### 4.4 동시성 / 원자성 / lazy 트리거 단일화 (v5 — Finding 102321 #3 + #5 ACCEPT, High)
 
-- jsonl append는 `core/file_lock.locked_file` 사용 (실제 위치: `core/file_lock.py:38`. 이미 `core/project_task_board.py:12`, `core/project_mailbox.py:9`, `core/work_item_telemetry.py:9`, `core/providers/session_adapter.py:21`에서 동일 import). multi-thread 안전.
-- `_summary.json` 갱신은 read-modify-write이므로 동일 lock으로 직렬화.
-- 동시 다른 프로젝트 record는 다른 디렉토리 → 충돌 없음.
+**jsonl append (SoT)**:
+- `core/file_lock.locked_file` 사용 (실제 위치: `core/file_lock.py:38`. 이미 `core/project_task_board.py:12`, `core/project_mailbox.py:9`, `core/work_item_telemetry.py:9`, `core/providers/session_adapter.py:21`에서 동일 import). multi-thread 안전.
+- lock 키는 **rule_id 단위가 아닌 slug 단위 통일**: `<workspace>/runtime/warnings/<slug>/.lock` 단일 파일. 이유: 같은 slug 내 다른 rule도 _summary.json을 공유하므로 rule별 lock은 비대칭 → race 위험 (#3).
+
+**`_summary.json` 갱신 — atomic write 의무화 (Finding #3)**:
+`core/work_item_telemetry.py:55-65` 패턴을 그대로 차용:
+
+```python
+# WarningRegistry._write_summary 내부
+payload = json.dumps(summary, ensure_ascii=False, indent=2)
+with locked_file(str(slug_lock_path), timeout=5):
+    fd, tmp = tempfile.mkstemp(dir=str(slug_dir), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        os.replace(tmp, str(summary_path))   # atomic
+    except Exception:
+        try: os.unlink(tmp)
+        except OSError: pass
+        raise
+```
+
+이 패턴은 mid-write crash 시 `_summary.json`이 이전 정상본을 보존 (M10 회귀 방지).
+
+**lazy 트리거 단일화 (Finding #5)**:
+
+v3/v4의 "10건마다 또는 run 종료 시 갱신" 명세는 **폐기**. v5는 **`summarize()`를 read-on-demand로 단일화**:
+
+- `record()`는 jsonl append만 수행 (SoT 갱신). `_summary.json`은 건드리지 않음.
+- `summarize(*, project_slug)` 호출 시점에 jsonl 풀스캔으로 by_rule + by_phase 재계산 → atomic write.
+- CLI `summary` / acceptance 검증 / approval-gate _decision.md 생성 모두 `summarize()` 호출 → SoT와 항상 정합.
+
+이 단일화로 (a) "10건마다" 트리거 호출처를 wiring할 필요 없음, (b) 1건 record 케이스에서도 stale 없음 (acceptance #2/#11 정합), (c) `repair`는 사실상 `summarize()` 호출과 동일.
+
+**동시 다른 프로젝트 record는 다른 디렉토리 → lock 충돌 없음.**
 
 ### 4.5 .gitignore 정책 (v4 — Finding 100614 #4 ACCEPT, 정확한 글로브 패턴)
 
@@ -271,6 +342,8 @@ class WarningRegistry:
 - 5행 `_global/`: `_global/` 하위 (cache) 별도 ignore (1행만으로는 unignore된 디렉토리 안의 cache 파일이 다시 잡힐 수 있어 명시).
 
 P1 PR 머지 후 검증: `git check-ignore -v runtime/warnings/<slug>/<rule>.jsonl` → 1행 매치, `git check-ignore -v runtime/warnings/_index.json` → 매치 없음 (trackable).
+
+**v5 (Finding 102321 #8 — Medium, REBUTTAL)**: 102321 리뷰가 "exception semantics 미명세"로 지적했으나, v4 §4.5는 이미 정확한 5줄 패턴(unignore 3개 명시)을 제공하고 `git check-ignore` 검증 의무까지 포함. 추가 액션 없음 — 단 v5 §4.1에서 `_global/`을 P4로 이연했으므로 `.gitignore`의 `/runtime/warnings/_global/` 라인은 **P1에서는 제거** (디렉토리 자체가 없음 → 불필요). P4가 활성될 때 다시 추가.
 
 ---
 
@@ -357,6 +430,31 @@ rules:
   ```
 
   **이유 (Finding #2)**: body가 `pass`면 None 반환 → caller가 `.block`/`.severity` 접근 시 AttributeError. P1 stub도 반드시 `EscalationDecision` 인스턴스를 반환해야 P2 진입 시 시그니처 회귀 없이 body만 교체 가능. acceptance #8 (P2 stub은 모두 False)과 정합.
+
+  **v5 보강 (Finding 102321 #6 ACCEPT — `evaluate()` 시그니처 확정)**: `evaluate()`는 단일 record만 받는다. `repeat_count` 같은 history 의존 정보는 §2.2 정책에 따라 **`record()` 내부에서 계산되어 record 자체에 persist**되므로, `evaluate(record)`가 `record.repeat_count`만 보면 history 스캔 없이 정책 매칭 가능. registry/history 인자 없음 — 시그니처 단순화 + P4가 P2/P3 데이터로 분기 시에도 record 자체로 self-contained.
+
+### 5.5 escalation_policy.yaml loader (v5 — Finding 102321 #9 ACCEPT, Medium)
+
+P1 단계에서 yaml은 stub이 읽지 않지만, P2 진입 시 즉시 필요. baseline `core/config_paths.py:38-41`의 frozen-aware 패턴을 차용:
+
+```python
+# core/escalation_evaluator.py (P1 stub)
+import yaml
+from core.config_paths import BASE_DIR     # frozen-aware (sys.frozen 분기 포함)
+
+_POLICY_PATH = os.path.join(BASE_DIR, "config", "escalation_policy.yaml")
+
+def _load_policy() -> dict:
+    """P1: yaml 존재 검증만. P2가 정책 매칭 사용."""
+    if not os.path.isfile(_POLICY_PATH):
+        return {"version": 0, "rules": []}     # missing은 inactive와 동치
+    with open(_POLICY_PATH, "r", encoding="utf-8") as fh:
+        return yaml.safe_load(fh) or {"version": 0, "rules": []}
+```
+
+`BASE_DIR`은 `core/config_paths.py:38-41`에서 frozen 시 `sys.executable` 기반, 소스 시 레포 루트 기반으로 자동 분기. PyInstaller `_MEIPASS` 경로 해석을 별도로 할 필요 없음 (이미 baseline이 처리).
+
+**P1 acceptance**: `_load_policy()`가 yaml 파일을 읽어 dict 반환 (frozen build와 source mode 모두). 실제 정책 매칭은 P2.
 
 ---
 
@@ -457,6 +555,14 @@ def gate(self) -> ApprovalGate:
 
 **통합 여부 결정**: 본문 통합 아닌 **링크 참조** 방식 유지 (v3 결정 그대로).
 
+**v5 보강 (Finding 102321 #1 — Critical, REBUTTAL)**: 102321 리뷰는 v4 §6.3 본문 ("v3 가정 정정 + 절대경로 정책 채택")을 못 보고 v3 가정을 다시 비판. v4가 이미 채택한 fix:
+- ApprovalGate 시그니처 확장 ✅ (위 코드 블록)
+- `runtime_workspace` 별도 인자 도입 ✅ (`*, runtime_workspace=None`)
+- 절대경로 정책 ✅ (`gate_decision_report: <abs_path>`)
+- 호출처 2곳 명시 ✅ (work_item_generator:1061, project_pipeline:87-95)
+
+리뷰가 요구한 Action(`os.path.abspath` 절대경로 또는 `_decision.md` doc_root 이동)은 v4가 전자(`os.path.abspath`)를 명시 채택한 상태. 따라서 ACCEPT는 유지하되 **fix는 v4에서 이미 완료**임을 명시. acceptance #18 추가로 §6.3 본문이 baseline 코드와 정합한지 grep 검증 의무화 (다음 라운드 sycophancy 방지).
+
 이유:
 1. approval-gate.md는 `_render()`/`_parse()`가 정해진 5섹션 포맷 (`core/approval_gate.py:42-50`)에 강하게 의존 — 본문 통합 시 파싱 정규식 수정 필요 (회귀 위험 큼).
 2. _decision.md는 자주 갱신되는 누적 로그 성격, approval-gate는 승인 스냅샷 성격 (수명주기 다름).
@@ -532,11 +638,20 @@ P1에서 `core/approval_gate.py`에 추가할 변경 (최소):
 - [ ] **`.gitignore` 갱신 (v4 — Finding 100614 #4)** — §4.5의 정확한 5줄 패턴 추가. `git check-ignore` 검증 acceptance 포함.
 - [ ] **`af.spec` hiddenimports 갱신 (v3 ACCEPT 유지)** — `af.spec:33-` 블록에 `'core.warning_registry'`, `'core.escalation_evaluator'` 추가. `config/escalation_policy.yaml`은 `af.spec:29` `('config', 'config')` data 매핑으로 자동 포함.
 - [ ] **CLI 명령 (v4 — Finding 100614 #2)** — `python -m core.warning_registry summary --workspace=<path> --slug=<slug>` + `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` (§8.3). `--workspace` 필수 (argparse error on missing).
-- [ ] tests:
-  - `tests/test_warning_registry.py` (6 케이스): record / summarize (by_phase 포함) / lock 동시성 / IOError 격리 / record_id idempotency / rebuild_caches 정합 (Finding 100614 #3)
-  - `tests/test_warning_registry_migration_callsites.py` (4 케이스): 4건 호출처에서 record 호출 검증 (mock). owner_role_mismatch는 새 3-tuple 시그니처 mock 검증.
-  - `tests/test_approval_gate_runtime_workspace.py` (3 케이스, v4 신규): (a) workspace == doc_root 단일 모드, (b) target_path 분리 모드 (workspace ≠ doc_root)에서 절대경로 링크 정확, (c) `_render()`/`_parse()` 5섹션 정규식 회귀 없음 (Finding 100614 #1).
-  - `tests/test_warning_registry_cli.py` (2 케이스, v4 신규): summary --workspace 미지정 시 argparse error / repair가 cache 재생성 정확.
+- [ ] **`run_factory_cli.py` argparse subcommand 추가 (v5 — Finding 102321 #2)** — `warning-summary`, `warning-repair` 두 subcommand. handler는 `core.warning_registry.cli` 모듈 호출. frozen `af.exe <subcmd>` 동작 검증.
+- [ ] **`_summary.json` atomic write 의무화 (v5 — Finding 102321 #3)** — `core/work_item_telemetry.py:55-65` 패턴(`tempfile.mkstemp + locked_file + os.replace`) 그대로 차용. lock 키는 slug 단위 (`<slug>/.lock`)로 통일.
+- [ ] **summarize() read-on-demand 단일화 (v5 — Finding 102321 #5)** — `record()`는 jsonl append만, `_summary.json` 갱신은 `summarize()` 호출 시점 풀스캔. "10건마다 lazy 트리거" 명세 폐기.
+- [ ] **phase 정규화 (v5 — Finding 102321 #4)** — `_PHASE_ALIAS` 딕셔너리 + `_normalize_phase()` 함수 (§2.2a). `record()` 진입 시 정규화 + `extra.original_phase` 보존.
+- [ ] **repeat_count persist (v5 — Finding 102321 #6)** — `record()`가 SoT 풀스캔으로 prior count 계산 후 record에 채워 append. `evaluate(record)`는 history 인자 없음.
+- [ ] **`_global/` P1 scope에서 제거 (v5 — Finding 102321 #7)** — 디렉토리 미생성. `load_global()` `NotImplementedError`. `.gitignore`의 `_global/` 라인 제거. P4가 활성 시 추가.
+- [ ] **escalation_policy.yaml loader (v5 — Finding 102321 #9)** — `core/escalation_evaluator._load_policy()` 헬퍼 + `core/config_paths.BASE_DIR` 사용 (frozen-aware).
+- [ ] **open schema deserializer (v5 — Finding 102321 #10)** — `WarningRecord.schema_version` 필드 + unknown field → `extra` 흡수 + missing field default.
+- [ ] tests (v5 갱신):
+  - `tests/test_warning_registry.py` (8 케이스): record / summarize (by_phase 포함, read-on-demand) / lock 동시성 / IOError 격리 / record_id idempotency / phase 정규화 (alias + unknown fallback) / repeat_count persist 정확 / atomic write (mid-write crash 시 이전 본 보존)
+  - `tests/test_warning_registry_migration_callsites.py` (4 케이스): 4건 호출처 record 호출 검증 (mock). owner_role_mismatch는 3-tuple 시그니처.
+  - `tests/test_approval_gate_runtime_workspace.py` (3 케이스, v4 신규 — v5 유지): single mode / 분리 mode 절대경로 / `_render`/`_parse` 회귀.
+  - `tests/test_warning_registry_cli.py` (4 케이스, v5 갱신): summary --workspace 미지정 시 argparse error / repair가 cache 재생성 정확 / **frozen subcommand wiring (af.exe warning-summary 동작)** / repair record_id 중복 시 idempotent.
+  - `tests/test_warning_registry_schema_evolution.py` (1 케이스, v5 신규): v0.1 record + v0.2 신규 필드 round-trip.
 - [ ] Master_Blueprint.md §3 (warning_registry 신규 섹션) + §12 변경 이력 갱신.
 
 ---
@@ -555,14 +670,27 @@ P1에서 `core/approval_gate.py`에 추가할 변경 (최소):
 - 기존 `evidence._warnings` 리스트 유지.
 - approval-gate.md `_render`/`_parse` 정규식 수정 없음 (링크는 review_notes 본문에 plain text로).
 
-### 8.3 관측 가능성 (v4 — Finding 100614 #2 ACCEPT, CLI workspace 명시)
+### 8.3 관측 가능성 (v5 — Finding 102321 #2 + #11 보강)
 
-- registry record 시 RunEvent 발행 (옵션, P1에선 placeholder만).
-- CLI 추가 (P1, `--workspace` 필수):
-  - `python -m core.warning_registry summary --workspace=<path> --slug=<slug>` — `_summary.json` 출력 (`by_rule.<rule>.by_phase` 분포 포함).
-  - `python -m core.warning_registry repair --workspace=<path> --slug=<slug>` — SoT(`<slug>/<rule>.jsonl`)로부터 `_summary.json` + `_global/<rule>.jsonl` 재생성 (Finding #3 ACCEPT — partial-write 복구).
-- `--workspace` 미지정 시 `argparse`가 즉시 `error: --workspace is required` 출력 + exit 2. cwd / `AF_WORKSPACE` env / doc_root fallback 모두 금지 (§4.0과 정합).
-- v0.1+에서 사용자 요청 있으면 `AF_WORKSPACE` env fallback 추가 검토 (현재는 over-design 회피 — CLAUDE.md "Simplicity First").
+**RunEvent 결정 (Finding 102321 #11 HOLD → DECIDE)**: P1에서 RunEvent **미발행** 못박음. 이유:
+- baseline에 `core/events.py` 또는 `RunEvent` 클래스 부재 (grep 검증: `grep -rln "class RunEvent\|run_event" core/*.py` → 0 매치).
+- P1 record 호출처 (`work_item_generator.py:1056`, `project_pipeline.py:1402,759,966` 등)에서 `run_id` 가용성도 일관 보장 안 됨 (일부 경로는 run_id 없는 boot phase).
+- 따라서 P1은 jsonl + summary cache만 → 충분한 관측성. RunEvent 통합은 P4에서 escalation 활성 시 함께 검토 (별도 PR scope).
+
+**CLI 명령** (P1, `--workspace` 필수, source + frozen 양쪽 지원):
+
+| 환경 | 명령어 |
+|------|-------|
+| 소스 모드 (개발) | `python -m core.warning_registry summary --workspace <path> --slug <slug>` |
+| 소스 모드 (개발) | `python -m core.warning_registry repair --workspace <path> --slug <slug>` |
+| frozen build | `af.exe warning-summary --workspace <path> --slug <slug>` (v5 추가 — Finding 102321 #2) |
+| frozen build | `af.exe warning-repair --workspace <path> --slug <slug>` (v5 추가) |
+
+**frozen build subcommand wiring (v5 — Finding 102321 #2 ACCEPT)**: `run_factory_cli.py`의 argparse subcommand 트리에 `warning-summary`, `warning-repair` 두 subcommand 추가. handler는 `core.warning_registry.cli.summary_cmd(args)` / `repair_cmd(args)`를 호출. PyInstaller frozen에서 `python -m`이 동작하지 않으므로 `af.exe <subcmd>` 진입점이 필수.
+
+**`--workspace` 미지정 동작**: `argparse`가 즉시 `error: the following arguments are required: --workspace` 출력 + exit 2. cwd / `AF_WORKSPACE` env / doc_root fallback 모두 금지 (§4.0과 정합).
+
+v0.1+에서 사용자 요청 있으면 `AF_WORKSPACE` env fallback 추가 검토 (현재는 over-design 회피 — CLAUDE.md "Simplicity First").
 
 ---
 
@@ -601,6 +729,16 @@ P1 머지 후 다음이 모두 충족되어야 다음 단계(P2) 진입:
 15. **(v4 Finding 100614 #4)** `.gitignore` 갱신 후 `git check-ignore -v runtime/warnings/<slug>/<rule>.jsonl`은 매치, `git check-ignore -v runtime/warnings/_index.json`은 매치 없음 (trackable).
 16. **(v4 Finding 100614 #5)** `detect_owner_drift()`가 `list[tuple[task_id, expected_owner, actual_owner]]`를 반환하고, `extra["mismatches"]`에 dict 구조도 보존된다.
 17. **(v4 Finding 100406 #5)** `_PHASE_ORDER` 6개 phase 중 `scope`만 exempt — §0 / §5.1 / §7.2의 phase 리스트가 모두 `build/integrate/code_review/cross_validate/verify` 5개로 일치한다 (텍스트 grep 검증).
+18. **(v5 Finding 102321 #1 REBUTTAL 검증)** §6.3 본문이 baseline 코드와 정합한지 grep 검증: `grep -n "ApprovalGate(doc_root, slug" core/work_item_generator.py core/project_pipeline.py` → 양쪽 모두 매치, `grep "runtime_workspace" docs/2026-05-09-warning-registry-and-gate-escalation-design.md` → 본문에 시그니처/호출처 모두 명시.
+19. **(v5 Finding 102321 #2)** frozen build에서 `af.exe warning-summary --workspace <path> --slug <slug>`이 동작하고 `--workspace` 미지정 시 argparse error로 exit 2.
+20. **(v5 Finding 102321 #3)** `_summary.json` mid-write에 의도적 crash 주입(예: `os.replace` 직전 sigkill mock) 후에도 이전 정상본이 손상되지 않는다 (`tempfile.mkstemp + os.replace` atomic 패턴 검증).
+21. **(v5 Finding 102321 #4)** `record(affected_phase="design")` 호출 시 jsonl에는 `affected_phase=scope` + `extra.original_phase=design` 저장. `record(affected_phase="unknown_x")` → `affected_phase=build` + `extra.original_phase=unknown_x` fallback.
+22. **(v5 Finding 102321 #5)** `summarize()` 호출이 jsonl SoT 풀스캔을 수행하고 `_summary.json`을 atomic write로 갱신. record 1건 케이스에서도 stale 없음 (read-on-demand).
+23. **(v5 Finding 102321 #6)** 동일 slug + rule_id로 3회 record 호출 시 마지막 record의 `repeat_count == 3`. `evaluate(record)`는 record.repeat_count만 보고 `repeat_count_min: 3` 정책 매칭.
+24. **(v5 Finding 102321 #7)** P1 머지 후 `<workspace>/runtime/warnings/_global/` 디렉토리가 생성되지 않는다. `WarningRegistry.load_global(rule_id="x")` 호출 시 `NotImplementedError`.
+25. **(v5 Finding 102321 #9)** `_load_policy()` 호출이 source mode와 frozen build (`af.exe`) 양쪽에서 `config/escalation_policy.yaml`을 읽어 dict 반환. `core.config_paths.BASE_DIR` 사용 검증.
+26. **(v5 Finding 102321 #10)** `WarningRecord.schema_version=1` 인스턴스 jsonl 직렬화 후, schema_version=2 + 신규 필드를 가진 record와 같은 jsonl 파일에 공존하고 deserializer가 둘 다 정상 로드 (round-trip).
+27. **(v5 Finding 102321 #11)** P1 record 호출에서 RunEvent 미발행 — `grep -rn "RunEvent\|run_event" core/warning_registry.py` → 0 매치.
 
 ---
 
@@ -646,3 +784,17 @@ P1 PR 작성 시:
   - **§7.3 PR scope**: `core/approval_gate.py` 시그니처 확장 항목 추가 / `repair` CLI 추가 / `record_id` 필드 추가 / 정확한 .gitignore 패턴 / 신규 테스트 2개 (`test_approval_gate_runtime_workspace.py`, `test_warning_registry_cli.py`) 추가.
   - **§10 acceptance**: 11건 → 17건. #12-17은 v4 6건 finding의 검증 케이스 (절대경로 링크 / CLI argparse error / repair idempotency / git check-ignore / drift 3-tuple / phase enum 텍스트 일치).
   - **OBSOLETE finding (v3가 이미 fix)**: 100406 #1 (evidence_quality_warn 호출처 이동, v3 §3.1 row 3) / 100406 #2 (af.spec hiddenimports, v3 §7.3) / 100406 #4 (by_phase 추가, v3 §4.3 — 100406 제안한 nested schema {scope: {count, severity}}는 advisory로 분류, v4는 v3의 평면 schema {scope: 5} 유지 — acceptance #2 충족 가능).
+- 2026-05-09 v5: v4 통합 cross-review (102321, claude critic + codex cross + judge=claude) 11 finding 중 ACCEPT 9 / REBUTTAL 2 / HOLD→DECIDE 1 모두 처리 (Opus 4.7).
+  - **§2.2a 신설 (Finding 102321 #4 ACCEPT, High — phase 정규화)**: `_PHASE_ALIAS` 딕셔너리 + `_normalize_phase()` 함수. 비표준 phase(`"design"`/`"test"`/`"integration"`)는 baseline의 `scope`/`verify`/`integrate`로 alias. unknown은 `build` fallback + `extra.original_phase` 보존 → §5.1 정책 silent skip 방지.
+  - **§2.4 신설 (Finding 102321 #10 ACCEPT, Medium — open schema)**: append-only / unknown field tolerance / missing field default / `schema_version: int = 1` 필드 추가. P4 schema 변경 시 deserializer 분기 가능.
+  - **§2.2 (Finding 102321 #6 ACCEPT, High — repeat_count 소유권)**: "P4가 계산" → **"`record()` 내부에서 SoT 풀스캔으로 prior count 계산 후 persist"**. `evaluate(record)`는 history 인자 없이 `record.repeat_count`만 보면 됨.
+  - **§4.1 (Finding 102321 #7 ACCEPT, High — _global P4 이연)**: `_global/<rule>.jsonl` 디렉토리를 P1 scope에서 제거. `load_global()`은 `NotImplementedError`. `.gitignore`의 `_global/` 라인도 P1에서 제거. P4 활성 시 `rebuild_global()` API 추가.
+  - **§4.4 재작성 (Finding 102321 #3 + #5 ACCEPT, High)**: (a) `_summary.json` 갱신을 `tempfile.mkstemp + locked_file + os.replace` atomic 패턴 의무화 (`core/work_item_telemetry.py:55-65` 인용). (b) lock 키를 slug 단위(`<slug>/.lock`)로 통일해 rule별 lock 비대칭 race 제거. (c) "10건마다 lazy 트리거" 명세 폐기 → `summarize()` read-on-demand 단일화로 stale 제거.
+  - **§5.4 보강 (Finding 102321 #6)**: `evaluate()` 시그니처 확정 — 단일 record 인자, history 인자 없음. record가 self-contained (#6과 §2.2 정합).
+  - **§5.5 신설 (Finding 102321 #9 ACCEPT, Medium — yaml loader)**: `_load_policy()` 헬퍼 + `core.config_paths.BASE_DIR` 사용. frozen-aware (baseline `core/config_paths.py:38-41` 패턴 차용 — `_MEIPASS` 직접 분기 불필요).
+  - **§8.3 재작성 (Finding 102321 #2 + #11)**: (a) frozen `af.exe warning-summary`/`warning-repair` subcommand 추가 (PyInstaller에서 `python -m` 미동작 → `run_factory_cli.py` argparse subcommand wiring). (b) RunEvent **P1 미발행 못박음** — baseline `core/events.py` 부재 + record 호출처 일부에서 `run_id` 미가용. P4 escalation 활성 시 함께 검토.
+  - **§4.5 보강 (Finding 102321 #8 REBUTTAL)**: v4 §4.5의 5줄 글로브 패턴이 이미 정확. 단 §4.1 `_global/` 이연에 따라 P1에서는 `/runtime/warnings/_global/` 라인 제거.
+  - **§6.3 보강 (Finding 102321 #1 REBUTTAL — Critical)**: 102321 리뷰가 v4 §6.3 본문(이미 ApprovalGate 시그니처 확장 + 절대경로 정책 채택)을 못 보고 v3 가정을 다시 비판. v4 fix 4건(시그니처 확장 / runtime_workspace 인자 / 절대경로 / 호출처 2곳)이 리뷰 Action Required와 정합 → 추가 변경 없음. acceptance #18 (grep 검증) 추가로 다음 라운드 sycophancy 방지.
+  - **§7.3 PR scope**: subcommand wiring / atomic write / read-on-demand / phase 정규화 / repeat_count persist / _global 제거 / yaml loader / open schema 등 8개 항목 신규 추가. 테스트 6 → 8 케이스 + 신규 schema_evolution + cli 4 케이스.
+  - **§10 acceptance**: 17건 → 27건. #18-27이 v5 9개 ACCEPT + 2 REBUTTAL 검증.
+  - **REJECTED 관리**: detect_owner_drift 회귀 우려 (v4 검증 완료) / phase 분포 추정 정확성 (acceptance #1로 흡수) / Blueprint §3 placement (PR scope에 이미 포함, recommendation으로 격하).
