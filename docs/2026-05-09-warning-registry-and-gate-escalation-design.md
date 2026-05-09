@@ -1,0 +1,448 @@
+# Warning Registry & Gate Escalation 설계 (P1 패키지)
+
+- 작성일: 2026-05-09 KST
+- 작성 모델: Claude Opus 4.7 (1M context)
+- 브랜치: `2026-05-07-memory-gitignore-cleanup`
+- 분류: 단일 설계문서 (CLAUDE.md 규칙 → af-cross-review 1라운드 자동 발화)
+- 상태: **Draft v2 — Round 1 BLOCK 4건 + Medium 1 + Low 1 반영 완료**
+- 선행 분석: `docs/codex/2026-05-08-af-productization-application-guide.md`
+- v1 리뷰 리포트: `docs/reviews/2026-05-09-094340-2026-05-09-warning-registry-and-gate-escalation-design-review.md`
+
+---
+
+## §0 한 줄 요약
+
+AF의 메타 결함은 "WARN을 못 찾는다"가 아니라 **"WARN이 BLOCK으로 승격되지 않는다"**. 본 P1 패키지는 (a) WarningRecord schema, (b) 기존 산발 WARN 4종 마이그레이션, (c) 표준 저장 위치, (d) escalation policy v0, (e) decision report 포맷, (f) P2~P6 의존성 다이어그램을 한 PR에 묶어 출시한다. **BLOCK 활성화 rollout 정책 (확정)**: P1은 schema/저장/policy 데이터만 수립하고 실제 차단은 일으키지 않는다(severity는 `warn`만). **P2에서 e2e_command_missing 한 rule만 phase-aware BLOCK으로 활성**한다(build/verify/code_review/cross_validate phase에서 발생 시). **P4에서 P2/P3 측정 데이터를 근거로 owner_role_mismatch / evidence_quality_warn 등 다른 rule을 BLOCK으로 점진 확장**한다. P3/P5는 record만 누적, BLOCK 활성화 없음.
+
+---
+
+## §1 배경 및 문제 정의
+
+### 1.1 메타 결함의 실증 (minesweeper-baseline 1회 실측)
+
+| 측정 항목 | 결과 | 출처 |
+|----------|------|------|
+| `e2e_command` 결측 task | **21/21** 전수 결측 | `core/work_item_generator.py:1056` |
+| owner_role 미스배정 module | **3/7** | `core/project_task_board.py:227` `detect_owner_drift` |
+| 파이프라인 verdict | PASS | approval-gate.md status: approved |
+| 사용자 노출된 차단 신호 | **없음** | hook log, gate 모두 BLOCK 미발화 |
+
+**해석**: WARN은 정상적으로 발화되었으나, 누구도 (1) 누적 횟수를 추적하지 않고 (2) 임계 초과 시 BLOCK으로 승격하지 않는다. 결과적으로 "WARN 21건 = WARN 0건"과 동일한 통과 신호가 생성된다.
+
+### 1.2 P1이 P2~P6보다 먼저 와야 하는 이유
+
+- P2(phase-aware BLOCK)는 "어떤 WARN을 BLOCK으로 강제할지" 판단을 위해 P1의 record schema가 선행되어야 함.
+- P3(Owner Lint measurement) / P5(contract drift 측정기)는 record 형식이 통일되어야 누적 비교 가능.
+- P4(escalation v1) / P6(domain-specific)는 P1의 schema를 기준으로 분기.
+- 따라서 P1은 **시멘틱 라이브러리 + 저장소** 역할이고, 실제 BLOCK 동작은 P2에서 e2e_command_missing 한 rule만 활성, P4에서 다른 rule로 점진 확장한다 (§0과 §7.2 일관).
+
+### 1.3 거부된 대안 (재논의 시에만 검토)
+
+- 포커 도메인 키 하드코딩(`starting_stack`, `SB/BB`)을 코어 config에 박는 안 — domain-specific gate는 P6 활성화 조건으로만 허용.
+- Event Protocol 필수 이벤트(`join_room` 등)를 코어 게이트로 강제 — 도메인 결합 과잉.
+- simulation.md 자동 생성 강제 — 모든 프로젝트에 부적합.
+- 한 단계에서 SSOT+protocol+owner+AC+simulation 일괄 처리 — 측정 데이터 없이 추진 시 P3 false-positive 분포를 모르고 BLOCK 승격하는 위험.
+
+---
+
+## §2 WarningRecord schema (Acceptance #1)
+
+### 2.1 필드 정의
+
+```python
+# core/warning_registry.py (P1에서 신설)
+@dataclass
+class WarningRecord:
+    # ─── Identity (필수) ───
+    rule_id: str            # 예: "e2e_command_missing"
+    severity: str           # "warn" | "block_candidate" | "block"
+    project_slug: str       # 예: "minesweeper-smoke-v2-01"
+    ts: str                 # ISO 8601, now_iso() 사용
+
+    # ─── Localization (필수) ───
+    # baseline taxonomy: core/project_task_board.py:17 _PHASE_ORDER
+    # 다른 phase 값(설계 단계의 "design" 등)은 P1 단계에서 인정하지 않음 — 새 phase 도입은 baseline 확장 PR 선행.
+    affected_phase: str     # "scope" | "build" | "integrate" | "code_review" | "cross_validate" | "verify"
+    count: int = 1          # 이 record에서 측정한 위반 건수 (예: e2e_command 누락 21건 중 build phase 16건)
+
+    # ─── Escalation 입력 (선택) ───
+    repeat_count: int = 1            # 동일 rule_id가 동일 slug에서 발화된 누적 횟수
+    baseline_delta: float = 0.0      # 직전 baseline 대비 증가율 (없으면 0.0)
+    false_positive_override: bool = False  # 사용자가 명시 OK한 경우 True
+    rationale: str = ""              # "왜 이게 WARN인지" 한 줄 설명
+
+    # ─── Diagnostic payload (선택) ───
+    affected_ids: list[str] = field(default_factory=list)  # task_id, module_id 등
+    source_path: str = ""            # 발화 위치 (file:line)
+    extra: dict = field(default_factory=dict)
+```
+
+### 2.2 필수 vs 선택 정당화
+
+| 필드 | 필수 여부 | 이유 |
+|------|---------|------|
+| `rule_id`, `severity`, `project_slug`, `ts` | 필수 | jsonl append 시 식별·정렬 키 |
+| `affected_phase`, `count` | 필수 | P2 phase-aware BLOCK과 P4 escalation 임계 판정 입력 |
+| `repeat_count` | 선택 | jsonl 누적 후 P4가 계산. 첫 record는 1 |
+| `baseline_delta` | 선택 | P5 contract drift 측정기에서만 채움 |
+| `false_positive_override` | 선택 | 사용자 승인 후 BLOCK escalation 차단용 |
+| `rationale` | 선택 권장 | decision report 자동 생성 시 사용 |
+| `affected_ids`, `source_path`, `extra` | 선택 | 디버깅/리포트 가독성 |
+
+### 2.3 severity 값의 의미
+
+| severity | 의미 | 진입 조건 |
+|----------|------|---------|
+| `warn` | 단순 경고, 차단 없음 | 기본값 (모든 신규 record) |
+| `block_candidate` | escalation policy v0를 통과해 BLOCK 후보로 마킹됨 | P4가 자동 부여 |
+| `block` | gate가 실제 차단 (approval-gate에 반영) | P4가 부여하고 approval_gate.apply_verification_verdict 호출 |
+
+P1 단계에서는 `warn`만 발화하고, `block_candidate`/`block` 분기는 P4가 추가한다 (코드 구조는 P1에서 미리 마련).
+
+---
+
+## §3 기존 WARN → registry 매핑 표 (Acceptance #2)
+
+### 3.1 1차 마이그레이션 대상 4건
+
+| # | rule_id | 현재 발화 위치 (파일:줄) | 현재 동작 | P1 동작 (마이그레이션 후) |
+|---|---------|------------------------|---------|------------------------|
+| 1 | `e2e_command_missing` | `core/work_item_generator.py:1048-1056` | `_LOGGER.warning(...)` 단발 로그 (task list 전체 집계) | task별 `phase` 필드(`core/work_item_generator.py:166` `_clean(item.get("phase") or "build")` 참조)로 그룹화한 뒤, **phase 그룹별 record 분할 발화**: 예) build phase 결측 16건 → 1 record (`affected_phase="build"`, `count=16`), scope phase 결측 5건 → 1 record (`affected_phase="scope"`, `count=5`). 기존 `_LOGGER.warning` 단일 로그는 유지. 정책의 phase-exempt가 정상 분기되도록 record 단위가 phase별로 분리되어야 한다. |
+| 2 | `owner_role_mismatch` | `core/project_task_board.py:227-249` `detect_owner_drift` | `bool` 반환만 (호출처 `core/project_pipeline.py:1402` `logger.warning("strategy ledger skip — owner drift 감지 ...")`) | **시그니처 확장 (옵션 a)**: `detect_owner_drift(...) -> list[tuple[str,str]]`로 변경 (mismatched task_id, task_owner 페어 목록 반환). 빈 리스트는 falsy로 판정 가능 → 기존 `if detect_owner_drift(...):` 호출처 회귀 없음. 호출처(`core/project_pipeline.py:1401-1406`)에서 `mismatches = detect_owner_drift(...); if mismatches: ...` 후 `WarningRegistry.record(rule_id="owner_role_mismatch", count=len(mismatches), affected_phase="build", affected_ids=[mid] + [tid for tid,_ in mismatches])`. phase 값은 baseline taxonomy 중 `build`(module 실행 phase)로 통일. |
+| 3 | `evidence_quality_warn` | `core/research_verifier.py:362-366` | `evidence._warnings.append("evidence_quality_warn: score=%s, gaps=%s")` | 기존 `_warnings` append 유지 + `WarningRegistry.record(rule_id="evidence_quality_warn", affected_phase="scope", count=len(gaps), extra={"score": score, "gaps": gaps})` 병행 기록 (research 단계는 baseline에서 scope phase에 해당 — `core/project_pipeline.py:756-774` 흐름 참조). |
+| 4 | `plan_verifier_warn` | `core/plan_verifier.py:42-80` `PlanVerifyResult.passed=False` 흐름 | gate에서 `passed=False` 시 advisory만 (파이프라인 통과) | 호출처(`core/project_pipeline.py:959-` `from core.plan_verifier import PlanVerifier`)에서 `passed=False`면 `WarningRegistry.record(rule_id="plan_verifier_warn", affected_phase="scope", count=len(result.issues), extra={"score": result.score})` (plan 검증은 scope phase). |
+
+### 3.2 P5 자리 (현재 측정기 없음 — 신설)
+
+| # | rule_id | 발화 위치 (P5에서 신설) | 동작 |
+|---|---------|---------------------|------|
+| 5 | `doc_consistency_drift` | `core/doc_consistency_meter.py` (신설, P5) | brief의 기존 필드(data_model/tech_stack/non_goals)를 후속 문서에서 grep해 보존율 측정. 임계 미달 시 record |
+
+P1에서는 **rule_id 예약**만 하고, 실제 발화 코드는 P5에서 추가한다 (registry는 모르는 rule_id도 기록 가능 — open schema).
+
+### 3.3 마이그레이션 원칙
+
+1. **기존 WARN 코드는 삭제하지 않는다** — 이중 기록 (logger + registry) 방식. 사용자 가시 로그는 그대로 유지.
+2. **rule_id는 snake_case 명사** — `<noun>_<state>` 패턴 (e.g., `e2e_command_missing`, `owner_role_mismatch`).
+3. **affected_phase는 baseline `_PHASE_ORDER` 6개로 고정** (§2.1). 이는 P2 phase-aware BLOCK이 분기할 키. 새 phase 도입은 baseline 확장 PR 선행 필수.
+4. **registry record 호출은 try/except로 감싸 fire-and-forget** — registry 실패가 본 흐름을 깨면 안 됨.
+5. **phase 그룹별 분할 record 원칙**: 한 발화 지점에서 여러 phase의 위반이 섞여 있으면 phase별로 record를 나눠 기록 (§3.1 row 1 참조). 이 원칙이 §5.1 `exempt_when affected_phase_in: [scope]` 등 정책 분기를 작동 가능하게 만든다.
+
+---
+
+## §4 표준 저장 위치 명세 (Acceptance #3)
+
+### 4.1 디렉토리 구조
+
+```
+runtime/
+├── timing/                          # 기존 (Phase F)
+└── warnings/                        # 신설 (P1)
+    ├── _global/
+    │   └── <rule_id>.jsonl          # 프로젝트 간 누적 (escalation 판단용)
+    ├── _index.json                  # 등록된 rule_id 목록 + 메타 (선택)
+    └── <project_slug>/
+        ├── <rule_id>.jsonl          # 이 프로젝트의 rule_id별 누적
+        ├── _summary.json            # 이 프로젝트의 합본 (severity별 카운트, 최신 ts)
+        └── _decision.md             # WARN→BLOCK 승격 시 markdown 보고서 (P4부터 채움)
+```
+
+### 4.2 jsonl 레코드 1줄 예시
+
+```json
+{"rule_id":"e2e_command_missing","severity":"warn","project_slug":"minesweeper-smoke-v2-01","ts":"2026-05-09T01:23:45+09:00","affected_phase":"build","count":21,"repeat_count":1,"baseline_delta":0.0,"false_positive_override":false,"rationale":"work_item_generator: tasks without e2e_command","affected_ids":["T-001","T-002","..."],"source_path":"core/work_item_generator.py:1056","extra":{}}
+```
+
+### 4.3 _summary.json 포맷
+
+```json
+{
+  "project_slug": "minesweeper-smoke-v2-01",
+  "last_updated": "2026-05-09T01:23:45+09:00",
+  "by_rule": {
+    "e2e_command_missing": {"count": 21, "first_ts": "...", "last_ts": "...", "severity": "warn"},
+    "owner_role_mismatch": {"count": 3, "first_ts": "...", "last_ts": "...", "severity": "warn"}
+  },
+  "by_severity": {"warn": 24, "block_candidate": 0, "block": 0}
+}
+```
+
+### 4.4 동시성 / append 안전성
+
+- jsonl append는 `core/file_lock.locked_file` 사용 (실제 위치: `core/file_lock.py:38`. 이미 `core/project_task_board.py:12`, `core/project_mailbox.py:9`, `core/work_item_telemetry.py:9`, `core/providers/session_adapter.py:21`에서 동일 import). multi-thread 안전.
+- `_summary.json` 갱신은 read-modify-write이므로 동일 lock으로 직렬화.
+- 동시 다른 프로젝트 record는 다른 디렉토리 → 충돌 없음.
+
+### 4.5 .gitignore 정책
+
+- `runtime/warnings/<slug>/` — gitignore (프로젝트별 일시 데이터)
+- `runtime/warnings/_global/` — gitignore (escalation 판단 캐시; 재구성 가능)
+- `runtime/warnings/_index.json` — **commit 대상** (등록된 rule_id 목록은 코드와 함께 추적해야 escalation policy가 의미 있음)
+
+---
+
+## §5 escalation policy v0 (Acceptance #4)
+
+### 5.1 P1에서 정의할 것 (P4가 이걸 기반으로 동작)
+
+P1은 escalation policy를 **선언적 데이터로 명시**만 한다 (실제 적용은 P4).
+
+```yaml
+# config/escalation_policy.yaml (P1에서 신설)
+# phase 키는 core/project_task_board.py:17 _PHASE_ORDER와 정확히 일치해야 함.
+# 허용 값: scope, build, integrate, code_review, cross_validate, verify
+version: 0
+rules:
+  - rule_id: e2e_command_missing
+    activate_at: P2                                            # P2에서 BLOCK 활성 시작
+    block_when:
+      affected_phase_in: [build, integrate, code_review, cross_validate, verify]
+      count_per_run_min: 1                                     # 위 phase에서 1건이라도 BLOCK 후보
+    exempt_when:
+      affected_phase_in: [scope]                               # scope 단계는 placeholder 허용 → WARN 유지
+    rationale: "build 이후 단계에서는 e2e 검증 명령이 필수. scope phase는 task가 placeholder 상태일 수 있어 exempt."
+
+  - rule_id: owner_role_mismatch
+    activate_at: P4                                            # P3 measurement 후 P4에서 BLOCK 평가
+    block_when:
+      repeat_count_min: 3        # 같은 프로젝트에서 3회 이상 발생
+    rationale: "P3 measurement 기간 후 임계 결정 — 초기엔 보수적. P4에서 활성."
+
+  - rule_id: evidence_quality_warn
+    activate_at: P4
+    block_when:
+      count_per_run_min: 5       # 단일 run에서 5개 이상 gap
+    rationale: "근거 부족이 일정 수준 누적되면 후속 문서 신뢰도 붕괴. P4에서 활성."
+
+  - rule_id: plan_verifier_warn
+    activate_at: never           # 항상 advisory
+    block_when: never
+    rationale: "plan_verifier score는 refine 루프로 보정 가능 — escalation 보류"
+```
+
+**`activate_at` 필드 의미**: 이 rule의 BLOCK 평가가 어느 Phase에서 활성화되는지 명시. P1에선 `escalation_evaluator.py`가 stub이므로 모든 rule이 사실상 비활성. P2 진입 시 `activate_at: P2`인 rule만 평가, P4 진입 시 `activate_at: P2|P4`인 rule 모두 평가.
+
+### 5.2 임계값 결정 원칙 (왜 위 숫자인가)
+
+- **Phase 기반 (e2e_command_missing)**: build 이후 phase(build/integrate/code_review/cross_validate/verify)에서 1건이라도 발견되면 즉시 차단 — 코덱스 문서 §3 결론과 정합. scope phase는 의도된 placeholder가 있을 수 있어 exempt (work_item_generator가 task를 생성하는 시점에는 e2e_command가 비어 있고 후속 phase에서 채워짐).
+- **Repeat 기반 (owner_role_mismatch)**: P3 measurement 기간(약 4주) 데이터 수집 후 재조정 예정. 초기 3회는 "한 프로젝트에서 3번 같은 owner 미스배정 = 패턴".
+- **Count 기반 (evidence_quality_warn)**: 단일 run 5개 이상은 baseline 측정값(minesweeper에서 평균 1~2개) 대비 명확한 이상.
+- **Never**: plan_verifier는 score가 refine 루프에서 회복되므로 BLOCK으로 직행하면 false positive 위험.
+
+### 5.3 false_positive_override 처리
+
+사용자가 `_decision.md`에서 "이건 OK"라고 명시하면, 이후 동일 record는 escalation 평가에서 제외 (`false_positive_override=true`로 신규 record 생성). P4에서 구현.
+
+### 5.4 P1에서 코드에 들어갈 minimum
+
+- `core/warning_registry.py`: `record()`, `summarize(slug)`, `load_global(rule_id)`
+- `config/escalation_policy.yaml`: 위 v0 정책
+- `core/escalation_evaluator.py` **stub만**: `evaluate(record) -> EscalationDecision` 시그니처만 정의, body는 `pass` (P4에서 구현)
+
+---
+
+## §6 Gate Decision Report 포맷 (Acceptance #5)
+
+### 6.1 위치와 노출 경로
+
+- **파일 경로**: `runtime/warnings/<project_slug>/_decision.md`
+- **사용자 노출**: approval-gate.md의 `## Review Notes` 섹션에 자동 링크 추가 (P1에서 wiring).
+
+### 6.2 _decision.md 포맷
+
+```markdown
+# Gate Decision Report — <project_slug>
+
+- 생성: 2026-05-09T01:30:00+09:00
+- 마지막 갱신: 2026-05-09T01:35:12+09:00
+- 정책 버전: escalation_policy.yaml v0
+
+## Active Decisions
+
+### [BLOCK] e2e_command_missing — 2026-05-09T01:35:12
+
+**상태**: block_candidate → block (자동 승격)
+**임계**: build phase에서 발생, count=21
+**근거**: escalation_policy.yaml > rules > e2e_command_missing > block_when (phase=build, count_per_run_min=1)
+**관련 record**: runtime/warnings/<slug>/e2e_command_missing.jsonl (line 1)
+**affected_ids**: T-001, T-002, ..., T-021
+**해소 방법**: 각 task의 e2e_command 필드를 채우거나, 명시적으로 false_positive_override를 설정하세요.
+
+---
+
+### [WARN] owner_role_mismatch — 2026-05-09T01:35:12
+
+**상태**: warn (block 미승격)
+**현재 누적**: 1회 (block 임계 3회 미만)
+**근거**: escalation_policy.yaml v0 — repeat_count_min=3 미충족
+**관련 record**: runtime/warnings/<slug>/owner_role_mismatch.jsonl
+
+---
+
+## False Positive Overrides
+
+(없음 — 사용자가 OK 표시한 record가 여기 누적)
+
+## History
+
+- 2026-05-09T01:35:12: e2e_command_missing → BLOCK
+- 2026-05-09T01:23:45: e2e_command_missing → WARN (initial)
+```
+
+### 6.3 approval-gate.md와의 통합
+
+approval-gate.md `## Review Notes` 섹션에 다음 라인을 P1에서 자동 추가:
+
+```
+- gate_decision_report: runtime/warnings/<slug>/_decision.md
+```
+
+**통합 여부 결정**: 본문 통합 아닌 **링크 참조** 방식 채택.
+
+이유:
+1. approval-gate.md는 `_render()`/`_parse()`가 정해진 5섹션 포맷 (`core/approval_gate.py:42-50`)에 강하게 의존 — 본문 통합 시 파싱 정규식 수정 필요 (회귀 위험 큼).
+2. _decision.md는 자주 갱신되는 누적 로그 성격, approval-gate는 승인 스냅샷 성격 (수명주기 다름).
+3. 사용자는 approval-gate.md 한 곳만 보면 "추가로 봐야 할 곳"이 명시됨 (UX 동일).
+
+P1에서 `core/approval_gate.py`에 추가할 변경 (최소):
+- `_render()`의 `## Review Notes` 본문에 `decision_report_link`가 있으면 한 줄 추가.
+- `initialize()` / `apply_verification_verdict()` 시 link 자동 주입.
+
+---
+
+## §7 P2~P6 의존성 다이어그램 (Acceptance #6)
+
+### 7.1 의존 관계
+
+```
+                    ┌──────────────────────────────────┐
+                    │  P1 (이 문서) — Warning Registry │
+                    │  + Migration + Storage + Decision │
+                    └────────────────┬─────────────────┘
+                                     │ schema 의존
+                ┌────────────────────┼────────────────────┐
+                ▼                    ▼                    ▼
+    ┌───────────────────┐  ┌───────────────────┐  ┌──────────────────┐
+    │  P2 phase-aware   │  │  P3 Owner Lint    │  │  P5 contract     │
+    │  BLOCK (e2e only) │  │  measurement      │  │  drift 측정기   │
+    │  build/integrate/ │  │  (BLOCK 없음)     │  │  (record만)     │
+    │  code_review/     │  │                   │  │                  │
+    │  cross_validate/  │  │                   │  │                  │
+    │  verify           │  │                   │  │                  │
+    └─────────┬─────────┘  └─────────┬─────────┘  └────────┬─────────┘
+              │                      │                     │
+              └──────────────────────┼─────────────────────┘
+                                     ▼
+                    ┌──────────────────────────────────┐
+                    │  P4 escalation v1                │
+                    │  P2/P3 데이터로 일부 rule을      │
+                    │  block_candidate → block 승격    │
+                    │  decision report 자동 갱신       │
+                    └────────────────┬─────────────────┘
+                                     │ activation 조건만
+                                     ▼
+                    ┌──────────────────────────────────┐
+                    │  P6 (조건부) domain-specific gates│
+                    │  기존 _domain 분기에 1줄 활성화 │
+                    │  (포커, 카드 게임 등)            │
+                    └──────────────────────────────────┘
+```
+
+### 7.2 단계별 산출물
+
+| Phase | 핵심 산출물 | 코어 파일 (예상) | 의존 |
+|-------|----------|--------------|------|
+| **P1** (이 문서) | `WarningRecord`, registry, escalation_policy.yaml v0, _decision.md, 4건 마이그레이션 (BLOCK 활성화 없음) | `core/warning_registry.py`, `core/escalation_evaluator.py` (stub), `config/escalation_policy.yaml` | — |
+| **P2** | phase-aware BLOCK (e2e_command_missing 한 rule만, baseline phase `build/integrate/code_review/cross_validate/verify`에서 발생 시 BLOCK) | `core/escalation_evaluator.py` (body), `core/project_pipeline.py` 호출 추가 | P1 |
+| **P3** | Owner Lint measurement (BLOCK 없음, jsonl 누적만, false positive 분포 측정) | `core/project_pipeline.py:1401` 변경, 신규 측정 헬퍼 | P1 |
+| **P4** | escalation v1 (P2/P3 데이터로 owner_role_mismatch / evidence_quality_warn 등 다른 rule을 BLOCK으로 점진 확장, false positive override 기능 추가) | `core/escalation_evaluator.py` (full), approval_gate 링크 wiring | P1, P2, P3 |
+| **P5** | contract drift 측정기 (brief 보존율 grep, doc_consistency_drift record만 누적, BLOCK 없음) | `core/doc_consistency_meter.py` (신설) | P1 |
+| **P6** | (조건부) domain-specific gates (포커 등) | 기존 `_domain` 분기에 activation 1줄, pack 추상화 미도입 | P1, P4 |
+
+### 7.3 P1 PR scope (한 PR로 출시)
+
+- [ ] `core/warning_registry.py` 신설 (record/summarize/load_global)
+- [ ] `core/escalation_evaluator.py` stub 신설 (P4 placeholder)
+- [ ] `config/escalation_policy.yaml` v0 작성
+- [ ] 4건 WARN 마이그레이션 (§3.1)
+- [ ] approval-gate.md `_decision.md` 링크 wiring
+- [ ] `runtime/warnings/.gitkeep` + `runtime/warnings/_index.json` 초기 커밋
+- [ ] `.gitignore` 갱신 (`runtime/warnings/_global/`, `runtime/warnings/<slug>/`)
+- [ ] tests:
+  - `tests/test_warning_registry.py`: record / summarize / lock 동시성
+  - `tests/test_warning_registry_migration_callsites.py`: 4건 호출처에서 record 호출 검증 (mock)
+- [ ] Master_Blueprint.md §3 (warning_registry 신규 섹션) + §12 변경 이력 갱신
+
+---
+
+## §8 비기능 요구사항
+
+### 8.1 성능
+
+- jsonl append 1회당 < 5ms (디스크 fsync 포함). 측정 후 v1.1에서 batch 옵션 검토.
+- registry record 실패 시 본 흐름 영향 0 — try/except + 로그만.
+- _summary.json 갱신은 lazy (10건마다 1회 또는 run 종료 시점) — record 단계에서 매번 갱신하지 않음.
+
+### 8.2 backward compatibility
+
+- 기존 `_LOGGER.warning(...)` 호출 모두 유지 (사용자 가시 로그 회귀 없음).
+- 기존 `evidence._warnings` 리스트 유지.
+- approval-gate.md `_render`/`_parse` 정규식 수정 없음 (링크는 review_notes 본문에 plain text로).
+
+### 8.3 관측 가능성
+
+- registry record 시 RunEvent 발행 (옵션, P1에선 placeholder만).
+- `python -m core.warning_registry summary --slug=<slug>` CLI 추가 (P1).
+
+---
+
+## §9 거부된 설계 결정 (이유 명시)
+
+| 안 | 거부 이유 |
+|----|--------|
+| WarningRecord에 `severity_score: float` 필드 | 0.0~1.0 임계는 escalation_policy.yaml로 외화 가능 — schema 비대 회피 |
+| `runtime/warnings/<slug>/<rule_id>/<ts>.json` 파일당 1 record | inode 폭발 + 통계 어려움. jsonl append가 정합 |
+| approval-gate.md 본문에 _decision.md 통째로 inline | `_render`/`_parse` 정규식 회귀 위험 (§6.3) |
+| escalation_policy를 Python 코드로 하드코딩 | 정책 변경마다 재배포 필요. yaml 외화로 운영 분리 |
+| P1에서 BLOCK 승격 즉시 활성화 | 데이터 0건 상태에서 임계 결정 시 false positive 다발. P4까지 stub |
+| `affected_phase`에 `design`/`test`/`integration` 신설 | baseline `_PHASE_ORDER` (`core/project_task_board.py:17`)에 존재하지 않는 phase. work_item_generator가 task에 부여하지 않는 값으로 정책을 만들면 silent skip. baseline 확장은 별도 PR로 분리. |
+| owner_role_mismatch record를 `detect_owner_drift` 내부에서 호출 (옵션 b) | helper의 단일 책임 원칙 위배 + import 사이클 위험. 호출처에 책임을 두는 것이 정합. |
+
+---
+
+## §10 측정 가능 acceptance (다음 세션 검증용)
+
+P1 머지 후 다음이 모두 충족되어야 다음 단계(P2) 진입:
+
+1. `runtime/warnings/<slug>/e2e_command_missing.jsonl`이 minesweeper baseline 재실행 시 **phase 그룹별로 분할 record**로 기록된다 (총 count 합계 = 21, phase별 record는 baseline의 task phase 분포에 따라 1~5건). 단일 record로 21을 모두 묶지 않는다 (§3.1 row 1 원칙).
+2. `python -m core.warning_registry summary --slug=<slug>`이 by_rule 딕셔너리를 출력하고, by_rule.e2e_command_missing.by_phase 분포가 표시된다.
+3. approval-gate.md `## Review Notes`에 `gate_decision_report:` 라인이 자동 추가된다.
+4. 기존 `_LOGGER.warning("e2e_command 누락 task ...")` 로그 메시지가 동일하게 출력된다 (회귀 없음).
+5. `detect_owner_drift()`의 새 시그니처(`-> list[tuple[str,str]]`)가 기존 호출처(`core/project_pipeline.py:1401-1406`)에서 truthy 분기를 깨지 않는다 (빈 리스트는 falsy → if 분기 회귀 없음).
+6. tests/test_warning_registry.py 4 케이스 PASS, tests/test_warning_registry_migration_callsites.py 4 케이스 PASS.
+7. registry record 호출이 본 흐름을 깨지 않는다 (모의 IOError 주입 시에도 work_item 생성 성공).
+8. P2 진입 시 `escalation_evaluator.evaluate(record)`가 `affected_phase="scope"` record는 `EscalationDecision.block=False`, `affected_phase="build"` record는 `EscalationDecision.block=True`를 반환한다 (P1 stub은 모두 False).
+
+---
+
+## §11 다음 단계
+
+P1 PR 작성 시:
+1. 이 설계문서가 cross-review 통과 (BLOCK 0건) 확인.
+2. Sonnet으로 모델 전환 (메모리 규칙: 코드 구현은 Sonnet).
+3. `core/warning_registry.py` 부터 시작. 4건 마이그레이션은 위 §3.1 표 순서대로.
+4. 머지 전 3-tier (af-test-runner / af-critic / af-cross-review) 모두 PASS 또는 WARN-only.
+
+---
+
+## §12 변경 이력
+
+- 2026-05-09 v1: 초안 작성 (Opus 4.7). codex 문서 §3/§6/§8 분석 결론 반영. minesweeper baseline 21/21 결측 + 3/7 owner 미스배정 데이터 인용. acceptance 6개 항목 충족.
+- 2026-05-09 v2: af-cross-review Round 1 BLOCK 4건 + Medium 1 + Low 1 모두 반영 (Opus 4.7).
+  - §0 / §1.2 / §7.2: BLOCK 활성화 시점 3-way 모순 해소 → "P1 stub, P2 e2e_command만 활성, P4에서 다른 rule 확장"으로 일관화 (#3 ACCEPT).
+  - §2.1 affected_phase enum: `scope/design/build/test/verify/integration` → baseline `_PHASE_ORDER` 6개(`scope/build/integrate/code_review/cross_validate/verify`)로 통일 (#1 ACCEPT).
+  - §3.1 row 1: e2e_command record를 task별 `phase` 필드로 그룹화한 phase별 분할 발화로 변경, exempt 분기 가능하게 정정 (#2 ACCEPT).
+  - §3.1 row 2: `detect_owner_drift()` 시그니처를 `bool` → `list[tuple[str,str]]`로 확장(옵션 a 채택), 호출처 회귀 없음 보장. `affected_phase="design"` → `"build"`로 정정. "logger.info" → "logger.warning" 정정 (#4 ACCEPT, #6 ACCEPT-ADV).
+  - §4.4: `core/file_io.locked_file` → `core/file_lock.locked_file` 모듈 경로 정정 (#5 ACCEPT).
+  - §5.1: `escalation_policy.yaml`에 `activate_at` 필드 추가, phase 키를 baseline taxonomy로 정정.
+  - §10 acceptance: phase 분할 검증 + detect_owner_drift 시그니처 회귀 검증 + escalation_evaluator P2 케이스 추가 (3건 → 8건).
