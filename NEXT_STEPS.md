@@ -1,14 +1,14 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-09 KST — **P1 설계 v2 작성 후 자동 발화 design-review에서 추가 BLOCK 5건 발견. 다음: v3 작성 (Opus)**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-09 KST — **설계 v6 합의 완료 (commit `6f5d6156`). max_rounds=2 캡 도달, 자동 cross-review 종료. 다음: P1 코드 구현 (Sonnet 전환)**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
 >
-> ## 🔥 다음 세션 진입 시 우선 작업 — v3 작성 (설계 단계, Opus 유지)
+> ## 🔥 다음 세션 진입 시 우선 작업 — P1 코드 구현 (Sonnet)
 >
-> **모델 유지**: 설계 단계이므로 Opus 그대로 (메모리: 설계는 Opus). v3 PASS 후 P1 코드 진입 시점에 Sonnet 전환.
+> **모델 전환**: 코드 구현 단계 (메모리: 설계는 Opus, 구현은 Sonnet).
 > ```
 > /clear
-> /model claude-opus-4-7
+> /model claude-sonnet-4-6
 > ```
 >
 > ### 진입 시 무조건 첫 동작
@@ -17,38 +17,103 @@
 > python start_db.py agent-factory
 > ```
 >
-> ### v2 → v3에서 반영해야 할 BLOCK 5건 (2026-05-09 자동 cross-review)
+> ### 첫 메시지 (그대로 입력해도 됨)
+> ```
+> NEXT_STEPS.md 읽고 P1 코드 구현 진행해. v6 §7.3 PR scope 그대로.
+> ```
 >
-> 자동 발화된 추가 design-review 4회(09:10/09:47/09:49/09:51) 모두 BLOCK. 가장 최신(095135) 리포트 기준 5건:
+> ### 첫 읽을 문서 (순서)
+> 1. `docs/2026-05-09-warning-registry-and-gate-escalation-design.md` (v6, 973 lines) — P1 설계 본체
+>    - **§7.3 PR scope** — 14개 항목 체크리스트 (모듈/migration/CLI/test)
+>    - **§10 acceptance 34건** — 머지 전 검증 케이스 전수
+>    - **§4.0 path ownership** — workspace vs doc_root 분리 의미
+>    - **§4.0a record_id idempotency** — `f"{slug}:{rule_id}:{hash8(stable_payload)}"`, ts 제외
+>    - **§4.4 동시성** — `_summary.json.lock` 별도, atomic write (`tempfile.mkstemp + os.replace`)
+>    - **§5.4 EscalationDecision** — P1 stub은 `EscalationDecision(block=False, severity="warn", reason="inactive_phase")` 반환
+>    - **§6.3 ApprovalGate** — `workspace` 인자명 유지 + `runtime_workspace` keyword 추가만 (rename 포기)
+> 2. `docs/reviews/2026-05-09-112334-...-design-review.md` (v5 통합 리뷰, BLOCK 10 finding) — v6가 모두 반영
+> 3. `CLAUDE.md` — Karpathy 4원칙 + Master_Blueprint.md 갱신 의무 + Review-Gate 규칙
 >
-> | # | severity | 위치 | 결함 | v3 수정 방향 |
-> |---|---------|------|------|-----------|
-> | 1 | High | §4.1 / `core/warning_registry.py` API | `runtime/warnings/`가 workspace/doc_root/cwd 어디 기준인지 미명시. baseline은 workspace와 doc_root를 분리(`core/work_item_generator.py:948`, `core/project_pipeline.py:946`). multi-PC/`target_path` run에서 path 결정 불가. | `WarningRegistry(workspace: str)` 생성자 명시 또는 `record(workspace=..., doc_root=..., project_slug=...)` 인자 명시. approval-gate.md 링크가 workspace/runtime/... 또는 doc_root/runtime/... 중 어느 쪽인지 §6.3에 명시. |
-> | 2 | High | §7.3 / §10 acceptance #8 | `escalation_evaluator.evaluate()` body가 `pass` → None 반환. `.block` attribute 접근 시 AttributeError. acceptance #8과 충돌. | P1 stub에서도 `EscalationDecision(block=False, severity="warn", reason="inactive_phase")` 반환 명시. dataclass 필드 정의도 §7.3에 추가. |
-> | 3 | Medium | §4.3 _summary.json 포맷 | by_rule 딕셔너리에 `by_phase` 필드 없음. acceptance #2가 `by_rule.e2e_command_missing.by_phase` 출력 요구. | §4.3 예시에 `"by_phase": {"scope": 5, "build": 16}` 추가. CLI 출력 형식과 일치시킴. |
-> | 4 | Medium | §7.3 PR scope | 새 모듈(`core/warning_registry`, `core/escalation_evaluator`)이 `af.spec:33` hiddenimports에 누락. frozen build 호환성. | §7.3에 af.spec 항목 추가 (`config/`는 이미 data로 포함 — `af.spec:29` 확인 후 path 유지 명시). |
-> | 5 | Medium | §3.1 row 3 (`evidence_quality_warn`) | `ResearchVerifier()`는 slug/workspace 모름(`core/project_pipeline.py:725`). `verify_with_retry()`도 evidence_fn/task_input만 받음(`core/project_pipeline.py:756`). callsite에서 slug 미접근. | record 호출 위치를 `project_pipeline.py`의 `_vr` 반환 직후로 옮기거나, `ResearchVerifier`/`verify_with_retry`에 `workspace`/`project_slug` 명시 인자 추가. |
+> ### v6 §7.3 P1 PR scope (구현 순서)
+> 1. **`core/warning_registry.py`** — `WarningRegistry(workspace)` 클래스. `record()` / `summarize()` / `rebuild_caches()` / `repair()`. `WarningRecord` dataclass (`record_id`/`schema_version` 필수)
+> 2. **`core/escalation_evaluator.py`** — stub. `EscalationDecision` dataclass + `evaluate(record)` 항상 inactive 반환. `_load_policy()` (yaml 로더, `core.config_paths.BASE_DIR` 사용)
+> 3. **`config/escalation_policy.yaml`** — v6 §5.1 그대로. `block_when` 키 자체 생략으로 `activate_at: never` 표현 (string 거부)
+> 4. **`core/approval_gate.py`** — `__init__(workspace, slug, *, runtime_workspace=None)` 시그니처 확장 (rename **금지**, keyword 추가만). `_render()`에 `gate_decision_report:` 절대경로 라인 주입
+> 5. **`run_factory_cli.py`** — argparse `warning-summary`/`warning-repair` subcommand 추가 (frozen `af.exe` 진입점)
+> 6. **4건 WARN 마이그레이션** (§3.1 표 순서):
+>    - `e2e_command_missing` — `core/work_item_generator.py:1048-1056`. **task별 phase 그룹화 분할 record**
+>    - `owner_role_mismatch` — `core/project_task_board.py:227-249` 시그니처 `bool` → `list[tuple[task_id, expected, actual]]` 변경. 호출처 `core/project_pipeline.py:1401-1406`에서 record
+>    - `evidence_quality_warn` — **호출처 `core/project_pipeline.py:756-774`**에서 record (verifier 내부 아님)
+>    - `plan_verifier_warn` — `core/project_pipeline.py:959-`에서 record. **`affected_phase=""` 빈값** (다중 phase 통합)
+> 7. **`runtime/warnings/.gitkeep` + `_index.json`** 초기 커밋 + **`.gitignore` 3줄 추가** (v6 §4.5)
+> 8. **`af.spec` hiddenimports** — `core.warning_registry`, `core.escalation_evaluator` 추가 (line 33-)
+> 9. **테스트 20 케이스**:
+>    - `tests/test_warning_registry.py` (8): record / summarize(by_phase) / lock / IOError / record_id idempotency / phase 정규화 / repeat_count persist / atomic write
+>    - `tests/test_warning_registry_migration_callsites.py` (4): 호출처 mock
+>    - `tests/test_approval_gate_runtime_workspace.py` (3): single mode / 분리 mode / `_render` 정규식 회귀
+>    - `tests/test_warning_registry_cli.py` (4): --workspace 누락 시 argparse error / repair / frozen subcommand wiring / dedup idempotent
+>    - `tests/test_warning_registry_schema_evolution.py` (1): round-trip
+> 10. **Master_Blueprint.md** — §3 warning_registry 신규 섹션 + §12 변경 이력 (CLAUDE.md 의무, **같은 commit**)
 >
-> ### Positive observations (v3에서 유지할 것)
-> - affected_phase enum이 baseline `_PHASE_ORDER`와 정렬됨 (v1→v2 수정 결과 — 회귀 금지)
-> - `detect_owner_drift()` migration이 caller-side recording을 채택해 layering 깔끔 (v1→v2 수정 결과 — 회귀 금지)
+> ### baseline grep 의무 (코드 진입 시 1차 검증)
+> | 파일:줄 | 역할 |
+> |---------|------|
+> | `core/project_task_board.py:17` | `_PHASE_ORDER = {scope, build, integrate, code_review, cross_validate, verify}` — affected_phase enum |
+> | `core/project_task_board.py:227-249` | `detect_owner_drift(...) -> bool` — 시그니처 확장 대상 (`mod_owner` line 230, `task_owner` line 244) |
+> | `core/file_lock.py:38,53` | `locked_file()` — path별 독립 lock. `_summary.json.lock` 별도 키 사용 |
+> | `core/work_item_telemetry.py:55-65` | `tempfile.mkstemp + locked_file + os.replace` atomic write 패턴 (그대로 차용) |
+> | `core/config_paths.py:38-41` | `if getattr(sys, "frozen", False): BASE_DIR = ...` frozen-aware path |
+> | `core/work_item_generator.py:166` | `phase_order.get(_clean(item.get("phase") or "build"), 99)` — task별 phase 추출 |
+> | `core/work_item_generator.py:1061` | `gate = ApprovalGate(doc_root, slug)` — 호출처 (분리 모드, runtime_workspace 추가) |
+> | `core/project_pipeline.py:95` | `ApprovalGate(self._effective_doc_root(), ...)` — 호출처 (분리 모드, runtime_workspace 추가) |
+> | `core/project_pipeline.py:1401-1406` | `if detect_owner_drift(...)` — owner_role_mismatch 호출처 |
+> | `core/project_pipeline.py:756-774` | `_vr` 반환 직후 — evidence_quality_warn record 위치 |
+> | `core/project_pipeline.py:959-` | `PlanVerifier` 호출 — plan_verifier_warn record 위치 |
+> | `core/control/maintenance_pipeline.py:310` | `ApprovalGate(self._workspace, slug)` — **변경 없음** (단일 모드) |
+> | `tests/test_t3_7_run_event_integration.py:96` | `ApprovalGate(workspace=tmp_dir, slug=slug)` — **변경 없음** (keyword arg) |
+> | `scripts/verify_handoff_checker.py:104` | ApprovalGate 호출 — **변경 없음** |
+> | `core/approval_gate.py:78` | `__init__(workspace, slug)` — keyword `runtime_workspace=None` 추가 (rename 금지) |
+> | `core/approval_gate.py:42-50` | `_SEC_*` 정규식 5섹션 — `_render`/`_parse` 회귀 금지 |
+> | `af.spec:33,78,148` | hiddenimports 등록 패턴 |
 >
-> ### v3 작성 절차
-> 1. `docs/2026-05-09-warning-registry-and-gate-escalation-design.md` (현재 v2)에 in-place 5건 반영
-> 2. §12 변경 이력에 v3 row 추가 (각 finding ACCEPT 근거 명시)
-> 3. **수동으로 af-cross-review 1라운드 발화** (자동 hook이 이미 max 발동했을 가능성)
-> 4. PASS 또는 WARN-only 시 P1 코드 진입 (Sonnet 전환)
+> ### 머지 전 3-tier 게이트 (CLAUDE.md Review-Gate 규칙)
+> - core/*.py 수정이므로 Tier 2~3 → **af-test-runner → af-critic → af-cross-review** 순서 자동 발화
+> - 모두 PASS 또는 WARN-only면 머지 가능 (BLOCK 시 수정 후 재발화, max_rounds=2 캡)
+> - **af.spec 갱신 + 빌드 빠른 smoke**: `python build_exe.py` → `dist/af-{version}/af.exe warning-summary --workspace=. --slug=test` 시도해 ImportError 없음 검증
 >
-> ### v3 작성 시 baseline grep 의무 위치
-> | 파일:줄 | 확인 사항 |
-> |---------|---------|
-> | `core/work_item_generator.py:948` | target_path vs workspace 분기 위치 |
-> | `core/work_item_generator.py:1042` | telemetry workspace/runtime 경로 패턴 |
-> | `core/project_pipeline.py:725` | ResearchVerifier 생성 시그니처 |
-> | `core/project_pipeline.py:756` | verify_with_retry 호출 인자 |
-> | `core/project_pipeline.py:946` | doc_root 변수 흐름 |
-> | `af.spec:29` | config/ data 포함 여부 |
-> | `af.spec:33,75` | hiddenimports 등록 패턴 (e.g., `core.work_item_telemetry`, `core.plan_verifier`) |
+> ### 작업 순서 (실측 우선)
+> 1. `core/warning_registry.py` 신설 (record + summarize + tests `test_warning_registry.py` 8 케이스 PASS) — 가장 핵심, 다른 마이그레이션의 기반
+> 2. `core/escalation_evaluator.py` stub + `config/escalation_policy.yaml` (loader smoke만)
+> 3. `core/approval_gate.py` 시그니처 확장 + `tests/test_approval_gate_runtime_workspace.py` 3 케이스
+> 4. 4건 마이그레이션 (callsite 순서대로) + `tests/test_warning_registry_migration_callsites.py` 4 케이스
+> 5. CLI 추가 + `tests/test_warning_registry_cli.py` 4 케이스 + frozen subcommand wiring
+> 6. `.gitignore` + `runtime/warnings/.gitkeep` + `_index.json` + `af.spec` hiddenimports
+> 7. Master_Blueprint.md §3 + §12 갱신
+> 8. 3-tier 게이트 발화 → PASS 후 PR 머지 또는 main 직접 push 결정
+>
+> ### v6 자기검증 (참고용)
+> - 9개 finding (Critical 1 + High 3 + Medium 4 + Low 1) 모두 in-place 반영
+> - acceptance 27 → 34건 (#28-34이 v6 fix 검증)
+> - line 800 → 973 (+173)
+> - max_rounds=2 캡 도달 — 자동 cross-review 미발화
+>
+> ### v3 → v6 합의 핵심 변화 (참고)
+> - **rename 포기**: ApprovalGate `workspace` 인자명 유지 (rename 시 baseline 4 call site 중 keyword arg 1건 TypeError)
+> - **runtime/warnings는 PC 로컬**: multi-PC sync 채널 없음 (.gitignore + supabase 채널 별도)
+> - **_global/는 P4 이연**: P1에서 디렉토리 미생성, scope 단순화
+> - **read-on-demand 단일화**: `record()`는 jsonl append만, `summarize()`만 cache 갱신
+> - **record_id ts 제외**: stable hash로 retry dedup, repeat_count는 SoT count로 분리
+> - **block_when 단일 형식**: string("never") 거부, mapping만 (또는 키 생략)
+>
+> ---
+>
+> ## (참고) v3 → v6 작성 이력 — max_rounds 캡 도달
+>
+> 5라운드 자동 cross-review 후 합의 (각 라운드 BLOCK → fix → push 사이클):
+> - v3 (commit `1c71d9b7`): 095135 BLOCK 5건 fix
+> - v4 (commit `a24eee84`): 100406+100614 BLOCK 6건 fix
+> - v5 (commit `ecc7c8a2`): 102321 BLOCK 11 finding 처리 (ACCEPT 9 / REBUTTAL 2 / HOLD→DECIDE 1)
+> - v6 (commit `6f5d6156`): 112334 BLOCK 10 finding 처리 (ACCEPT 9 / REJECT 1)
 >
 > ---
 >
