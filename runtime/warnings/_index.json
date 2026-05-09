@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "description": "등록된 rule_id 목록 — 코드 변경과 함께 갱신 (P1)",
+  "rules": [
+    {
+      "rule_id": "e2e_command_missing",
+      "activate_at": "P2",
+      "source": "core/work_item_generator.py:1056"
+    },
+    {
+      "rule_id": "owner_role_mismatch",
+      "activate_at": "P4",
+      "source": "core/project_pipeline.py:1401"
+    },
+    {
+      "rule_id": "evidence_quality_warn",
+      "activate_at": "P4",
+      "source": "core/project_pipeline.py:757"
+    },
+    {
+      "rule_id": "plan_verifier_warn",
+      "activate_at": "never",
+      "source": "core/project_pipeline.py:983"
+    },
+    {
+      "rule_id": "doc_consistency_drift",
+      "activate_at": "P5",
+      "source": "core/doc_consistency_meter.py (P5 신설 예정)"
+    }
+  ]
+}

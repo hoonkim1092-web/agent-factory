@@ -75,9 +75,18 @@ def _clean(value: Any) -> str:
 class ApprovalGate:
     """work-item 폴더의 approval-gate.md를 읽고 씁니다."""
 
-    def __init__(self, workspace: str, slug: str):
+    def __init__(
+        self,
+        workspace: str,
+        slug: str,
+        *,
+        runtime_workspace: str | None = None,
+    ):
         self.workspace = os.path.abspath(workspace)
         self.slug = slug
+        self.runtime_workspace = (
+            os.path.abspath(runtime_workspace) if runtime_workspace else self.workspace
+        )
         self.work_item_dir = os.path.join(
             self.workspace, "docs", "work-items", slug
         )
@@ -338,6 +347,15 @@ class ApprovalGate:
             f"- {key}_status: {gate_statuses.get(key, 'review_pending')}"
             for key in _DOC_FILES
         )
+        decision_report_path = os.path.join(
+            self.runtime_workspace, "runtime", "warnings", self.slug, "_decision.md"
+        )
+        decision_report_line = f"- gate_decision_report: {decision_report_path}"
+        notes_body = (
+            f"{review_notes}\n{decision_report_line}"
+            if review_notes.strip()
+            else decision_report_line
+        )
         return (
             "# Approval Gate\n"
             "\n"
@@ -359,7 +377,7 @@ class ApprovalGate:
             "\n"
             f"{_SEC_REVIEW_NOTES}\n"
             "\n"
-            f"{review_notes}\n"
+            f"{notes_body}\n"
             "\n"
             f"{_SEC_INVALIDATION}\n"
             "\n"

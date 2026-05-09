@@ -227,13 +227,17 @@ def module_outcome_from_board(
 def detect_owner_drift(
     module: dict, board: dict,
     task_map: dict[str, dict] | None = None,
-) -> bool:
-    """모듈 내 (INFRA·review 외) task의 owner_role이 module.owner_role과 다르면 True."""
+) -> list[tuple[str, str, str]]:
+    """모듈 내 (INFRA·review 외) task의 owner_role이 module.owner_role과 다른 경우 목록 반환.
+
+    각 tuple은 (task_id, expected_owner, actual_owner). 빈 리스트는 falsy → 기존 if 호출처 회귀 없음.
+    """
     mod_owner = str(module.get("owner_role") or "")
     if not mod_owner:
-        return False
+        return []
     if task_map is None:
         task_map, _ = _build_board_maps(board)
+    mismatches: list[tuple[str, str, str]] = []
     for tid in (module.get("task_ids") or []):
         t = task_map.get(str(tid))
         if not t:
@@ -244,8 +248,8 @@ def detect_owner_drift(
             continue
         task_owner = str(t.get("owner_role") or "")
         if task_owner and task_owner != mod_owner:
-            return True
-    return False
+            mismatches.append((str(tid), mod_owner, task_owner))
+    return mismatches
 
 
 def _pick_owner_role(

@@ -51,6 +51,11 @@ build/
 # .af/nightly_summary.md, .af/alert.flag, .af/nightly.lock, .af/ise_ledger_*.json
 .af/
 
+# --- Warning registry — workspace 운영 데이터 (record SoT + cache, 미동기화) ---
+/runtime/warnings/*
+!/runtime/warnings/.gitkeep
+!/runtime/warnings/_index.json
+
 # --- Agent Factory local runtime state (per-machine, auto-regenerated) ---
 # Contains CLI session state, Codex/Gemini/Claude runtime caches, auth seeds,
 # sandbox state, sqlite state, shell guards, and absolute local paths.

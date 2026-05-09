@@ -278,6 +278,31 @@ def _run_nightly_tick(rest: list[str]) -> None:
     sys.exit(tick_main(rest))
 
 
+def _run_warning_summary_subcommand(rest: list[str]) -> None:
+    """warning-summary --workspace PATH --slug SLUG"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-summary")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    args = parser.parse_args(rest)
+    from core.warning_registry import WarningRegistry
+    summary = WarningRegistry(workspace=args.workspace).summarize(project_slug=args.slug)
+    import json
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+
+def _run_warning_repair_subcommand(rest: list[str]) -> None:
+    """warning-repair --workspace PATH --slug SLUG"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-repair")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    args = parser.parse_args(rest)
+    from core.warning_registry import WarningRegistry
+    WarningRegistry(workspace=args.workspace).repair(project_slug=args.slug)
+    print(f"[warning-repair] _summary.json rebuilt for slug={args.slug}")
+
+
 def _run_resume_subcommand(rest: list[str]) -> None:
     """resume <run_id> — 중단된 run을 재개한다.
 
@@ -390,6 +415,8 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
     "nightly-status":  _run_nightly_status,
     "nightly-tick":    _run_nightly_tick,
     "resume":          _run_resume_subcommand,
+    "warning-summary": _run_warning_summary_subcommand,
+    "warning-repair":  _run_warning_repair_subcommand,
 }
 
 
@@ -431,6 +458,8 @@ _STAGE1_USAGE = {
     "nightly-stop":    "usage: af nightly-stop [--workspace PATH]    # 야간 자율 모드 비활성화",
     "nightly-status":  "usage: af nightly-status [--workspace PATH]    # 야간 파이프라인 상태 조회",
     "nightly-tick":    "usage: af nightly-tick [--workspace PATH]    # 수동 1회 tick 실행",
+    "warning-summary": "usage: af warning-summary --workspace PATH --slug SLUG    # WARN 요약 출력",
+    "warning-repair":  "usage: af warning-repair --workspace PATH --slug SLUG    # _summary.json 재생성",
 }
 
 

@@ -1057,8 +1057,34 @@ def generate_work_items(
             "e2e_command 누락 task %d건 (needs_backfill 태그 부여): %s",
             len(missing_e2e), missing_e2e,
         )
+        try:
+            from core.project_task_board import _PHASE_ORDER as _e2e_phase_order
+            from core.warning_registry import WarningRegistry as _WR
+            _phase_groups: dict[str, list[str]] = {}
+            for _t in tasks_list:
+                if _clean(_t.get("e2e_command") or ""):
+                    continue
+                _tid = _clean(_t.get("task_id") or _t.get("id") or "?")
+                _ph = _clean(_t.get("phase") or "build")
+                if _ph not in _e2e_phase_order:
+                    _ph = "build"
+                _phase_groups.setdefault(_ph, []).append(_tid)
+            _wr = _WR(workspace=workspace)
+            for _ph, _tids in _phase_groups.items():
+                _wr.record(
+                    project_slug=slug,
+                    rule_id="e2e_command_missing",
+                    affected_phase=_ph,
+                    count=len(_tids),
+                    severity="warn",
+                    rationale="work_item_generator: tasks without e2e_command",
+                    affected_ids=_tids,
+                    source_path="core/work_item_generator.py:1056",
+                )
+        except Exception as _e2e_exc:
+            _LOGGER.debug("warning_registry record skip (e2e_command_missing): %s", _e2e_exc)
 
-    gate = ApprovalGate(doc_root, slug)
+    gate = ApprovalGate(doc_root, slug, runtime_workspace=workspace)
     gate.initialize(work_item_id, run_id=run_id)
     files["approval-gate.md"] = gate.gate_path
 

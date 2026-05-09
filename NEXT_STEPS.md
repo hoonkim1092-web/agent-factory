@@ -1,9 +1,24 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-09 KST — **설계 v6 합의 완료 (commit `6f5d6156`). max_rounds=2 캡 도달, 자동 cross-review 종료. 다음: P1 코드 구현 (Sonnet 전환)**. 브랜치: `2026-05-07-memory-gitignore-cleanup`.
+> 마지막 업데이트: 2026-05-09 KST — **P1 코드 구현 완료 (Sonnet). 테스트 25 PASS. Tier 2~3 게이트 대기 중 (af-test-runner PASS → af-critic → af-cross-review 순서). 브랜치: `2026-05-07-memory-gitignore-cleanup`.**
 >
-> ## 🔥 다음 세션 진입 시 우선 작업 — P1 코드 구현 (Sonnet)
+> ## 🔥 다음 세션 진입 시 우선 작업 — Tier 2~3 교차검증 결과 확인 후 PR 머지
+>
+> ### 구현 완료 목록
+> - `core/warning_registry.py` ✅ (WarningRecord + WarningRegistry)
+> - `core/escalation_evaluator.py` ✅ (EscalationDecision stub)
+> - `config/escalation_policy.yaml` ✅ (v0 정책)
+> - `core/approval_gate.py` ✅ (runtime_workspace 추가 + gate_decision_report 주입)
+> - 4건 마이그레이션 ✅ (e2e_command_missing / owner_role_mismatch / evidence_quality_warn / plan_verifier_warn)
+> - CLI ✅ (warning-summary / warning-repair)
+> - 테스트 25 케이스 PASS ✅
+> - Master_Blueprint.md §3.8 + §12 갱신 ✅
+>
+> ### 다음 할 일
+> 1. af-critic → af-cross-review Tier 2~3 게이트 통과 확인
+> 2. BLOCK 없으면 PR 머지 또는 main push
+> 3. P2 (e2e_command_missing BLOCK 활성화) 설계 및 구현 시작
 >
 > **모델 전환**: 코드 구현 단계 (메모리: 설계는 Opus, 구현은 Sonnet).
 > ```

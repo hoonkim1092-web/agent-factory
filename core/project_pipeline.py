@@ -92,7 +92,8 @@ class PreparedProject:
         return os.path.join(self._effective_doc_root(), "docs", "work-items", self.work_item_slug)
 
     def gate(self) -> ApprovalGate:
-        return ApprovalGate(self._effective_doc_root(), self.work_item_slug)
+        return ApprovalGate(self._effective_doc_root(), self.work_item_slug,
+                            runtime_workspace=self.workspace)
 
     def summary_lines(self) -> list[str]:
         roles = self.role_plan.get("roles") or []
@@ -762,6 +763,20 @@ class ProjectPipeline:
                         f"[ProjectPipeline] evidence quality={_vr.status} "
                         f"score={_vr.score} gaps={_vr.gaps}"
                     )
+                    try:
+                        from core.warning_registry import WarningRegistry as _WR
+                        _ev_slug = safe_id(task_input)[:40]
+                        _WR(workspace=target_workspace).record(
+                            project_slug=_ev_slug,
+                            rule_id="evidence_quality_warn",
+                            affected_phase="scope",
+                            count=len(_vr.gaps),
+                            severity="warn",
+                            extra={"score": _vr.score, "gaps": _vr.gaps},
+                            source_path="core/project_pipeline.py:757",
+                        )
+                    except Exception as _eqw_exc:
+                        print(f"[ProjectPipeline] warning_registry record skip (evidence_quality_warn): {_eqw_exc}")
             except Exception as exc:
                 print(f"[ProjectPipeline] research verification failed: {exc}")
                 try:
@@ -980,6 +995,20 @@ class ProjectPipeline:
                 f"[Pipeline] plan verify: {'PASS' if _plan_result.passed else 'WARN'} "
                 f"score={_plan_result.score:.2f}"
             )
+            if not _plan_result.passed:
+                try:
+                    from core.warning_registry import WarningRegistry as _WR
+                    _WR(workspace=target_workspace).record(
+                        project_slug=slug,
+                        rule_id="plan_verifier_warn",
+                        affected_phase="",
+                        count=len(_plan_result.issues),
+                        severity="warn",
+                        extra={"score": _plan_result.score},
+                        source_path="core/project_pipeline.py:983",
+                    )
+                except Exception as _pvw_exc:
+                    print(f"[Pipeline] warning_registry record skip (plan_verifier_warn): {_pvw_exc}")
         except Exception as _pv_err:
             print(f"[Pipeline] plan verify skipped: {_pv_err}")
 
@@ -1398,11 +1427,29 @@ class ProjectPipeline:
                 continue
 
             board_module = module_map.get(mid)
-            if board_module and detect_owner_drift(board_module, board, task_map=task_map):
+            mismatches = detect_owner_drift(board_module, board, task_map=task_map) if board_module else []
+            if mismatches:
                 logger.warning(
                     "strategy ledger skip — owner drift 감지 (module=%s, plan_owner=%s)",
                     mid, owner,
                 )
+                try:
+                    from core.warning_registry import WarningRegistry as _WR
+                    _WR(workspace=workspace).record(
+                        project_slug=project_id,
+                        rule_id="owner_role_mismatch",
+                        count=len(mismatches),
+                        affected_phase="build",
+                        severity="warn",
+                        affected_ids=[mid] + [tid for tid, _, _ in mismatches],
+                        extra={"mismatches": [
+                            {"task_id": tid, "expected": exp, "actual": act}
+                            for tid, exp, act in mismatches
+                        ]},
+                        source_path="core/project_pipeline.py:1401",
+                    )
+                except Exception as _owr_exc:
+                    logger.debug("warning_registry record skip (owner_role_mismatch): %s", _owr_exc)
                 continue
 
             for raw in [str(mod.get("name") or "")] + list(mod.get("deliverables") or []):

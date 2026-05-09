@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-08 | version: v1.2.22 -->
+<!-- last_updated: 2026-05-09 | version: v1.2.23 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -602,7 +602,44 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 ---
 
-### §3.8 Evaluator (`core/evaluator.py`)
+### §3.8 Warning Registry (`core/warning_registry.py`, `core/escalation_evaluator.py`)
+<!-- last_updated: 2026-05-09 (P1 신설 — WarningRecord schema + SoT jsonl + EscalationDecision stub) -->
+
+**목적**: AF 파이프라인에서 발화되는 WARN을 표준 스키마로 기록하고, 임계 초과 시 BLOCK으로 승격할 수 있는 기반을 마련한다.
+
+**핵심 클래스/함수**:
+
+| 심볼 | 파일 | 역할 |
+|------|------|------|
+| `WarningRecord` | `core/warning_registry.py` | 단일 WARN 기록 dataclass (record_id, schema_version, affected_phase, repeat_count 포함) |
+| `WarningRegistry` | `core/warning_registry.py` | `.record()` / `.summarize()` / `.rebuild_caches()` / `.repair()` 공개 API |
+| `EscalationDecision` | `core/escalation_evaluator.py` | escalation 결과 dataclass (block, severity, reason, rule_id, activate_at) |
+| `evaluate()` | `core/escalation_evaluator.py` | P1 stub — 항상 `EscalationDecision(block=False, reason="inactive_phase")` 반환 |
+| `_load_policy()` | `core/escalation_evaluator.py` | `config/escalation_policy.yaml` 로드 (frozen-aware `BASE_DIR`) |
+
+**저장 위치** (`<workspace>/runtime/warnings/`):
+- `<slug>/<rule_id>.jsonl` — append-only SoT (locked_file 보호)
+- `<slug>/_summary.json` — read-on-demand cache (atomic write, 별도 `.lock`)
+- `_index.json` — 등록된 rule_id 목록 (git commit 대상)
+- `.gitignore` 3줄: `/runtime/warnings/*` + `!.gitkeep` + `!_index.json`
+
+**record_id 정책**: `f"{slug}:{rule_id}:{hash8(stable_payload)}"` — `ts` 제외 stable hash, dedup으로 retry 안전.
+
+**P1 마이그레이션 4건**:
+1. `e2e_command_missing` — `core/work_item_generator.py:1056` phase별 분할 record
+2. `owner_role_mismatch` — `core/project_task_board.detect_owner_drift()` 반환 타입 `bool → list[tuple]`, `core/project_pipeline.py:1401` record
+3. `evidence_quality_warn` — `core/project_pipeline.py:757` `_vr.status != "pass"` 시 record
+4. `plan_verifier_warn` — `core/project_pipeline.py:983` `passed=False` 시 record (`affected_phase=""`)
+
+**ApprovalGate 변경**: `__init__(workspace, slug, *, runtime_workspace=None)` — rename 없이 keyword 추가. `_render()`에 `gate_decision_report:` 절대경로 라인 주입. 호출처 2곳 (`work_item_generator:1061`, `project_pipeline:95`) `runtime_workspace=workspace` 추가.
+
+**CLI**: `af warning-summary --workspace PATH --slug SLUG` / `af warning-repair --workspace PATH --slug SLUG` (frozen 진입점 `run_factory_cli.py`).
+
+**테스트**: `tests/test_warning_registry.py` (11 케이스) · `tests/test_warning_registry_migration_callsites.py` (5) · `tests/test_approval_gate_runtime_workspace.py` (4) · `tests/test_warning_registry_cli.py` (4) · `tests/test_warning_registry_schema_evolution.py` (1) = **총 25 케이스 PASS**.
+
+---
+
+### §3.9 Evaluator (`core/evaluator.py`)
 <!-- last_updated: 2026-04-02 (ControlPlaneLLM으로 전환) -->
 
 **클래스:** `StrategyEvaluator`
@@ -1303,6 +1340,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-09 | v1.2.23 | feat(P1-warning-registry): `core/warning_registry.py` + `core/escalation_evaluator.py` 신설 — WarningRecord schema v1, WarningRegistry(record/summarize/rebuild_caches/repair), EscalationDecision stub(block=False), _load_policy(escalation_policy.yaml frozen-aware). `core/project_task_board.detect_owner_drift()` bool→list[tuple]. `core/approval_gate.py` __init__(runtime_workspace=None) keyword 추가 + _render() gate_decision_report 주입. 호출처 2곳(work_item_generator:1061, project_pipeline:95) runtime_workspace 추가. 4건 WARN 마이그레이션(e2e_command_missing/owner_role_mismatch/evidence_quality_warn/plan_verifier_warn). CLI(warning-summary/warning-repair). runtime/warnings/.gitkeep+_index.json. .gitignore 3줄. af.spec hiddenimports. 테스트 25 케이스 PASS. §3.8 신규. |
 | 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서 줄바꿈·공백 일괄 정규화 — 84개 파일 이중 빈줄→단일 빈줄, agents/ YAML·profile.md 포함, README·SYNC_GUIDE·PROJECT_LOG 적용, 내용 변경 없음` |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운 파일 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 연속 빈 줄 제거, agents/ YAML·profile.md 공백 일괄 정리, artifacts/·docs/ 문서 동일 적용 |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 문서·설정 파일 공백 정규화 — 빈 줄 후행 공백 84개 파일 일괄 제거, agents/*.yaml·artifacts/*.md·docs/*.md 포함 |

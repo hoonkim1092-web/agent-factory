@@ -36,6 +36,8 @@ a = Analysis(
         'core.agent_worker',
         'core.agent_specializer',
         'core.approval_gate',
+        'core.escalation_evaluator',
+        'core.warning_registry',
         'core.ast_engine',
         'core.ast_memory_hub',
         'core.review_bundle',
