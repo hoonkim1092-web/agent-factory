@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import re
+import shutil
 from typing import Optional
 
 import yaml
@@ -258,6 +259,17 @@ def enrich_skill_metadata(
 
     # meta.yaml 저장
     try:
+        # H5 v3: action 타입(skill.py 존재)에서만 .bak 생성.
+        # knowledge 타입은 evolve_skill이 meta.yaml을 수정하지 않으므로 .bak 불필요.
+        # evolve_skill이 먼저 만든 .bak이 있으면 보존 (not exists 체크).
+        meta_yaml = os.path.join(skill_dir, "meta.yaml")
+        skill_py = os.path.join(skill_dir, "skill.py")
+        if (os.path.exists(skill_py) and os.path.exists(meta_yaml)
+                and not os.path.exists(meta_yaml + ".bak")):
+            try:
+                shutil.copy2(meta_yaml, meta_yaml + ".bak")
+            except OSError as bak_err:
+                logger.warning("[SkillEnricher] meta.yaml 백업 실패 (계속 진행): %s", bak_err)
         _write_meta(skill_dir, meta)
         logger.info("[SkillEnricher] 메타 보강 완료: %s", skill_name)
         return True

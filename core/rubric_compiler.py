@@ -159,7 +159,7 @@ class RubricCompiler:
             rule = check.get("rule", "")
             desc = check.get("description", field_name)
             value = check.get("value")
-            ok = self._run_check(artifact, field_name, rule, value)
+            ok = self._run_check(artifact, field_name, rule, value, check)
             if ok:
                 checks_passed.append(desc)
             else:
@@ -188,7 +188,7 @@ class RubricCompiler:
             evidence_checks_failed=checks_failed,
         )
 
-    def _run_check(self, artifact: dict, field_name: str, rule: str, value: Any) -> bool:
+    def _run_check(self, artifact: dict, field_name: str, rule: str, value: Any, check_def: dict | None = None) -> bool:
         """단일 evidence_check rule을 실행한다."""
         # 중첩 필드 지원 (예: "_claim_map")
         obj = artifact.get(field_name)
@@ -229,6 +229,70 @@ class RubricCompiler:
             grounded = sum(1 for c in claims if c.get("status") == "grounded")
             ratio = grounded / len(claims)
             return ratio >= float(value or 0.5)
+
+        if rule == "doc_set_present":
+            # value: list of required filenames — documents dict에 모두 있고 내용이 있어야 함
+            docs = obj if isinstance(obj, dict) else {}
+            required = list(value or [])
+            return all(bool(docs.get(fname, "").strip()) for fname in required)
+
+        if rule == "covers_deliverables":
+            # field: "documents.feature-spec.md" 형태 — 중첩 접근
+            parts = field_name.split(".", 1)
+            if len(parts) == 2:
+                parent = artifact.get(parts[0]) or {}
+                content = parent.get(parts[1], "") if isinstance(parent, dict) else ""
+            else:
+                content = obj or ""
+            deliverables = artifact.get("project_brief", {}).get("deliverables") or []
+            if not deliverables:
+                return True
+            content_lower = content.lower()
+            covered = sum(
+                1 for d in deliverables
+                if any(w.lower() in content_lower for w in str(d).split()[:3])
+            )
+            ratio = covered / len(deliverables)
+            return ratio >= float(value or 0.6)
+
+        if rule == "keyword_count_min":
+            parts = field_name.split(".", 1)
+            if len(parts) == 2:
+                parent = artifact.get(parts[0]) or {}
+                content = parent.get(parts[1], "") if isinstance(parent, dict) else ""
+            else:
+                content = obj or ""
+            keywords = (check_def or {}).get("keywords") or []
+            count = sum(1 for kw in keywords if kw.lower() in content.lower())
+            return count >= int(value or 3)
+
+        if rule == "phase_count_match":
+            docs = obj if isinstance(obj, dict) else {}
+            plan_content = docs.get("feature-plan.md", "")
+            spec_content = docs.get("feature-spec.md", "")
+            import re
+            plan_phases = len(re.findall(r"(?m)^#{1,3}\s+(?:Phase|단계|P\d)", plan_content))
+            spec_phases = len(re.findall(r"(?m)^#{1,3}\s+(?:Phase|단계|P\d)", spec_content))
+            tolerance = int((check_def or {}).get("tolerance", 1))
+            if plan_phases == 0 and spec_phases == 0:
+                return True
+            return abs(plan_phases - spec_phases) <= tolerance
+
+        if rule == "task_section_ref_ratio":
+            parts = field_name.split(".", 1)
+            if len(parts) == 2:
+                parent = artifact.get(parts[0]) or {}
+                content = parent.get(parts[1], "") if isinstance(parent, dict) else ""
+            else:
+                content = obj or ""
+            import re
+            tasks = re.findall(r"(?m)^[-*]\s+.+", content)
+            if not tasks:
+                return True
+            ref_count = sum(1 for t in tasks if re.search(r"§\d", t))
+            ratio = ref_count / len(tasks)
+            threshold = float((check_def or {}).get("threshold", 0.6))
+            return ratio >= threshold
 
         # 알 수 없는 rule은 pass로 처리
         return True

@@ -1,8 +1,11 @@
 import inspect
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 from core.approval_gate import ApprovalGate
 from core.bootstrap_roles import ProjectPlanningDirector, build_bootstrap_agent
@@ -18,6 +21,7 @@ from core.project_task_board import (
 from core.utils import (
     append_dashboard_run,
     now_iso,
+    print_agent_msg,
     read_yaml,
     safe_id,
     to_portable_path,
@@ -25,8 +29,31 @@ from core.utils import (
 )
 from core.work_item_generator import generate_work_items, slug_from_brief
 from core.work_item_parser import sync_board_from_work_items
+from core.agent_runner import _safe_print
 
 PROJECT_ROLE_BASELINE_SKILLS = ("file_handler", "core_memory")
+
+
+class ResearchGateBlocked(RuntimeError):
+    """P2 C1: coverage_report.block==True 시 work_item 생성을 차단하는 예외."""
+
+
+@dataclass
+class PreparedBrief:
+    """prepare_brief() 결과 — Evidence + Brief까지만 담은 중간 객체.
+
+    Clarification 단계에서 project_brief를 enriched_brief로 교체한 뒤
+    prepare_documents()에 전달한다.
+    """
+
+    run_id: str
+    workspace: str
+    task_input: str
+    project_brief: dict
+    research_evidence: dict = field(default_factory=dict)
+    research_evidence_path: str = ""
+    project_brief_path: str = ""
+    memory_context: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -65,7 +92,8 @@ class PreparedProject:
         return os.path.join(self._effective_doc_root(), "docs", "work-items", self.work_item_slug)
 
     def gate(self) -> ApprovalGate:
-        return ApprovalGate(self._effective_doc_root(), self.work_item_slug)
+        return ApprovalGate(self._effective_doc_root(), self.work_item_slug,
+                            runtime_workspace=self.workspace)
 
     def summary_lines(self) -> list[str]:
         roles = self.role_plan.get("roles") or []
@@ -106,10 +134,18 @@ class ProjectPipeline:
     def _write_json(self, path: str, data: dict):
         import tempfile
         dir_ = os.path.dirname(path) or "."
-        with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, suffix=".tmp", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            tmp = f.name
-        os.replace(tmp, path)
+        os.makedirs(dir_, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+        except Exception:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     def _write_skill_manifest(self, workspace: str, role_id: str, run_id: str, entries: list[dict]) -> None:
         """agents/{role_id}/skill_manifest.json — 스킬 조달 경로 기록 (projection)."""
@@ -146,7 +182,7 @@ class ProjectPipeline:
         return d
 
     def _save_checkpoint(self, workspace: str, stage: str, data: dict) -> None:
-        """단계 완료 시 결과를 .checkpoint/{stage}.json에 저장."""
+        """단계 완료 시 결과를 .checkpoint/{stage}.json에 저장 (atomic write)."""
         import hashlib as _hl
         path = os.path.join(self._checkpoint_dir(workspace), f"{stage}.json")
         payload = {
@@ -158,8 +194,7 @@ class ProjectPipeline:
             "data": data,
         }
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
+            self._write_json(path, payload)
         except Exception as exc:
             print(f"[Checkpoint] save failed for stage={stage}: {exc}")
 
@@ -175,7 +210,87 @@ class ProjectPipeline:
         except Exception:
             return None
 
+    # ── P2 C1 helpers ──────────────────────────────────────────────────
+
+    def _verify_domain_spec(self, workspace: str, slug: str) -> bool:
+        """도메인 스펙 파일이 이미 생성되어 있으면 True."""
+        from pathlib import Path
+        return any((Path(workspace) / "docs" / "specs").glob(f"{slug}-*.md"))
+
+    def _save_specs(self, specs: dict, workspace: str, slug: str) -> list:
+        """SpecGenerator 출력을 docs/specs/<slug>-<filename> 에 저장. 저장된 Path 리스트 반환."""
+        from pathlib import Path
+        from core.spec_generator import SPEC_FILENAMES
+        specs_dir = Path(workspace) / "docs" / "specs"
+        specs_dir.mkdir(parents=True, exist_ok=True)
+        saved = []
+        for key, content in specs.items():
+            filename = SPEC_FILENAMES.get(key, f"{key}.md")
+            p = specs_dir / f"{slug}-{filename}"
+            p.write_text(content, encoding="utf-8")
+            saved.append(p)
+        return saved
+
+    def _load_evidence(self, workspace: str, task_input: str) -> tuple[list[dict], list[dict]]:
+        """docs/research/<safe_id(task_input)[:40]>-evidence.json에서 claims/sources를 읽어 반환.
+
+        researcher.py:1069 와 동일한 slug 파생 (`safe_id(task_input)[:40]`) 사용.
+        """
+        import json
+        import logging
+        from pathlib import Path
+        evidence_slug = safe_id(task_input)[:40]
+        path = Path(workspace) / "docs" / "research" / f"{evidence_slug}-evidence.json"
+        if not path.exists():
+            return [], []
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data.get("claims") or [], data.get("sources") or []
+        except json.JSONDecodeError as exc:
+            logging.warning("[Pipeline] evidence JSON parse error (%s): %s", path, exc)
+            return [], []
+
+    def _save_adr(self, workspace: str, slug: str, adr_md: str) -> "Path":
+        """ADR을 docs/decisions/<slug>-rule-baseline.md 에 원자적으로 저장."""
+        import tempfile, os
+        from pathlib import Path
+        out_dir = Path(workspace) / "docs" / "decisions"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"{slug}-rule-baseline.md"
+        with tempfile.NamedTemporaryFile("w", dir=out_dir, delete=False, suffix=".tmp", encoding="utf-8") as fh:
+            fh.write(adr_md)
+            tmp = fh.name
+        os.replace(tmp, dest)
+        return dest
+
+    def _save_traceability(self, workspace: str, slug: str, trace_md: str) -> "Path":
+        """traceability를 docs/research/<slug>-traceability.md 에 원자적으로 저장."""
+        import tempfile, os
+        from pathlib import Path
+        out_dir = Path(workspace) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"{slug}-traceability.md"
+        with tempfile.NamedTemporaryFile("w", dir=out_dir, delete=False, suffix=".tmp", encoding="utf-8") as fh:
+            fh.write(trace_md)
+            tmp = fh.name
+        os.replace(tmp, dest)
+        return dest
+
+    def _coverage_blocked(self, research_evidence: dict) -> bool:
+        return bool((research_evidence.get("coverage_report") or {}).get("block"))
+
     # ── Structural Gate (Rubric-based) ─────────────────────────────────
+
+    def _load_doc_contents(self, work_item_files: dict[str, str]) -> dict[str, str]:
+        """{name: path} → {name: content} 변환. 읽기 실패 시 빈 문자열."""
+        out: dict[str, str] = {}
+        for name, path in work_item_files.items():
+            try:
+                with open(path, encoding="utf-8") as f:
+                    out[name] = f.read()
+            except OSError:
+                out[name] = ""
+        return out
 
     def run_structural_gate(self, artifact: dict, artifact_type: str = "architecture_plan") -> dict:
         """Rubric Compiler를 사용해 artifact를 평가하고 gate 결과를 반환.
@@ -447,7 +562,7 @@ class ProjectPipeline:
             todo_items = [str(x).strip() for x in (role_plan.get("todo_items") or []) if str(x).strip()]
         if not todo_items:
             todo_items = [f"{item.get('name')}: {item.get('objective')}" for item in (role_plan.get("roles") or [])]
-        return write_project_todo(workspace, todo_items)
+        return write_project_todo(workspace, todo_items, board=task_board or None)
 
     def _materialize_roles(
         self,
@@ -555,10 +670,10 @@ class ProjectPipeline:
         return list(dict.fromkeys(roles)), installed_map
 
     # ------------------------------------------------------------------
-    # Phase 1: prepare
+    # Phase 1a: prepare_brief
     # ------------------------------------------------------------------
 
-    def prepare(
+    def prepare_brief(
         self,
         task_input: str,
         workspace: str,
@@ -566,12 +681,12 @@ class ProjectPipeline:
         enable_build: bool = False,
         requested_role: str = "",
         route: dict | None = None,
-    ) -> PreparedProject:
-        """
-        Phase 1: 문서를 생성하고 work-item 을 자동으로 채운다.
+    ) -> PreparedBrief:
+        """Phase 1a: Evidence 수집 + Brief 생성.
 
-        에이전트를 실행하지 않는다.
-        반환된 PreparedProject 에서 gate().approve() 후 execute() 를 호출해야 한다.
+        Clarification 삽입 포인트를 위해 prepare()에서 분리.
+        반환된 PreparedBrief.project_brief를 enriched_brief로 교체한 뒤
+        prepare_documents()에 전달하면 된다.
         """
         target_workspace = os.path.abspath(workspace)
         os.makedirs(target_workspace, exist_ok=True)
@@ -591,7 +706,6 @@ class ProjectPipeline:
                 _facade.register_adapter(CoreMemoryAdapter())
                 _facade.register_adapter(KnowledgeGraphAdapter(workspace=target_workspace))
                 _run_async_safe(_facade.initialise())
-            # Planning 전 메모리 회상
             from core.control.intake import ControlPlaneIntake
             memory_context = ControlPlaneIntake()._recall_from_memory(task_input)
             if memory_context.get("recall_count", 0) > 0:
@@ -621,13 +735,21 @@ class ProjectPipeline:
                 _ce_params = _inspect.signature(collect_evidence).parameters
                 _supports_risk = "risk_level" in _ce_params
 
-                def _evidence_fn():
-                    kw = dict(_collect_kwargs)
+                def _evidence_fn(**kwargs):
+                    kw = dict(_collect_kwargs) | kwargs
                     if not _supports_risk:
                         kw.pop("risk_level", None)
                         kw.pop("comparison_mode", None)
                     try:
                         return collect_evidence(task_input, **kw) or {}
+                    except TypeError:
+                        # old-style collector (e.g. test mock) doesn't accept hint_gaps
+                        kw.pop("hint_gaps", None)
+                        try:
+                            return collect_evidence(task_input, **kw) or {}
+                        except Exception as exc2:
+                            print(f"[ProjectPipeline] collect_project_evidence failed: {exc2}")
+                            return {}
                     except Exception as exc:
                         print(f"[ProjectPipeline] collect_project_evidence failed: {exc}")
                         return {}
@@ -641,8 +763,21 @@ class ProjectPipeline:
                         f"[ProjectPipeline] evidence quality={_vr.status} "
                         f"score={_vr.score} gaps={_vr.gaps}"
                     )
+                    try:
+                        from core.warning_registry import WarningRegistry as _WR
+                        _ev_slug = safe_id(task_input)[:40]
+                        _WR(workspace=target_workspace).record(
+                            project_slug=_ev_slug,
+                            rule_id="evidence_quality_warn",
+                            affected_phase="scope",
+                            count=len(_vr.gaps),
+                            severity="warn",
+                            extra={"score": _vr.score, "gaps": _vr.gaps},
+                            source_path="core/project_pipeline.py:757",
+                        )
+                    except Exception as _eqw_exc:
+                        print(f"[ProjectPipeline] warning_registry record skip (evidence_quality_warn): {_eqw_exc}")
             except Exception as exc:
-                # Graceful degradation: 로컬만으로 진행
                 print(f"[ProjectPipeline] research verification failed: {exc}")
                 try:
                     research_evidence = collect_evidence(task_input, workspace=target_workspace) or {}
@@ -653,7 +788,7 @@ class ProjectPipeline:
         self._write_json(research_evidence_path, research_evidence)
         self._save_checkpoint(target_workspace, "evidence_acquisition", research_evidence)
 
-        # -- Brief (graceful degradation) --
+        # -- Brief --
         from core.pipeline_quality import PipelineStageGuard
         _guard = PipelineStageGuard()
 
@@ -687,16 +822,65 @@ class ProjectPipeline:
         self._write_json(project_brief_path, project_brief)
         self._save_checkpoint(target_workspace, "draft_brief", project_brief)
 
-        # -- Planning (graceful degradation) --
+        # P0 A6: brief를 docs/research/<slug>-project-brief.json 에 저장 (Quality Gate 추적용)
+        try:
+            _slug = slug_from_brief(project_brief)
+            _research_dir = os.path.join(target_workspace, "docs", "research")
+            os.makedirs(_research_dir, exist_ok=True)
+            self._write_json(os.path.join(_research_dir, f"{_slug}-project-brief.json"), project_brief)
+        except Exception:
+            pass
+
+        return PreparedBrief(
+            run_id=run_id,
+            workspace=target_workspace,
+            task_input=task_input,
+            project_brief=project_brief,
+            research_evidence=research_evidence,
+            research_evidence_path=to_portable_path(research_evidence_path),
+            project_brief_path=to_portable_path(project_brief_path),
+            memory_context=memory_context,
+        )
+
+    # ------------------------------------------------------------------
+    # Phase 1b: prepare_documents
+    # ------------------------------------------------------------------
+
+    def prepare_documents(
+        self,
+        prepared_brief: PreparedBrief,
+        execution_mode: str = "approval",
+        enable_build: bool = False,
+    ) -> PreparedProject:
+        """Phase 1b: PreparedBrief → RolePlan → TaskBoard → Documents.
+
+        prepare_brief() 이후, Clarification 적용 완료 상태에서 호출.
+        """
+        target_workspace = prepared_brief.workspace
+        task_input = prepared_brief.task_input
+        project_brief = prepared_brief.project_brief
+        memory_context = prepared_brief.memory_context
+        research_evidence = prepared_brief.research_evidence
+        run_id = prepared_brief.run_id
+        planning_dir = self._planning_dir(target_workspace)
+        research_evidence_path = prepared_brief.research_evidence_path or os.path.join(
+            planning_dir, "research_evidence.json"
+        )
+        project_brief_path = prepared_brief.project_brief_path or os.path.join(
+            planning_dir, "project_brief.json"
+        )
+
+        # -- Planning --
+        from core.pipeline_quality import PipelineStageGuard
+        _guard = PipelineStageGuard()
         pd_agent = build_bootstrap_agent("pd_director")
 
         def _gen_role_plan():
             try:
                 raw = self.planner.plan(task_input, project_brief, memory_context=memory_context)
             except TypeError:
-                # memory_context 미지원 planner (테스트 목업 등) 폴백
                 raw = self.planner.plan(task_input, project_brief)
-            return enrich_role_plan(task_input, project_brief, raw)
+            return enrich_role_plan(task_input, project_brief, raw, workspace=target_workspace)
 
         role_plan = _guard.run(
             stage="role_planning",
@@ -727,9 +911,53 @@ class ProjectPipeline:
         )
         todo_path = self._write_todo(target_workspace, role_plan, task_board)
 
-        # -- Work Items (★ 신규) --
+        # -- Work Items --
         slug = slug_from_brief(project_brief)
-        # target_path가 절대경로면 문서를 그 경로에 생성, 아니면 workspace 사용
+        _adr_path, _trace_path = None, None  # P2 C3+C4: domain 분기 내에서 설정
+        _spec_paths: list = []  # D1: planning_files 주입용
+
+        # D3: research_evidence.research_plan → project_brief 주입 (domain 감지용)
+        if not project_brief.get("research_plan") and research_evidence:
+            _rp_from_ev = research_evidence.get("research_plan") or {}
+            if _rp_from_ev:
+                project_brief["research_plan"] = _rp_from_ev
+
+        # P2 C1: Domain Spec Gate — coverage BLOCK 시 work_item 생성 차단
+        _domain = (project_brief.get("research_plan") or {}).get("domain", "")
+        if _domain:
+            _specs_dict: dict = {}
+            if not self._verify_domain_spec(target_workspace, slug):
+                from core.spec_generator import SpecGenerator
+                _specs_dict = SpecGenerator().generate(project_brief)
+                _spec_paths = self._save_specs(_specs_dict, target_workspace, slug)
+            else:
+                from pathlib import Path as _Path
+                from core.spec_generator import SPEC_FILENAMES as _SFN
+                _key_by_fn = {v: k for k, v in _SFN.items()}
+                for _p in (_Path(target_workspace) / "docs" / "specs").glob(f"{slug}-*.md"):
+                    _spec_paths.append(_p)
+                    try:
+                        _fn = _p.name[len(slug) + 1:]
+                        _specs_dict[_key_by_fn.get(_fn, _fn)] = _p.read_text(encoding="utf-8")
+                    except Exception:
+                        pass
+            # D1: work_item_generator 프롬프트에 spec 내용이 보이도록 project_brief에 주입
+            if _specs_dict:
+                project_brief["domain_specs_summary"] = _specs_dict
+            # P2 C3+C4: ADR + traceability 자동 생성 (경로는 planning_files에 나중에 추가)
+            _claims, _sources = self._load_evidence(target_workspace, task_input)
+            from core.spec_generator import AdrGenerator, TraceabilityGenerator
+            _adr_md = AdrGenerator().generate(project_brief, _claims, _sources)
+            _adr_path = self._save_adr(target_workspace, slug, _adr_md) if _adr_md else None
+            _trace_md = TraceabilityGenerator().generate(project_brief, _claims, task_board)
+            _trace_path = self._save_traceability(target_workspace, slug, _trace_md) if _trace_md else None
+            if self._coverage_blocked(research_evidence):
+                _cr = research_evidence.get("coverage_report") or {}
+                raise ResearchGateBlocked(
+                    f"domain={_domain} match_rate={_cr.get('match_rate', 0):.0%} "
+                    f"missing={_cr.get('missing', [])}"
+                )
+
         _raw_target = str(project_brief.get("target_path") or "").strip()
         doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace
         work_item_files = generate_work_items(
@@ -738,13 +966,13 @@ class ProjectPipeline:
             project_brief=project_brief,
             role_plan=role_plan,
             task_board=task_board,
+            run_id=run_id,
         )
 
-        # -- Plan-Critique-Verify 사전 루프 --
+        # -- Plan-Critique-Verify --
         try:
             from core.plan_verifier import PlanVerifier
             _pv = PlanVerifier(workspace=target_workspace)
-            # 파일 경로 → 파일 내용으로 변환 (LLM이 실제 계획 내용을 볼 수 있도록)
             _wi_items = []
             for _wi_path in work_item_files.values():
                 try:
@@ -758,7 +986,7 @@ class ProjectPipeline:
                 for _retry in range(2):
                     _refined = _pv.refine(task_input, _wi_items, _plan_result.issues, project_brief)
                     if not _refined or _refined == _wi_items:
-                        break  # refine 결과 없거나 동일하면 LLM 재호출 낭비 방지
+                        break
                     _wi_items = _refined
                     _plan_result = _pv.verify(task_input, _wi_items, project_brief)
                     if _plan_result.passed:
@@ -767,19 +995,62 @@ class ProjectPipeline:
                 f"[Pipeline] plan verify: {'PASS' if _plan_result.passed else 'WARN'} "
                 f"score={_plan_result.score:.2f}"
             )
+            if not _plan_result.passed:
+                try:
+                    from core.warning_registry import WarningRegistry as _WR
+                    _WR(workspace=target_workspace).record(
+                        project_slug=slug,
+                        rule_id="plan_verifier_warn",
+                        affected_phase="",
+                        count=len(_plan_result.issues),
+                        severity="warn",
+                        extra={"score": _plan_result.score},
+                        source_path="core/project_pipeline.py:983",
+                    )
+                except Exception as _pvw_exc:
+                    print(f"[Pipeline] warning_registry record skip (plan_verifier_warn): {_pvw_exc}")
         except Exception as _pv_err:
             print(f"[Pipeline] plan verify skipped: {_pv_err}")
 
-        # -- 구조 검증 (run_structural_gate 연결) --
+        # -- 구조 검증 --
         try:
-            gate_result = self.run_structural_gate(
-                os.path.join(doc_root, "docs", "work-items", slug),
-                "work_item",
-            )
+            gate_result = self.run_structural_gate(project_brief, "work_item")
             if gate_result and gate_result.get("errors"):
                 _safe_print(f"[Pipeline] structural gate warnings: {gate_result.get('errors', [])}")
         except Exception as _gate_err:
             _safe_print(f"[Pipeline] structural gate skipped: {_gate_err}")
+
+        # -- T1 QA: work-item 문서 세트 구조 검사 --
+        try:
+            _wi_doc_contents = self._load_doc_contents(work_item_files)
+            _wi_doc_gate = self.run_structural_gate(
+                {"documents": _wi_doc_contents, "project_brief": project_brief},
+                "work_item_doc_set",
+            )
+            if not _wi_doc_gate.get("pass"):
+                _safe_print(f"[Pipeline] T1 QA work-item gate failed: {_wi_doc_gate.get('errors')}")
+                # T1 retry: 1회, _refine_document로 문서 보완
+                try:
+                    from core.work_item_generator import _refine_document
+                    _t1_feedback = "; ".join(_wi_doc_gate.get("errors") or ["구조적 품질 기준 미달"])
+                    for _dname in list(_wi_doc_contents):
+                        _wi_doc_contents[_dname] = _refine_document(
+                            original=_wi_doc_contents[_dname],
+                            feedback=_t1_feedback,
+                            project_brief=project_brief,
+                        )
+                        if _dname in work_item_files:
+                            from core.file_io import write_text
+                            write_text(work_item_files[_dname], _wi_doc_contents[_dname])
+                    _wi_doc_gate = self.run_structural_gate(
+                        {"documents": _wi_doc_contents, "project_brief": project_brief},
+                        "work_item_doc_set",
+                    )
+                    _safe_print(f"[Pipeline] T1 QA retry: {_wi_doc_gate.get('status')}")
+                except Exception as _t1_retry_err:
+                    _safe_print(f"[Pipeline] T1 QA retry skipped: {_t1_retry_err}")
+        except Exception as _wi_gate_err:
+            _safe_print(f"[Pipeline] T1 QA work-item gate skipped: {_wi_gate_err}")
 
         # -- 문서 교차검증 QA --
         cross_review_result = None
@@ -787,7 +1058,6 @@ class ProjectPipeline:
             from core.review_report import DocumentReviewSession
             _level = str(project_brief.get("pipeline_level", "dynamic"))
             if _level != "starter":
-                # 문서 내용 수집
                 _documents = {}
                 for _doc_name, _doc_path in work_item_files.items():
                     if _doc_name.endswith(".md") and _doc_name != "approval-gate.md":
@@ -812,10 +1082,10 @@ class ProjectPipeline:
                         )
                         _verdict = (_report.judge.verdict if _report.judge else "PASS")
 
-                        if _verdict == "PASS":
-                            _rpath = _report.save(target_workspace)
+                        if _verdict in ("PASS", "SKIP"):
+                            _rpath = _report.save(target_workspace) if _verdict == "PASS" else ""
                             cross_review_result = {
-                                "verdict": "PASS",
+                                "verdict": _verdict,
                                 "confidence": 1.0,
                                 "report_path": _rpath,
                             }
@@ -830,7 +1100,6 @@ class ProjectPipeline:
                             }
                             break
 
-                        # BLOCK → 문서 수정 후 재시도
                         if _report.judge and _report.judge.fix_instructions:
                             from core.work_item_generator import _refine_document
                             for _dtype, _instr in _report.judge.fix_instructions.items():
@@ -840,7 +1109,6 @@ class ProjectPipeline:
                                         feedback=_instr,
                                         project_brief=project_brief,
                                     )
-                                    # 수정된 문서 파일에 반영
                                     if _dtype in work_item_files:
                                         from core.file_io import write_text
                                         write_text(work_item_files[_dtype], _documents[_dtype])
@@ -857,8 +1125,15 @@ class ProjectPipeline:
             to_portable_path(task_execution_plan_path),
             to_portable_path(todo_path),
         ] + [to_portable_path(p) for p in work_item_files.values()]
+        # P2 C3+C4: ADR/traceability 경로 추가 (domain 분기에서 생성된 경우만)
+        for _extra_path in (_adr_path, _trace_path):
+            if _extra_path is not None:
+                planning_files.append(to_portable_path(str(_extra_path)))
+        # D1: spec 파일 경로 추가
+        for _sp in _spec_paths:
+            planning_files.append(to_portable_path(str(_sp)))
 
-        return PreparedProject(
+        prepared = PreparedProject(
             run_id=run_id,
             workspace=target_workspace,
             work_item_slug=slug,
@@ -876,6 +1151,78 @@ class ProjectPipeline:
             research_evidence_path=to_portable_path(research_evidence_path),
             doc_root=doc_root,
         )
+
+        # T1-1: canonical checkpoint double-write (이중 쓰기 phase)
+        try:
+            from core.checkpoint.canonical import Checkpoint
+            from core.checkpoint.storage import get_default_storage
+            import hashlib as _hl
+            _ext_digest = _hl.sha256(
+                json.dumps({"task_input": task_input, "workspace": target_workspace}, sort_keys=True).encode()
+            ).hexdigest()[:16]
+            _cp = Checkpoint(
+                run_id=run_id,
+                step_id="prepare_documents",
+                idempotency_key=Checkpoint.make_idempotency_key(slug, 0, _ext_digest),
+                worktree_snapshot=Checkpoint.snapshot_worktree(target_workspace),
+                next_step_cursor="orchestrate",
+                test_acceptance_results={},
+                project_id=project_brief.get("project_id", ""),
+                metadata={
+                    "prepared_project": {
+                        "run_id": run_id,
+                        "workspace": target_workspace,
+                        "work_item_slug": slug,
+                        "project_brief": project_brief,
+                        "role_plan": role_plan,
+                        "task_board": task_board,
+                        "planning_files": planning_files,
+                        "work_item_files": work_item_files,
+                        "project_brief_path": to_portable_path(project_brief_path),
+                        "role_plan_path": to_portable_path(role_plan_path),
+                        "task_board_path": to_portable_path(task_board_path),
+                        "task_execution_plan_path": to_portable_path(task_execution_plan_path),
+                        "todo_path": to_portable_path(todo_path),
+                        "research_evidence": research_evidence,
+                        "research_evidence_path": to_portable_path(research_evidence_path),
+                        "doc_root": doc_root,
+                    },
+                    "task_input": task_input,
+                },
+            )
+            get_default_storage().save(_cp)
+            print(f"[Checkpoint] canonical saved — run_id={run_id} cursor=orchestrate")
+        except Exception as _cp_err:
+            print(f"[Checkpoint] canonical save failed (non-fatal): {_cp_err}")
+
+        return prepared
+
+    # ------------------------------------------------------------------
+    # Phase 1: prepare (하위 호환 래퍼)
+    # ------------------------------------------------------------------
+
+    def prepare(
+        self,
+        task_input: str,
+        workspace: str,
+        execution_mode: str = "approval",
+        enable_build: bool = False,
+        requested_role: str = "",
+        route: dict | None = None,
+    ) -> PreparedProject:
+        """하위 호환 래퍼 — prepare_brief() + prepare_documents() 순차 호출.
+
+        Clarification 없이 바로 진행하는 기존 동작을 유지한다.
+        """
+        brief = self.prepare_brief(
+            task_input=task_input,
+            workspace=workspace,
+            execution_mode=execution_mode,
+            enable_build=enable_build,
+            requested_role=requested_role,
+            route=route,
+        )
+        return self.prepare_documents(brief, execution_mode=execution_mode, enable_build=enable_build)
 
     # ------------------------------------------------------------------
     # Phase 2: execute
@@ -901,7 +1248,23 @@ class ProjectPipeline:
         workspace = prepared.workspace
         gate = prepared.gate()
 
-        # -- 승인 확인 --
+        # B2: canonical checkpoint guard — 이미 완료된 run은 재실행하지 않는다
+        try:
+            from core.checkpoint.storage import get_default_storage as _get_store
+            _cp = _get_store().load(prepared.run_id)
+            if _cp and _cp.next_step_cursor == "done":
+                logger.info("[execute] run_id=%s already done — skipping", prepared.run_id)
+                return {
+                    "run_id": prepared.run_id,
+                    "pipeline": "project",
+                    "ok": True,
+                    "reason": "already_done",
+                    "work_item_slug": prepared.work_item_slug,
+                }
+        except Exception:
+            pass
+
+        # -- 승인 확인 (W3: is_execution_open이 check_validity를 내부 실행, 변경 시 자동 invalidate) --
         if not gate.is_execution_open():
             return {
                 "ok": False,
@@ -910,20 +1273,26 @@ class ProjectPipeline:
                 "gate_path": gate.gate_path,
             }
 
-        # -- 문서 변경 감지 --
-        valid, changed = gate.check_validity()
-        if not valid:
-            gate.invalidate(reason=f"변경된 문서: {', '.join(changed)}")
+        # P2: escalation block 체크 (승인 체크 직후)
+        blocked, block_decision = gate.read_block_decision()
+        if blocked:
+            _bd = block_decision or {}
             return {
                 "ok": False,
-                "reason": "documents_changed_after_approval",
-                "changed_files": changed,
-                "message": "승인 후 문서가 변경되었습니다. 재승인 후 실행하세요.",
+                "reason": "escalation_block",
+                "blocking_rules": _bd.get("blocking_rules", []),
+                "decision_report": os.path.join(
+                    prepared.workspace, "runtime", "warnings",
+                    prepared.work_item_slug, "_decision.md",
+                ),
+                "message": "escalation 차단. _decision.md 를 확인하고 e2e_command 보강 또는 warning-override 후 재실행하세요.",
             }
 
         # -- 편집 내용 반영 --
+        # target_path 설정 시 문서는 doc_root에 있으므로 workspace가 아닌 doc_root 사용
+        doc_root = prepared._effective_doc_root()
         updated_board = sync_board_from_work_items(
-            workspace=workspace,
+            workspace=doc_root,
             slug=prepared.work_item_slug,
             existing_board=prepared.task_board,
         )
@@ -943,13 +1312,28 @@ class ProjectPipeline:
         from core.model_router import print_startup_routing_notice
         print_startup_routing_notice()
 
+        # execution_mode=ise: AF_ISE_ENABLED가 명시적으로 꺼져 있어도 강제 활성화
+        # (기본값은 "1"이므로 대부분의 경우 no-op; AF_ISE_ENABLED=0 환경에서만 차이)
+        if execution_mode == "ise" and os.environ.get("AF_ISE_ENABLED", "1") == "0":
+            os.environ["AF_ISE_ENABLED"] = "1"
+            print_agent_msg("Pipeline", "execution_mode=ise → AF_ISE_ENABLED 강제 활성화", "🌀")
+
         task_input = str(prepared.project_brief.get("goal") or "")
         orchestrator = DynamicOrchestrator(
             self.mr, max_concurrent=5, terminal_per_agent=True,
-            broker=self._broker, visualizer=self._visualizer
+            broker=self._broker, visualizer=self._visualizer,
+            run_id=prepared.run_id,
         )
         run_board = orchestrator.run_project(task_input, roles, workspace)
         status = str(run_board.get("current_status", "unknown"))
+
+        # ── strategy ledger: 모듈별 outcome 기록 (B2-6) ──────────────
+        self._record_ledger_outcomes(
+            status=status,
+            role_plan=prepared.role_plan,
+            workspace=workspace,
+            project_slug=prepared.work_item_slug,
+        )
 
         append_dashboard_run(
             {
@@ -965,6 +1349,19 @@ class ProjectPipeline:
                 "work_item_slug": prepared.work_item_slug,
             }
         )
+
+        # T1-1: canonical checkpoint → done (run 완료 표시)
+        try:
+            from core.checkpoint.storage import get_default_storage
+            _existing = get_default_storage().load(prepared.run_id)
+            if _existing:
+                from datetime import datetime, timezone
+                _existing.next_step_cursor = "done"
+                _existing.saved_at = datetime.now(timezone.utc).isoformat()
+                _existing.test_acceptance_results["orchestrator_status"] = status
+                get_default_storage().save(_existing)
+        except Exception as _done_err:
+            logger.warning("[execute] done-checkpoint save failed (run_id=%s): %s", prepared.run_id, _done_err)
 
         return {
             "run_id": prepared.run_id,
@@ -985,6 +1382,105 @@ class ProjectPipeline:
             "todo_path": prepared.todo_path,
             "research_evidence_path": prepared.research_evidence_path,
         }
+
+    def _record_ledger_outcomes(
+        self,
+        status: str,
+        role_plan: dict,
+        workspace: str,
+        project_slug: str = "",
+    ) -> None:
+        """프로젝트 실행 후 strategy ledger에 모듈별 outcome을 기록한다.
+
+        - status in {crashed, unknown} → 전체 skip
+        - 그 외: board 로드 → 모듈별 module_outcome_from_board + detect_owner_drift 판정
+        """
+        _INFRA_STATUSES = {"crashed", "unknown"}
+        if status in _INFRA_STATUSES:
+            logger.info("strategy ledger 기록 skip — 인프라/불확실 실패 (status=%s)", status)
+            return
+
+        try:
+            from core.memory_system.strategy_ledger import get_strategy_ledger
+            from core.project_task_board import (
+                load_project_board,
+                module_outcome_from_board,
+                detect_owner_drift,
+                _build_board_maps,
+            )
+        except Exception as exc:
+            logger.warning("strategy ledger/board import 실패: %s", exc)
+            return
+
+        board = load_project_board(workspace)
+        if not board:
+            logger.info("strategy ledger 기록 skip — board 비어있음")
+            return
+
+        task_map, module_map = _build_board_maps(board)
+
+        ledger = get_strategy_ledger(workspace)
+        project_id = project_slug or os.path.basename(workspace)
+
+        batch: list[tuple[str, str, str, bool]] = []
+        seen: set[tuple[str, str]] = set()
+
+        for mod in (role_plan.get("modules") or []):
+            owner = str(mod.get("owner_role") or "")
+            if not owner:
+                continue
+            mid = str(mod.get("id") or "")
+            if mid not in module_map:
+                continue
+
+            outcome_label = module_outcome_from_board(
+                board, mid, task_map=task_map, module_map=module_map,
+            )
+            if outcome_label == "completed":
+                outcome = True
+            elif outcome_label == "at_risk":
+                outcome = False
+            else:
+                continue
+
+            board_module = module_map.get(mid)
+            mismatches = detect_owner_drift(board_module, board, task_map=task_map) if board_module else []
+            if mismatches:
+                logger.warning(
+                    "strategy ledger skip — owner drift 감지 (module=%s, plan_owner=%s)",
+                    mid, owner,
+                )
+                try:
+                    from core.warning_registry import WarningRegistry as _WR
+                    _WR(workspace=workspace).record(
+                        project_slug=project_id,
+                        rule_id="owner_role_mismatch",
+                        count=len(mismatches),
+                        affected_phase="build",
+                        severity="warn",
+                        affected_ids=[mid] + [tid for tid, _, _ in mismatches],
+                        extra={"mismatches": [
+                            {"task_id": tid, "expected": exp, "actual": act}
+                            for tid, exp, act in mismatches
+                        ]},
+                        source_path="core/project_pipeline.py:1401",
+                    )
+                except Exception as _owr_exc:
+                    logger.debug("warning_registry record skip (owner_role_mismatch): %s", _owr_exc)
+                continue
+
+            for raw in [str(mod.get("name") or "")] + list(mod.get("deliverables") or []):
+                words = str(raw).strip().lower().split()
+                dp = " ".join(words[:4]).strip()
+                if dp and (dp, owner) not in seen:
+                    seen.add((dp, owner))
+                    batch.append((dp, owner, project_id, outcome))
+
+        if batch:
+            try:
+                ledger.record_role_batch(batch)
+            except Exception as exc:
+                logger.warning("strategy ledger 배치 기록 실패: %s", exc)
 
     # ------------------------------------------------------------------
     # 하위 호환: run() = prepare + 자동 승인 + execute
@@ -1013,8 +1509,11 @@ class ProjectPipeline:
             requested_role=requested_role,
             route=route,
         )
-        # 자동 승인 (하위 호환)
-        prepared.gate().approve(approver="auto")
+        # 자동 승인 (하위 호환) — gate 파일 없으면 먼저 초기화
+        _gate = prepared.gate()
+        if not os.path.exists(_gate.gate_path):
+            _gate.initialize(prepared.work_item_slug, run_id=prepared.run_id)
+        _gate.approve(approver="auto", run_id=prepared.run_id)
 
         return self.execute(
             prepared=prepared,

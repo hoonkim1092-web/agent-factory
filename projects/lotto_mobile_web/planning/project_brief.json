@@ -1,0 +1,224 @@
+{
+  "goal": "모바일 웹 브라우저에서 동작하는 로또 6/45 번호 추천 서비스(백엔드 API + 반응형 프론트엔드)를 구축한다.",
+  "background_context": "기존 lotto_predictor_v2는 CLI 환경에서만 동작하여 외부에서 빠르게 추천을 받기 어려웠다. 해당 저장소의 패턴 분석 로직(frequency, consecutive gaps, odd/even ratio, section distribution, trend weights)은 검증되어 있어 재사용 가치가 높다. 모바일 접근성을 확보하면 사용자가 외출 중에도 즉시 추천 조합을 확인할 수 있다.",
+  "problem_statement": "CLI 전용 추천 파이프라인은 모바일/원격 사용자가 접근할 수 없고, 슬라이더 기반 파라미터 조정이나 카드형 시각화 같은 터치 친화적 UX가 부재하다. 또한 네트워크 불안정 시 사용자에게 의미 있는 폴백 경험을 제공하지 못한다.",
+  "target_path": "/Users/hoon/workTree/agent-factory/projects/lotto_mobile_web",
+  "constraints": [
+    "기존 lotto_predictor_v2의 패턴 분석 모듈을 신규 구현 없이 import 방식으로 재사용",
+    "문서는 한국어(ko-KR)로 작성하고 코드·경로·API 식별자는 원문 유지",
+    "터치 타깃 최소 44x44 CSS 픽셀, viewport meta tag 포함",
+    "API 질의 파라미터 범위 검증: n=1~10, draws=100~500",
+    "네트워크 오류 시 offline 캐시 폴백 제공",
+    "pytest 기반 서버 단위 테스트와 프론트엔드 렌더링 smoke 테스트 포함"
+  ],
+  "required_skills": [
+    "fastapi_backend_development",
+    "responsive_mobile_web_ui",
+    "lotto_pattern_analysis_reuse",
+    "rest_api_design",
+    "offline_cache_fallback",
+    "pytest_api_testing",
+    "frontend_smoke_testing",
+    "korean_technical_documentation"
+  ],
+  "role_hints": [
+    "backend_api_developer",
+    "mobile_frontend_developer",
+    "qa_engineer",
+    "technical_writer"
+  ],
+  "deliverables": [
+    "로또 추천 REST API 서버",
+    "모바일 반응형 추천 웹 UI",
+    "조합 카드 시각화 컴포넌트",
+    "파라미터 슬라이더 컨트롤",
+    "오프라인 캐시 폴백 모듈",
+    "API 단위 테스트 스위트",
+    "프론트엔드 렌더링 smoke 테스트",
+    "모바일 웹 설계 문서"
+  ],
+  "risks": [
+    "lotto_predictor_v2 내부 API 변경 시 import 경로 깨짐 위험",
+    "최근 500회차 분석 응답 지연으로 모바일 UX 저하 가능성",
+    "브라우저별 슬라이더/레이아웃 렌더링 편차",
+    "offline 캐시 stale 데이터가 사용자에게 노출될 가능성",
+    "API 파라미터 검증 누락 시 서버 에러 또는 과도한 연산"
+  ],
+  "research_notes": [
+    "docs/architecture.md 문서 규칙에 따라 설계 변경 시 같은 작업에서 아키텍처·변경 이력 문서 동시 갱신",
+    "docs/change_history.md는 append-only 방식으로 관리",
+    "기존 lotto.cli.run의 offline 로직을 서버 계층에서 재사용 예정",
+    "NotebookLM conversation ID: fd8bf2ba-4a2a-471a-8981-90ed49151e30 (후속 질의 가능)",
+    "docs/2026-04-18-mobile-web-design.md에 백엔드 API 계약과 프론트 상태 다이어그램을 남길 예정",
+    "local_references=6",
+    "llm_prior_references=4 (unverified)",
+    "notebook_summary=available",
+    "Local reference: docs/architecture.md -> ## 메타데이터 - 마지막 업데이트: 2026-04-18T01:19:38 - 상태: active - 문서 언어: 한국어 (OS: `ko-KR`)",
+    "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+    "Local reference: docs/change_history.md -> # 변경 이력 설계, 아키텍처, 워크플로, 구현 전략이 바뀔 때마다 항목을 하나씩 추가한다.",
+    "LLM prior knowledge (unverified): Mobile-first responsive design with viewport meta tag and touch-friendly tap targets (minimum 44x44 CSS pixels per WCAG/Apple HIG)"
+  ],
+  "tech_stack": [
+    "Python 3.11",
+    "FastAPI",
+    "Uvicorn",
+    "Pydantic v2",
+    "HTML5",
+    "CSS3 (mobile-first)",
+    "Vanilla JavaScript (ES2020)",
+    "pytest",
+    "httpx TestClient"
+  ],
+  "data_model": [
+    {
+      "entity": "RecommendationRequest",
+      "fields": [
+        "n",
+        "draws",
+        "offline"
+      ],
+      "storage": "memory"
+    },
+    {
+      "entity": "RecommendationCombo",
+      "fields": [
+        "numbers",
+        "score",
+        "odd_even_ratio",
+        "section_distribution"
+      ],
+      "storage": "memory"
+    },
+    {
+      "entity": "RecommendationResponse",
+      "fields": [
+        "generated_at",
+        "source",
+        "draws_used",
+        "combos"
+      ],
+      "storage": "memory"
+    },
+    {
+      "entity": "DrawCache",
+      "fields": [
+        "round",
+        "numbers",
+        "bonus",
+        "fetched_at"
+      ],
+      "storage": "json"
+    }
+  ],
+  "user_flows": [
+    "사용자: 스마트폰 브라우저로 접속 -> 시스템: 모바일 반응형 추천 화면 렌더링",
+    "사용자: 조합 개수·분석 회차 슬라이더 조정 후 추천받기 탭 -> 시스템: GET /api/recommend 호출 후 카드 5개 렌더링",
+    "사용자: 네트워크 오프라인 상태에서 추천받기 탭 -> 시스템: 로컬 캐시 기반 폴백 응답과 source=offline 표시",
+    "사용자: 카드 탭 -> 시스템: 점수·홀짝 비율·구간 분포 상세 영역 표시",
+    "개발자: pytest 실행 -> 시스템: API 단위 + 프론트 smoke 테스트 전 케이스 통과"
+  ],
+  "non_goals": [
+    "사용자 계정/로그인 기능 제공",
+    "실제 복권 구매 연동",
+    "iOS/Android 네이티브 앱 패키징",
+    "새로운 패턴 분석 알고리즘 개발",
+    "실시간 추첨 중계 기능"
+  ],
+  "architecture_style": "web_app",
+  "workspace_notes": [],
+  "evidence_summary": [
+    "Local reference: docs/architecture.md -> ## 메타데이터 - 마지막 업데이트: 2026-04-18T01:19:38 - 상태: active - 문서 언어: 한국어 (OS: `ko-KR`)",
+    "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+    "Local reference: docs/change_history.md -> # 변경 이력 설계, 아키텍처, 워크플로, 구현 전략이 바뀔 때마다 항목을 하나씩 추가한다.",
+    "LLM prior knowledge (unverified): Mobile-first responsive design with viewport meta tag and touch-friendly tap targets (minimum 44x44 CSS pixels per WCAG/Apple HIG)",
+    "LLM prior knowledge (unverified): Stateless REST JSON API with query parameter validation for numeric ranges (n: 1-10, draws: 100-500)",
+    "NotebookLM synthesis: Conversation ID: fd8bf2ba-4a2a-471a-8981-90ed49151e30 Use --conversation-id for follow-up questions"
+  ],
+  "local_references": [
+    {
+      "path": "docs/architecture.md",
+      "heading": "## 메타데이터",
+      "excerpt": "## 메타데이터 - 마지막 업데이트: 2026-04-18T01:19:38 - 상태: active - 문서 언어: 한국어 (OS: `ko-KR`)",
+      "score": 1.0
+    },
+    {
+      "path": "docs/architecture.md",
+      "heading": "## 문서 규칙",
+      "excerpt": "## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+      "score": 0.9735
+    },
+    {
+      "path": "docs/change_history.md",
+      "heading": "# 변경 이력",
+      "excerpt": "# 변경 이력 설계, 아키텍처, 워크플로, 구현 전략이 바뀔 때마다 항목을 하나씩 추가한다.",
+      "score": 0.7735
+    },
+    {
+      "path": "docs/change_history.md",
+      "heading": "### 2026-04-18T01:19:38",
+      "excerpt": "### 2026-04-18T01:19:38 - 요약: 문서 계약 초기화. - 이유: 아키텍처와 워크플로 변경 이력을 안정적으로 보존하기 위해. - 영향 파일: `docs/architecture.md`, `docs/change_history.md` - 후속 작업: 이 파일을 append-only로 유지하고, 생성하거나 수정하는 모든 문서를 운영체제 언어 코드 `ko-KR`에 맞는 한국어로 작성한다.",
+      "score": 0.5446
+    },
+    {
+      "path": "docs/2026-04-17-review-trigger-unified-architecture.md",
+      "heading": "### 8.1 단위 테스트",
+      "excerpt": "### 8.1 단위 테스트 - `tests/test_review_targets.py` 신규: `is_review_target` / `review_roles_for` 경계 케이스 - `tests/test_hook_runner.py` 신규 또는 확장: stdin JSON 파싱, 파일 경로 추출, 비정상 JSON 방어",
+      "score": 1.0
+    },
+    {
+      "path": "docs/code_review/code-review.md",
+      "heading": "## 2026-04-17 23:21 — `2026-04-14-build-diet` (9a494d41)",
+      "excerpt": "## 2026-04-17 23:21 — `2026-04-14-build-diet` (9a494d41) **Context**: edit: /Users/hoon/workTree/agent-factory/projects/lotto_predictor_v2/src/lotto/cli.py **Changed (5)**: `.claude/settings.local.json, .system_generated/cache/document_index.json, Master_Bl...",
+      "score": 0.95
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [
+    {
+      "title": "[LLM prior] Concept: Mobile-first responsive design with viewport meta tag and touch-friendly tap tar",
+      "excerpt": "Mobile-first responsive design with viewport meta tag and touch-friendly tap targets (minimum 44x44 CSS pixels per WCAG/Apple HIG)",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Stateless REST JSON API with query parameter validation for numeric ranges (n: 1",
+      "excerpt": "Stateless REST JSON API with query parameter validation for numeric ranges (n: 1-10, draws: 100-500)",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Separation of analysis engine (pattern scoring) from presentation layer via HTTP",
+      "excerpt": "Separation of analysis engine (pattern scoring) from presentation layer via HTTP boundary to enable reuse across CLI and web clients",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Offline fallback pattern using localStorage or IndexedDB to cache last successfu",
+      "excerpt": "Offline fallback pattern using localStorage or IndexedDB to cache last successful recommendation payload for network failure resilience",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    }
+  ],
+  "notebook_summary": "Conversation ID: fd8bf2ba-4a2a-471a-8981-90ed49151e30 Use --conversation-id for follow-up questions",
+  "requested_role": "General Assistant",
+  "route": {
+    "pipeline": "project",
+    "intent": "forced",
+    "confidence": 100,
+    "reasoning": "pipeline_mode=project",
+    "risk_level": "strict"
+  },
+  "generated_at": "2026-04-18T01:20:57"
+}

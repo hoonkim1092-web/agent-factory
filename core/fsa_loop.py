@@ -26,10 +26,13 @@ Git 범위 원칙:
 """
 from __future__ import annotations
 
+import logging
 import os
 import json
 import re
 import time
+
+logger = logging.getLogger(__name__)
 
 from core.agent_runner import AgentRunner
 from core.git_manager import GitManager
@@ -76,6 +79,8 @@ class FSALoop:
         self.agent_mgr = agent_mgr
         self._visualizer = visualizer
         self.max_cycles = 5
+        # DEFERRED/ERROR로 진화가 불가능했던 스킬 — run 중 재시도 차단
+        self._evolution_failed_skills: set[str] = set()
 
         # ISE-level 분석/재설계/정체감지 엔진
         model_name = "gemini-1.5-pro-latest"
@@ -97,9 +102,15 @@ class FSALoop:
         task_input: str,
         run_id: str,
         workspace: str | None = None,
+        lineage_id: str | None = None,
+        initial_failure_result: dict | None = None,
     ) -> dict:
         """
         FSA 메인 루프 — ISE와 동일한 에스컬레이션 파이프라인.
+
+        lineage_id: 야간 파이프라인 lineage 추적용 ID.
+        initial_failure_result: 이미 실행된 실패 결과. 제공 시 cycle 1에서 실행을 건너뛰고
+            분석부터 시작한다 (dynamic_orchestrator가 최초 실행 후 위임할 때 사용).
 
         Returns:
             {
@@ -108,8 +119,12 @@ class FSALoop:
                 "meta_cycles": int,
                 "max_escalation_level": int,
                 "strategy_ledger": dict,
+                "lineage_id": str | None,
             }
         """
+        # run 단위 상태 초기화
+        self._evolution_failed_skills = set()
+
         # ── 워크스페이스 설정 ──
         target_workspace = workspace or os.getcwd()
         if not target_workspace or not os.path.isdir(target_workspace):
@@ -118,6 +133,14 @@ class FSALoop:
         git = GitManager(target_workspace)
 
         agent_name = agent.get("name", "Agent") if isinstance(agent, dict) else "Agent"
+        _lineage_id = lineage_id or run_id
+
+        # ── lineage 원장 로드 ──
+        try:
+            from core.lineage_ledger import get_lineage_ledger
+            _ledger_obj = get_lineage_ledger(target_workspace)
+        except Exception:
+            _ledger_obj = None
 
         # ── 전략 원장 초기화 ──
         ledger = StrategyLedger(run_id=run_id, original_task=task_input)
@@ -126,12 +149,24 @@ class FSALoop:
         max_level_reached = 0
         evolved_skill_name = None
         gate_result = None
+        last_analysis = None  # P1: 실패 종료 경로에서 root_cause/패턴 채우기 위해 보존
 
         print_agent_msg("FSA", f"풀 셀프 자동화 모드(FSA) 시작: {run_id}", "🌀")
         print_agent_msg("FSA", f"최대 {self.max_cycles} 사이클 | workspace={target_workspace}", "📋")
+        if _lineage_id:
+            print_agent_msg("FSA", f"lineage_id={_lineage_id}", "🔗")
 
         try:
             for cycle in range(1, self.max_cycles + 1):
+                # ── 토큰 예산 체크 (dynamic_orchestrator와 동일한 가드) ──
+                try:
+                    from core.run_budget import get_run_budget
+                    if get_run_budget().is_exhausted():
+                        print_agent_msg("FSA", "Run budget exhausted — stopping.", "💰")
+                        break
+                except Exception:
+                    pass
+
                 if self._visualizer:
                     self._visualizer.update_from_fsa_step(agent_name, "execute", cycle, self.max_cycles)
                 else:
@@ -166,16 +201,23 @@ class FSALoop:
                     current_task = self.redesigner.inject_creativity(current_task, ledger)
 
                 # ── Step 1: Pre-Commit (워크스페이스 스냅샷) ──
-                git.commit(f"AEE Auto-Save: {run_id} Cycle {cycle}")
+                # cycle 1에서 initial_failure_result가 있으면 실행 생략 (이미 실행됨)
+                _use_initial_failure = cycle == 1 and initial_failure_result is not None
+                if not _use_initial_failure:
+                    git.commit(f"AEE Auto-Save: {run_id} Cycle {cycle}")
 
                 # ── Step 2: EXECUTE ──
-                result = self.runner.run(
-                    current_agent,
-                    current_task,
-                    run_id=f"{run_id}_c{cycle}",
-                    auto_approve=True,
-                    workspace=target_workspace,
-                )
+                if _use_initial_failure:
+                    result = initial_failure_result
+                    print_agent_msg("FSA", "초기 실패 결과 인수인계, 실행 건너뜀", "⏩")
+                else:
+                    result = self.runner.run(
+                        current_agent,
+                        current_task,
+                        run_id=f"{run_id}_c{cycle}",
+                        auto_approve=True,
+                        workspace=target_workspace,
+                    )
 
                 # ── 성공 체크 ──
                 if result.get("ok"):
@@ -185,11 +227,17 @@ class FSALoop:
                         print_agent_msg("FSA", f"Cycle {cycle}에서 성공!", "✅")
                     ledger.save(target_workspace)
                     self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
+                    if _ledger_obj:
+                        try:
+                            _ledger_obj.on_task_success(_lineage_id, max_level_reached)
+                        except Exception:
+                            pass
                     return {
                         **result,
                         "meta_cycles": cycle,
                         "max_escalation_level": max_level_reached,
                         "strategy_ledger": ledger.to_dict(),
+                        "lineage_id": _lineage_id,
                     }
 
                 # ── Step 3: Rollback (workspace tracked 파일만) ──
@@ -198,6 +246,8 @@ class FSALoop:
                 else:
                     print(f"⚠️ [Cycle {cycle}] 실패: {str(result.get('reason', ''))[:120]}")
 
+                # cycle 1 + initial_failure_result인 경우도 rollback을 수행한다.
+                # pre-commit이 없어 HEAD가 없는 순수 신규 워크스페이스에서는 no-op.
                 try:
                     git.rollback()
                 except Exception as e:
@@ -210,9 +260,11 @@ class FSALoop:
                     result=result,
                     ledger=ledger,
                 )
+                last_analysis = analysis  # P1: 실패 종료 시 episode에 패스
 
                 # ── Step 5: ESCALATE — 에스컬레이션 레벨 결정 ──
                 level = self._decide_escalation(ledger, analysis)
+                level, detected_skill_dir = self._apply_evolution_guard(level, result, analysis)
                 max_level_reached = max(max_level_reached, level)
 
                 # 원장에 시도 기록
@@ -224,6 +276,17 @@ class FSALoop:
                     escalation_level=level,
                     strategy_description=analysis.suggested_strategy,
                 )
+
+                # lineage 원장 업데이트
+                if _ledger_obj:
+                    try:
+                        _ledger_obj.on_task_failure(
+                            _lineage_id,
+                            new_level=level,
+                            reason=str(result.get("reason", ""))[:200],
+                        )
+                    except Exception:
+                        pass
 
                 print_agent_msg(
                     "FSA",
@@ -251,13 +314,19 @@ class FSALoop:
                         eval_reasoning=analysis.evaluator_reasoning,
                         run_id=run_id,
                         cycle=cycle,
+                        skill_dir=detected_skill_dir,
                     )
-                    if gate_result is not None:
+                    if gate_result is not None and gate_result.passed:
                         evolved_skill_name = (
                             gate_result.skill_path.split(os.sep)[-1]
                             if gate_result.skill_path else None
                         )
-                    current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
+                    if gate_result is None:
+                        # 진화 실패/불가/미탐지 → 전략 전환
+                        current_task = self.redesigner.apply_pivot(task_input, analysis, ledger)
+                    else:
+                        # gate_result는 항상 GateResult(passed=True) — PUBLISHED 성공
+                        current_task = self.redesigner.redesign_task(task_input, analysis, ledger)
 
                 elif level == 5:
                     print_agent_msg("FSA", "태스크 분해: 서브태스크로 분할 실행합니다", "🔀")
@@ -300,15 +369,28 @@ class FSALoop:
                 "meta_cycles": cycle if 'cycle' in dir() else 0,
                 "max_escalation_level": max_level_reached,
                 "strategy_ledger": ledger.to_dict(),
+                "failure_patterns": ["user_interrupt"],
+                "root_cause": "KeyboardInterrupt",
             }
 
         # ── max_cycles 초과 ──
+        # P1: last_analysis가 있으면 root_cause/error_category를 final_result에 노출 →
+        # _record_episode가 EpisodeRecord.failure_pattern/root_cause를 채울 수 있게 함.
+        _final_patterns: list[str] = []
+        _final_root_cause = ""
+        if last_analysis is not None:
+            if getattr(last_analysis, "error_category", ""):
+                _final_patterns.append(str(last_analysis.error_category))
+            _final_root_cause = str(getattr(last_analysis, "root_cause", "") or "")
         final_result = {
             "ok": False,
             "reason": f"최대 재시도 횟수({self.max_cycles}회) 초과로 중단되었습니다.",
             "meta_cycles": self.max_cycles,
             "max_escalation_level": max_level_reached,
             "strategy_ledger": ledger.to_dict(),
+            "lineage_id": _lineage_id,
+            "failure_patterns": _final_patterns,
+            "root_cause": _final_root_cause,
         }
         ledger.save(target_workspace)
         self._record_episode(task_input, final_result, evolved_skill_name, gate_result, self.max_cycles)
@@ -489,90 +571,94 @@ class FSALoop:
     #  스킬 진화 (기존 FSA 로직 보존)
     # ══════════════════════════════════════════════════════════════
 
+    def _apply_evolution_guard(
+        self, level: int, result: dict, analysis
+    ) -> tuple[int, str | None]:
+        """Level 4→5 강제 가드: 현재 사이클 탐지 스킬이 이미 차단됐을 때만 강제.
+
+        탐지 실패(_cand_name=None) 시에도 Level 5로 강제해 무한 루프를 방지한다.
+        Returns (adjusted_level, detected_skill_dir_or_None).
+        detected_skill_dir는 _try_evolve_failed_skill에 전달해 이중 탐색을 방지한다.
+        """
+        if level != 4 or not self._evolution_failed_skills:
+            return level, None
+        cand_dir = self._detect_failed_skill_dir(
+            result.get("reason", ""), analysis.evaluator_reasoning
+        )
+        cand_name = os.path.basename(cand_dir) if cand_dir else None
+        if not cand_name:
+            logger.warning("[EvolutionGuard] 스킬명 탐지 실패 — Level 5 강제 에스컬레이션")
+            return 5, None
+        if cand_name in self._evolution_failed_skills:
+            return 5, cand_dir
+        return level, cand_dir
+
     def _try_evolve_failed_skill(
-        self, error_reason: str, eval_reasoning: str, run_id: str, cycle: int
+        self,
+        error_reason: str,
+        eval_reasoning: str,
+        run_id: str,
+        cycle: int,
+        skill_dir: str | None = None,
     ):
         """
-        실패 원인에서 스킬 이름을 추출하고, 해당 스킬을 자동 진화시킵니다.
-
-        흐름:
-          1. 에러 로그/평가에서 스킬 디렉토리 식별
-          2. evolve_skill()로 LLM 기반 코드 개선
-          3. security_guard.run_isolated()로 샌드박스 검증
-          4. 품질 게이트 통과 시 레지스트리 핫리로딩 + EvolutionBus 호출
-          5. 실패 시 .bak 롤백 유지
+        실패 원인에서 스킬 이름을 추출하고 SelfEvolutionController로 진화시킵니다.
 
         Returns:
-            GateResult | None: 품질 게이트 결과 (진화 미발생 시 None)
+            GateResult | None: PUBLISHED → GateResult(passed=True), 그 외 모두 → None
         """
-        skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
+        if skill_dir is None:
+            skill_dir = self._detect_failed_skill_dir(error_reason, eval_reasoning)
         if not skill_dir:
             return None
 
         skill_name = os.path.basename(skill_dir)
+
+        # 이미 이 run에서 DEFERRED/ERROR 이력이 있는 스킬은 재시도하지 않음
+        if skill_name in self._evolution_failed_skills:
+            logger.info("[SkillEvolve] 이미 진화 불가 판정(%s) — 재시도 스킵", skill_name)
+            return None
+
         print_agent_msg("SkillEvolve", f"스킬 진화 시도: {skill_name} (cycle {cycle})", "🧬")
 
-        try:
-            from core.skill_creator import evolve_skill
-            from core.skill_enricher import enrich_skill_metadata
-            from core.skill_evolution_bus import SkillEvolutionBus
+        from core.skill_evolution_controller import SelfEvolutionController
+        from core.evolution_types import EvolutionDecision
+        from core.skill_quality_gate import GateResult
 
-            coding_engine = None
-            if hasattr(self.runner, 'mr') and hasattr(self.runner.mr, 'pick'):
-                coding_engine = self.runner.mr.pick('coding')
+        controller = SelfEvolutionController(run_id=run_id)
+        result = controller.submit(
+            skill_dir=skill_dir,
+            skill_id=skill_name,
+            trigger="fsa_failure",
+            feedback=eval_reasoning,
+            error_log=error_reason,
+        )
 
-            old_version = self._read_skill_version(skill_dir)
-
-            success = evolve_skill(
-                skill_dir=skill_dir,
-                feedback=eval_reasoning,
-                error_log=error_reason,
-                coding_engine=coding_engine,
-            )
-
-            if not success:
-                print_agent_msg("SkillEvolve", f"진화 실패, 기존 코드 유지: {skill_name}", "⚠️")
-                return None
-
-            enrich_skill_metadata(skill_dir, coding_engine=coding_engine, force=True)
-
-            skill_py = os.path.join(skill_dir, "skill.py")
-            if os.path.exists(skill_py):
-                verified = self._verify_evolved_skill(skill_py, skill_name)
-                if not verified:
-                    self._rollback_skill(skill_dir, skill_name)
-                    return None
-
-            new_version = self._read_skill_version(skill_dir)
-
-            gate_result = self._run_quality_gate(skill_dir, skill_name)
-            if gate_result is not None and not gate_result.passed:
-                for reason in gate_result.failure_reasons:
-                    print_agent_msg("SkillEvolve", reason, "⚠️")
-                print_agent_msg("SkillEvolve", f"품질 게이트 실패 — hot_reload 스킵: {skill_name}", "🚫")
-                return gate_result
-            elif gate_result is not None and gate_result.passed:
+        if result.decision == EvolutionDecision.PUBLISHED:
+            try:
                 self._hot_reload_registry(skill_name)
-            else:
-                print_agent_msg("SkillEvolve", f"품질 게이트 미완료 — hot_reload & EvolutionBus 스킵: {skill_name}", "⚠️")
-                return None
-
-            evo_bus = SkillEvolutionBus.get_instance()
-            evo_bus.bind_runner(self.runner)
-            evo_bus.on_skill_evolved(
-                skill_id=skill_name,
-                skill_dir=skill_dir,
-                old_version=old_version,
-                new_version=new_version,
-                trigger="fsa_failure",
+            except Exception as reload_exc:
+                logger.error("[SkillEvolve] hot_reload 예외 (%s): %s", skill_name, reload_exc)
+            print_agent_msg("SkillEvolve", f"스킬 진화 성공: {skill_name}", "✅")
+        else:
+            print_agent_msg(
+                "SkillEvolve",
+                f"진화 결과: {result.decision.value} ({result.rejection_reason})",
+                "⚠️",
             )
 
-            print_agent_msg("SkillEvolve", f"스킬 진화 성공 + 전체 캐시 무효화: {skill_name}", "✅")
-            return gate_result
-
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"진화 프로세스 예외: {e}", "⚠️")
+        # PUBLISHED만 성공 — REJECTED/DEFERRED/ERROR 모두 run 내 재시도 차단
+        if result.decision != EvolutionDecision.PUBLISHED:
+            self._evolution_failed_skills.add(skill_name)
             return None
+
+        return GateResult(
+            passed=True,
+            skill_path=skill_dir,
+            recommended_stage="active",
+            pass_rate=1.0,
+            eval_report_path="",
+        )
 
     def _detect_failed_skill_dir(self, error_reason: str, eval_reasoning: str) -> str | None:
         """에러 로그에서 실패한 스킬 디렉토리를 추출합니다."""
@@ -604,67 +690,6 @@ class FSALoop:
 
         return None
 
-    def _verify_evolved_skill(self, skill_py: str, skill_name: str) -> bool:
-        """진화된 스킬을 샌드박스에서 검증합니다."""
-        try:
-            from core.security_guard import quick_guard, run_isolated
-
-            with open(skill_py, "r", encoding="utf-8") as f:
-                code = f.read()
-
-            safe, violations = quick_guard(code)
-            if not safe:
-                print_agent_msg("SkillEvolve", f"보안 검사 실패 ({skill_name}): {violations}", "🛑")
-                return False
-
-            ok, result, stderr = run_isolated(skill_py, timeout_sec=15)
-            if not ok:
-                reason = result.get("reason", "") or result.get("error", "") or stderr
-                print_agent_msg("SkillEvolve", f"샌드박스 검증 실패 ({skill_name}): {reason}", "🛑")
-                return False
-
-            print_agent_msg("SkillEvolve", f"샌드박스 검증 통과: {skill_name}", "✅")
-            return True
-
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"검증 중 예외 ({skill_name}): {e}", "⚠️")
-            return False
-
-    def _rollback_skill(self, skill_dir: str, skill_name: str):
-        """진화 실패 시 .bak 파일로 롤백합니다."""
-        import shutil
-        restored = False
-        for filename in ("skill.py", "SKILL.md", "skill.md"):
-            bak = os.path.join(skill_dir, filename + ".bak")
-            src = os.path.join(skill_dir, filename)
-            if os.path.exists(bak):
-                try:
-                    shutil.copy2(bak, src)
-                    os.remove(bak)
-                    print_agent_msg("SkillEvolve", f"롤백 완료: {skill_name}/{filename}", "⏪")
-                    restored = True
-                except Exception as e:
-                    print_agent_msg("SkillEvolve", f"롤백 실패: {skill_name}/{filename}: {e}", "⚠️")
-        if not restored:
-            print_agent_msg("SkillEvolve", f"롤백 대상 .bak 파일 없음: {skill_name}", "⚠️")
-
-    def _run_quality_gate(self, skill_dir: str, skill_name: str):
-        """품질 게이트를 실행하여 GateResult를 반환합니다. 실패 시 None."""
-        try:
-            from core.skill_quality_gate import SkillQualityGate
-            gate = SkillQualityGate()
-            result = gate.validate(skill_dir, auto_register=True)
-            print_agent_msg(
-                "SkillEvolve",
-                f"품질 게이트 결과: {skill_name} — {'통과' if result.passed else '실패'} "
-                f"(pass_rate={result.pass_rate:.1%}, stage={result.recommended_stage})",
-                "🔬",
-            )
-            return result
-        except Exception as e:
-            print_agent_msg("SkillEvolve", f"품질 게이트 예외 ({skill_name}): {e}", "⚠️")
-            return None
-
     # ══════════════════════════════════════════════════════════════
     #  에피소드 기록 / 유틸
     # ══════════════════════════════════════════════════════════════
@@ -683,11 +708,19 @@ class FSALoop:
             from core.memory_system.models import EpisodeRecord
             facade = UnifiedMemoryFacade.get_instance()
             if facade._initialised:
+                _patterns = result.get("failure_patterns") or []
+                _fp = ";".join(str(p) for p in _patterns)[:120] if not result.get("ok") else ""
+                # max_cycles 종료 경로에서 reason은 "최대 재시도 횟수…" 고정 문자열이므로
+                # last_analysis에서 채운 root_cause를 우선해야 의미 있는 정보가 보존됨.
+                _rc = str(result.get("root_cause") or result.get("reason") or "")[:200] if not result.get("ok") else ""
                 episode = EpisodeRecord(
                     task_input=task_input,
                     outcome="success" if result.get("ok") else "failure",
+                    event_type="fsa_cycle",
+                    failure_pattern=_fp,
+                    root_cause=_rc,
                     metadata={
-                        "failure_patterns": result.get("failure_patterns", []),
+                        "failure_patterns": _patterns,
                         "skill_evolved": evolved_skill_name or "",
                         "gate_result": gate_result.pass_rate if gate_result else 0.0,
                         "cycle_count": cycle,

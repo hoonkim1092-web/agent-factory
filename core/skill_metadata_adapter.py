@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+import logging
 import os
 import re
 from typing import Any, Optional
@@ -8,6 +10,8 @@ import yaml
 
 from core.file_io import read_yaml
 from core.skill_metadata import SkillCategory, SkillMetadata, SkillType
+
+logger = logging.getLogger(__name__)
 
 
 EVAL_FILENAMES = ("evals.yml", "evals.yaml")
@@ -249,8 +253,17 @@ def _mapping_to_metadata(
     )
     display_name = raw_name or _default_display_name(skill_id)
 
+    # `skill_type` 키도 인식 — meta.yaml/SKILL.md frontmatter에서 흔히 쓰이는 별칭.
+    # (Codex P4 fix 2026-04-23): graphify_guide SKILL.md frontmatter `skill_type: knowledge`가
+    # 지금까지 무시돼 default(KNOWLEDGE)에 의해 우연히 맞아떨어진 함정 해소.
     skill_type = _parse_skill_type(
-        _first_non_empty(raw.get("kind"), raw.get("type"), metadata_block.get("type")),
+        _first_non_empty(
+            raw.get("kind"),
+            raw.get("type"),
+            raw.get("skill_type"),
+            metadata_block.get("type"),
+            metadata_block.get("skill_type"),
+        ),
         default_skill_type,
     )
     category = _parse_category(
@@ -428,17 +441,49 @@ def convert_yaml_config_to_metadata(skill_config: dict) -> Optional[SkillMetadat
 
 
 
+def _fill_missing_description(metadata: SkillMetadata, skill_dir: str) -> SkillMetadata:
+    """description/when_to_use가 비어있을 때 SKILL.md에서 채운다.
+
+    우선순위: SKILL.md frontmatter 값 > SKILL.md body 텍스트.
+    """
+    if metadata.description and metadata.when_to_use:
+        return metadata
+    for md_name in ("SKILL.md", "skill.md"):
+        md_path = os.path.join(skill_dir, md_name)
+        if not os.path.exists(md_path):
+            continue
+        try:
+            with open(md_path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            fm, markdown_body = _split_frontmatter(content)
+            md_desc = _extract_markdown_description(markdown_body)
+            updates: dict[str, str] = {}
+            if not metadata.description:
+                val = _coerce_str(fm.get("description")) or md_desc
+                if val:
+                    updates["description"] = val
+            if not metadata.when_to_use:
+                val = _coerce_str(fm.get("when_to_use")) or md_desc
+                if val:
+                    updates["when_to_use"] = val
+            if updates:
+                return dataclasses.replace(metadata, **updates)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("SKILL.md read failed for %s: %s", md_path, exc)
+    return metadata
+
+
 def auto_detect_and_convert(skill_dir: str, skill_id: str) -> Optional[SkillMetadata]:
     for spec_name in PACKAGE_SPEC_FILENAMES:
         spec_path = os.path.join(skill_dir, spec_name)
         metadata = convert_skill_yaml_to_metadata(spec_path)
         if metadata:
-            return metadata
+            return _fill_missing_description(metadata, skill_dir)
 
     meta_path = os.path.join(skill_dir, "meta.yaml")
     metadata = convert_meta_yaml_to_metadata(meta_path)
     if metadata:
-        return metadata
+        return _fill_missing_description(metadata, skill_dir)
 
     for md_name in ("SKILL.md", "skill.md"):
         md_path = os.path.join(skill_dir, md_name)

@@ -1,0 +1,42 @@
+{
+  "verdict": "BLOCK",
+  "issues": [
+    {
+      "severity": "high",
+      "file": "tests/api/test_recommend_endpoint.py:21",
+      "title": "테스트 응답 계약이 최신 백엔드 설계와 불일치함",
+      "detail": "`GET /api/recommend`의 최신 설계 문서는 `status`, `latest_draw_no`, `latest_draw_date`, `source in {api,cache}`를 요구하지만 테스트는 `generated_at`, `source`, `draws_used`, `combos`만 확인한다. 또한 오프라인 요청에 대해 `source == \"offline\"`을 요구해 백엔드 설계(`cache`) 및 구현 폴백 계약과 충돌한다."
+    },
+    {
+      "severity": "high",
+      "file": "tests/api/conftest.py:23",
+      "title": "기본 앱 탐색 경로가 실제 구현과 어긋나며 의존성 주입 계약도 기본값이 없다",
+      "detail": "기본 후보 경로가 `app.main:app`, `main:app`, `src.main:app`, `backend.main:app`, `backend.app:app`뿐이라 실제 구현인 `server.app:app` 또는 `server:create_app`를 기본 경로로 찾지 못한다. 현재 환경에서는 `fastapi` 미설치로 바로 실패했지만, 의존성이 설치돼도 기본 설정만으로는 테스트 진입이 불안정하다."
+    },
+    {
+      "severity": "high",
+      "file": "server/app.py:17",
+      "title": "실행 검증이 런타임 의존성 누락으로 즉시 실패함",
+      "detail": "`pytest tests/api -q` 실행 결과 10건 모두 setup error였고, 공통 원인은 `ModuleNotFoundError: No module named 'fastapi'`였다. 모듈 6의 품질 게이트가 현재 워크스페이스에서 실행 가능 상태가 아니다."
+    },
+    {
+      "severity": "medium",
+      "file": "tests/api/conftest.py:101",
+      "title": "`section_distribution` 타입 계약이 문서 및 다른 모듈과 불일치함",
+      "detail": "QA stub와 테스트는 `section_distribution`을 배열로 사용하지만, 백엔드 설계 문서와 데이터 모델은 `dict[str, int]`를 정의한다. 프론트 범위 문서도 배열 형태를 소비하고 있어 모듈 간 직렬화 계약이 분기돼 있다."
+    },
+    {
+      "severity": "medium",
+      "file": "docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/qa-api-unit-test-scope.md:69",
+      "title": "문서에 명시한 오류 처리 케이스가 구현되지 않음",
+      "detail": "범위 문서는 내부 예측 의존성 예외 발생 시 합의된 오류 응답을 검증하도록 요구하지만, 현재 테스트 파일에는 503/500 오류 응답이나 예외 주입 케이스가 없다. 테스트 커버리지가 문서화된 범위를 충족하지 못한다."
+    },
+    {
+      "severity": "medium",
+      "file": "planning/role_plan.json:395",
+      "title": "의존성 그래프에 백엔드 선행 의존성이 반영되지 않음",
+      "detail": "`qa-api-unit-test-scope.md`는 `backend_dev_module_1_scope_1`, `backend_dev_module_1_build_2`를 선행 의존성으로 고정하지만 `planning/role_plan.json`의 `qa_engineer_module_6` 및 하위 task에는 해당 의존성이 없다. 계획 그래프상 QA 빌드가 백엔드 계약 확정 전에 시작될 수 있다."
+    }
+  ],
+  "summary": "qa_engineer_module_6는 BLOCK이다. 실제 실행에서 `pytest tests/api -q`가 `fastapi` 미설치로 10건 모두 실패했고, 테스트 계약은 최신 백엔드 설계와 맞지 않으며 `section_distribution` 타입과 의존성 그래프도 모듈 간 일치하지 않는다."
+}

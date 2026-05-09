@@ -658,14 +658,14 @@ def update_skill(
             # 백업 복원
             shutil.copy2(bak, src)
 
-    # 버전 bump
+    # 버전 bump — type 누락 시 감지된 skill_type 보존 (knowledge → action 오염 방지)
+    meta.setdefault("type", skill_type)
     old_version = meta.get("version", "0.1.0")
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version
     meta["updated_at"] = now
-    if skill_type == "action":
-        _write_meta(skill_dir, meta)
-        print(f"[OK] 버전 bump: {old_version} → {new_version}")
+    _write_meta(skill_dir, meta)
+    print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
     # 검증
     ok, msg = validate_skill(skill_dir)
@@ -732,8 +732,11 @@ def evolve_skill(
         if not os.path.exists(src):
             src = os.path.join(skill_dir, "skill.md")
     bak = src + ".bak"
-    shutil.copy2(src, bak)
-    print(f"[OK] 백업 생성: {bak}")
+    if not os.path.exists(bak):  # stale .bak 보존 (meta.yaml.bak 정책 통일)
+        shutil.copy2(src, bak)
+        print(f"[OK] 백업 생성: {bak}")
+    else:
+        print(f"[OK] 기존 백업 보존: {bak}")
 
     # LLM 진화 요청
     content = generate_skill_content(
@@ -758,8 +761,7 @@ def evolve_skill(
     new_version = _bump_minor_version(old_version)
     meta["version"] = new_version
     meta["updated_at"] = datetime.datetime.now().isoformat()
-    if skill_type == "action":
-        _write_meta(skill_dir, meta)
+    _write_meta(skill_dir, meta)
     print(f"[OK] 버전 bump: {old_version} → {new_version}")
 
     # 검증

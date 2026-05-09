@@ -1,0 +1,33 @@
+{
+  "project_id": "lotto_mobile_web",
+  "runs": [
+    {
+      "ts": "2026-04-18T02:08:41",
+      "type": "project_run",
+      "project_id": "lotto_mobile_web",
+      "task": "모바일 웹 브라우저에서 동작하는 로또 6/45 번호 추천 서비스(백엔드 API + 반응형 프론트엔드)를 구축한다.",
+      "ok": false,
+      "reason": "partial",
+      "pipeline": "project",
+      "roles": [
+        "frontend_dev",
+        "backend_dev",
+        "qa_engineer"
+      ],
+      "planning_files": [
+        "projects/lotto_mobile_web/planning/research_evidence.json",
+        "projects/lotto_mobile_web/planning/project_brief.json",
+        "projects/lotto_mobile_web/planning/role_plan.json",
+        "projects/lotto_mobile_web/project_board_state.json",
+        "projects/lotto_mobile_web/docs/task_execution_plan.md",
+        "projects/lotto_mobile_web/.todo.md",
+        "projects/lotto_mobile_web/docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/feature-plan.md",
+        "projects/lotto_mobile_web/docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/feature-spec.md",
+        "projects/lotto_mobile_web/docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/implementation-design.md",
+        "projects/lotto_mobile_web/docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/implementation-tasks.md",
+        "projects/lotto_mobile_web/docs/work-items/모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축/approval-gate.md"
+      ],
+      "work_item_slug": "모바일-웹-브라우저에서-동작하는-로또-6-45-번호-추천-서비스-백엔드-api-반응형-프론트엔드-를-구축"
+    }
+  ]
+}

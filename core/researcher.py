@@ -2,6 +2,7 @@
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from core.requirement_llm import execute_requirement_prompt
 from core.utils import (
     safe_id, read_yaml, write_yaml, now_iso, get_random_signature,
@@ -13,6 +14,23 @@ from core.research_engine import query_notebooklm
 from core.retrieval_router import RetrievalRouter, RetrievalStrategy
 from core.skill_feedback import SkillFeedbackLoop
 from core.skill_retrieval_engine import SkillRetrievalEngine
+
+# A3: 권위 출처 도메인 화이트리스트 (포커 도메인)
+_AUTHORITY_DOMAINS_POKER = frozenset({
+    "wsop.com", "pokertda.com", "pokerstars.com",
+    "upswingpoker.com", "pokernews.com",
+})
+
+# A2: 도메인 토큰 추출 시 제거할 stopwords
+_STOPWORDS = frozenset({
+    # 영문
+    "the", "and", "for", "are", "but", "not", "you", "all", "can", "was",
+    "has", "had", "one", "our", "out", "use", "how", "his", "her", "its",
+    "with", "this", "that", "from", "have", "been", "will", "when", "also",
+    # 한국어 조사/어미 (2자 이하라서 길이 필터로 이미 걸러지지만 명시)
+    "이것", "그것", "저것",
+})
+
 
 class HimariResearchAgent:
     """Specialized research agent utilizing local and external knowledge (NotebookLM)."""
@@ -254,6 +272,12 @@ class HimariResearchAgent:
             pass
         return to_portable_path(abs_path)
 
+    def _extract_domain_tokens(self, text: str) -> set[str]:
+        """A2: 도메인 키워드 토큰 추출. 외부 라이브러리 의존 없음."""
+        import re
+        tokens = re.split(r"[\s\-_/\\,.;:!?()\[\]{}\"']+", (text or "").lower())
+        return {t for t in tokens if len(t) >= 3 and t not in _STOPWORDS}
+
     def _collect_local_references(self, task_input: str, workspace: str, limit: int = 6) -> list[dict]:
         from core.ingestion_pipeline import IngestionPipeline
 
@@ -304,8 +328,21 @@ class HimariResearchAgent:
                     }
                 )
                 if len(refs) >= limit:
-                    return refs
-        return refs
+                    break
+            if len(refs) >= limit:  # 내부 루프 limit 도달 시 외부 루프도 탈출
+                break
+
+        # A2: 도메인 매칭 가드 — task_input 토큰이 excerpt/heading에 없는 자기참조 노이즈 제거
+        domain_tokens = self._extract_domain_tokens(task_input)
+        if domain_tokens:
+            refs = [
+                r for r in refs
+                if any(
+                    tok in (r.get("excerpt") or "").lower() + " " + (r.get("heading") or "").lower()
+                    for tok in domain_tokens
+                )
+            ]
+        return refs[:limit]
 
     def _collect_web_references(self, task_input: str, limit: int = 4) -> list[dict]:
         if not os.getenv("TAVILY_API_KEY"):
@@ -324,21 +361,197 @@ class HimariResearchAgent:
             return []
 
         refs: list[dict] = []
-        for item in results[:limit]:
+        for item in results:
             url = str(item.get("url") or "").strip()
             title = self._compact_text(item.get("title") or url, limit=120)
-            excerpt = self._compact_text(item.get("content") or "", limit=260)
+            # Phase 1b: content_full 우선, excerpt fallback, 구버전 content 하위 호환
+            content_full = item.get("content_full") or item.get("content") or ""
+            excerpt = self._compact_text(item.get("excerpt") or content_full, limit=260)
             if not url:
                 continue
+            # A3: 권위 출처 화이트리스트 — trust_score 0.0~1.0 (정확한 도메인/서브도메인 매칭)
+            url_host = url.split("//")[-1].split("/")[0]
+            if url_host.startswith("www."):
+                url_host = url_host[4:]
+            trust_score = 0.4 if (
+                url_host in _AUTHORITY_DOMAINS_POKER
+                or any(url_host.endswith("." + d) for d in _AUTHORITY_DOMAINS_POKER)
+            ) else 0.0
+            raw_score = float(item.get("score") or 0.0)
             refs.append(
                 {
                     "url": url,
                     "title": title,
                     "excerpt": excerpt,
-                    "score": round(float(item.get("score") or 0.0), 4),
+                    "content_full": content_full,
+                    "score": round(raw_score, 4),
+                    "trust_score": trust_score,
+                    "_sort_key": raw_score * (1 + trust_score),
                 }
             )
-        return refs
+        refs.sort(key=lambda r: r.pop("_sort_key"), reverse=True)
+        return refs[:limit]
+
+    def _build_source_pack(
+        self,
+        web_refs: list[dict],
+        local_refs: list[dict],
+        llm_prior_refs: list[dict],
+    ) -> dict:
+        """§6.2 source_pack 조립 — web/local/llm_prior refs를 공통 소스 형식으로 정규화."""
+        sources: list[dict] = []
+        counter = {"web": 0, "local": 0, "llm": 0}
+
+        for ref in web_refs:
+            counter["web"] += 1
+            sid = f"web_{counter['web']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "web",
+                "retrieval_method": "tavily_search",
+                "url": ref.get("url", ""),
+                "title": ref.get("title", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("content_full", ""),
+                "authority_level": "secondary",
+                "relevance_score": round(float(ref.get("score") or 0.5), 4),
+                "selected_reason": "tavily_search_result",
+            })
+
+        for ref in local_refs:
+            counter["local"] += 1
+            sid = f"local_{counter['local']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "local",
+                "retrieval_method": "local_rag",
+                "url": "",
+                "title": ref.get("path", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("excerpt", ""),
+                "authority_level": "primary",
+                "relevance_score": round(float(ref.get("score") or 0.5), 4),
+                "selected_reason": "local_rag_result",
+            })
+
+        for ref in llm_prior_refs:
+            counter["llm"] += 1
+            sid = f"llm_{counter['llm']:03d}"
+            sources.append({
+                "source_id": sid,
+                "source_type": "llm_prior",
+                "retrieval_method": "llm_prior",
+                "url": "",
+                "title": ref.get("title", ""),
+                "excerpt": ref.get("excerpt", ""),
+                "content_full": ref.get("excerpt", ""),
+                "authority_level": "tertiary",
+                "relevance_score": round(float(ref.get("score") or 0.4), 4),
+                "selected_reason": "llm_prior_knowledge",
+            })
+
+        return {"sources": sources}
+
+    def _synthesize_structured_evidence(
+        self,
+        task_input: str,
+        mode: str,
+        source_pack: dict,
+    ) -> dict:
+        """§6.3 LLM normalizer — source_pack → structured_evidence.
+
+        fast_synthesis 모드는 research_project_brief() LLM 호출에 합쳐지므로
+        이 메서드는 fresh/deep/archive 모드에서만 호출된다.
+        """
+        sources = source_pack.get("sources") or []
+        source_summaries = []
+        for s in sources[:6]:
+            label = s.get("title") or s.get("url") or s.get("source_id") or ""
+            excerpt = (s.get("excerpt") or "")[:200]
+            source_summaries.append(f"[{s['source_id']}] {label}: {excerpt}")
+
+        prompt = f"""You are a research synthesis engine.
+Task: {task_input}
+Research mode: {mode}
+Sources({len(sources)} total):
+{chr(10).join(source_summaries) or '(none)'}
+
+Return JSON only:
+{{
+  "research_mode": "{mode}",
+  "goal_interpretation": "one sentence describing what to build",
+  "recommended_architecture": "architecture style identifier",
+  "recommended_tech_stack": ["tech with version"],
+  "required_capabilities": ["snake_case_capability"],
+  "agent_role_hints": ["snake_case_role"],
+  "skill_gap_hypotheses": [
+    {{
+      "need_skill_id": "snake_case_skill",
+      "required_capabilities": ["cap1"],
+      "reuse_expectation": "reuse|enhance|forge",
+      "reason": "why this skill gap exists"
+    }}
+  ],
+  "risks": ["risk description"],
+  "verification_focus": ["what to verify"],
+  "maintenance_strategy": ["strategy note"],
+  "source_backed_claims": [
+    {{"claim": "factual claim", "source_ids": ["web_001"]}}
+  ]
+}}
+
+Rules:
+- required_capabilities: 3-6 concrete capabilities.
+- source_backed_claims: only claims traceable to provided sources. Use actual source_ids from above.
+- If no sources, return empty source_backed_claims.
+""".strip()
+
+        _FALLBACK: dict = {
+            "research_mode": mode,
+            "goal_interpretation": "",
+            "recommended_architecture": "",
+            "recommended_tech_stack": [],
+            "required_capabilities": [],
+            "agent_role_hints": [],
+            "skill_gap_hypotheses": [],
+            "risks": [],
+            "verification_focus": [],
+            "maintenance_strategy": [],
+            "source_backed_claims": [],
+        }
+
+        from core.requirement_llm import execute_requirement_prompt
+        from core.utils import safe_json_load
+        try:
+            result = execute_requirement_prompt(prompt)
+            if not result.get("ok"):
+                raise RuntimeError("structured_evidence_llm_unavailable")
+            data = safe_json_load(result.get("text") or "{}")
+            if not isinstance(data, dict):
+                raise ValueError("structured_evidence_not_dict")
+            for k, v in _FALLBACK.items():
+                data.setdefault(k, v)
+        except Exception:
+            return dict(_FALLBACK)
+
+        # G5: sources>=3인데 claims=0이면 1회 retry — retry 실패 시 1차 data 보존
+        if len(sources) >= 3 and not data.get("source_backed_claims"):
+            retry_prompt = (
+                prompt
+                + "\n\nNote: previous response had no source_backed_claims."
+                " Provide at least 1 claim traceable to the sources above."
+            )
+            try:
+                retry_result = execute_requirement_prompt(retry_prompt)
+                if retry_result.get("ok"):
+                    retry_data = safe_json_load(retry_result.get("text") or "{}")
+                    if isinstance(retry_data, dict) and retry_data.get("source_backed_claims"):
+                        for k, v in _FALLBACK.items():
+                            retry_data.setdefault(k, v)
+                        return retry_data
+            except Exception:
+                pass
+        return data
 
     def _collect_notebook_summary(self, task_input: str, local_refs: list[dict], web_refs: list[dict]) -> str:
         try:
@@ -382,7 +595,191 @@ class HimariResearchAgent:
             return ""
         return self._compact_text(insight, limit=1200)
 
-    def _is_sufficient(self, local_refs: list[dict], task_input: str) -> bool:
+    def _build_quality_contract(self, task_input: str, research_plan) -> "QualityContract | None":
+        """Phase 5: WorkSpec → QualityContract 빌드. 실패 시 None (fallback to _load_domain_manifest)."""
+        import logging
+        _log = logging.getLogger(__name__)
+        try:
+            from core.research.work_spec import WorkSpecExtractor
+            from core.research.quality_contract import QualityContractBuilder
+            from core.research.checklist_merger import ChecklistMerger
+
+            domain_hint = getattr(research_plan, "domain", "") or ""
+            extractor = WorkSpecExtractor()
+            work_spec = extractor.extract(
+                task_input,
+                domain_hints=[domain_hint] if domain_hint else [],
+            )
+            contract = QualityContractBuilder().build(work_spec)
+            contract.checklist = ChecklistMerger().merge(contract.checklist)
+            return contract
+        except Exception as e:
+            _log.debug("_build_quality_contract fallback: %s", e)
+            return None
+
+    def _load_domain_manifest(self, domain: str) -> list[str] | None:
+        """B3: domain → required_fields list 로드. 파일 없거나 domain="" → None."""
+        if not domain:
+            return None
+        from pathlib import Path
+        import yaml
+        path = Path(__file__).parent.parent / "config" / "coverage_manifests" / f"{domain}.yaml"
+        if not path.exists():
+            return None
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            return data.get("required_fields") or []
+        except Exception:
+            return None
+
+    def _identify_unmet_gaps(
+        self,
+        local_refs: list[dict],
+        web_refs: list[dict],
+        checklist: list[str] | None,
+    ) -> list[str]:
+        """B1 helper: checklist 항목 중 refs 텍스트에 매칭 안 된 항목 반환."""
+        if not checklist:
+            return []
+        joined = " ".join(
+            (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
+            for r in local_refs + web_refs
+        ).lower()
+        return [item for item in checklist if item.replace("_", " ") not in joined and item.lower() not in joined]
+
+    def _emit_evidence_files(
+        self,
+        slug: str,
+        web_refs: list[dict],
+        structured_evidence: dict,
+        source_pack: dict | None = None,
+        workspace: str | None = None,
+    ) -> None:
+        """B4: docs/research/<slug>-evidence.json 저장 (claims ↔ sources 구조화)."""
+        from pathlib import Path
+        out_dir = Path(workspace or os.getcwd()) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        # H2: source_pack의 web_001 포맷 ID 재사용 — LLM 프롬프트(source_ids=["web_001"])와 일치
+        _pack_web = [s for s in ((source_pack or {}).get("sources") or []) if s.get("source_type") == "web"]
+        if _pack_web:
+            sources = [
+                {
+                    "source_id": s["source_id"],
+                    "url": s.get("url", ""),
+                    "title": s.get("title", ""),
+                    "trust_score": round(float(s.get("relevance_score") or 0.0), 3),
+                    "retrieval_method": s.get("retrieval_method", "tavily_search"),
+                    "fetched_at": now_iso(),
+                }
+                for s in _pack_web
+            ]
+        else:
+            sources = [
+                {
+                    "source_id": f"web_{i:03d}",
+                    "url": ref.get("url") or "",
+                    "title": ref.get("title") or "",
+                    "trust_score": ref.get("trust_score", 0.0),
+                    "retrieval_method": "tavily_search",
+                    "fetched_at": now_iso(),
+                }
+                for i, ref in enumerate(web_refs, 1)
+            ]
+        claims_raw = structured_evidence.get("source_backed_claims") or []
+        if not sources:
+            claims_raw = []
+        valid_source_ids = {s["source_id"] for s in sources}
+        claims = []
+        for i, claim_text in enumerate(claims_raw, 1):
+            fallback_sid = sources[min(i, len(sources)) - 1]["source_id"] if sources else ""
+            if isinstance(claim_text, dict):
+                claim_str = str(claim_text.get("claim") or claim_text)
+                llm_source_ids = claim_text.get("source_ids") or []
+                candidate = llm_source_ids[0] if llm_source_ids else ""
+                sid = candidate if candidate in valid_source_ids else fallback_sid
+            else:
+                claim_str = str(claim_text)
+                sid = fallback_sid
+            claims.append({
+                "claim_id": f"C{i:03d}",
+                "claim": claim_str,
+                "source_id": sid,
+                "authority": "secondary",
+                "confidence": 0.7,
+                "applies_to": [],
+            })
+        (out_dir / f"{slug}-evidence.json").write_text(
+            json.dumps({"claims": claims, "sources": sources}, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    def _emit_coverage_report(
+        self,
+        domain: str,
+        domain_checklist: list[str] | None,
+        local_refs: list[dict],
+        web_refs: list[dict],
+        slug: str,
+        rounds_used: int,
+        workspace: str | None = None,
+    ) -> dict:
+        """B5: docs/research/<slug>-coverage.json + .md 저장. block 여부 반환."""
+        if not domain_checklist or not domain:
+            return {}
+        from pathlib import Path
+        import yaml
+        manifest_path = Path(__file__).parent.parent / "config" / "coverage_manifests" / f"{domain}.yaml"
+        match_keywords: dict = {}
+        if manifest_path.exists():
+            try:
+                data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+                match_keywords = data.get("match_keywords") or {}
+            except Exception:
+                pass
+        joined = " ".join(
+            (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
+            for r in local_refs + web_refs
+        ).lower()
+        matched, missing = [], []
+        for field in domain_checklist:
+            keywords = match_keywords.get(field, [field.replace("_", " ")])
+            if any(kw.lower() in joined for kw in keywords):
+                matched.append(field)
+            else:
+                missing.append(field)
+        match_rate = len(matched) / len(domain_checklist) if domain_checklist else 1.0
+        block = match_rate < 0.7 or len(missing) >= 3
+        report = {
+            "domain": domain,
+            "manifest_version": "1.0",
+            "rounds": rounds_used,
+            "matched": matched,
+            "missing": missing,
+            "match_rate": round(match_rate, 3),
+            "block": block,
+        }
+        out_dir = Path(workspace or os.getcwd()) / "docs" / "research"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / f"{slug}-coverage.json").write_text(
+            json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        md_lines = [
+            f"# Coverage Report — {slug}",
+            "",
+            f"Domain: `{domain}` | Rounds: {rounds_used} | Match rate: {match_rate:.1%} | Block: {block}",
+            "",
+            "| Field | Status |",
+            "|-------|--------|",
+        ] + [f"| {f} | matched |" for f in matched] + [f"| {f} | missing |" for f in missing]
+        (out_dir / f"{slug}-coverage.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
+        return report
+
+    def _is_sufficient(
+        self,
+        local_refs: list[dict],
+        task_input: str,
+        domain_checklist: list[str] | None = None,  # A4: P1 토대, P0에서는 None으로만 호출
+    ) -> bool:
         """로컬 근거만으로 충분한지 판정하는 Sufficiency Gate.
 
         아래 조건을 모두 만족하면 충분:
@@ -409,6 +806,15 @@ class HimariResearchAgent:
         text_lower = (task_input or "").lower()
         if any(kw in text_lower for kw in freshness_keywords):
             return False
+        # A4: 도메인 체크리스트 (P1에서 활성화, P0에서는 None)
+        if domain_checklist:
+            joined = " ".join(
+                (r.get("excerpt") or "") + " " + (r.get("heading") or "")
+                for r in local_refs
+            ).lower()
+            matched = sum(1 for item in domain_checklist if item.lower() in joined)
+            if matched < len(domain_checklist) * 0.7:
+                return False
         return True
 
     def _collect_llm_prior_knowledge(self, task_input: str, limit: int = 4) -> list[dict]:
@@ -510,23 +916,87 @@ Rules:
         workspace: str | None = None,
         risk_level: str = "normal",
         comparison_mode: bool = False,
+        research_plan=None,
+        hint_gaps=None,
+        **_kwargs,
     ) -> dict:
+        from core.research_router import ResearchRouter, ResearchPlan, gap_to_mode
+
+        # -- Research plan 결정 --
+        if hint_gaps:
+            # escalation: gap → mode override (§4.4.1 direct-jump)
+            escalated_mode = gap_to_mode(hint_gaps)
+            if escalated_mode and (research_plan is None or research_plan.mode != escalated_mode):
+                # for_mode()으로 모든 파생 필드를 atomic하게 재계산 (partial mutation 방지)
+                prev_domain = (research_plan.domain if research_plan else None) or ResearchRouter()._detect_domain(task_input)
+                research_plan = ResearchPlan.for_mode(escalated_mode)
+                research_plan.domain = prev_domain  # A5: escalation 후 기존 도메인 감지 결과 유지
+
+        if research_plan is None:
+            research_plan = ResearchRouter().plan(task_input)
+
+        mode = research_plan.mode
+
         target_workspace = os.path.abspath(workspace or os.getenv("AGENT_PROJECT_ROOT") or os.getcwd())
 
         workspace_notes = self._workspace_notes(target_workspace)
-        local_refs = self._collect_local_references(task_input, target_workspace)
 
-        # -- Sufficiency Gate --
-        sufficient = self._is_sufficient(local_refs, task_input)
-
-        # -- 웹 또는 LLM fallback --
+        # -- 웹 또는 LLM fallback (mode-aware gating) --
         web_refs: list[dict] = []
         llm_prior_refs: list[dict] = []
-        if not sufficient:
-            if os.getenv("TAVILY_API_KEY"):
-                web_refs = self._collect_web_references(task_input)
+        sufficient: bool = True  # requires_web/fast_synthesis 분기에선 gate 미사용
+        _recovery_rounds = 0  # B1: RecoverySearchLoop 라운드 카운터
+        _domain_checklist: list[str] | None = None  # B1: else 분기에서 할당, 이후 재사용
+
+        if research_plan.requires_web:
+            # fresh_lookup/deep/live: local + secondary 병렬 수집 (sufficiency gate 무시)
+            def _collect_secondary():
+                if os.getenv("TAVILY_API_KEY"):
+                    return "web", self._collect_web_references(task_input)
+                return "llm_prior", self._collect_llm_prior_knowledge(task_input)
+
+            with ThreadPoolExecutor(max_workers=2) as _executor:
+                _fut_local = _executor.submit(
+                    self._collect_local_references, task_input, target_workspace
+                )
+                _fut_secondary = _executor.submit(_collect_secondary)
+                local_refs = _fut_local.result()
+                _kind, _refs = _fut_secondary.result()
+            if _kind == "web":
+                web_refs = _refs
             else:
-                llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+                llm_prior_refs = _refs
+        elif mode == "fast_synthesis":
+            # fast_synthesis + no secondary: 순차, 웹 수집 없음
+            local_refs = self._collect_local_references(task_input, target_workspace)
+        else:
+            # archive_research 또는 기타: RecoverySearchLoop (B1 → Phase 5 QualityContract)
+            _quality_contract = self._build_quality_contract(task_input, research_plan)
+            _domain_checklist = (
+                [item.id.replace("_", " ") for item in _quality_contract.checklist]
+                if _quality_contract
+                else self._load_domain_manifest(research_plan.domain)
+            )
+            if not _domain_checklist:
+                # Phase 5: 체크리스트 없음 = 통과 아님 → degraded evidence로 처리
+                _domain_checklist = ["requirements_coverage", "architecture_rationale"]
+            _max_rounds = 3 if research_plan.research_depth == "deep" else 2
+            local_refs = self._collect_local_references(task_input, target_workspace)
+            _recovery_rounds = 0
+            while _recovery_rounds < _max_rounds:
+                sufficient = self._is_sufficient(local_refs, task_input, domain_checklist=_domain_checklist)
+                if sufficient:
+                    break
+                _unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
+                if not _unmet or not os.getenv("TAVILY_API_KEY"):
+                    if os.getenv("TAVILY_API_KEY"):
+                        web_refs = self._collect_web_references(task_input)
+                    else:
+                        llm_prior_refs = self._collect_llm_prior_knowledge(task_input)
+                    break
+                for gap in _unmet[:8]:  # 라운드당 최대 8개 갭 검색 (예산 캡)
+                    web_refs.extend(self._collect_web_references(f"{task_input} {gap}", limit=2))
+                _recovery_rounds += 1
 
         # -- virtual chunk 인덱싱 (Unified RAG) --
         # _collect_local_references가 캐싱한 pipeline에 직접 올려야 동일 인덱스에서 검색 가능
@@ -559,10 +1029,16 @@ Rules:
             except Exception:
                 pass
 
-        # -- NotebookLM: normal 이상이면 시도 (notebooklm_tools 없으면 자동 스킵) --
-        should_query_notebooklm = (
-            risk_level.lower() not in ("low", "skip") or comparison_mode
-        )
+        # -- NotebookLM: mode-aware gating (Phase 1a: source injection 미적용) --
+        if mode == "fast_synthesis":
+            should_query_notebooklm = False
+        elif research_plan.requires_notebooklm:
+            should_query_notebooklm = True
+        else:
+            # 기존 risk_level 기반 fallback (하위 호환)
+            should_query_notebooklm = (
+                risk_level.lower() not in ("low", "skip") or comparison_mode
+            )
         notebook_summary = (
             self._collect_notebook_summary(task_input, local_refs, web_refs)
             if should_query_notebooklm
@@ -576,7 +1052,21 @@ Rules:
             notebook_summary,
             llm_prior_refs,
         )
-        return {
+
+        # Phase 1b: source_pack 조립 + structured_evidence 생성 (non-fast 모드만)
+        source_pack = self._build_source_pack(web_refs, local_refs, llm_prior_refs)
+        structured_evidence: dict = {}
+        if mode != "fast_synthesis":
+            structured_evidence = self._synthesize_structured_evidence(
+                task_input, mode, source_pack
+            )
+
+        # B1: RecoverySearchLoop 최종 상태 (_domain_checklist는 else 분기에서 할당됨)
+        _final_unmet: list[str] = []
+        if _domain_checklist:
+            _final_unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
+
+        initial_evidence = {
             "workspace_notes": workspace_notes,
             "local_references": local_refs,
             "web_references": web_refs,
@@ -584,10 +1074,53 @@ Rules:
             "notebook_summary": notebook_summary,
             "evidence_summary": evidence_summary,
             "sufficiency_gate_passed": sufficient,
+            "research_plan": research_plan.to_dict(),
+            "source_pack": source_pack,
+            "structured_evidence": structured_evidence,
+            "unmet_gaps": _final_unmet,  # B1
         }
+
+        # §4.4.5 router gap detection — hint_gaps is None = first call only (max 1 retry)
+        if hint_gaps is None:
+            router_gaps = ResearchRouter().detect_complexity_gaps(
+                task_input, initial_evidence, mode
+            )
+            if router_gaps:
+                return self.collect_project_evidence(
+                    task_input,
+                    workspace=workspace,
+                    risk_level=risk_level,
+                    comparison_mode=comparison_mode,
+                    hint_gaps=router_gaps,
+                )
+
+        # B4: evidence.json, B5: coverage report 저장 (hint_gaps 최종 결과에서만)
+        _slug = safe_id(task_input)[:40]
+        try:
+            self._emit_evidence_files(
+                _slug, web_refs, structured_evidence,
+                source_pack=source_pack,       # H2: web_001 포맷 ID 공유
+                workspace=target_workspace,    # H1: cwd 대신 실제 workspace 사용
+            )
+            _coverage = self._emit_coverage_report(
+                research_plan.domain,
+                _domain_checklist,
+                local_refs,
+                web_refs,
+                _slug,
+                rounds_used=_recovery_rounds,
+                workspace=target_workspace,    # H1
+            )
+            if _coverage:
+                initial_evidence["coverage_report"] = _coverage
+        except Exception:
+            pass
+
+        return initial_evidence
 
     def _merge_project_brief_evidence(self, brief: dict, task_input: str, evidence_bundle: dict | None) -> dict:
         data = dict(brief or {})
+        data["original_request"] = task_input  # unconditional override — LLM 변형 방지, 정상+fallback 경로 동시 커버
         evidence = dict(evidence_bundle or {})
         workspace_notes = [str(x).strip() for x in (evidence.get("workspace_notes") or []) if str(x).strip()]
         evidence_summary = [str(x).strip() for x in (evidence.get("evidence_summary") or []) if str(x).strip()]
@@ -610,6 +1143,17 @@ Rules:
         data["web_references"] = web_references
         data["llm_prior_references"] = llm_prior_references
         data["notebook_summary"] = notebook_summary
+
+        # §6.4 structured evidence 필드 (Phase 1b) — evidence_bundle에서 복사 (optional)
+        se = evidence.get("structured_evidence") or {}
+        if isinstance(se, dict) and se:
+            for key in (
+                "research_mode", "recommended_architecture", "recommended_tech_stack",
+                "required_capabilities", "skill_gap_hypotheses", "verification_focus",
+                "maintenance_strategy", "source_backed_claims",
+            ):
+                if se.get(key) is not None:
+                    data.setdefault(key, se[key])
 
         derived_notes: list[str] = []
         if local_references:
@@ -684,6 +1228,21 @@ Rules:
         notebook_summary = str(evidence.get("notebook_summary") or "").strip()
         evidence_summary = [str(x).strip() for x in (evidence.get("evidence_summary") or []) if str(x).strip()]
 
+        # fast_synthesis 모드: structured evidence를 같은 LLM 호출에 합친다 (Phase 1b)
+        research_plan_obj = evidence.get("research_plan") or {}
+        mode = research_plan_obj.get("mode", "fast_synthesis") if isinstance(research_plan_obj, dict) else "fast_synthesis"
+        se_extra = ""
+        if mode == "fast_synthesis":
+            se_extra = """
+  "research_mode": "fast_synthesis",
+  "recommended_architecture": "architecture style identifier",
+  "recommended_tech_stack": ["tech with version"],
+  "required_capabilities": ["snake_case_capability"],
+  "skill_gap_hypotheses": [],
+  "verification_focus": ["what to verify in tests"],
+  "maintenance_strategy": [],
+  "source_backed_claims": [],"""
+
         prompt = f"""
 You are Himari, a project research director.
 Task: {task_input}
@@ -695,6 +1254,7 @@ NotebookLM synthesis: {notebook_summary or '(none)'}
 
 Return JSON only:
 {{
+  "original_request": "(will be overwritten verbatim by Python — leave empty or echo task_input)",
   "goal": "single sentence describing what to build",
   "background_context": "2-3 sentences on project motivation and existing situation (different from goal)",
   "problem_statement": "the specific pain point or gap this project solves (different angle from goal)",
@@ -709,7 +1269,7 @@ Return JSON only:
   "data_model": [{{"entity": "EntityName", "fields": ["field1", "field2"], "storage": "sqlite|json|memory"}}],
   "user_flows": ["actor: action -> system response"],
   "non_goals": ["what this project will NOT do"],
-  "architecture_style": "desktop_gui|web_app|cli|api_server|library"
+  "architecture_style": "desktop_gui|web_app|cli|api_server|library"{se_extra}
 }}
 
 Rules:

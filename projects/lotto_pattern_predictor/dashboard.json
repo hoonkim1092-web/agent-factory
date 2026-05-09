@@ -1,0 +1,32 @@
+{
+  "project_id": "lotto_pattern_predictor",
+  "runs": [
+    {
+      "ts": "2026-04-16T21:24:00",
+      "type": "project_run",
+      "project_id": "lotto_pattern_predictor",
+      "task": "동행복권 API에서 최근 500회차 로또 당첨번호를 수집·통계 분석하여 가중 랜덤 기반 1등 후보 5조합을 추천하는 macOS CLI 도구를 개발한다.",
+      "ok": false,
+      "reason": "stopped_max_cycles",
+      "pipeline": "project",
+      "roles": [
+        "backend_dev",
+        "qa_engineer"
+      ],
+      "planning_files": [
+        "projects/lotto_pattern_predictor/planning/research_evidence.json",
+        "projects/lotto_pattern_predictor/planning/project_brief.json",
+        "projects/lotto_pattern_predictor/planning/role_plan.json",
+        "projects/lotto_pattern_predictor/project_board_state.json",
+        "projects/lotto_pattern_predictor/docs/task_execution_plan.md",
+        "projects/lotto_pattern_predictor/.todo.md",
+        "projects/lotto_pattern_predictor/docs/work-items/동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을/feature-plan.md",
+        "projects/lotto_pattern_predictor/docs/work-items/동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을/feature-spec.md",
+        "projects/lotto_pattern_predictor/docs/work-items/동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을/implementation-design.md",
+        "projects/lotto_pattern_predictor/docs/work-items/동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을/implementation-tasks.md",
+        "projects/lotto_pattern_predictor/docs/work-items/동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을/approval-gate.md"
+      ],
+      "work_item_slug": "동행복권-api에서-최근-500회차-로또-당첨번호를-수집-통계-분석하여-가중-랜덤-기반-1등-후보-5조합을"
+    }
+  ]
+}

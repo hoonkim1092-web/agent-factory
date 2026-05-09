@@ -1,0 +1,35 @@
+items:
+  - id: requirements_coverage
+    title: Requirements coverage
+    required: true
+    priority: high
+    acceptance: Evidence addresses the core requirements stated in the request.
+    match_keywords: [requirements, 요구사항, specification, scope]
+
+  - id: architecture_rationale
+    title: Architecture rationale
+    required: true
+    priority: high
+    acceptance: Evidence explains the architectural approach and key design decisions.
+    match_keywords: [architecture, 아키텍처, design, structure, component]
+
+  - id: implementation_feasibility
+    title: Implementation feasibility
+    required: true
+    priority: high
+    acceptance: Evidence confirms the approach is technically feasible with known tools and methods.
+    match_keywords: [feasibility, implementation, 구현, technology, stack, framework]
+
+  - id: major_failure_modes
+    title: Major failure modes
+    required: true
+    priority: medium
+    acceptance: Evidence identifies the most likely failure scenarios and mitigation strategies.
+    match_keywords: [failure, error, 오류, exception, edge case, fallback, recovery]
+
+  - id: test_strategy
+    title: Test strategy
+    required: false
+    priority: medium
+    acceptance: Evidence outlines how correctness will be verified.
+    match_keywords: [test, 테스트, validation, verification, quality]

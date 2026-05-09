@@ -1,0 +1,18 @@
+contract:
+- ctx:
+    constraints: &id001 []
+    goal: g
+    mode: contract
+    skill_id: dp
+  expect_contains: ok
+  expect_ok: true
+  name: contract-basic-ok
+hidden:
+- ctx:
+    constraints: *id001
+    dry_run: true
+    goal: g
+    mode: hidden
+    skill_id: dp
+  expect_ok: true
+  name: hidden-policy-stability

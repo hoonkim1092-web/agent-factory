@@ -1,0 +1,145 @@
+{
+  "goal": "search_all_backends() 함수에 memory_type과 scope 필터 파라미터를 추가하여 search_semantic()과 인터페이스를 통일하고, 회귀 테스트 2건으로 검증한다",
+  "background_context": "Agent Factory의 memory facade는 여러 백엔드를 통합 조회하는 search_all_backends()를 제공하지만, search_semantic()에 이미 존재하는 memory_type/scope 슬라이스 필터가 없어 인터페이스가 불일치한다. 기존 설계문서(2026-04-24-unified-memory-facade-rag-extension)는 search_all_backends() 호출부를 '변경 없음'으로 고정했으나, 필터 파라미터 부재는 호출자가 전수 결과를 받은 후 직접 필터링해야 하는 책임 역전을 유발한다. MemoryScope.GLOBAL/LOCAL 구분 로직은 v3 설계문서에 이미 정의되어 있어 구현 참고가 가능하다.",
+  "problem_statement": "search_all_backends()가 memory_type/scope 필터를 지원하지 않아 search_semantic()과 API 계약이 다르고, 호출자 측에 중복 필터링 코드가 발생하며 단위 테스트로 필터 동작을 검증할 수 없다",
+  "target_path": "/Users/hoon/workTree/agent-factory",
+  "constraints": [
+    "search_all_backends() 시그니처에 memory_type: MemoryType | None = None, scope: MemoryScope | None = None 파라미터 추가 — 기존 호출부 무파괴(하위 호환)",
+    "필터 로직은 search_semantic()의 구현과 동일한 방식으로 적용(코드 중복 최소화, 공통 헬퍼 추출 가능)",
+    "기존 tests/test_phase10_memory_foundation.py에 회귀 테스트 2건 추가 — 새 파일 생성 금지",
+    "Review-Gate 3단계(af-test-runner → af-critic → af-cross-review) 완주 후 커밋",
+    "Master_Blueprint.md §3 + §12 동일 커밋 업데이트 필수",
+    "MemoryType·MemoryScope 임포트 경로는 기존 facade.py 내 search_semantic()과 동일하게 유지"
+  ],
+  "required_skills": [
+    "python_function_signature_extension",
+    "filter_predicate_logic",
+    "pytest_parametrize_regression_test",
+    "memory_facade_pattern",
+    "type_annotation_optional_enum",
+    "backward_compatible_api_design"
+  ],
+  "role_hints": [
+    "facade_modifier",
+    "filter_logic_implementer",
+    "regression_test_author",
+    "blueprint_updater"
+  ],
+  "deliverables": [
+    "search_all_backends() memory_type/scope 필터 파라미터 추가",
+    "search_semantic()과 동일한 필터 적용 로직",
+    "memory_type 필터 회귀 테스트 1건",
+    "scope 필터 회귀 테스트 1건"
+  ],
+  "risks": [
+    "기존 search_all_backends() 호출부가 키워드 인자 없이 호출 중일 경우 시그니처 변경 무해하나 내부 필터 로직이 None 처리를 누락하면 기존 호출 결과 변경 위험",
+    "search_semantic()의 필터 구현이 backend별로 다르게 위임되어 있을 경우 all_backends 경로에 동일 로직을 재현하면 중복 발생 — 공통 헬퍼로 추출 검토 필요",
+    "MemoryType/MemoryScope Enum 값이 백엔드 스토리지 필드와 정확히 매핑되지 않으면 필터 효과 없음(False Positive 결과 반환)"
+  ],
+  "research_notes": [
+    "docs/features/2026-04-24-unified-memory-facade-rag-extension.md §6.4: search_all_backends() 호출부 변경 없음 명시 — 파라미터 추가는 하위 호환이므로 해당 원칙과 충돌하지 않음",
+    "docs/features/2026-04-24-unified-memory-facade-rag-extension-v3.md: scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL 패턴 확인 — 필터 비교 기준",
+    "core/memory_system/facade.py의 search_semantic() 시그니처와 필터 조건문을 먼저 읽어 동일 패턴 추출 후 search_all_backends()에 이식",
+    "tests/test_phase10_memory_foundation.py 기존 픽스처(mock backend, sample MemoryNode)를 재사용하여 테스트 작성 — 새 픽스처 최소화",
+    "local_references=6",
+    "Workspace note: existing_todo=.todo.md",
+    "Workspace note: existing_project_board=project_board_state.json",
+    "Workspace note: existing_agents=8",
+    "Local reference: docs/features/2026-04-24-unified-memory-facade-rag-extension.md -> ### 6.4 기존 `search_all_backends` 호출부 - 변경 없음. project_id 필터 없는 무차별 검색 유지 ---"
+  ],
+  "tech_stack": [
+    "Python 3.11",
+    "pytest",
+    "core/memory_system/facade.py (Agent Factory memory subsystem)",
+    "MemoryType Enum (core/memory_system 내부)",
+    "MemoryScope Enum (core/memory_system 내부)"
+  ],
+  "data_model": [
+    {
+      "entity": "MemoryNode",
+      "fields": [
+        "memory_type",
+        "scope",
+        "content",
+        "project_id",
+        "backend_id"
+      ],
+      "storage": "memory"
+    }
+  ],
+  "user_flows": [
+    "호출자: search_all_backends(query, memory_type=MemoryType.EPISODIC) 호출 -> 시스템: EPISODIC 타입 노드만 반환",
+    "호출자: search_all_backends(query, scope=MemoryScope.GLOBAL) 호출 -> 시스템: GLOBAL 스코프 노드만 반환",
+    "호출자: search_all_backends(query) 호출(필터 없음) -> 시스템: 기존과 동일하게 전체 결과 반환"
+  ],
+  "non_goals": [
+    "search_all_backends() 이외 다른 메서드의 시그니처 변경",
+    "새로운 MemoryType 또는 MemoryScope 값 추가",
+    "백엔드 스토리지 스키마 변경",
+    "project_id 필터 추가(기존 설계문서에서 search_all_backends는 project_id 무차별 검색 유지로 명시)"
+  ],
+  "architecture_style": "library",
+  "workspace_notes": [
+    "existing_todo=.todo.md",
+    "existing_project_board=project_board_state.json",
+    "existing_agents=8"
+  ],
+  "evidence_summary": [
+    "Workspace note: existing_todo=.todo.md",
+    "Workspace note: existing_project_board=project_board_state.json",
+    "Workspace note: existing_agents=8",
+    "Local reference: docs/features/2026-04-24-unified-memory-facade-rag-extension.md -> ### 6.4 기존 `search_all_backends` 호출부 - 변경 없음. project_id 필터 없는 무차별 검색 유지 ---",
+    "Local reference: docs/features/2026-04-24-unified-memory-facade-rag-extension-v3.md -> # scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+    "Local reference: docs/features/2026-04-08-phased-skill-pipeline.md -> # 현재 (dynamic_orchestrator.py) def run_project(self, task_input, roles, workspace): ``` 슬라이스 필터 파라미터 추가: ```python"
+  ],
+  "local_references": [
+    {
+      "path": "docs/features/2026-04-24-unified-memory-facade-rag-extension.md",
+      "heading": "### 6.4 기존 `search_all_backends` 호출부",
+      "excerpt": "### 6.4 기존 `search_all_backends` 호출부 - 변경 없음. project_id 필터 없는 무차별 검색 유지 ---",
+      "score": 1.0
+    },
+    {
+      "path": "docs/features/2026-04-24-unified-memory-facade-rag-extension-v3.md",
+      "heading": "# scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+      "excerpt": "# scope=MemoryScope.GLOBAL if node.project_id is None else MemoryScope.LOCAL,",
+      "score": 0.9229
+    },
+    {
+      "path": "docs/features/2026-04-08-phased-skill-pipeline.md",
+      "heading": "# 현재 (dynamic_orchestrator.py)",
+      "excerpt": "# 현재 (dynamic_orchestrator.py) def run_project(self, task_input, roles, workspace): ``` 슬라이스 필터 파라미터 추가: ```python",
+      "score": 0.7233
+    },
+    {
+      "path": "docs/2026-04-09-three-plane-integration-design.md",
+      "heading": "# 5. 기존 테스트 회귀",
+      "excerpt": "# 5. 기존 테스트 회귀 python -m pytest tests/ -v ``` ---",
+      "score": 0.7185
+    },
+    {
+      "path": "docs/archive/implementation/phase4_implementation.md",
+      "heading": "## 테스트",
+      "excerpt": "## 테스트 `tests/test_phase4_evaluator_skills.py` — 15개 테스트",
+      "score": 0.7142
+    },
+    {
+      "path": "docs/archive/code_review/memory_system_deep_review_2026-03-19.md",
+      "heading": "### 2. `core/memory_system/facade.py` (287줄) ⚠️ **중대 문제 2개**",
+      "excerpt": "### 2. `core/memory_system/facade.py` (287줄) ⚠️ **중대 문제 2개**",
+      "score": 0.7103
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "requested_role": "General Assistant",
+  "route": {
+    "pipeline": "project",
+    "intent": "forced",
+    "confidence": 100,
+    "reasoning": "pipeline_mode=project",
+    "risk_level": "strict"
+  },
+  "generated_at": "2026-04-26T22:32:27"
+}

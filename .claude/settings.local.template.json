@@ -1,0 +1,121 @@
+{
+  "_comment": [
+    "settings.local.json is machine-local and gitignored.",
+    "Copy this file to settings.local.json — no OS-specific changes needed.",
+    "hooks use 'sh scripts/hookpy.sh' which auto-detects python3 or python."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(echo *)"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git checkout --:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py check_design_pending.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_code_review",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py post_agent_record",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -171,21 +171,279 @@ def _run_check_nlm_subcommand(rest: list[str]) -> None:
         sys.exit(1)
 
 
+def _run_nightly_start(rest: list[str]) -> None:
+    """nightly-start: 야간 자율 모드 활성화 + launchd plist 설치."""
+    import argparse
+    import subprocess
+    from core.nightly_state import load_state, save_state
+
+    parser = argparse.ArgumentParser(prog="af nightly-start")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    parser.add_argument("--budget", type=int, default=0, help="야간 최대 토큰 (0=unlimited)")
+    parser.add_argument("--project", "-p", type=str, default=None, help="활성 프로젝트 ID")
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    state.nightly_autonomy_enabled = True
+    if args.project:
+        state.active_project = args.project
+        import os
+        from core.utils import safe_id
+        projects_root = os.environ.get("AGENT_PROJECTS_DIR", os.path.join(FACTORY_DIR, "projects"))
+        state.active_workspace = os.path.join(projects_root, safe_id(args.project))
+    if args.budget > 0:
+        state.budget.max_tokens = args.budget
+    save_state(state, ws)
+
+    # 플랫폼별 스케줄러 설치
+    import importlib.util
+    from pathlib import Path as _Path
+    _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
+    if os.path.exists(_sched_path):
+        _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
+        if _spec is None:
+            print("[nightly-start] install_scheduler.py 로드 실패. 수동으로 15분 주기 설정 필요.", file=sys.stderr)
+        else:
+            _sched = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+            _sched.install(_Path(FACTORY_DIR), _Path(ws))
+    else:
+        print("[nightly-start] install_scheduler.py 없음. 수동으로 15분 주기 설정 필요.", file=sys.stderr)
+
+    print(f"[nightly-start] 자율 모드 활성화됨. 프로젝트={state.active_project or '(미지정)'}")
+
+
+def _run_nightly_stop(rest: list[str]) -> None:
+    """nightly-stop: 야간 자율 모드 비활성화 + launchd plist 언로드."""
+    import subprocess
+    from core.nightly_state import load_state, save_state
+
+    import argparse
+    parser = argparse.ArgumentParser(prog="af nightly-stop")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    state.nightly_autonomy_enabled = False
+    save_state(state, ws)
+
+    import importlib.util
+    from pathlib import Path as _Path
+    _sched_path = os.path.join(FACTORY_DIR, "scripts", "install_scheduler.py")
+    if os.path.exists(_sched_path):
+        _spec = importlib.util.spec_from_file_location("install_scheduler", _sched_path)
+        if _spec is not None:
+            _sched = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_sched)  # type: ignore[union-attr]
+            _sched.uninstall(_Path(FACTORY_DIR))
+
+    print("[nightly-stop] 자율 모드 비활성화됨.")
+
+
+def _run_nightly_status(rest: list[str]) -> None:
+    """nightly-status: 야간 파이프라인 현재 상태 출력."""
+    from core.nightly_state import load_state, summary_path, alert_flag_path
+    from core.watchdog import WatchdogState
+
+    import argparse
+    parser = argparse.ArgumentParser(prog="af nightly-status")
+    parser.add_argument("--workspace", "-w", type=str, default=None)
+    args = parser.parse_args(rest)
+
+    ws = args.workspace or FACTORY_DIR
+    state = load_state(ws)
+    b = state.budget
+    w = state.watchdog
+
+    print(f"=== 야간 자율 파이프라인 상태 ===")
+    print(f"  활성: {'예' if state.nightly_autonomy_enabled else '아니오'}")
+    print(f"  프로젝트: {state.active_project or '(없음)'}")
+    print(f"  Watchdog: {w.watchdog_level} (연속 무진전: {w.consecutive_no_progress_ticks})")
+    print(f"  예산: {b.consumed_tokens:,}/{b.max_tokens or 'unlimited'} tokens")
+    print(f"  Tick 횟수: {b.tick_count}")
+    print(f"  마지막 tick: {state.last_tick_id or '(없음)'}")
+    alert = alert_flag_path(ws)
+    if alert.exists():
+        print(f"  ⚠️  ALERT 플래그 존재: {alert.read_text()[:200]}")
+    summary = summary_path(ws)
+    if summary.exists():
+        print(f"  요약 파일: {summary}")
+
+
+def _run_nightly_tick(rest: list[str]) -> None:
+    """nightly-tick: 수동 1회 tick (launchd 호출과 동일)."""
+    from scripts.nightly_tick import main as tick_main
+    sys.exit(tick_main(rest))
+
+
+def _run_warning_summary_subcommand(rest: list[str]) -> None:
+    """warning-summary --workspace PATH --slug SLUG"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-summary")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    args = parser.parse_args(rest)
+    from core.warning_registry import WarningRegistry
+    summary = WarningRegistry(workspace=args.workspace).summarize(project_slug=args.slug)
+    import json
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+
+
+def _run_warning_repair_subcommand(rest: list[str]) -> None:
+    """warning-repair --workspace PATH --slug SLUG"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-repair")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    args = parser.parse_args(rest)
+    from core.warning_registry import WarningRegistry
+    WarningRegistry(workspace=args.workspace).repair(project_slug=args.slug)
+    print(f"[warning-repair] _summary.json rebuilt for slug={args.slug}")
+
+
+def _run_warning_override_subcommand(rest: list[str]) -> None:
+    """warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-override")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    parser.add_argument("--rule", required=True, help="override할 rule_id")
+    parser.add_argument("--reason", default="", help="override 사유 (추가 시 필수)")
+    parser.add_argument("--remove", action="store_true", help="override 제거 (재차단)")
+    args = parser.parse_args(rest)
+
+    from core.warning_overrides import upsert_override, remove_override
+    if args.remove:
+        remove_override(args.workspace, args.slug, args.rule)
+        print(f"[warning-override] removed slug={args.slug} rule={args.rule}")
+    else:
+        if not args.reason.strip():
+            parser.error("--reason 은 override 추가 시 필수")
+        upsert_override(args.workspace, args.slug, args.rule, args.reason)
+        print(f"[warning-override] added slug={args.slug} rule={args.rule}")
+
+    # summary 재계산 → decision report 갱신
+    from core.warning_registry import WarningRegistry
+    WarningRegistry(workspace=args.workspace).summarize(project_slug=args.slug)
+
+
+def _run_resume_subcommand(rest: list[str]) -> None:
+    """resume <run_id> — 중단된 run을 재개한다.
+
+    인자 없이 실행하면 재개 가능한 run 목록을 표시한다.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="af resume")
+    parser.add_argument("run_id", nargs="?", default=None, help="재개할 run_id")
+    args = parser.parse_args(rest)
+
+    from core.checkpoint.storage import get_default_storage
+    storage = get_default_storage()
+
+    if not args.run_id:
+        runs = storage.list_runs()
+        resumable = []
+        for rid in runs:
+            cp = storage.load(rid)
+            if cp and cp.next_step_cursor != "done":
+                resumable.append((rid, cp))
+        if not resumable:
+            print("[resume] 재개 가능한 run이 없습니다.")
+            return
+        print("[resume] 재개 가능한 run 목록:")
+        for rid, cp in resumable:
+            print(f"  {rid}  cursor={cp.next_step_cursor}  saved={cp.saved_at[:19]}")
+        return
+
+    cp = storage.load(args.run_id)
+    if not cp:
+        print(f"[resume] run_id={args.run_id} 의 checkpoint를 찾을 수 없습니다.")
+        sys.exit(1)
+
+    if cp.next_step_cursor == "done":
+        print(f"[resume] run_id={args.run_id} 는 이미 완료된 run입니다 (cursor=done).")
+        return
+
+    prepared_data = cp.metadata.get("prepared_project")
+    if not prepared_data:
+        print(f"[resume] checkpoint에 prepared_project 데이터가 없습니다. 처음부터 실행하세요.")
+        sys.exit(1)
+
+    # resume UX 메뉴
+    print(f"\n♻️  [resume] run_id={args.run_id}")
+    print(f"   마지막 저장: {cp.saved_at[:19]}  cursor={cp.next_step_cursor}")
+    print(f"   task: {cp.metadata.get('task_input', '')[:100]}")
+    print()
+    print("  [1] 처음부터 시작 (새 run)")
+    print(f"  [2] 마지막 step부터 재개 (cursor={cp.next_step_cursor})")
+    print("  [q] 취소")
+    choice = input("  선택 (1/2/q, 기본=2): ").strip() or "2"
+
+    if choice == "q":
+        print("  취소됨.")
+        return
+
+    if choice == "1":
+        print("  처음부터 실행합니다. 새 task 명령을 사용하세요 (af run ...).")
+        return
+
+    # choice == "2": restore PreparedProject and call execute()
+    from core.project_pipeline import PreparedProject
+    try:
+        prepared = PreparedProject(**prepared_data)
+    except Exception as exc:
+        print(f"[resume] PreparedProject 복원 실패: {exc}")
+        sys.exit(1)
+
+    print(f"\n[resume] PreparedProject 복원 완료 — workspace={prepared.workspace}")
+
+    # 승인 게이트 확인
+    gate = prepared.gate()
+    if not gate.is_execution_open():
+        print("\n[resume] 승인 게이트가 닫혀 있습니다.")
+        print(f"  승인 파일: {gate.gate_path}")
+        print("  파일에서 execution_open: true 로 변경 후 재실행하거나, 처음부터 실행하세요.")
+        sys.exit(1)
+
+    # execute
+    from agent_launcher import AgentFactory
+    factory = AgentFactory()
+    result = factory.project_pipeline.execute(prepared=prepared)
+
+    if result.get("ok"):
+        print(f"\n  [resume] 완료 — run_id={result.get('run_id')}")
+    else:
+        print(f"\n  [resume] 실패 — {result.get('reason', 'unknown')}")
+        sys.exit(1)
+
+
 # STAGE 1에서 setup gate 이전에 즉시 분기되어야 하는 서브커맨드 dispatch.
 # 단일 진실원천: 새 항목 추가 시 이 dict만 수정하면 STAGE 1 분기에 자동 반영된다
 # (af-critic WARN 5 해소 — 집합/if-체인 이중 진실원천 제거).
 # - 기존 내부 서브커맨드: setup / worker / skill-* / preflight
 # - v3 신규: __nlm / __check-nlm (NotebookLM CLI를 af 프로세스 내부에서 invoke)
+# - Phase 0 신규: nightly-start / nightly-stop / nightly-status / nightly-tick
 _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
-    "setup":         _run_setup_subcommand,
-    "worker":        _run_worker_subcommand,
-    "skill-create":  lambda rest: _run_skill_creator(rest),
-    "skill-spec":    lambda rest: _run_skill_spec(rest),
-    "preflight":     lambda rest: _run_preflight(rest),
-    "skill-eval":    lambda rest: _run_skill_eval(rest),
-    "skill-promote": lambda rest: _run_skill_promote(rest),
-    "__nlm":         _run_nlm_subcommand,
-    "__check-nlm":   _run_check_nlm_subcommand,
+    "setup":           _run_setup_subcommand,
+    "worker":          _run_worker_subcommand,
+    "skill-create":    lambda rest: _run_skill_creator(rest),
+    "skill-spec":      lambda rest: _run_skill_spec(rest),
+    "preflight":       lambda rest: _run_preflight(rest),
+    "skill-eval":      lambda rest: _run_skill_eval(rest),
+    "skill-promote":   lambda rest: _run_skill_promote(rest),
+    "__nlm":           _run_nlm_subcommand,
+    "__check-nlm":     _run_check_nlm_subcommand,
+    "nightly-start":   _run_nightly_start,
+    "nightly-stop":    _run_nightly_stop,
+    "nightly-status":  _run_nightly_status,
+    "nightly-tick":    _run_nightly_tick,
+    "resume":          _run_resume_subcommand,
+    "warning-summary":  _run_warning_summary_subcommand,
+    "warning-repair":   _run_warning_repair_subcommand,
+    "warning-override": _run_warning_override_subcommand,
 }
 
 
@@ -214,15 +472,22 @@ def _is_meta_arg(argv: list[str]) -> bool:
 # 하위 argparse/Typer가 자체 --help를 처리하는 커맨드(worker, skill-*, __nlm 등)
 # 라도 setup_wizard처럼 부작용이 먼저 시작되는 경우가 있으므로 일괄 가드한다.
 _STAGE1_USAGE = {
-    "setup":         "usage: af setup    # API 키·TAVILY·NotebookLM 대화형 설정 마법사",
-    "worker":        "usage: af worker --task-file PATH    # PyInstaller exe 전용 에이전트 워커",
-    "skill-create":  "usage: af skill-create [ARGS...]    # 스킬 생성 (자세한 옵션은 core/skill_creator.py)",
-    "skill-spec":    "usage: af skill-spec [ARGS...]    # 스킬 스펙 합성 (core/skill_spec_synthesizer.py)",
-    "preflight":     "usage: af preflight [ARGS...]    # 스킬 preflight 검사 (core/skill_preflight.py)",
-    "skill-eval":    "usage: af skill-eval [ARGS...]    # 스킬 평가 하네스 (core/skill_eval_harness.py)",
-    "skill-promote": "usage: af skill-promote [ARGS...]    # 스킬 승격 (core/skill_promotion.py)",
-    "__nlm":         "usage: af __nlm <nlm-args>    # (hidden) af 프로세스 내부 nlm Typer 호출",
-    "__check-nlm":   "usage: af __check-nlm    # (hidden) nlm 패키지 import 가능 여부 검사",
+    "setup":           "usage: af setup    # API 키·TAVILY·NotebookLM 대화형 설정 마법사",
+    "worker":          "usage: af worker --task-file PATH    # PyInstaller exe 전용 에이전트 워커",
+    "skill-create":    "usage: af skill-create [ARGS...]    # 스킬 생성 (자세한 옵션은 core/skill_creator.py)",
+    "skill-spec":      "usage: af skill-spec [ARGS...]    # 스킬 스펙 합성 (core/skill_spec_synthesizer.py)",
+    "preflight":       "usage: af preflight [ARGS...]    # 스킬 preflight 검사 (core/skill_preflight.py)",
+    "skill-eval":      "usage: af skill-eval [ARGS...]    # 스킬 평가 하네스 (core/skill_eval_harness.py)",
+    "skill-promote":   "usage: af skill-promote [ARGS...]    # 스킬 승격 (core/skill_promotion.py)",
+    "__nlm":           "usage: af __nlm <nlm-args>    # (hidden) af 프로세스 내부 nlm Typer 호출",
+    "__check-nlm":     "usage: af __check-nlm    # (hidden) nlm 패키지 import 가능 여부 검사",
+    "nightly-start":   "usage: af nightly-start [--workspace PATH] [--budget TOKENS] [--project ID]    # 야간 자율 모드 활성화",
+    "nightly-stop":    "usage: af nightly-stop [--workspace PATH]    # 야간 자율 모드 비활성화",
+    "nightly-status":  "usage: af nightly-status [--workspace PATH]    # 야간 파이프라인 상태 조회",
+    "nightly-tick":    "usage: af nightly-tick [--workspace PATH]    # 수동 1회 tick 실행",
+    "warning-summary":  "usage: af warning-summary --workspace PATH --slug SLUG    # WARN 요약 출력",
+    "warning-repair":   "usage: af warning-repair --workspace PATH --slug SLUG    # _summary.json 재생성",
+    "warning-override": "usage: af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]   # P2 false-positive override",
 }
 
 
@@ -367,6 +632,7 @@ def main(argv: list[str] | None = None):
     parser.add_argument("--no-cli-auto-install", action="store_true", help="Disable missing CLI auto install")
     parser.add_argument("--pipeline", choices=["auto", "single", "project"], default="auto", help="Pipeline mode")
     parser.add_argument("--chat", action="store_true", help="Interactive chat mode (continuous conversation)")
+    parser.add_argument("--research-only", action="store_true", help="Research + Brief 단계만 실행 후 중단")
     # WARN-1 fix: argv가 아닌 effective_argv를 전달해 단일 진실원천 유지.
     args = parser.parse_args(effective_argv)
 
@@ -411,8 +677,10 @@ def main(argv: list[str] | None = None):
         try:
             from core.providers.registry import configure_providers
             configure_providers([args.provider])
-        except Exception:
-            os.environ["AGENT_CHAT_PROVIDER"] = args.provider  # 폴백
+        except Exception as _exc:
+            import logging as _logging
+            _logging.getLogger(__name__).debug("configure_providers 실패: %s", _exc)
+        os.environ["AGENT_CHAT_PROVIDER"] = args.provider  # 항상 설정
     if args.provider_command:
         os.environ[CLI_PROVIDER_COMMAND_ENVS[args.provider]] = args.provider_command.strip()
     if args.no_cli_auto_install:
@@ -456,6 +724,15 @@ def main(argv: list[str] | None = None):
 
     try:
         factory = AgentFactory()
+        if getattr(args, "research_only", False):
+            brief = factory.project_pipeline.prepare_brief(
+                task_input=task,
+                workspace=project_root,
+            )
+            print(f"\n[research-only] 완료")
+            print(f"  research_evidence : {brief.research_evidence_path}")
+            print(f"  project_brief     : {brief.project_brief_path}")
+            return
         if args.workflow:
             roles = [item.strip() for item in (args.agents or "").split(",") if item.strip()]
             factory.run_workflow(task_input=task, workflow_path=args.workflow, role_specs=roles)

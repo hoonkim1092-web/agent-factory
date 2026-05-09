@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 
 
 CLI_PROVIDER_IDS = ("claude_cli", "gemini_cli", "codex_cli")
@@ -17,7 +18,7 @@ AI_ENGINE_API_KEY_ENVS = ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", 
 _DEFAULT_MODELS = {
     "claude_cli": "claude",
     "gemini_cli": "gemini",
-    "codex_cli": "gpt-5",
+    "codex_cli": "",  # Codex 자체 기본 모델 사용 (ChatGPT 계정: gpt-5.4)
 }
 
 _ENGINE_ENV_BY_ID = {
@@ -198,6 +199,7 @@ def _unix_npm_global_dirs() -> list[str]:
 _installed_cli_cache: list[str] | None = None
 _installed_cli_cache_ts: float = 0.0
 _INSTALLED_CLI_CACHE_TTL = 60.0  # 60초 TTL
+_installed_cli_cache_lock = threading.Lock()
 
 
 def detect_installed_cli_providers() -> list[str]:
@@ -205,14 +207,19 @@ def detect_installed_cli_providers() -> list[str]:
 
     shutil.which()는 시스템 PATH를 탐색하므로 비용이 있음.
     60초 내 재호출은 캐시 결과를 반환한다.
+    멀티스레드 안전: _installed_cli_cache_lock으로 전역 캐시 RMW를 보호한다.
+    패턴: fast-path(캐시 읽기 under lock) → slow-path(I/O without lock) → write under lock.
     """
     import time
     global _installed_cli_cache, _installed_cli_cache_ts
 
-    now = time.monotonic()
-    if _installed_cli_cache is not None and (now - _installed_cli_cache_ts) < _INSTALLED_CLI_CACHE_TTL:
-        return list(_installed_cli_cache)
+    # Fast path: 신선 캐시가 있으면 lock 안에서 즉시 반환
+    with _installed_cli_cache_lock:
+        now = time.monotonic()
+        if _installed_cli_cache is not None and (now - _installed_cli_cache_ts) < _INSTALLED_CLI_CACHE_TTL:
+            return list(_installed_cli_cache)
 
+    # Slow path: shutil.which I/O는 lock 바깥에서 수행 (다른 스레드 차단 최소화)
     installed: list[str] = []
     for provider_id, executable in _CLI_EXECUTABLES.items():
         if shutil.which(executable):
@@ -234,16 +241,21 @@ def detect_installed_cli_providers() -> list[str]:
                     installed.append(provider_id)
                     break
 
-    _installed_cli_cache = installed
-    _installed_cli_cache_ts = now
-    return list(installed)
+    # Double-checked write: 다른 스레드가 먼저 채웠을 수 있으므로 재확인
+    with _installed_cli_cache_lock:
+        now = time.monotonic()
+        if _installed_cli_cache is None or (now - _installed_cli_cache_ts) >= _INSTALLED_CLI_CACHE_TTL:
+            _installed_cli_cache = installed
+            _installed_cli_cache_ts = now
+        return list(_installed_cli_cache)
 
 
 def invalidate_installed_cli_cache() -> None:
     """설치 캐시를 강제 무효화한다 (테스트 또는 CLI 설치 직후 사용)."""
     global _installed_cli_cache, _installed_cli_cache_ts
-    _installed_cli_cache = None
-    _installed_cli_cache_ts = 0.0
+    with _installed_cli_cache_lock:
+        _installed_cli_cache = None
+        _installed_cli_cache_ts = 0.0
 
 
 def detect_available_cli_providers(raw: str | None = None) -> list[str]:
@@ -291,4 +303,18 @@ def get_cli_install_command(provider_id: str) -> str:
 
 def get_cli_auth_command(provider_id: str) -> str:
     return _CLI_AUTH_COMMANDS.get(provider_id, "")
+
+
+def pick_review_provider(author_provider: str) -> str:
+    """작성자와 다른 CLI provider를 반환한다.
+
+    author_provider는 provider ID (예: 'claude_cli')여야 한다.
+    사용 가능한 다른 provider가 없으면 같은 provider를 반환한다
+    (별도 run_id로 독립 세션 보장).
+    """
+    available = detect_available_cli_providers()
+    candidates = [p for p in available if p != author_provider]
+    if candidates:
+        return candidates[0]
+    return author_provider
 

@@ -1,0 +1,23 @@
+{
+  "role_id": "frontend_dev",
+  "run_id": "project_run_1778206205_frontend_dev",
+  "skills": [
+    {
+      "skill_id": "frontend_game_ui",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 1,
+    "installed": 1,
+    "by_mode": {
+      "direct_install": 1
+    }
+  },
+  "generated_at": "2026-05-08T11:20:51"
+}

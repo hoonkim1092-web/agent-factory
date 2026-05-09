@@ -920,7 +920,7 @@ class SkillOrchestrator:
 
         evidence_pack = research_bundle.get("evidence_pack", {}) if isinstance(research_bundle, dict) else {}
         evidence_targets = evidence_pack.get("targets", {}) if isinstance(evidence_pack, dict) else {}
-        auto_approve = execution_mode == "fsa"
+        auto_approve = execution_mode in ("fsa", "ise")
 
         for name in targets:
             fallback_chain: list[str] = []

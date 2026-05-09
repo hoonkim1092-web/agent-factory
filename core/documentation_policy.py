@@ -139,7 +139,13 @@ def documentation_language_profile() -> dict[str, object]:
                 "파일이 없으면 생성한다.\n"
                 f"이 작업에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `{language_code}`에 맞는 언어인 한국어로 작성해야 한다.\n"
                 "코드, 파일 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지할 수 있지만, 제목·본문·요약·변경 이력 설명은 한국어로 작성한다.\n"
-                "설계 수준 변경이 없으면 해당 문서는 건드리지 않는다."
+                "설계 수준 변경이 없으면 해당 문서는 건드리지 않는다.\n\n"
+                "[Design Review Contract]\n"
+                "동작 변경 또는 아키텍처 변경이 포함된 작업에서는 구현을 시작하기 전에 "
+                "설계 의도, 영향 범위, 대안을 `docs/plans/YYYY-MM-DD-{변경명}.md` 파일로 작성해야 한다.\n"
+                "설계 문서 작성 후 `send_mailbox_message`로 `review_request` 타입 메시지를 보내 교차검증을 요청한다.\n"
+                "교차검증 완료 전까지 구현을 시작하지 않는다.\n"
+                "면제 조건: 테스트로 검증 가능한 회귀 수정, 또는 설정 값만 변경하는 경우."
             ),
         }
 
@@ -220,7 +226,13 @@ def documentation_language_profile() -> dict[str, object]:
             "Create those files if they do not exist.\n"
             f"All documentation files created or updated in this task MUST be written in the language that matches OS language code `{language_code}`.\n"
             "Keep code, file paths, commands, and API identifiers in their original form when needed, but write headings, body text, summaries, and change-log entries in that language.\n"
-            "If no design-level change happened, leave those files untouched."
+            "If no design-level change happened, leave those files untouched.\n\n"
+            "[Design Review Contract]\n"
+            "For tasks involving behavioral or architectural changes, you MUST document design intent, "
+            "impact scope, and alternatives in a `docs/plans/YYYY-MM-DD-{change-name}.md` file before starting implementation.\n"
+            "After writing the design document, send a `review_request` message via `send_mailbox_message` to trigger cross-review.\n"
+            "Do not start implementation until the cross-review is complete.\n"
+            "Exempt: regression fixes verifiable by tests, or configuration-only value changes."
         ),
     }
 
@@ -270,10 +282,45 @@ def normalize_project_todo_items(todo_items: list[str] | None) -> list[str]:
     return list(dict.fromkeys(normalized + documentation_todo_items()))
 
 
-def write_project_todo(workspace: str, todo_items: list[str] | None) -> str:
+def _normalize_instruction(text: str) -> str:
+    return " ".join(str(text or "").split())
+
+
+def _mark_for_status(status: str | None) -> str:
+    if status == "completed":
+        return "x"
+    if status == "in_progress":
+        return "/"
+    if status in ("blocked", "failed"):
+        return "!"
+    return " "
+
+
+def _instruction_status_map(board: dict) -> dict[str, str]:
+    # 동일 instruction을 가진 task가 여럿이면 가장 덜 완료된 상태를 채택 (false-positive 방지).
+    precedence: dict[str, int] = {"completed": 3, "in_progress": 2, "blocked": 1, "failed": 1, "pending": 0}
+    result: dict[str, str] = {}
+    for task in (board.get("tasks") or []):
+        if not isinstance(task, dict):
+            continue
+        instruction = _normalize_instruction(task.get("instruction") or "")
+        if not instruction:
+            continue
+        status = str(task.get("status") or "pending")
+        if instruction in result:
+            if precedence.get(status, 0) < precedence.get(result[instruction], 0):
+                result[instruction] = status
+        else:
+            result[instruction] = status
+    return result
+
+
+def write_project_todo(workspace: str, todo_items: list[str] | None, board: dict | None = None) -> str:
     lines = [f"# {project_todo_title()}", ""]
+    status_map = _instruction_status_map(board) if board else {}
     for item in normalize_project_todo_items(todo_items):
-        lines.append(f"- [ ] {item}")
+        mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
+        lines.append(f"- [{mark}] {item}")
     todo_path = os.path.join(os.path.abspath(workspace), ".todo.md")
     write_text(todo_path, "\n".join(lines).strip() + "\n")
     return todo_path
@@ -328,3 +375,54 @@ def inject_documentation_contract(system_prompt: str) -> str:
 
     contract = str(documentation_language_profile()["contract"])
     return f"{base}\n\n{contract}".strip()
+
+
+_CODE_REVIEW_CONTRACT = """\
+[Code Review Contract]
+당신은 Code Reviewer다. 작성된 코드를 리뷰한다.
+
+검토 항목:
+1. 보안 취약점 (OWASP Top 10, 인젝션, 인증)
+2. 버그 및 엣지 케이스 (off-by-one, null 처리, 경계값)
+3. 설계 품질 (단일 책임, 의존성 방향, 인터페이스 일관성)
+4. 에러 처리 (예외 누락, 복구 전략)
+5. 성능 (불필요한 I/O, O(n^2) 루프)
+
+판정: PASS / WARN (경고 + 진행) / BLOCK (수정 필수)
+JSON 형식으로 응답:
+{"verdict": "PASS|WARN|BLOCK", "issues": [...], "summary": "..."}"""
+
+_CROSS_VALIDATION_CONTRACT = """\
+[Cross Validation Contract]
+당신은 Cross Validator다. 모듈 전체의 정합성을 검증한다.
+
+검토 항목:
+1. 모듈 간 인터페이스 일관성 (입출력 타입, 계약)
+2. 설계 문서와 구현의 괴리
+3. 테스트 커버리지 갭 (QA가 놓친 시나리오)
+4. 의존성 그래프 정합성
+5. 문서 업데이트 누락
+
+판정: PASS / WARN / BLOCK
+JSON 형식으로 응답:
+{"verdict": "PASS|WARN|BLOCK", "issues": [...], "summary": "..."}"""
+
+
+def inject_code_review_contract(system_prompt: str, role: str = "") -> str:
+    """_code_reviewer suffix 역할에만 Code Review Contract를 주입한다."""
+    if not str(role).endswith("_code_reviewer"):
+        return system_prompt
+    base = str(system_prompt or "").strip()
+    if "[Code Review Contract]" in base:
+        return base
+    return f"{base}\n\n{_CODE_REVIEW_CONTRACT}".strip()
+
+
+def inject_cross_validation_contract(system_prompt: str, role: str = "") -> str:
+    """_cross_validator suffix 역할에만 Cross Validation Contract를 주입한다."""
+    if not str(role).endswith("_cross_validator"):
+        return system_prompt
+    base = str(system_prompt or "").strip()
+    if "[Cross Validation Contract]" in base:
+        return base
+    return f"{base}\n\n{_CROSS_VALIDATION_CONTRACT}".strip()

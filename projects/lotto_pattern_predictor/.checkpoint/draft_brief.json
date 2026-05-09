@@ -1,0 +1,188 @@
+{
+  "stage": "draft_brief",
+  "saved_at": "2026-04-16T20:43:37",
+  "data_hash": "7a61c58b088edfd5e053b5819faf5b69",
+  "data": {
+    "goal": "동행복권 API에서 최근 500회차 로또 당첨번호를 수집·통계 분석하여 가중 랜덤 기반 1등 후보 5조합을 추천하는 macOS CLI 도구를 개발한다.",
+    "background_context": "로또 6/45는 매주 1회 추첨되며 수동 번호 선택 시 과거 통계를 참고하려는 수요가 크지만, 동행복권 사이트에서 회차별로 일일이 확인하는 것은 비효율적이다. 개별 번호 출현 빈도뿐 아니라 쌍·삼중 동시 출현 패턴까지 분석하면 단순 랜덤보다 통계적으로 편향된 조합 생성이 가능하다.",
+    "problem_statement": "과거 당첨 데이터를 체계적으로 수집·캐싱하고, 빈도·동시출현·구간 편향 등 다차원 통계를 한 번에 산출하여 가중치 기반 추천까지 자동화하는 로컬 도구가 없다.",
+    "target_path": "/Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor",
+    "constraints": [
+      "동행복권 공개 API(dhlottery.co.kr)만 사용하며 스크래핑 금지",
+      "API 호출 시 rate-limit 준수 (회차당 1건씩, 요청 간 0.5초 이상 간격)",
+      "수집 데이터는 로컬 SQLite에 캐싱하여 반복 호출 최소화",
+      "macOS CLI 환경에서 Python 단독 실행 (외부 바이너리 의존 없음)",
+      "추천 조합은 1~45 범위 내 중복 없는 6개 번호 + 보너스 번호 제외",
+      "인터넷 미연결 시 캐시된 데이터로 분석·추천 가능해야 함",
+      "모든 사용자 출력 메시지는 한국어"
+    ],
+    "required_skills": [
+      "http_api_integration",
+      "sqlite_data_persistence",
+      "frequency_statistical_analysis",
+      "weighted_random_sampling",
+      "cli_argument_parsing",
+      "data_visualization_terminal",
+      "json_data_processing"
+    ],
+    "role_hints": [
+      "backend_developer",
+      "data_analyst",
+      "cli_ux_designer"
+    ],
+    "deliverables": [
+      "동행복권 API 데이터 수집 모듈",
+      "SQLite 기반 당첨번호 캐시 저장소",
+      "번호별 출현빈도·동시출현·구간 통계 분석 엔진",
+      "가중 랜덤 기반 5조합 추천 생성기",
+      "터미널 통계 요약 출력 포맷터",
+      "CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)"
+    ],
+    "risks": [
+      "동행복권 API 응답 형식이 문서화되지 않아 변경 시 파서 깨질 수 있음",
+      "500회차 일괄 수집 시 API 서버 차단 가능성",
+      "통계 기반 가중치가 실제 당첨 확률 향상을 보장하지 않음 — 사용자 오해 방지 고지 필요",
+      "API 엔드포인트 URL이 비공식이므로 검증 필요"
+    ],
+    "research_notes": [
+      "동행복권 API 엔드포인트: GET https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={회차} — JSON 응답으로 drwtNo1~drwtNo6, bnusNo 반환",
+      "2024년 기준 최신 회차는 약 1100회 이상이므로 최근 500회차는 약 600~1100회 범위",
+      "빈도 분석 외에 번호 쌍(pair) 동시출현 빈도와 번홀짝/고저 분포도 유용한 통계 지표",
+      "가중 랜덤 샘플링은 numpy 없이 random.choices(population, weights)로 구현 가능",
+      "llm_prior_references=4 (unverified)",
+      "notebook_summary=available",
+      "LLM prior knowledge (unverified): HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning numbers by draw round as JSON",
+      "LLM prior knowledge (unverified): Frequency analysis of individual numbers and pair/triplet co-occurrence across historical draws",
+      "NotebookLM synthesis: Conversation ID: a6e109cb-b12e-4120-97e8-aabdbafb2b3e Use --conversation-id for follow-up questions"
+    ],
+    "tech_stack": [
+      "Python 3.11+",
+      "sqlite3 (stdlib)",
+      "requests 2.31+",
+      "argparse (stdlib)",
+      "rich (터미널 테이블/컬러 출력)"
+    ],
+    "data_model": [
+      {
+        "entity": "Draw",
+        "fields": [
+          "draw_no",
+          "draw_date",
+          "num1",
+          "num2",
+          "num3",
+          "num4",
+          "num5",
+          "num6",
+          "bonus",
+          "total_sell_amount",
+          "first_prize_amount",
+          "first_prize_winners",
+          "fetched_at"
+        ],
+        "storage": "sqlite"
+      },
+      {
+        "entity": "NumberFrequency",
+        "fields": [
+          "number",
+          "count",
+          "last_appeared_draw",
+          "avg_gap"
+        ],
+        "storage": "memory"
+      },
+      {
+        "entity": "PairCooccurrence",
+        "fields": [
+          "num_a",
+          "num_b",
+          "count"
+        ],
+        "storage": "memory"
+      },
+      {
+        "entity": "Recommendation",
+        "fields": [
+          "set_id",
+          "numbers",
+          "weight_score",
+          "generated_at"
+        ],
+        "storage": "memory"
+      }
+    ],
+    "user_flows": [
+      "사용자: `lotto fetch` 실행 -> 시스템: 최신 회차 확인 후 미수집 회차만 API로 가져와 SQLite에 저장, 수집 결과 요약 출력",
+      "사용자: `lotto analyze` 실행 -> 시스템: 캐시된 500회차 데이터로 번호별 빈도, 쌍 동시출현, 홀짝/고저 분포 통계를 터미널 테이블로 출력",
+      "사용자: `lotto recommend` 실행 -> 시스템: 분석 통계 기반 가중 랜덤으로 5조합 생성하여 번호·가중치 점수와 함께 출력",
+      "사용자: `lotto recommend --count 10` 실행 -> 시스템: 10조합으로 확장 생성",
+      "사용자: 오프라인 상태에서 `lotto analyze` 실행 -> 시스템: 캐시 데이터로 정상 분석 수행"
+    ],
+    "non_goals": [
+      "당첨 확률 향상 보장 또는 예측 정확도 주장",
+      "GUI 또는 웹 인터페이스 제공",
+      "자동 로또 구매 연동",
+      "Windows/Linux 크로스플랫폼 지원 (macOS CLI 전용)",
+      "딥러닝/머신러닝 기반 번호 예측",
+      "과거 전체 회차(1~현재) 수집 — 최근 500회차로 한정"
+    ],
+    "architecture_style": "cli",
+    "workspace_notes": [],
+    "evidence_summary": [
+      "LLM prior knowledge (unverified): HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning numbers by draw round as JSON",
+      "LLM prior knowledge (unverified): Frequency analysis of individual numbers and pair/triplet co-occurrence across historical draws",
+      "NotebookLM synthesis: Conversation ID: a6e109cb-b12e-4120-97e8-aabdbafb2b3e Use --conversation-id for follow-up questions"
+    ],
+    "local_references": [],
+    "web_references": [],
+    "llm_prior_references": [
+      {
+        "title": "[LLM prior] Concept: HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning ",
+        "excerpt": "HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning numbers by draw round as JSON",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Frequency analysis of individual numbers and pair/triplet co-occurrence across h",
+        "excerpt": "Frequency analysis of individual numbers and pair/triplet co-occurrence across historical draws",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Weighted random sampling without replacement to select 6 numbers from 1-45 based",
+        "excerpt": "Weighted random sampling without replacement to select 6 numbers from 1-45 based on computed weights",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Lotto 6/45 probability space: C(45,6) = 8,145,060 combinations — no statistical ",
+        "excerpt": "Lotto 6/45 probability space: C(45,6) = 8,145,060 combinations — no statistical method improves true odds",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      }
+    ],
+    "notebook_summary": "Conversation ID: a6e109cb-b12e-4120-97e8-aabdbafb2b3e Use --conversation-id for follow-up questions",
+    "requested_role": "General Assistant",
+    "route": {
+      "pipeline": "project",
+      "intent": "forced",
+      "confidence": 100,
+      "reasoning": "pipeline_mode=project",
+      "risk_level": "strict"
+    },
+    "generated_at": "2026-04-16T20:43:37"
+  }
+}

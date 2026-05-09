@@ -1,0 +1,32 @@
+{
+  "role_id": "frontend_dev",
+  "run_id": "project_run_1776442779_frontend_dev",
+  "skills": [
+    {
+      "skill_id": "responsive_mobile_web_ui",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "frontend_smoke_testing",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 2,
+    "installed": 2,
+    "by_mode": {
+      "direct_install": 2
+    }
+  },
+  "generated_at": "2026-04-18T01:25:30"
+}

@@ -1,0 +1,28 @@
+items:
+  - id: authoritative_server
+    title: Authoritative server architecture
+    required: true
+    priority: high
+    acceptance: Evidence explains how server-owned state prevents invalid client actions.
+    match_keywords: [authoritative server, server-side validation, 권위 서버, 서버 검증, anti-cheat]
+
+  - id: disconnect_recovery
+    title: Disconnect and reconnect handling
+    required: true
+    priority: high
+    acceptance: Evidence describes what happens when a player disconnects mid-game and how reconnection is handled.
+    match_keywords: [disconnect, reconnect, 재접속, connection loss, timeout]
+
+  - id: server_client_responsibility
+    title: Server vs client responsibility boundary
+    required: true
+    priority: high
+    acceptance: Evidence clearly separates what logic runs on server vs client.
+    match_keywords: [server responsibility, client responsibility, 서버 역할, 클라이언트 역할, viewer, 뷰어]
+
+  - id: concurrency_handling
+    title: Concurrency handling
+    required: false
+    priority: medium
+    acceptance: Evidence addresses race conditions when multiple players act simultaneously.
+    match_keywords: [concurrency, race condition, 동시성, lock, mutex, atomic]

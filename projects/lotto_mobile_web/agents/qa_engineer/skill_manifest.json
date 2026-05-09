@@ -1,0 +1,23 @@
+{
+  "role_id": "qa_engineer",
+  "run_id": "project_run_1776442779_qa_engineer",
+  "skills": [
+    {
+      "skill_id": "integration_test_guard",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 1,
+    "installed": 1,
+    "by_mode": {
+      "direct_install": 1
+    }
+  },
+  "generated_at": "2026-04-18T01:25:30"
+}

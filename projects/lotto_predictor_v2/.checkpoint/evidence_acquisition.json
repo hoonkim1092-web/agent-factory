@@ -1,0 +1,72 @@
+{
+  "stage": "evidence_acquisition",
+  "saved_at": "2026-04-17T01:24:13",
+  "data_hash": "cec5d87cc161d08e352868df6a1cb14c",
+  "data": {
+    "workspace_notes": [],
+    "local_references": [
+      {
+        "path": "docs/architecture.md",
+        "heading": "## 문서 규칙",
+        "excerpt": "## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+        "score": 1.0
+      }
+    ],
+    "web_references": [],
+    "llm_prior_references": [
+      {
+        "title": "[LLM prior] Concept: Frequency analysis of historical draws to identify hot and cold numbers",
+        "excerpt": "Frequency analysis of historical draws to identify hot and cold numbers",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive ",
+        "excerpt": "Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive runs)",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Number-range bucketing for 1-45 (typically 5 buckets of 9) for distribution anal",
+        "excerpt": "Number-range bucketing for 1-45 (typically 5 buckets of 9) for distribution analysis",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      },
+      {
+        "title": "[LLM prior] Concept: Recent-trend weighting via exponential decay over draw index",
+        "excerpt": "Recent-trend weighting via exponential decay over draw index",
+        "url": "",
+        "source_type": "llm_prior",
+        "weight": 0.4,
+        "verified": false,
+        "score": 0.4
+      }
+    ],
+    "notebook_summary": "Conversation ID: d68298d4-d15b-4e78-9caf-c342f528fc0c Use --conversation-id for follow-up questions",
+    "evidence_summary": [
+      "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+      "LLM prior knowledge (unverified): Frequency analysis of historical draws to identify hot and cold numbers",
+      "LLM prior knowledge (unverified): Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive runs)",
+      "NotebookLM synthesis: Conversation ID: d68298d4-d15b-4e78-9caf-c342f528fc0c Use --conversation-id for follow-up questions"
+    ],
+    "sufficiency_gate_passed": false,
+    "_verification": {
+      "score": 0.647,
+      "status": "pass",
+      "gaps": [
+        "local_references_insufficient (found 1, need 3+)",
+        "sufficiency_gate_not_passed"
+      ],
+      "attempt": 0
+    }
+  }
+}

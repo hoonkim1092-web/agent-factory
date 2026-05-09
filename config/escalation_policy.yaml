@@ -1,0 +1,29 @@
+# escalation_policy.yaml — v0 (P1)
+# phase 키: core/project_task_board.py:17 _PHASE_ORDER 와 정확히 일치해야 함.
+# 허용 값: scope, build, integrate, code_review, cross_validate, verify
+version: 0
+rules:
+  - rule_id: e2e_command_missing
+    activate_at: P2
+    block_when:
+      affected_phase_in: [build, integrate, code_review, cross_validate, verify]
+      count_per_run_min: 1
+    exempt_when:
+      affected_phase_in: [scope]
+    rationale: "build 이후 단계에서는 e2e 검증 명령이 필수. scope phase는 task가 placeholder 상태일 수 있어 exempt."
+
+  - rule_id: owner_role_mismatch
+    activate_at: P4
+    block_when:
+      repeat_count_min: 3
+    rationale: "P3 measurement 기간 후 임계 결정 — 초기엔 보수적. P4에서 활성."
+
+  - rule_id: evidence_quality_warn
+    activate_at: P4
+    block_when:
+      count_per_run_min: 5
+    rationale: "근거 부족이 일정 수준 누적되면 후속 문서 신뢰도 붕괴. P4에서 활성."
+
+  - rule_id: plan_verifier_warn
+    activate_at: never
+    rationale: "plan_verifier score는 refine 루프로 보정 가능 — escalation 보류"

@@ -1,0 +1,522 @@
+{
+  "stage": "role_plan",
+  "saved_at": "2026-04-16T20:43:37",
+  "data_hash": "53967365e6fe7ec1a5e6acd5ee9965b8",
+  "data": {
+    "execution_strategy": "parallel",
+    "planning_steps": [
+      {
+        "id": "scope_contracts",
+        "name": "범위와 계약 정의",
+        "objective": "기능 경계를 모듈 단위로 나누고 역할별 인터페이스를 고정한다.",
+        "exit_criteria": [
+          "모든 작업이 owner_role과 depends_on을 가진다.",
+          "핵심 산출물이 모듈별로 정리된다."
+        ]
+      },
+      {
+        "id": "vertical_slice_build",
+        "name": "기능 슬라이스 구현",
+        "objective": "독립 배포 가능한 작은 기능 단위로 구현을 진행한다.",
+        "exit_criteria": [
+          "각 모듈이 최소 1개의 구현 작업을 가진다.",
+          "기능 슬라이스가 파일/산출물 기준으로 분리된다."
+        ]
+      },
+      {
+        "id": "integration_handoff",
+        "name": "통합과 핸드오프",
+        "objective": "역할 간 의존성을 정리하고 결과를 다음 작업자가 이어받을 수 있게 만든다.",
+        "exit_criteria": [
+          "의존 작업이 정리되고 handoff 기준이 명시된다.",
+          "검증 전에 필요한 연결 작업이 완료된다."
+        ]
+      },
+      {
+        "id": "verification_closeout",
+        "name": "검증과 마감",
+        "objective": "기능 동작, 회귀 리스크, 남은 이슈를 명시적으로 검증한다.",
+        "exit_criteria": [
+          "검증 작업이 존재한다.",
+          "잔여 리스크와 후속 작업이 기록된다."
+        ]
+      }
+    ],
+    "roles": [
+      {
+        "id": "backend_dev",
+        "name": "Backend Dev",
+        "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+        "required_skills": [
+          "http_api_integration",
+          "sqlite_data_persistence",
+          "data_visualization_terminal",
+          "json_data_processing"
+        ],
+        "owned_modules": [
+          "backend_dev_module_1",
+          "backend_dev_module_2",
+          "backend_dev_module_3",
+          "backend_dev_module_4",
+          "backend_dev_module_5",
+          "backend_dev_module_6"
+        ]
+      },
+      {
+        "id": "qa_engineer",
+        "name": "QA Engineer",
+        "objective": "핵심 플로우와 회귀 시나리오를 검증한다.",
+        "required_skills": [
+          "integration_test_guard"
+        ],
+        "owned_modules": [
+          "qa_engineer_module_7"
+        ]
+      }
+    ],
+    "modules": [
+      {
+        "id": "backend_dev_module_1",
+        "name": "동행복권 API 데이터 수집 모듈",
+        "summary": "동행복권 API 데이터 수집 모듈을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "동행복권 API 데이터 수집 모듈"
+        ],
+        "feature_slices": [
+          "동행복권 API 데이터 수집 모듈을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_1_scope_1",
+            "title": "Backend Dev: 동행복권 API 데이터 수집 모듈 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: 동행복권 API 데이터 수집 모듈 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "동행복권 API 데이터 수집 모듈 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_1_build_2",
+            "title": "Backend Dev: 동행복권 API 데이터 수집 모듈 기능을 구현한다.",
+            "instruction": "Backend Dev: 동행복권 API 데이터 수집 모듈을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_1_scope_1"
+            ],
+            "acceptance": [
+              "동행복권 API 데이터 수집 모듈의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_1_verify_3",
+            "title": "Backend Dev: 동행복권 API 데이터 수집 모듈 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: 동행복권 API 데이터 수집 모듈 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_1_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_2",
+        "name": "SQLite 기반 당첨번호 캐시 저장소",
+        "summary": "SQLite 기반 당첨번호 캐시 저장소을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "SQLite 기반 당첨번호 캐시 저장소"
+        ],
+        "feature_slices": [
+          "SQLite 기반 당첨번호 캐시 저장소을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_2_scope_1",
+            "title": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "SQLite 기반 당첨번호 캐시 저장소 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_2_build_2",
+            "title": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 기능을 구현한다.",
+            "instruction": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_2_scope_1"
+            ],
+            "acceptance": [
+              "SQLite 기반 당첨번호 캐시 저장소의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_2_verify_3",
+            "title": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_2_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_3",
+        "name": "번호별 출현빈도·동시출현·구간 통계 분석 엔진",
+        "summary": "번호별 출현빈도·동시출현·구간 통계 분석 엔진을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "번호별 출현빈도·동시출현·구간 통계 분석 엔진"
+        ],
+        "feature_slices": [
+          "번호별 출현빈도·동시출현·구간 통계 분석 엔진을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_3_scope_1",
+            "title": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "번호별 출현빈도·동시출현·구간 통계 분석 엔진 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_3_build_2",
+            "title": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 기능을 구현한다.",
+            "instruction": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_3_scope_1"
+            ],
+            "acceptance": [
+              "번호별 출현빈도·동시출현·구간 통계 분석 엔진의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_3_verify_3",
+            "title": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_3_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_4",
+        "name": "가중 랜덤 기반 5조합 추천 생성기",
+        "summary": "가중 랜덤 기반 5조합 추천 생성기을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "가중 랜덤 기반 5조합 추천 생성기"
+        ],
+        "feature_slices": [
+          "가중 랜덤 기반 5조합 추천 생성기을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_4_scope_1",
+            "title": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "가중 랜덤 기반 5조합 추천 생성기 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_4_build_2",
+            "title": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기 기능을 구현한다.",
+            "instruction": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_4_scope_1"
+            ],
+            "acceptance": [
+              "가중 랜덤 기반 5조합 추천 생성기의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_4_verify_3",
+            "title": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: 가중 랜덤 기반 5조합 추천 생성기 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_4_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_5",
+        "name": "터미널 통계 요약 출력 포맷터",
+        "summary": "터미널 통계 요약 출력 포맷터을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "터미널 통계 요약 출력 포맷터"
+        ],
+        "feature_slices": [
+          "터미널 통계 요약 출력 포맷터을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_5_scope_1",
+            "title": "Backend Dev: 터미널 통계 요약 출력 포맷터 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: 터미널 통계 요약 출력 포맷터 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "터미널 통계 요약 출력 포맷터 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_5_build_2",
+            "title": "Backend Dev: 터미널 통계 요약 출력 포맷터 기능을 구현한다.",
+            "instruction": "Backend Dev: 터미널 통계 요약 출력 포맷터을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_5_scope_1"
+            ],
+            "acceptance": [
+              "터미널 통계 요약 출력 포맷터의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_5_verify_3",
+            "title": "Backend Dev: 터미널 통계 요약 출력 포맷터 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: 터미널 통계 요약 출력 포맷터 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_5_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_6",
+        "name": "CLI 엔트리포인트",
+        "summary": "CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)을(를) 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)"
+        ],
+        "feature_slices": [
+          "CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_6_scope_1",
+            "title": "Backend Dev: CLI 엔트리포인트 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: CLI 엔트리포인트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "CLI 엔트리포인트 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_6_build_2",
+            "title": "Backend Dev: CLI 엔트리포인트 기능을 구현한다.",
+            "instruction": "Backend Dev: CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_6_scope_1"
+            ],
+            "acceptance": [
+              "CLI 엔트리포인트의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "backend_dev_module_6_verify_3",
+            "title": "Backend Dev: CLI 엔트리포인트 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: CLI 엔트리포인트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_6_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "qa_engineer_module_7",
+        "name": "QA Engineer 검증",
+        "summary": "핵심 플로우와 회귀 시나리오를 검증한다.",
+        "owner_role": "qa_engineer",
+        "depends_on": [],
+        "deliverables": [
+          "동행복권 API 데이터 수집 모듈"
+        ],
+        "feature_slices": [
+          "핵심 플로우와 회귀 시나리오를 검증한다."
+        ],
+        "tasks": [
+          {
+            "id": "qa_engineer_module_7_scope_1",
+            "title": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의한다.",
+            "instruction": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "qa_engineer",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "QA Engineer 검증 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "qa_engineer_module_7_build_2",
+            "title": "QA Engineer: QA Engineer 검증 기능을 구현한다.",
+            "instruction": "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "qa_engineer",
+            "phase": "build",
+            "depends_on": [
+              "qa_engineer_module_7_scope_1"
+            ],
+            "acceptance": [
+              "QA Engineer 검증의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          },
+          {
+            "id": "qa_engineer_module_7_verify_3",
+            "title": "QA Engineer: QA Engineer 검증 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "QA Engineer: QA Engineer 검증 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "qa_engineer",
+            "phase": "verify",
+            "depends_on": [
+              "qa_engineer_module_7_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending"
+          }
+        ]
+      }
+    ],
+    "todo_items": [
+      "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
+    ],
+    "plan_summary": {
+      "goal": "동행복권 API에서 최근 500회차 로또 당첨번호를 수집·통계 분석하여 가중 랜덤 기반 1등 후보 5조합을 추천하는 macOS CLI 도구를 개발한다.",
+      "role_count": 2,
+      "module_count": 7,
+      "task_count": 21
+    },
+    "generated_at": "2026-04-16T20:43:37",
+    "pd_agent": {
+      "id": "pd_director",
+      "name": "Lilith Bootstrap"
+    }
+  }
+}

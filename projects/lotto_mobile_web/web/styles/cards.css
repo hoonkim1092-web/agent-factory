@@ -1,0 +1,230 @@
+/* cards.css — 조합 카드 시각화 전용 스타일
+ * 문서 언어: ko-KR / 모듈: frontend_dev_module_3
+ * - base.css 토큰 재사용(--color-*, --space-*, --radius-*, --touch-target-min)
+ * - 번호 공 색상: 한국 로또 표준 팔레트(1–10 노랑, 11–20 파랑, 21–30 빨강, 31–40 회색, 41–45 초록)
+ * - 대비(AA ≥ 4.5:1)를 확보하려 텍스트는 흰색/네이비로 명시
+ */
+
+:root {
+  /* 번호 공 팔레트(라이트) */
+  --ball-b1-bg: #f5c518; /* 1–10 노랑 */
+  --ball-b1-fg: #1f1b06;
+  --ball-b2-bg: #1e88e5; /* 11–20 파랑 */
+  --ball-b2-fg: #ffffff;
+  --ball-b3-bg: #e53935; /* 21–30 빨강 */
+  --ball-b3-fg: #ffffff;
+  --ball-b4-bg: #616161; /* 31–40 회색 */
+  --ball-b4-fg: #ffffff;
+  --ball-b5-bg: #2e7d32; /* 41–45 초록 */
+  --ball-b5-fg: #ffffff;
+  --ball-unknown-bg: var(--color-surface-alt);
+  --ball-unknown-fg: var(--color-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 다크 훅: 상위 모듈에서 html[data-theme="dark"]로 옵트인 가능 */
+    --ball-b1-bg-dark: #d4a50f;
+    --ball-b2-bg-dark: #1565c0;
+    --ball-b3-bg-dark: #c62828;
+    --ball-b4-bg-dark: #424242;
+    --ball-b5-bg-dark: #1b5e20;
+  }
+}
+
+/* 카드 리스트 컨테이너 */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card-list__item {
+  display: block;
+}
+
+/* 카드 버튼(접힘/펼침 토글) */
+.combo-card {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.combo-card:hover {
+  border-color: var(--color-primary);
+}
+
+.combo-card:active {
+  transform: scale(0.995);
+}
+
+.combo-card[aria-expanded="true"] {
+  border-color: var(--color-primary);
+}
+
+/* 요약 영역 — 번호 공 + 점수 텍스트 */
+.combo-card__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-target-min);
+}
+
+.combo-card__balls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combo-card__ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background-color: var(--ball-unknown-bg);
+  color: var(--ball-unknown-fg);
+  line-height: 1;
+}
+
+.combo-card__ball--b1 {
+  background-color: var(--ball-b1-bg);
+  color: var(--ball-b1-fg);
+}
+
+.combo-card__ball--b2 {
+  background-color: var(--ball-b2-bg);
+  color: var(--ball-b2-fg);
+}
+
+.combo-card__ball--b3 {
+  background-color: var(--ball-b3-bg);
+  color: var(--ball-b3-fg);
+}
+
+.combo-card__ball--b4 {
+  background-color: var(--ball-b4-bg);
+  color: var(--ball-b4-fg);
+}
+
+.combo-card__ball--b5 {
+  background-color: var(--ball-b5-bg);
+  color: var(--ball-b5-fg);
+}
+
+.combo-card__score-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 상세 영역 — 게이지/배지/히스토그램 */
+.combo-card__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.combo-card__detail[hidden] {
+  display: none;
+}
+
+/* 점수 게이지 */
+.combo-card__score-gauge {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background-color: var(--color-surface-alt);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.combo-card__score-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--color-primary) 0%,
+    var(--color-success) 100%
+  );
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+/* 홀짝 배지 */
+.combo-card__ratio {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background-color: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 구간 분포 히스토그램 */
+.combo-card__sections {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+  align-items: end;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 48px;
+}
+
+.combo-card__section {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: calc(8px + 40px * var(--h, 0));
+  min-height: 8px;
+  padding-block: var(--space-1);
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  opacity: calc(0.35 + 0.65 * var(--h, 0));
+  font-variant-numeric: tabular-nums;
+}
+
+/* 환경 모션 감소 대응 — 전이/애니메이션 제거 */
+@media (prefers-reduced-motion: reduce) {
+  .combo-card,
+  .combo-card__score-fill {
+    transition: none;
+  }
+
+  .combo-card:active {
+    transform: none;
+  }
+}

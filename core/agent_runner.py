@@ -36,7 +36,12 @@ from core.utils import _safe_write_json
 from core.registry import ToolRegistry
 from core.tool_runtime import ToolRuntimeWrapper
 from core.policy_runtime import PolicyRuntime
-from core.documentation_policy import inject_documentation_contract, inject_thinking_contract
+from core.documentation_policy import (
+    inject_code_review_contract,
+    inject_cross_validation_contract,
+    inject_documentation_contract,
+    inject_thinking_contract,
+)
 from core.implementation_language_policy import inject_implementation_language_contract
 from core.destructive_guard import inject_destructive_guard_contract
 from core.project_mailbox import (
@@ -115,6 +120,7 @@ class AgentRunner:
         self._knowledge_skills = []
         self._skill_loader_cache: Dict[str, "AdaptiveSkillLoader"] = {}  # per-model loader cache
         self._current_model_name: str = "default"  # current model name
+        self._sse_hook: "Any | None" = None  # H4: lazy singleton hook — 생성 전/실패 시 None
 
     def _resolve_system_prompt(self, agent: dict) -> str:
         direct = str(agent.get("system_ko", "")).strip()
@@ -138,9 +144,12 @@ class AgentRunner:
         return []
 
     def _build_runtime_system_prompt(self, agent: dict) -> str:
+        role = str(agent.get("role") or agent.get("name") or "")
         prompt = inject_documentation_contract(self._resolve_system_prompt(agent))
         prompt = inject_implementation_language_contract(prompt)
         prompt = inject_destructive_guard_contract(prompt)
+        prompt = inject_code_review_contract(prompt, role=role)
+        prompt = inject_cross_validation_contract(prompt, role=role)
         return inject_thinking_contract(prompt)
 
     def _build_policy(self, agent: dict, loaded_skill_ids: list[str]) -> dict:
@@ -903,10 +912,17 @@ class AgentRunner:
                     _run_async_safe(_mem_facade.shutdown())
                 except Exception:
                     pass
-            # 글로벌 토큰 예산 기록
+            # 글로벌 토큰 예산 기록 — result dict에 "text" 키가 없으므로
+            # transcript의 assistant 엔트리에서 출력 텍스트를 합산한다.
+            # join 방식으로 엔트리 간 공백(n-1개)이 미세하게 오버카운트되지만
+            # 4-char≈1-token 휴리스틱 범위 내 허용 오차다.
             try:
                 from core.run_budget import get_run_budget
-                _text = str(result.get("text", "") or "")
+                _text = " ".join(
+                    str(e.get("payload", {}).get("text", ""))
+                    for e in transcript
+                    if e.get("kind") == "assistant"
+                ).strip()
                 if _text:
                     get_run_budget().record(_text)
             except Exception:
@@ -961,8 +977,11 @@ class AgentRunner:
         try:
             from core.hooks.skill_self_evolution import SkillSelfEvolutionHook
             from core.skill_evolution_bus import SkillEvolutionBus
-            _sse_hook = SkillSelfEvolutionHook(check_interval=10)
-            bus.register(_sse_hook)
+            if getattr(self, "_sse_hook", None) is None:
+                self._sse_hook = SkillSelfEvolutionHook(check_interval=10, run_id=run_id)
+            else:
+                self._sse_hook.update_run_id(run_id)   # 재진입 시 run_id 갱신 (thread-safe)
+            bus.register(self._sse_hook)
             _evo_bus = SkillEvolutionBus.get_instance()
             _evo_bus.bind_runner(self)
             _evo_bus.bind_event_bus(bus)
@@ -982,14 +1001,21 @@ class AgentRunner:
             _safe_print(f"[Runner] DesignReviewHook registration failed: {_dr_err}")
 
         try:
+            from core.hooks.checkpoint import CheckpointHook
+            bus.register(CheckpointHook())
+        except Exception as _cp_err:
+            _safe_print(f"[Runner] CheckpointHook registration failed: {_cp_err}")
+
+        try:
             from core.memory_system.knowledge_injection import KnowledgeInjectionHook
-            from core.hooks.memory_consolidation import MemoryConsolidationHook
+            from core.hooks.memory_consolidation import MemoryConsolidationHook, register_active_hook
             from core.memory_system.facade import UnifiedMemoryFacade
             from core.memory_system.adapters.knowledge_graph import KnowledgeGraphAdapter
             from core.memory_system.adapters.core_memory import CoreMemoryAdapter
 
             _mem_ki_hook = KnowledgeInjectionHook()
             _mem_mc_hook = MemoryConsolidationHook()
+            register_active_hook(_mem_mc_hook)  # Stage 1: _notify_consolidation 글로벌 경로 연결
 
             _agent_name = str(agent.get("name", ""))
             _pid = str(project_id or "agent_factory")

@@ -1,0 +1,54 @@
+# Domain overlay: poker (Texas Hold'em)
+# 기존 config/coverage_manifests/poker.yaml을 QualityContract overlay 형식으로 재정의.
+# base/artifact/capability pack이 이미 범용 항목을 커버하므로
+# 여기서는 포커 도메인 고유 항목만 정의한다.
+
+items:
+  - id: hand_ranking
+    title: Hand ranking (poker)
+    required: true
+    priority: high
+    acceptance: Evidence describes the complete poker hand ranking from Royal Flush to High Card including kicker rules.
+    match_keywords: [hand ranking, 족보, royal flush, straight flush, full house, flush, kicker]
+
+  - id: blind_structure
+    title: Blind structure
+    required: true
+    priority: high
+    acceptance: Evidence covers small blind, big blind, button rotation, and blind increase schedule for tournament mode.
+    match_keywords: [blind, small blind, big blind, button, blinds increase, 블라인드]
+
+  - id: betting_rules
+    title: Betting rules (No-Limit Hold'em)
+    required: true
+    priority: high
+    acceptance: Evidence specifies No-Limit betting rules across preflop, flop, turn, river.
+    match_keywords: [no-limit, betting round, preflop, flop, turn, river, raise, call, fold, check]
+
+  - id: side_pot
+    title: Side pot calculation
+    required: true
+    priority: high
+    acceptance: Evidence explains how side pots are created and distributed when a player goes all-in.
+    match_keywords: [side pot, 사이드팟, main pot, all-in, 올인]
+
+  - id: showdown_rules
+    title: Showdown and split pot
+    required: true
+    priority: high
+    acceptance: Evidence covers showdown procedure, tie-breaking rules, and split pot handling.
+    match_keywords: [showdown, 쇼다운, tie, split pot, best five, 베스트 5]
+
+  - id: card_randomness
+    title: Card shuffle fairness
+    required: true
+    priority: high
+    acceptance: Evidence describes the shuffling algorithm and confirms cryptographic or sufficiently random card distribution.
+    match_keywords: [shuffle, randomness, random, 셔플, cryptographic, PRNG, deck]
+
+  - id: client_hidden_state
+    title: Client hidden state (hole cards)
+    required: true
+    priority: high
+    acceptance: Evidence explains that hole cards of other players are not sent to clients.
+    match_keywords: [hidden state, private state, hole cards, 홀카드, information asymmetry, 정보 비대칭]

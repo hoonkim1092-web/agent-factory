@@ -25,7 +25,7 @@
 ### 2026-03-10 17:46:45
 - 요약: `code_review_report.md`를 현재 브랜치 기준으로 재검증한 문서를 추가했고, 실제 런타임 구조와 항목별 판정, 단계별 수정 순서를 정리했다.
 - 이유: 기존 리뷰 리포트는 방향성은 유효하지만 현재 코드 상태를 완전히 반영하진 않아, 실제 실행용 계획을 현재 코드와 테스트 기준으로 다시 맞출 필요가 있었다.
-- 영향 파일: `docs/plans/2026-03-10-code-review-report-validation.md`, `docs/change_history.md`
+- 영향 파일: `docs/archive/plans/2026-03-10-code-review-report-validation.md`, `docs/change_history.md`
 - 후속 작업: 새 검증 문서의 우선순위를 기준으로 작업하고, `code_review_report.md`를 그대로 패치 체크리스트처럼 적용하지 않는다. 오케스트레이터 resume 회귀도 활성 수정 큐에 포함한다.
 
 ### 2026-03-10 17:30:00

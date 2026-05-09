@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
 from dataclasses import dataclass
 
@@ -29,6 +30,12 @@ from model_utils import (
 _REQUIREMENT_SYSTEM_PROMPT = (
     "You are the internal requirement-stage analyzer. "
     "Return JSON only. Do not inspect files, call tools, or modify the workspace."
+)
+
+_DOCUMENT_SYSTEM_PROMPT = (
+    "You are a technical document generator. "
+    "Return well-structured markdown only. Do not return JSON. "
+    "Do not inspect files, call tools, or modify the workspace."
 )
 
 
@@ -64,7 +71,11 @@ def _extract_openai_text(response) -> str:
     return "\n".join(parts).strip()
 
 
-def _call_google_api(model: str, prompt: str) -> str:
+def _make_usage(prompt_t: int, completion_t: int) -> dict:
+    return {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
+
+
+def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("google") or get_configured_engine_api_key("google")
     if not api_key:
         raise RuntimeError("missing_google_api_key")
@@ -72,10 +83,19 @@ def _call_google_api(model: str, prompt: str) -> str:
 
     client = genai.Client(api_key=api_key)
     response = generate_content_with_self_heal(client, normalize_model_name(model), prompt)
-    return str(getattr(response, "text", "") or "").strip()
+    text = str(getattr(response, "text", "") or "").strip()
+    if not return_usage:
+        return text
+    meta = getattr(response, "usage_metadata", None)
+    usage: dict = {}
+    if meta:
+        prompt_t = getattr(meta, "prompt_token_count", 0) or 0
+        completion_t = getattr(meta, "candidates_token_count", 0) or 0
+        usage = _make_usage(prompt_t, completion_t)
+    return text, usage
 
 
-def _call_openai_api(model: str, prompt: str) -> str:
+def _call_openai_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("openai") or get_configured_engine_api_key("openai")
     if not api_key:
         raise RuntimeError("missing_openai_api_key")
@@ -83,10 +103,19 @@ def _call_openai_api(model: str, prompt: str) -> str:
         raise RuntimeError("openai_package_unavailable")
     client = OpenAI(api_key=api_key)
     response = client.responses.create(model=model, input=prompt)
-    return _extract_openai_text(response)
+    text = _extract_openai_text(response)
+    if not return_usage:
+        return text
+    raw = getattr(response, "usage", None)
+    usage: dict = {}
+    if raw:
+        prompt_t = getattr(raw, "input_tokens", 0) or 0
+        completion_t = getattr(raw, "output_tokens", 0) or 0
+        usage = _make_usage(prompt_t, completion_t)
+    return text, usage
 
 
-def _call_anthropic_api(model: str, prompt: str) -> str:
+def _call_anthropic_api(model: str, prompt: str, *, return_usage: bool = False):
     api_key = get_engine_api_key("anthropic") or get_configured_engine_api_key("anthropic")
     if not api_key:
         raise RuntimeError("missing_anthropic_api_key")
@@ -115,7 +144,14 @@ def _call_anthropic_api(model: str, prompt: str) -> str:
             value = str(item.get("text", "") or "").strip()
             if value:
                 parts.append(value)
-    return "\n".join(parts).strip()
+    text = "\n".join(parts).strip()
+    if not return_usage:
+        return text
+    raw = data.get("usage") or {}
+    prompt_t = raw.get("input_tokens", 0) or 0
+    completion_t = raw.get("output_tokens", 0) or 0
+    usage = _make_usage(prompt_t, completion_t)
+    return text, usage
 
 
 def _cli_model_for_provider(provider_id: str, cli_providers: list[str]) -> str:
@@ -164,6 +200,74 @@ def pick_requirement_candidate() -> RequirementCandidate | None:
     return candidates[0] if candidates else None
 
 
+def execute_document_prompt(
+    prompt: str,
+    *,
+    workspace: str | None = None,
+    run_id: str = "",
+    timeout_sec: int = 120,
+) -> dict:
+    """Markdown 문서 생성 전용. execute_requirement_prompt()와 동일한 provider 순회,
+    단 시스템 프롬프트만 다름 — JSON 계약과 분리."""
+    target_workspace = _workspace_path(workspace)
+    errors: list[str] = []
+
+    for candidate in list_requirement_candidates():
+        t_start = time.monotonic()
+        try:
+            if candidate.transport == "cli":
+                result = execute_cli_chat(
+                    CliChatRequest(
+                        provider_id=candidate.provider_id,
+                        model=candidate.model,
+                        system_prompt=_DOCUMENT_SYSTEM_PROMPT,
+                        task_input=prompt,
+                        workspace=target_workspace,
+                        run_id=run_id,
+                        timeout_sec=timeout_sec,
+                    )
+                )
+                text = str(result.get("text") or result.get("stdout") or "").strip()
+                usage: dict = result.get("usage") or {}
+                if not result.get("ok"):
+                    raise RuntimeError(str(result.get("reason") or "cli_document_failed"))
+            else:
+                effective_prompt = f"{_DOCUMENT_SYSTEM_PROMPT}\n\n{str(prompt or '').strip()}".strip()
+                if candidate.provider_id == "anthropic_api":
+                    text, usage = _call_anthropic_api(candidate.model, effective_prompt, return_usage=True)
+                elif candidate.provider_id == "openai_api":
+                    text, usage = _call_openai_api(candidate.model, effective_prompt, return_usage=True)
+                else:
+                    text, usage = _call_google_api(candidate.model, effective_prompt, return_usage=True)
+        except Exception as exc:
+            errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
+            continue
+
+        elapsed = time.monotonic() - t_start
+
+        if text:
+            return {
+                "ok": True,
+                "provider_id": candidate.provider_id,
+                "model": candidate.model,
+                "text": text,
+                "elapsed_sec": elapsed,
+                "usage_tokens": usage,
+                "errors": errors,
+            }
+        errors.append(f"{candidate.provider_id}:{candidate.model}:empty_response")
+
+    return {
+        "ok": False,
+        "provider_id": "",
+        "model": "",
+        "text": "",
+        "elapsed_sec": 0.0,
+        "usage_tokens": {},
+        "errors": errors,
+    }
+
+
 def execute_requirement_prompt(
     prompt: str,
     *,
@@ -171,7 +275,6 @@ def execute_requirement_prompt(
     run_id: str = "",
     timeout_sec: int = 120,
 ) -> dict:
-    effective_prompt = _effective_requirement_prompt(prompt)
     target_workspace = _workspace_path(workspace)
     errors: list[str] = []
 
@@ -192,12 +295,14 @@ def execute_requirement_prompt(
                 text = str(result.get("text") or result.get("stdout") or "").strip()
                 if not result.get("ok"):
                     raise RuntimeError(str(result.get("reason") or "cli_requirement_failed"))
-            elif candidate.provider_id == "anthropic_api":
-                text = _call_anthropic_api(candidate.model, effective_prompt)
-            elif candidate.provider_id == "openai_api":
-                text = _call_openai_api(candidate.model, effective_prompt)
             else:
-                text = _call_google_api(candidate.model, effective_prompt)
+                effective_prompt = _effective_requirement_prompt(prompt)
+                if candidate.provider_id == "anthropic_api":
+                    text = _call_anthropic_api(candidate.model, effective_prompt)
+                elif candidate.provider_id == "openai_api":
+                    text = _call_openai_api(candidate.model, effective_prompt)
+                else:
+                    text = _call_google_api(candidate.model, effective_prompt)
         except Exception as exc:
             errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
             continue

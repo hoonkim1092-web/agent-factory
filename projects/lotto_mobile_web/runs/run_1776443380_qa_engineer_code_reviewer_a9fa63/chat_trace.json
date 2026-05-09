@@ -1,0 +1,40 @@
+{
+  "run_id": "run_1776443380_qa_engineer_code_reviewer_a9fa63",
+  "project_id": "lotto_mobile_web",
+  "agent_name": "agent_qa_engineer_code_reviewer",
+  "agent_role": "qa_engineer_code_reviewer",
+  "task": "[Code Review] qa_engineer_module_6 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+  "task_id": "qa_engineer_module_6_code_review",
+  "transcript": [
+    {
+      "ts": "2026-04-18T01:30:46",
+      "kind": "assistant",
+      "payload": {
+        "channel": "codex_cli",
+        "text": "{\"verdict\":\"BLOCK\",\"issues\":[{\"severity\":\"high\",\"file\":\"tests/api/conftest.py:23\",\"title\":\"기본 앱 탐색 경로가 설계 계약과 불일치하여 스위트가 전부 skip될 수 있음\",\"detail\":\"기본 후보 경로가 `app.main`, `main`, `src.main`, `backend.main`, `backend.app`뿐입니다. 그런데 현재 문서화된 백엔드 구조는 `server/` 하위 FastAPI 앱입니다. 이 상태에서는 백엔드가 정상 구현돼도 `QA_API_APP_TARGET`를 따로 주지 않으면 `_resolve_app_target()`가 `pytest.skip()`로 빠져 전체 스위트가 무력화됩니다. 실제 실행 결과도 `10 skipped`였습니다. 계약 회귀를 잡아야 하는 QA 스위트가 환경 변수 누락만으로 녹색 처리되는 것은 릴리스 차단 사안입니다.\"},{\"severity\":\"high\",\"file\":\"tests/api/conftest.py:37\",\"title\":\"핵심 의존성 미연결을 실패가 아닌 skip으로 처리해 CI에서 거짓 양성을 만든다\",\"detail\":\"앱 import 실패 시 예외를 내지 않고 `pytest.skip()`를 호출합니다. 그 결과 테스트 코드나 설정이 잘못돼도 빌드는 실패하지 않습니다. QA 목적의 계약 테스트라면 최소한 명시적 opt-in 마커나 `pytest.fail()`로 전환해 설정 오류를 빨리 드러내야 합니다. 현재 동작은 품질 게이트 역할을 하지 못합니다.\"},{\"severity\":\"medium\",\"file\":\"tests/api/conftest.py:131\",\"title\":\"`dependency_overrides`를 원복하지 않아 테스트 간 상태 오염 위험이 있다\",\"detail\":\"`app.dependency_overrides[dependency] = lambda: predictor_stub`를 설정한 뒤 정리하지 않습니다. FastAPI 앱이 모듈 전역 싱글턴이면 이전 테스트의 override가 다음 테스트나 다른 스위트에 남아 비결정적 결과를 만들 수 있습니다. `yield` fixture로 override 등록 후 `app.dependency_overrides.clear()` 또는 대상 키 삭제가 필요합니다.\"},{\"severity\":\"medium\",\"file\":\"tests/api/test_recommend_endpoint.py:4\",\"title\":\"응답 계약 검증이 너무 느슨해 잘못된 추천 데이터가 통과할 수 있다\",\"detail\":\"`numbers`가 6개 정수 리스트인지까지만 확인하고, 로또 도메인에서 중요한 `1..45` 범위, 중복 없음, 정렬 여부 같은 핵심 불변식을 검증하지 않습니다. 이 테스트는 API 계약 회귀용인데도 잘못된 조합 생성 버그를 놓칠 가능성이 큽니다. 최소한 도메인 경계값과 중복 금지는 포함해야 합니다.\"},{\"severity\":\"medium\",\"file\":\"tests/api/conftest.py:69\",\"title\":\"예측기 대체 지점이 환경 변수에 과도하게 의존해 단위 테스트 격리가 보장되지 않는다\",\"detail\":\"`QA_API_PREDICTOR_TARGET`이나 `QA_API_PREDICTOR_DEPENDENCY`가 없으면 stub가 실제 요청 경로에 연결되지 않을 수 있습니다. 이 경우 테스트는 실구현, 실캐시, 외부 I/O에 우연히 의존하게 되어 단위 테스트의 격리성과 재현성이 깨집니다. 기본 주입 경로를 코드 계약으로 고정하거나, 미설정 시 실패시키는 편이 안전합니다.\"}],\"summary\":\"현재 산출물은 테스트 코드 자체는 간단하지만, 가장 큰 문제는 스위트가 기본 설정에서 전부 `skip`되어 품질 게이트 역할을 못 한다는 점입니다. 그 상태에서 상태 오염 가능성과 느슨한 계약 검증까지 겹쳐 있어 판정은 `BLOCK`입니다.\"}",
+        "model": "",
+        "command": [
+          "/Users/hoon/.npm-global/bin/codex",
+          "--ask-for-approval",
+          "never",
+          "--sandbox",
+          "workspace-write",
+          "exec",
+          "--skip-git-repo-check",
+          "--add-dir",
+          "/Users/hoon/workTree/agent-factory",
+          "-c",
+          "model_reasoning_effort=\"low\"",
+          "-"
+        ]
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "reason": "codex_cli",
+    "latency_ms": 64064,
+    "approval_rejects": 0
+  },
+  "updated_at": "2026-04-18T01:30:47"
+}

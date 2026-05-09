@@ -211,8 +211,22 @@ class UnifiedMemoryFacade:
         # Deduplicate by content_hash
         deduped = _deduplicate(active)
 
-        # Rank by relevance score (Phase 14)
-        scored = decay_mgr.rank_by_relevance(deduped)
+        # T2-5: Build semantic_scores — prefer vector similarity (_vector_score from
+        # CortexVectorAdapter), fall back to keyword overlap for records without it.
+        try:
+            from core.memory_system.episode_matcher import keyword_similarity as _ksim
+            semantic_scores = {}
+            for r in deduped:
+                vec_score = r.metadata.get("_vector_score")
+                if vec_score is not None:
+                    semantic_scores[r.record_id] = float(vec_score)
+                else:
+                    semantic_scores[r.record_id] = _ksim(query, r.content)
+        except Exception:
+            semantic_scores = {}
+
+        # Rank by relevance score (Phase 14) — NEW-H2 fix: pass semantic_scores
+        scored = decay_mgr.rank_by_relevance(deduped, semantic_scores=semantic_scores)
 
         # Return top-N by relevance score
         return [rec for rec, _ in scored[:limit]]
@@ -241,15 +255,19 @@ class UnifiedMemoryFacade:
         query: str,
         *,
         limit: int = 10,
+        memory_type: MemoryType | None = None,
+        scope: MemoryScope | None = None,
     ) -> list[MemoryRecord]:
         """Search across all backends WITHOUT project_id filter (cross-project recall)."""
         self._ensure_initialised()
         timeout = get_config().timeouts.search_timeout
 
+        # Fetch extra per adapter so post-filter (memory_type/scope) doesn't drop below limit.
+        fetch_limit = limit * 3
         # Parallel search across all adapters, no project_id filter
         tasks = [
             asyncio.wait_for(
-                adapter.search(query, limit=limit, project_id=None),
+                adapter.search(query, limit=fetch_limit, project_id=None),
                 timeout=timeout,
             )
             for adapter in self._adapters.values()
@@ -260,14 +278,37 @@ class UnifiedMemoryFacade:
         for i, res in enumerate(results):
             if isinstance(res, BaseException):
                 adapter_name = list(self._adapters.values())[i].backend_name
-                logger.error("search_all on '%s' failed: %s", adapter_name, res)
+                if isinstance(res, asyncio.TimeoutError):
+                    logger.error("search_all on '%s' timed out", adapter_name)
+                else:
+                    logger.error("search_all on '%s' failed: %s", adapter_name, res)
             else:
                 all_records.extend(res)  # type: ignore[union-attr]
 
-        # Rank by relevance and deduplicate
-        deduped = _deduplicate(all_records)
+        # Filter by type/scope (mirrors search_semantic behaviour)
+        if memory_type:
+            all_records = [r for r in all_records if r.memory_type == memory_type]
+        if scope:
+            all_records = [r for r in all_records if r.scope == scope]
+
+        # Evict expired records + rank by relevance
         decay_mgr = MemoryDecayManager()
-        scored = decay_mgr.rank_by_relevance(deduped)
+        active, expired = decay_mgr.collect_expired(all_records)
+        if expired:
+            logger.debug("search_all_backends: filtered %d expired records", len(expired))
+        deduped = _deduplicate(active)
+        try:
+            from core.memory_system.episode_matcher import keyword_similarity as _ksim
+            semantic_scores = {}
+            for r in deduped:
+                vec_score = r.metadata.get("_vector_score")
+                if vec_score is not None:
+                    semantic_scores[r.record_id] = float(vec_score)
+                else:
+                    semantic_scores[r.record_id] = _ksim(query, r.content)
+        except Exception:
+            semantic_scores = {}
+        scored = decay_mgr.rank_by_relevance(deduped, semantic_scores=semantic_scores)
         return [rec for rec, _ in scored[:limit]]
 
     # ── Episode recording ──────────────────────────────────────────────
@@ -317,12 +358,23 @@ class UnifiedMemoryFacade:
 # ── Module-level helpers ───────────────────────────────────────────────
 
 def _deduplicate(records: list[MemoryRecord]) -> list[MemoryRecord]:
-    """Remove duplicates by content_hash, keeping the one with the most accesses."""
+    """Remove duplicates by content_hash, keeping the one with the most accesses.
+
+    Tiebreaker: prefer the record that carries _vector_score (from CortexVectorAdapter)
+    so that vector-similarity ranking is not silently discarded by dedup.
+    """
     seen: dict[str, MemoryRecord] = {}
     for r in records:
         key = r.content_hash if r.content_hash else r.record_id
         if key in seen:
-            if r.access_count > seen[key].access_count:
+            existing = seen[key]
+            has_vec = "_vector_score" in r.metadata
+            existing_has_vec = "_vector_score" in existing.metadata
+            prefer = (
+                r.access_count > existing.access_count
+                or (r.access_count == existing.access_count and has_vec and not existing_has_vec)
+            )
+            if prefer:
                 seen[key] = r
         else:
             seen[key] = r

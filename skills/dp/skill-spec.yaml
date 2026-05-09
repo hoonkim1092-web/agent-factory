@@ -1,0 +1,72 @@
+capabilities:
+- dp
+capability_intent:
+  capabilities:
+  - description: ''
+    id: dp
+    required: true
+    source: skill_name
+  constraints: []
+  evidence:
+    external_attempts: 0
+    reuse_confidence: 0.0
+    top_candidate: ''
+    verified: false
+  generated_at: '2026-05-07T17:26:48'
+  goal: g
+  risk_level: normal
+  role: DA
+  skill_id: dp
+compatibility:
+  providers:
+  - claude_cli
+  - gemini_cli
+  - codex_cli
+  roles:
+  - da
+constraints: []
+description: Next-generation generated skill for g
+distribution:
+  maturity: draft
+  source: builder
+  visibility: project
+entrypoints:
+- skill.py
+failure_modes:
+- Self-test passes but runtime usage fails on realistic project inputs.
+- Forbidden imports or destructive side effects bypass the declared policy.
+- The implementation writes outside the allowed workspace or artifact directory.
+goal: g
+id: dp
+inputs:
+- task context
+- ctx data
+- workspace files when needed
+invocation:
+  auto: true
+  context_mode: inline
+  planner_invocable: true
+  user_invocable: true
+kind: action
+name: Dp
+observability:
+  collect_runtime_feedback: true
+  emit_usage_event: true
+outputs:
+- result dict
+- artifacts under ctx['artifacts_dir'] when needed
+policy:
+  allowed_tools:
+  - read_file
+  approval_required_tools: []
+  destructive: false
+provenance:
+  generated_at: '2026-05-07T17:26:48'
+  generator: skill_spec_synthesizer
+success_criteria:
+- apply(ctx) returns a dict with an ok field.
+- isolated self-test passes before promotion.
+- implementation stays within the declared tool and filesystem policy.
+version: 2
+when_to_use:
+- g

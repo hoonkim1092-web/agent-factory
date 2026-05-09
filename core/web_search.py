@@ -74,10 +74,12 @@ def tavily_search(
 
     parsed: list[dict] = []
     for item in results[:max_results]:
+        full = item.get("content", "") or item.get("raw_content", "")
         parsed.append({
             "url": item.get("url", ""),
             "title": item.get("title", ""),
-            "content": item.get("content", "")[:500],
+            "excerpt": full[:200],
+            "content_full": full,
             "score": item.get("score", 0.0),
         })
 
@@ -86,6 +88,56 @@ def tavily_search(
 
     print(f"🐕 [사냥개] {len(parsed)}개의 검색 결과를 수집했습니다.")
     return parsed
+
+
+def tavily_extract(
+    urls: list[str],
+    *,
+    include_images: bool = False,
+) -> list[dict]:
+    """Tavily Extract API — URL 본문 전문 수집 (확장 예약).
+
+    Phase 1b 확장 지점. 현재는 tavily_search()와 같은 인터페이스를 유지하며,
+    추후 Tavily Extract/Crawl API와 연결한다.
+
+    Returns:
+        list[dict]: 각 항목은 {url, title, excerpt, content_full, score}.
+    """
+    if not urls:
+        return []
+    api_key = _get_tavily_key()
+    payload = {
+        "api_key": api_key,
+        "urls": urls[:5],
+    }
+    if include_images:
+        payload["include_images"] = True
+
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.tavily.com/extract",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"⚠️ [사냥개] Tavily Extract 실패: {e}")
+        return []
+
+    extracted: list[dict] = []
+    for item in body.get("results", []):
+        full = item.get("raw_content", "") or item.get("content", "")
+        extracted.append({
+            "url": item.get("url", ""),
+            "title": item.get("title", ""),
+            "excerpt": full[:200],
+            "content_full": full,
+            "score": 1.0,
+        })
+    return extracted
 
 
 def extract_urls(search_results: list[dict]) -> list[str]:
@@ -101,4 +153,6 @@ if __name__ == "__main__":
     for r in results:
         print(f"  [{r['score']:.2f}] {r['title']}")
         print(f"         {r['url']}")
+        print(f"         excerpt: {r['excerpt'][:80]}")
+        print(f"         content_full: {len(r['content_full'])} chars")
     print(f"\nURLs: {extract_urls(results)}")

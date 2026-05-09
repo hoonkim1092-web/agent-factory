@@ -1,0 +1,21 @@
+items:
+  - id: latency_handling
+    title: Latency handling
+    required: true
+    priority: high
+    acceptance: Evidence addresses how the system handles network latency and maintains responsiveness.
+    match_keywords: [latency, 지연, lag, response time, timeout, websocket]
+
+  - id: event_ordering
+    title: Event ordering guarantees
+    required: true
+    priority: high
+    acceptance: Evidence explains how the system ensures events are processed in the correct order.
+    match_keywords: [event ordering, sequence, 이벤트 순서, message ordering, queue]
+
+  - id: state_synchronization
+    title: State synchronization
+    required: true
+    priority: high
+    acceptance: Evidence describes how all clients are kept in sync with the server state.
+    match_keywords: [synchronization, sync, 동기화, state update, broadcast, 브로드캐스트]

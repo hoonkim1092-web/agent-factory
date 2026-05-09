@@ -1,0 +1,695 @@
+{
+  "stage": "role_plan",
+  "saved_at": "2026-05-07T23:52:52",
+  "data_hash": "f835b727dea333d7aa5d527f0594dca5",
+  "data": {
+    "execution_strategy": "parallel",
+    "planning_steps": [
+      {
+        "id": "scope_contracts",
+        "name": "범위와 계약 정의",
+        "objective": "기능 경계를 모듈 단위로 나누고 역할별 인터페이스를 고정한다.",
+        "exit_criteria": [
+          "모든 작업이 owner_role과 depends_on을 가진다.",
+          "핵심 산출물이 모듈별로 정리된다."
+        ]
+      },
+      {
+        "id": "vertical_slice_build",
+        "name": "기능 슬라이스 구현",
+        "objective": "독립 배포 가능한 작은 기능 단위로 구현을 진행한다.",
+        "exit_criteria": [
+          "각 모듈이 최소 1개의 구현 작업을 가진다.",
+          "기능 슬라이스가 파일/산출물 기준으로 분리된다."
+        ]
+      },
+      {
+        "id": "integration_handoff",
+        "name": "통합과 핸드오프",
+        "objective": "역할 간 의존성을 정리하고 결과를 다음 작업자가 이어받을 수 있게 만든다.",
+        "exit_criteria": [
+          "의존 작업이 정리되고 handoff 기준이 명시된다.",
+          "검증 전에 필요한 연결 작업이 완료된다."
+        ]
+      },
+      {
+        "id": "verification_closeout",
+        "name": "검증과 마감",
+        "objective": "기능 동작, 회귀 리스크, 남은 이슈를 명시적으로 검증한다.",
+        "exit_criteria": [
+          "검증 작업이 존재한다.",
+          "잔여 리스크와 후속 작업이 기록된다."
+        ]
+      }
+    ],
+    "roles": [
+      {
+        "id": "frontend_dev",
+        "name": "Frontend Dev",
+        "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+        "required_skills": [
+          "responsive_html5_css3_ui"
+        ],
+        "owned_modules": [
+          "frontend_dev_module_1",
+          "frontend_dev_module_2",
+          "frontend_dev_module_3",
+          "frontend_dev_module_4",
+          "frontend_dev_module_5",
+          "frontend_dev_module_6"
+        ]
+      },
+      {
+        "id": "backend_dev",
+        "name": "Backend Dev",
+        "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+        "required_skills": [
+          "websocket_server_development",
+          "server_side_game_loop_management"
+        ],
+        "owned_modules": [
+          "backend_dev_module_7"
+        ]
+      },
+      {
+        "id": "game_logic_dev",
+        "name": "Game Logic Dev",
+        "objective": "핵심 규칙과 상태 전이를 구현한다.",
+        "required_skills": [
+          "texas_holdem_rule_engine",
+          "hand_evaluation_algorithm",
+          "real_time_game_state_synchronization"
+        ],
+        "owned_modules": [
+          "game_logic_dev_module_8"
+        ]
+      },
+      {
+        "id": "qa_engineer",
+        "name": "QA Engineer",
+        "objective": "핵심 플로우와 회귀 시나리오를 검증한다.",
+        "required_skills": [
+          "integration_test_guard"
+        ],
+        "owned_modules": [
+          "qa_engineer_module_9"
+        ]
+      }
+    ],
+    "modules": [
+      {
+        "id": "frontend_dev_module_1",
+        "name": "텍사스 홀덤 룰 엔진",
+        "summary": "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)"
+        ],
+        "feature_slices": [
+          "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_1_scope_1",
+            "title": "Frontend Dev: 텍사스 홀덤 룰 엔진 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 텍사스 홀덤 룰 엔진 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "텍사스 홀덤 룰 엔진 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_1_build_2",
+            "title": "Frontend Dev: 텍사스 홀덤 룰 엔진 기능을 구현한다.",
+            "instruction": "Frontend Dev: 텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_1_scope_1"
+            ],
+            "acceptance": [
+              "텍사스 홀덤 룰 엔진의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_1_verify_3",
+            "title": "Frontend Dev: 텍사스 홀덤 룰 엔진 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 텍사스 홀덤 룰 엔진 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_1_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "frontend_dev_module_2",
+        "name": "8인 실시간 게임 서버",
+        "summary": "8인 실시간 게임 서버 (WebSocket 기반)을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "8인 실시간 게임 서버 (WebSocket 기반)"
+        ],
+        "feature_slices": [
+          "8인 실시간 게임 서버 (WebSocket 기반)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_2_scope_1",
+            "title": "Frontend Dev: 8인 실시간 게임 서버 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 8인 실시간 게임 서버 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "8인 실시간 게임 서버 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_2_build_2",
+            "title": "Frontend Dev: 8인 실시간 게임 서버 기능을 구현한다.",
+            "instruction": "Frontend Dev: 8인 실시간 게임 서버 (WebSocket 기반)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_2_scope_1"
+            ],
+            "acceptance": [
+              "8인 실시간 게임 서버의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_2_verify_3",
+            "title": "Frontend Dev: 8인 실시간 게임 서버 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 8인 실시간 게임 서버 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_2_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "frontend_dev_module_3",
+        "name": "반응형 HTML5 게임 클라이언트",
+        "summary": "반응형 HTML5 게임 클라이언트 (모바일·PC·태블릿)을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "반응형 HTML5 게임 클라이언트 (모바일·PC·태블릿)"
+        ],
+        "feature_slices": [
+          "반응형 HTML5 게임 클라이언트 (모바일·PC·태블릿)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_3_scope_1",
+            "title": "Frontend Dev: 반응형 HTML5 게임 클라이언트 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 반응형 HTML5 게임 클라이언트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "반응형 HTML5 게임 클라이언트 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_3_build_2",
+            "title": "Frontend Dev: 반응형 HTML5 게임 클라이언트 기능을 구현한다.",
+            "instruction": "Frontend Dev: 반응형 HTML5 게임 클라이언트 (모바일·PC·태블릿)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_3_scope_1"
+            ],
+            "acceptance": [
+              "반응형 HTML5 게임 클라이언트의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_3_verify_3",
+            "title": "Frontend Dev: 반응형 HTML5 게임 클라이언트 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 반응형 HTML5 게임 클라이언트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_3_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "frontend_dev_module_4",
+        "name": "방 생성·입장·대기 로비 UI",
+        "summary": "방 생성·입장·대기 로비 UI을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "방 생성·입장·대기 로비 UI"
+        ],
+        "feature_slices": [
+          "방 생성·입장·대기 로비 UI을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_4_scope_1",
+            "title": "Frontend Dev: 방 생성·입장·대기 로비 UI 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 방 생성·입장·대기 로비 UI 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "방 생성·입장·대기 로비 UI 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_4_build_2",
+            "title": "Frontend Dev: 방 생성·입장·대기 로비 UI 기능을 구현한다.",
+            "instruction": "Frontend Dev: 방 생성·입장·대기 로비 UI을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_4_scope_1"
+            ],
+            "acceptance": [
+              "방 생성·입장·대기 로비 UI의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_4_verify_3",
+            "title": "Frontend Dev: 방 생성·입장·대기 로비 UI 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 방 생성·입장·대기 로비 UI 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_4_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "frontend_dev_module_5",
+        "name": "게임 진행 화면",
+        "summary": "게임 진행 화면 (커뮤니티카드·홀카드·베팅 액션 표시)을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "게임 진행 화면 (커뮤니티카드·홀카드·베팅 액션 표시)"
+        ],
+        "feature_slices": [
+          "게임 진행 화면 (커뮤니티카드·홀카드·베팅 액션 표시)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_5_scope_1",
+            "title": "Frontend Dev: 게임 진행 화면 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 게임 진행 화면 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "게임 진행 화면 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_5_build_2",
+            "title": "Frontend Dev: 게임 진행 화면 기능을 구현한다.",
+            "instruction": "Frontend Dev: 게임 진행 화면 (커뮤니티카드·홀카드·베팅 액션 표시)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_5_scope_1"
+            ],
+            "acceptance": [
+              "게임 진행 화면의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_5_verify_3",
+            "title": "Frontend Dev: 게임 진행 화면 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 게임 진행 화면 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_5_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "frontend_dev_module_6",
+        "name": "베팅 액션 UI",
+        "summary": "베팅 액션 UI (콜·레이즈·폴드·체크·올인)을(를) 구현한다.",
+        "owner_role": "frontend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "베팅 액션 UI (콜·레이즈·폴드·체크·올인)"
+        ],
+        "feature_slices": [
+          "베팅 액션 UI (콜·레이즈·폴드·체크·올인)을(를) 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "frontend_dev_module_6_scope_1",
+            "title": "Frontend Dev: 베팅 액션 UI 범위와 인터페이스를 정의한다.",
+            "instruction": "Frontend Dev: 베팅 액션 UI 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "frontend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "베팅 액션 UI 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_6_build_2",
+            "title": "Frontend Dev: 베팅 액션 UI 기능을 구현한다.",
+            "instruction": "Frontend Dev: 베팅 액션 UI (콜·레이즈·폴드·체크·올인)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "frontend_dev",
+            "phase": "build",
+            "depends_on": [
+              "frontend_dev_module_6_scope_1"
+            ],
+            "acceptance": [
+              "베팅 액션 UI의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "frontend_dev_module_6_verify_3",
+            "title": "Frontend Dev: 베팅 액션 UI 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Frontend Dev: 베팅 액션 UI 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "frontend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "frontend_dev_module_6_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "backend_dev_module_7",
+        "name": "Backend Dev 구현",
+        "summary": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+        "owner_role": "backend_dev",
+        "depends_on": [],
+        "deliverables": [
+          "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)"
+        ],
+        "feature_slices": [
+          "서버, 데이터, 외부 연동 레이어를 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "backend_dev_module_7_scope_1",
+            "title": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의한다.",
+            "instruction": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "backend_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "Backend Dev 구현 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "backend_dev_module_7_build_2",
+            "title": "Backend Dev: Backend Dev 구현 기능을 구현한다.",
+            "instruction": "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "backend_dev",
+            "phase": "build",
+            "depends_on": [
+              "backend_dev_module_7_scope_1"
+            ],
+            "acceptance": [
+              "Backend Dev 구현의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "backend_dev_module_7_verify_3",
+            "title": "Backend Dev: Backend Dev 구현 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Backend Dev: Backend Dev 구현 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "backend_dev",
+            "phase": "verify",
+            "depends_on": [
+              "backend_dev_module_7_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "game_logic_dev_module_8",
+        "name": "Game Logic Dev 구현",
+        "summary": "핵심 규칙과 상태 전이를 구현한다.",
+        "owner_role": "game_logic_dev",
+        "depends_on": [],
+        "deliverables": [
+          "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)"
+        ],
+        "feature_slices": [
+          "핵심 규칙과 상태 전이를 구현한다."
+        ],
+        "tasks": [
+          {
+            "id": "game_logic_dev_module_8_scope_1",
+            "title": "Game Logic Dev: Game Logic Dev 구현 범위와 인터페이스를 정의한다.",
+            "instruction": "Game Logic Dev: Game Logic Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "game_logic_dev",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "Game Logic Dev 구현 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "game_logic_dev_module_8_build_2",
+            "title": "Game Logic Dev: Game Logic Dev 구현 기능을 구현한다.",
+            "instruction": "Game Logic Dev: 핵심 규칙과 상태 전이를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "game_logic_dev",
+            "phase": "build",
+            "depends_on": [
+              "game_logic_dev_module_8_scope_1"
+            ],
+            "acceptance": [
+              "Game Logic Dev 구현의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "game_logic_dev_module_8_verify_3",
+            "title": "Game Logic Dev: Game Logic Dev 구현 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "Game Logic Dev: Game Logic Dev 구현 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "game_logic_dev",
+            "phase": "verify",
+            "depends_on": [
+              "game_logic_dev_module_8_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      },
+      {
+        "id": "qa_engineer_module_9",
+        "name": "QA Engineer 검증",
+        "summary": "핵심 플로우와 회귀 시나리오를 검증한다.",
+        "owner_role": "qa_engineer",
+        "depends_on": [],
+        "deliverables": [
+          "텍사스 홀덤 룰 엔진 (핸드 평가·팟·사이드팟 계산·턴 진행)"
+        ],
+        "feature_slices": [
+          "핵심 플로우와 회귀 시나리오를 검증한다."
+        ],
+        "tasks": [
+          {
+            "id": "qa_engineer_module_9_scope_1",
+            "title": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의한다.",
+            "instruction": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+            "owner_role": "qa_engineer",
+            "phase": "scope",
+            "depends_on": [],
+            "acceptance": [
+              "QA Engineer 검증 범위가 명확히 정리된다.",
+              "의존성과 산출물이 명시된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "qa_engineer_module_9_build_2",
+            "title": "QA Engineer: QA Engineer 검증 기능을 구현한다.",
+            "instruction": "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+            "owner_role": "qa_engineer",
+            "phase": "build",
+            "depends_on": [
+              "qa_engineer_module_9_scope_1"
+            ],
+            "acceptance": [
+              "QA Engineer 검증의 핵심 기능이 구현된다.",
+              "관련 파일과 산출물이 갱신된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          },
+          {
+            "id": "qa_engineer_module_9_verify_3",
+            "title": "QA Engineer: QA Engineer 검증 결과를 검증하고 handoff를 남긴다.",
+            "instruction": "QA Engineer: QA Engineer 검증 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+            "owner_role": "qa_engineer",
+            "phase": "verify",
+            "depends_on": [
+              "qa_engineer_module_9_build_2"
+            ],
+            "acceptance": [
+              "검증 결과가 정리된다.",
+              "잔여 리스크와 후속 작업이 기록된다."
+            ],
+            "artifacts": [],
+            "status": "pending",
+            "e2e_command": ""
+          }
+        ]
+      }
+    ],
+    "todo_items": [
+      "Frontend Dev: 사용자 화면과 상호작용 레이어를 구현한다.",
+      "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "Game Logic Dev: 핵심 규칙과 상태 전이를 구현한다.",
+      "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
+    ],
+    "plan_summary": {
+      "goal": "WSOP 텍사스 홀덤 공식 룰 기반의 최대 8인 실시간 네트워크 포커 게임을 WebSocket 서버-클라이언트 분리 구조로 구현한다.",
+      "role_count": 4,
+      "module_count": 9,
+      "task_count": 27
+    },
+    "generated_at": "2026-05-07T23:52:52",
+    "pd_agent": {
+      "id": "pd_director",
+      "name": "Lilith Bootstrap"
+    }
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "goal": "한국 로또 6/45 최근 500회차 1등 당첨번호를 동행복권 API에서 수집·통계 분석하여 패턴 기반 1등 번호 5개 조합을 추천하고 PyInstaller로 더블클릭 실행 가능한 단일 실행 파일로 배포하는 데스크톱 도구를 구축한다.",
+  "background_context": "개인 사용자가 로또 번호 추천을 받기 위해 매번 웹사이트를 방문하거나 수작업으로 통계를 계산하는 불편이 존재한다. 동행복권이 공식적으로 제공하는 회차별 당첨번호 JSON 엔드포인트(`lottery.go.kr/common.do?method=getLottoNumber&drwNo=N`)를 활용하면 공인된 데이터로 통계 분석이 가능하다. 또한 Python 환경이 없는 사용자도 쓸 수 있도록 PyInstaller onefile 번들이 요구된다.",
+  "problem_statement": "공식 회차 데이터의 산재성과 Python 런타임 미설치 환경이라는 두 장벽 때문에, 비개발자 사용자가 최근 500회차 통계에 근거한 번호 조합을 즉시 얻지 못하는 접근성 공백이 있다.",
+  "target_path": "/Users/hoon/workTree/agent-factory/projects/lotto_predictor_v2",
+  "constraints": [
+    "모든 주석·로그·출력·문서는 ko-KR 한국어로 작성 (식별자·URL·API 필드명은 원문 유지)",
+    "데이터 소스는 동행복권 공식 JSON 엔드포인트로 한정 (비공식 스크래핑 금지)",
+    "최근 500회차 1등 당첨번호를 대상으로 분석 수행",
+    "PyInstaller onefile 빌드로 더블클릭 실행 가능 (.app on macOS / .exe on Windows)",
+    "네트워크 장애 시 로컬 캐시(SQLite 또는 JSON)로 재시도·복구",
+    "문서 변경 시 docs/architecture.md 및 docs/change_history.md 동시 갱신",
+    "랜덤성은 seed 고정 가능하도록 설계하여 재현성 보장",
+    "로또 추천은 오락·참고용이며 당첨 보장 문구는 출력하지 않는다"
+  ],
+  "required_skills": [
+    "http_api_client",
+    "statistical_analysis",
+    "data_caching",
+    "terminal_pretty_print",
+    "pyinstaller_packaging",
+    "random_combination_generation",
+    "error_retry_handling",
+    "cross_platform_build"
+  ],
+  "role_hints": [
+    "backend_dev",
+    "data_analyst",
+    "build_engineer",
+    "qa_engineer"
+  ],
+  "deliverables": [
+    "동행복권 회차 수집기 모듈",
+    "회차 데이터 로컬 캐시 저장소",
+    "통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)",
+    "패턴 기반 번호 조합 추천기",
+    "터미널 포맷 출력 리포트",
+    "PyInstaller 빌드 스펙 및 산출물",
+    "사용자 실행 가이드 문서"
+  ],
+  "risks": [
+    "동행복권 API 스키마 또는 엔드포인트 변경 시 수집 실패",
+    "과도한 요청으로 IP 차단 또는 rate limit 발생",
+    "작은 표본(500회차) 통계의 과적합·편향 위험",
+    "macOS PyInstaller .app이 Gatekeeper 서명 미적용으로 실행 경고 발생",
+    "번호 추천을 보장된 당첨으로 오해할 소지(면책 고지 필요)",
+    "교차 OS 빌드(Windows↔macOS) 제약으로 단일 머신에서 양쪽 산출물 생성 불가"
+  ],
+  "research_notes": [
+    "동행복권 공식 엔드포인트: https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={회차}, JSON 필드 drwtNo1~6, bnusNo, drwNoDate, returnValue",
+    "최신 회차 번호는 메인 페이지 또는 returnValue=fail 이전까지 증분 탐색으로 확인 가능",
+    "통계 지표: 번호별 출현빈도, 연속번호 쌍 빈도, 홀짝 비율 분포, 10단위 구간 분포(1-10/11-20/21-30/31-40/41-45), 최근 50회 가중 트렌드",
+    "추천 전략: 빈도 상위 hot + 희소 cold 가중 샘플링 + 홀짝·구간 제약 필터 + 연속번호 제한",
+    "docs/architecture.md 의 문서 규칙: ko-KR 한국어, 코드/경로/API 식별자는 원문 유지",
+    "NotebookLM 세션 ID: d68298d4-d15b-4e78-9caf-c342f528fc0c (추가 질의 시 --conversation-id 재사용)",
+    "local_references=1",
+    "llm_prior_references=4 (unverified)",
+    "notebook_summary=available",
+    "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+    "LLM prior knowledge (unverified): Frequency analysis of historical draws to identify hot and cold numbers",
+    "LLM prior knowledge (unverified): Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive runs)",
+    "NotebookLM synthesis: Conversation ID: d68298d4-d15b-4e78-9caf-c342f528fc0c Use --conversation-id for follow-up questions"
+  ],
+  "tech_stack": [
+    "Python 3.11",
+    "requests",
+    "SQLite (stdlib sqlite3)",
+    "rich (터미널 포맷 출력)",
+    "statistics/collections (stdlib)",
+    "PyInstaller 6.x",
+    "pytest (검증)"
+  ],
+  "data_model": [
+    {
+      "entity": "LottoDraw",
+      "fields": [
+        "drwNo",
+        "drwNoDate",
+        "drwtNo1",
+        "drwtNo2",
+        "drwtNo3",
+        "drwtNo4",
+        "drwtNo5",
+        "drwtNo6",
+        "bnusNo",
+        "totSellamnt",
+        "firstWinamnt"
+      ],
+      "storage": "sqlite"
+    },
+    {
+      "entity": "NumberFrequency",
+      "fields": [
+        "number",
+        "count",
+        "last_seen_drwNo",
+        "recent_50_count"
+      ],
+      "storage": "sqlite"
+    },
+    {
+      "entity": "Recommendation",
+      "fields": [
+        "generated_at",
+        "seed",
+        "numbers",
+        "strategy_tag",
+        "odd_even_ratio",
+        "range_distribution"
+      ],
+      "storage": "json"
+    },
+    {
+      "entity": "FetchCheckpoint",
+      "fields": [
+        "last_fetched_drwNo",
+        "fetched_at",
+        "source_url"
+      ],
+      "storage": "sqlite"
+    }
+  ],
+  "user_flows": [
+    "사용자: 실행파일 더블클릭 -> 시스템: 로컬 캐시 확인 후 최신 회차까지 증분 수집",
+    "사용자: 분석 실행 선택 -> 시스템: 최근 500회차 통계 리포트를 터미널에 출력",
+    "사용자: 추천 요청 -> 시스템: 패턴 기반 1등 후보 5조합과 근거 지표 출력",
+    "사용자: 재현용 seed 입력 -> 시스템: 동일 seed로 동일 조합 재생성",
+    "개발자: pyinstaller 빌드 스크립트 실행 -> 시스템: dist/ 하위에 더블클릭 실행 산출물 생성"
+  ],
+  "non_goals": [
+    "2등 이하 등수 예측 및 보너스 번호 예측",
+    "머신러닝/딥러닝 기반 시계열 예측 모델 도입",
+    "GUI(윈도우 창) 인터페이스 제공",
+    "웹 서비스·모바일 앱 배포",
+    "실시간 구매 자동화 또는 결제 연동",
+    "당첨 보장성 주장 또는 확률 조작"
+  ],
+  "architecture_style": "cli",
+  "workspace_notes": [],
+  "evidence_summary": [
+    "Local reference: docs/architecture.md -> ## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+    "LLM prior knowledge (unverified): Frequency analysis of historical draws to identify hot and cold numbers",
+    "LLM prior knowledge (unverified): Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive runs)",
+    "NotebookLM synthesis: Conversation ID: d68298d4-d15b-4e78-9caf-c342f528fc0c Use --conversation-id for follow-up questions"
+  ],
+  "local_references": [
+    {
+      "path": "docs/architecture.md",
+      "heading": "## 문서 규칙",
+      "excerpt": "## 문서 규칙 - 설계가 바뀌면 같은 작업 안에서 이 파일을 갱신한다. - 작업을 닫기 전에 `docs/change_history.md`에 대응되는 항목을 추가한다. - 이 저장소에서 생성하거나 수정하는 모든 문서는 운영체제 언어 코드 `ko-KR`에 맞는 언어인 한국어로 작성한다. - 코드, 경로, 명령어, API 식별자는 필요한 경우 원문 그대로 유지한다.",
+      "score": 1.0
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [
+    {
+      "title": "[LLM prior] Concept: Frequency analysis of historical draws to identify hot and cold numbers",
+      "excerpt": "Frequency analysis of historical draws to identify hot and cold numbers",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive ",
+      "excerpt": "Combinatorial filtering (odd/even ratio, low/high split, sum range, consecutive runs)",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Number-range bucketing for 1-45 (typically 5 buckets of 9) for distribution anal",
+      "excerpt": "Number-range bucketing for 1-45 (typically 5 buckets of 9) for distribution analysis",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Recent-trend weighting via exponential decay over draw index",
+      "excerpt": "Recent-trend weighting via exponential decay over draw index",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    }
+  ],
+  "notebook_summary": "Conversation ID: d68298d4-d15b-4e78-9caf-c342f528fc0c Use --conversation-id for follow-up questions",
+  "requested_role": "General Assistant",
+  "route": {
+    "pipeline": "project",
+    "intent": "forced",
+    "confidence": 100,
+    "reasoning": "pipeline_mode=project",
+    "risk_level": "strict"
+  },
+  "generated_at": "2026-04-17T01:24:58"
+}

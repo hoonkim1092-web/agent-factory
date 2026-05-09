@@ -8,16 +8,27 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from core.providers.session_adapter import handle_hook_event
+# __init__.py의 heavy import 체인(cli.py → implementation_language_policy 등)을
+# 완전히 우회하기 위해 spec_from_file_location으로 session_adapter만 직접 로드
+import importlib.util as _ilu
+_sa_path = os.path.join(_PROJECT_ROOT, "core", "providers", "session_adapter.py")
+_spec = _ilu.spec_from_file_location("core.providers.session_adapter", _sa_path,
+                                      submodule_search_locations=[])
+_mod = _ilu.module_from_spec(_spec)
+sys.modules[_spec.name] = _mod
+_spec.loader.exec_module(_mod)
+handle_hook_event = _mod.handle_hook_event
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Bridge CLI hook events into agent-factory continuity.")
     parser.add_argument("--provider", required=True, choices=("claude", "gemini"))
-    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--workspace", default="")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--repo-root", default="")
     args = parser.parse_args(argv)
+    if not args.workspace:
+        args.workspace = _PROJECT_ROOT
 
     raw = sys.stdin.read().strip()
     payload = json.loads(raw) if raw else {}

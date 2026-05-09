@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -17,7 +18,10 @@ from core.destructive_guard import (
     merge_claude_destructive_guard,
     write_gemini_destructive_policy,
 )
+from core.file_lock import locked_file
 from scripts.session_bridge import run_bridge
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _safe_slug(text: str, fallback: str = "item") -> str:
@@ -37,6 +41,10 @@ def _hook_path_arg(value: str | Path) -> str:
     if os.name == "nt":
         return path.as_posix()
     return str(path)
+
+
+def _hook_runner_python() -> str:
+    return "python" if os.name == "nt" else "python3"
 
 
 def _merge_pythonpath(repo_root: Path) -> str:
@@ -214,11 +222,12 @@ def _build_continuity_context(workspace: str, provider_id: str, run_id: str) -> 
 
 
 def _hook_command(provider_base: str, workspace: str, run_id: str, repo_root: Path) -> str:
-    script_path = repo_root / "scripts" / "cli_hook_bridge.py"
+    runner_path = repo_root / "scripts" / "hook_runner.py"
     return _quote_command(
         [
-            _hook_path_arg(sys.executable),
-            _hook_path_arg(script_path),
+            _hook_runner_python(),
+            _hook_path_arg(runner_path),
+            "cli_hook_bridge",
             "--provider",
             provider_base,
             "--workspace",
@@ -231,7 +240,29 @@ def _hook_command(provider_base: str, workspace: str, run_id: str, repo_root: Pa
     )
 
 
-def _merge_named_hook_group(existing_groups: list[Any], hook_name: str, command: str) -> list[dict[str, Any]]:
+def _is_managed_bridge_hook(hook: Any, provider_base: str) -> bool:
+    if not isinstance(hook, dict):
+        return False
+    name = str(hook.get("name") or "").strip()
+    if name.startswith(f"agent_factory_{provider_base}_"):
+        return True
+
+    command = str(hook.get("command") or "").strip()
+    if not command:
+        return False
+    if f"--provider {provider_base}" not in command:
+        return False
+    if "cli_hook_bridge" not in command:
+        return False
+    return "hook_runner.py" in command or "cli_hook_bridge.py" in command
+
+
+def _merge_named_hook_group(
+    existing_groups: list[Any],
+    hook_name: str,
+    command: str,
+    provider_base: str,
+) -> list[dict[str, Any]]:
     groups: list[dict[str, Any]] = []
     for raw_group in existing_groups or []:
         if not isinstance(raw_group, dict):
@@ -240,12 +271,13 @@ def _merge_named_hook_group(existing_groups: list[Any], hook_name: str, command:
         for hook in raw_group.get("hooks", []) or []:
             if not isinstance(hook, dict):
                 continue
-            if str(hook.get("name") or "") == hook_name:
+            if _is_managed_bridge_hook(hook, provider_base):
                 continue
             hooks.append(dict(hook))
-        new_group = dict(raw_group)
-        new_group["hooks"] = hooks
-        groups.append(new_group)
+        if hooks:
+            new_group = dict(raw_group)
+            new_group["hooks"] = hooks
+            groups.append(new_group)
     groups.append({"hooks": [{"type": "command", "name": hook_name, "command": command}]})
     return groups
 
@@ -253,21 +285,27 @@ def _merge_named_hook_group(existing_groups: list[Any], hook_name: str, command:
 def _write_claude_settings(workspace: str, run_id: str) -> Path:
     repo_root = _repo_root()
     settings_path = Path(workspace).resolve() / ".claude" / "settings.local.json"
-    data = _load_json(settings_path)
-    if not isinstance(data, dict):
-        data = {}
-    hooks = data.get("hooks", {})
-    if not isinstance(hooks, dict):
-        hooks = {}
+    with locked_file(str(settings_path), timeout=5):
+        data = _load_json(settings_path)
+        if not isinstance(data, dict):
+            data = {}
+        hooks = data.get("hooks", {})
+        if not isinstance(hooks, dict):
+            hooks = {}
 
-    command = _hook_command("claude", workspace, run_id, repo_root)
-    for event_name in ("SessionStart", "UserPromptSubmit", "PreCompact", "Stop", "SessionEnd"):
-        hook_name = f"agent_factory_claude_{event_name.lower()}"
-        hooks[event_name] = _merge_named_hook_group(hooks.get(event_name, []), hook_name, command)
+        command = _hook_command("claude", workspace, run_id, repo_root)
+        for event_name in ("SessionStart", "UserPromptSubmit", "PreCompact", "Stop", "SessionEnd"):
+            hook_name = f"agent_factory_claude_{event_name.lower()}"
+            hooks[event_name] = _merge_named_hook_group(
+                hooks.get(event_name, []),
+                hook_name,
+                command,
+                "claude",
+            )
 
-    data["hooks"] = hooks
-    data = merge_claude_destructive_guard(data)
-    _save_json(settings_path, data)
+        data["hooks"] = hooks
+        data = merge_claude_destructive_guard(data)
+        _save_json(settings_path, data)
     return settings_path
 
 
@@ -283,7 +321,12 @@ def _write_gemini_defaults(workspace: str, run_id: str, defaults_path: Path, pol
     command = _hook_command("gemini", workspace, run_id, repo_root)
     for event_name in ("SessionStart", "BeforeAgent", "AfterAgent", "PreCompress", "SessionEnd"):
         hook_name = f"agent_factory_gemini_{event_name.lower()}"
-        hooks[event_name] = _merge_named_hook_group(hooks.get(event_name, []), hook_name, command)
+        hooks[event_name] = _merge_named_hook_group(
+            hooks.get(event_name, []),
+            hook_name,
+            command,
+            "gemini",
+        )
 
     data["hooks"] = hooks
     guard_path = write_gemini_destructive_policy(policy_path)
@@ -434,7 +477,12 @@ def prepare_cli_session(request, command: list[str]) -> dict[str, Any]:
     # PyInstaller 번들 환경에서는 sys.executable이 Python이 아닌 af.exe이므로
     # hook 명령이 올바르게 실행되지 않는다 — hook 등록을 건너뜀
     if spec.provider_id == "claude_cli" and not _is_frozen():
-        settings_path = _write_claude_settings(workspace, run_id)
+        try:
+            settings_path = _write_claude_settings(workspace, run_id)
+        except TimeoutError as exc:
+            _LOGGER.warning(
+                "_write_claude_settings lock timeout — settings 미작성으로 계속: %s", exc
+            )
     elif spec.provider_id == "gemini_cli" and not _is_frozen():
         settings_path, guard_path = _write_gemini_defaults(
             workspace,

@@ -1,0 +1,36 @@
+id: graphify
+name: Graphify Knowledge Graph
+version: 0.1.0
+description: 폴더(코드+문서)를 지식그래프로 변환해 LLM 토큰을 절감하고 코드 영향 범위를 추적한다. 외부 graphifyy 패키지(<Python 3.14)를 격리 환경에서 호출하는 wrapper.
+when_to_use: 코드베이스 구조 분석이 필요할 때, Blast Radius 산출, 함수 간 호출 관계 추적, 토큰 비용 절감을 위한 사전 그래프 빌드
+when_NOT_to_use: 단발성 grep/Read로 충분한 단순 검색, graphifyy 미설치 환경, 첫 빌드가 너무 비싸지 않은 큰 변경 직후
+when_to_use_keywords:
+  - graphify
+  - knowledge_graph
+  - blast_radius
+  - code_structure
+  - dependency_graph
+  - 지식그래프
+  - 코드영향범위
+category: research
+type: action
+capabilities:
+  - graphify_build
+  - graphify_query
+  - knowledge_graph_index
+network_required: true
+stateful: true
+status: active
+source: builtin
+last_test_ok: false
+author: agent-factory
+tags:
+  - graphify
+  - knowledge_graph
+  - external_wrapper
+external_dependency:
+  package: graphifyy
+  cli: graphify
+  version: ">=0.4.27,<0.5.0"
+  python_constraint: ">=3.10,<3.14"
+  install_via: install-af.sh --with-graphify

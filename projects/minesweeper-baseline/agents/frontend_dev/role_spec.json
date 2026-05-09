@@ -1,0 +1,26 @@
+{
+  "role_id": "frontend_dev",
+  "name": "Frontend Dev",
+  "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+  "required_skills": [
+    "frontend_game_ui"
+  ],
+  "owned_modules": [
+    "frontend_dev_module_1",
+    "frontend_dev_module_2",
+    "frontend_dev_module_3"
+  ],
+  "feature_slices": [
+    "8x8 지뢰찾기 CLI 실행 파일 (minesweeper.py)을(를) 구현한다.",
+    "지뢰 배치 및 셀 공개 게임 로직 모듈을(를) 구현한다.",
+    "승리/패배 판정 및 보드 렌더링 출력을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-05-08T11:20:51"
+}

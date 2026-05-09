@@ -1,0 +1,35 @@
+{
+  "role_id": "backend_dev",
+  "name": "Backend Dev",
+  "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+  "required_skills": [
+    "http_api_integration",
+    "sqlite_data_persistence",
+    "data_visualization_terminal",
+    "json_data_processing"
+  ],
+  "owned_modules": [
+    "backend_dev_module_1",
+    "backend_dev_module_2",
+    "backend_dev_module_3",
+    "backend_dev_module_4",
+    "backend_dev_module_5",
+    "backend_dev_module_6"
+  ],
+  "feature_slices": [
+    "동행복권 API 데이터 수집 모듈을(를) 구현한다.",
+    "SQLite 기반 당첨번호 캐시 저장소을(를) 구현한다.",
+    "번호별 출현빈도·동시출현·구간 통계 분석 엔진을(를) 구현한다.",
+    "가중 랜덤 기반 5조합 추천 생성기을(를) 구현한다.",
+    "터미널 통계 요약 출력 포맷터을(를) 구현한다.",
+    "CLI 엔트리포인트 (fetch / analyze / recommend 서브커맨드)을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-04-16T20:48:06"
+}

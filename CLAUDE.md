@@ -1,6 +1,71 @@
 # Agent Factory — Claude Code 지시사항
 
+<!-- KARPATHY-PRINCIPLES-START (실험 2026-05-04 ~ 2026-05-11, 제거 시 이 마커 사이 전부 삭제) -->
+## LLM 행동 원칙 (Karpathy)
+
+> 출처: [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
+> **트레이드오프**: 속도보다 신중함을 택한다. trivial한 작업에는 판단해서 적용.
+
+### 1. Think Before Coding — 가정하지 말고, 혼란을 숨기지 말고, 트레이드오프를 드러내라
+
+구현 전에:
+- 가정을 명시한다. 불확실하면 묻는다.
+- 해석이 여럿이면 모두 제시한다. 조용히 고르지 않는다.
+- 더 단순한 방법이 있으면 말한다. 정당하면 반박한다.
+- 모르겠으면 멈추고 무엇이 혼란스러운지 명시하고 묻는다.
+
+### 2. Simplicity First — 문제를 푸는 최소 코드. 추측성 코드 금지.
+
+- 요청하지 않은 기능 추가 금지.
+- 일회성 코드에 추상화 금지.
+- 요청하지 않은 "유연성/설정 가능성" 금지.
+- 일어날 수 없는 시나리오의 에러 처리 금지.
+- 200줄을 50줄로 줄일 수 있으면 다시 써라.
+
+자문: "시니어 엔지니어가 이걸 보면 과설계라고 할까?" YES면 단순화.
+
+### 3. Surgical Changes — 꼭 필요한 곳만 만져라. 자기 흔적만 정리해라.
+
+기존 코드를 편집할 때:
+- 인접한 코드/주석/포맷을 "개선"하지 않는다.
+- 깨지지 않은 것을 리팩토링하지 않는다.
+- 기존 스타일을 유지한다 — 본인 취향과 달라도.
+- 무관한 죽은 코드를 발견하면 언급만 한다 — 삭제 X.
+
+본인 변경으로 고아가 된 것만 제거:
+- 본인이 미사용으로 만든 import/변수/함수만 제거.
+- 기존부터 죽어있던 코드는 요청 없이 제거 X.
+
+검증: 변경된 모든 줄이 사용자 요청에 직접 추적되어야 한다.
+
+### 4. Goal-Driven Execution — 성공 기준 정의. 검증될 때까지 반복.
+
+작업을 검증 가능한 목표로 변환:
+- "검증 추가" → "잘못된 입력 테스트 작성 후 통과시키기"
+- "버그 수정" → "버그 재현 테스트 작성 후 통과시키기"
+- "X 리팩토링" → "전후 테스트 통과 보장"
+
+다단계 작업은 간단한 계획 제시:
+```
+1. [단계] → 검증: [체크]
+2. [단계] → 검증: [체크]
+```
+
+강한 성공 기준은 독립 반복을 가능하게 한다. "그냥 동작하게 해" 같은 약한 기준은 매번 명확화가 필요하다.
+
+**효과 측정**: 불필요한 변경 감소, 과설계로 인한 재작성 감소, 구현 후가 아닌 구현 전 명확화 질문 증가.
+<!-- KARPATHY-PRINCIPLES-END -->
+
+---
+
 ## 필수 규칙
+
+### 세션 연속성 규칙 (2026-04-23 추가)
+- **세션 시작 시**: `NEXT_STEPS.md`를 먼저 읽어 현재 진행 중인 작업과 우선순위를 파악한다
+- **작업 완료 또는 세션 종료 전**: `NEXT_STEPS.md` 상태 업데이트 → `git commit` → `git push` → `python end_db.py agent-factory` (메모리 Supabase 동기화)
+- **다른 PC에서 재개 시**: `git pull` → `python start_db.py agent-factory` (Supabase → 로컬 메모리 pull)
+- Claude Code 메모리(`memory/`)는 PC별 로컬 저장 — `sync_claude_memory.py`가 Supabase `claude_memory` 테이블을 통해 동기화
+- Supabase 미설정 시 `start_db`/`end_db` 실패하지 않고 경고만 출력하고 진행
 
 ### Master_Blueprint.md 참조 의무
 - **코드 수정 전**: `Master_Blueprint.md`의 해당 §섹션을 먼저 읽어 의존성과 영향 범위를 파악한다
@@ -29,9 +94,23 @@
   - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
 
 ### 교차검증 자동 실행
-- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **반드시** af-critic + af-cross-review 에이전트를 백그라운드로 병렬 실행한다
-- 설계문서(.md) 작성 후에는 af-doc-qa + af-critic을 병렬 실행한다
-- 교차검증 결과에서 BLOCK 판정 시 발견 사항을 즉시 수정한다
+- UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
+- UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-cross-review **1개만** 실행한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)
+- **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-cross-review만** 실행한다 (2026-05-01 변경: af-critic은 설계문서에서 소스 중복 탐색 비용만 발생, 효과 없음)
+- **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-cross-review **2개를 병렬 실행**한다
+- 교차검증 결과에서 **BLOCK 판정 시에만** 발견 사항을 수정한다. **WARN은 advisory** — 자동 수정 의무 없음 (Phase 0 정책, 2026-04-30: 무한루프 방지)
+- **Tier 3(af-cross-review)는 가용 외부 CLI 프로바이더 전부에 병렬 fan-out한다.** 외부 프로바이더 0개면 자동 SKIP(통과 간주), 1개 이상 인증 만료가 있으면 BLOCK + 재인증 안내. (`core/provider_detect.py` Step 0 감지)
+
+### Review-Gate 규칙 (Phase 0 갱신 2026-04-30)
+- `.py` 파일 수정 후 `git commit` 전 필수 tier 완주:
+  - **Tier 1 파일** (docs/, README, 단순 설정): af-test-runner만
+  - **Tier 2~3 파일** (core/, scripts/, 일반 코드): af-test-runner → af-critic → af-cross-review 순서
+  - 분류는 `scripts/blast_radius.py`가 결정 (`subprocess`, `shell=True`, hook launcher 등은 자동 Tier 3)
+- **max_rounds=2 캡** — 같은 큐는 최대 2라운드까지만 자동 발화. 이후엔 사용자가 수동 결정 (재리뷰 vs 우회)
+- **WARN-only no-fire** — 직전 라운드가 BLOCK 없이 완료됐다면 (전부 WARN/PASS) 재편집해도 자동 재발화 안 함
+- **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
+- `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
+- 진단: `python3 scripts/review_gate.py --debug`
 
 ### 커밋 규칙
 - 코드 수정 + Blueprint 업데이트는 같은 커밋

@@ -28,6 +28,7 @@ class MemoryScope(str, Enum):
     LOCAL = "local"
     GLOBAL = "global"
     SESSION = "session"
+    PROJECT = "project"
 
 
 class NodeType(str, Enum):
@@ -149,6 +150,9 @@ class EpisodeRecord:
     created_at: datetime = field(default_factory=_utcnow)
     causal_links: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    event_type: str = ""
+    failure_pattern: str = ""
+    root_cause: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -164,6 +168,9 @@ class EpisodeRecord:
             "created_at": self.created_at.isoformat(),
             "causal_links": self.causal_links,
             "metadata": self.metadata,
+            "event_type": self.event_type,
+            "failure_pattern": self.failure_pattern,
+            "root_cause": self.root_cause,
         }
 
     @classmethod

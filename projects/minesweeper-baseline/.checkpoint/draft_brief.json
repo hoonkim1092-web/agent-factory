@@ -1,0 +1,180 @@
+{
+  "stage": "draft_brief",
+  "saved_at": "2026-05-08T11:10:42",
+  "data_hash": "97ac394530c7e951b9e77a5c5b36783d",
+  "data": {
+    "original_request": "8x8 minesweeper game with mines",
+    "goal": "Build a playable 8x8 CLI minesweeper game where the player can reveal cells and flag mines.",
+    "background_context": "This project serves as a lightweight baseline for Agent Factory's work-item parallel measurement pipeline. The previous baseline was a poker game; minesweeper was chosen as a simpler, web-free alternative. The run is instrumented to emit timing JSONL to runtime/timing/minesweeper-baseline_baseline.jsonl.",
+    "problem_statement": "The parallel measurement pipeline needs a deterministic, self-contained game task with no external dependencies to benchmark FSA doc-generation throughput (plan → spec → work-items → design) across parallel vs. sequential runs.",
+    "target_path": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline",
+    "constraints": [
+      "8x8 grid fixed size",
+      "No web server or browser dependency — CLI only",
+      "Must run with Python 3.11 stdlib only (no third-party packages)",
+      "Game must be completable in a single terminal session",
+      "Mine count must be configurable at launch (default: 10)"
+    ],
+    "required_skills": [
+      "game_logic_implementation",
+      "cli_io_design",
+      "grid_data_structure",
+      "recursive_cell_reveal",
+      "mine_placement_algorithm",
+      "win_lose_condition_checking",
+      "unit_testing"
+    ],
+    "role_hints": [
+      "game_logic_dev",
+      "cli_frontend_dev",
+      "qa_engineer"
+    ],
+    "deliverables": [
+      "8x8 지뢰찾기 CLI 실행 파일 (minesweeper.py)",
+      "지뢰 배치 및 셀 공개 게임 로직 모듈",
+      "승리/패배 판정 및 보드 렌더링 출력",
+      "단위 테스트 스위트 (pytest)"
+    ],
+    "risks": [
+      "재귀 셀 공개 시 8x8 범위 초과 인덱스 오류",
+      "지뢰 배치 시 첫 클릭 셀과 충돌",
+      "FSA 문서 생성 단계에서 game_logic과 cli_io 역할 경계 모호로 중복 구현 가능성"
+    ],
+    "research_notes": [
+      "핸드오프 문서(docs/2026-05-08-work-item-parallel-measurement-handoff.md)에서 실행 명령 확인: python3 run_factory_cli.py --task '8x8 minesweeper game with mines' --project minesweeper-baseline --mode fsa",
+      "예상 타이밍 출력: runtime/timing/minesweeper-baseline_baseline.jsonl (doc_type별 elapsed_sec 기록)",
+      "포커 게임 대비 경량 케이스 — Web 미요구, 단순 게임 로직",
+      "AF 역할 매핑: Rule Engine → Game Logic Dev, UI/입력 → CLI Frontend Dev, 테스트 → QA Engineer",
+      "local_references=5",
+      "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+      "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+      "Local reference: docs/codex/2026-05-08-af-productization-application-guide.md -> ### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer"
+    ],
+    "tech_stack": [
+      "Python 3.11",
+      "stdlib only (random, sys, os)",
+      "pytest 7.x (테스트 전용)"
+    ],
+    "data_model": [
+      {
+        "entity": "Board",
+        "fields": [
+          "grid_size",
+          "mine_count",
+          "cells",
+          "revealed",
+          "flagged",
+          "game_state"
+        ],
+        "storage": "memory"
+      },
+      {
+        "entity": "Cell",
+        "fields": [
+          "row",
+          "col",
+          "is_mine",
+          "adjacent_count",
+          "is_revealed",
+          "is_flagged"
+        ],
+        "storage": "memory"
+      }
+    ],
+    "user_flows": [
+      "사용자: 프로그램 실행 -> 시스템: 8x8 빈 보드 출력 및 좌표 입력 프롬프트 표시",
+      "사용자: 좌표 입력(예: 3 4) -> 시스템: 셀 공개, 인접 지뢰 수 또는 빈 영역 연쇄 공개",
+      "사용자: 플래그 명령 입력(예: f 2 5) -> 시스템: 해당 셀에 깃발 표시/해제",
+      "사용자: 지뢰 셀 공개 -> 시스템: 게임 오버, 전체 지뢰 위치 공개",
+      "사용자: 지뢰 외 모든 셀 공개 -> 시스템: 승리 메시지 출력 및 종료"
+    ],
+    "non_goals": [
+      "GUI 또는 웹 인터페이스 제공",
+      "점수 저장 또는 리더보드",
+      "8x8 이외의 그리드 크기 동적 지원",
+      "멀티플레이어 또는 네트워크 기능",
+      "힌트 또는 자동 해결 기능"
+    ],
+    "architecture_style": "cli",
+    "research_mode": "fast_synthesis",
+    "recommended_architecture": "cli",
+    "recommended_tech_stack": [
+      "Python 3.11",
+      "stdlib (random, sys)",
+      "pytest 7.x"
+    ],
+    "required_capabilities": [
+      "grid_initialization",
+      "mine_random_placement",
+      "adjacent_mine_counting",
+      "recursive_flood_reveal",
+      "flag_toggle",
+      "win_lose_detection",
+      "board_ascii_render",
+      "input_parsing_and_validation"
+    ],
+    "skill_gap_hypotheses": [],
+    "verification_focus": [
+      "지뢰 배치 후 adjacent_count 정확성 (모든 셀)",
+      "재귀 공개가 경계 조건에서 무한루프 없이 종료",
+      "첫 클릭 시 지뢰 미배치 보장 (safe-first-click)",
+      "모든 비지뢰 셀 공개 시 WIN 상태 전환",
+      "지뢰 셀 공개 시 LOSE 상태 전환"
+    ],
+    "maintenance_strategy": [],
+    "source_backed_claims": [
+      "실행 명령 근거: docs/2026-05-08-work-item-parallel-measurement-handoff.md §방법 A",
+      "역할 매핑 근거: docs/codex/2026-05-08-af-productization-application-guide.md §권장 강제 매핑"
+    ],
+    "workspace_notes": [],
+    "evidence_summary": [
+      "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+      "Local reference: docs/2026-05-08-work-item-parallel-measurement-handoff.md -> # 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+      "Local reference: docs/codex/2026-05-08-af-productization-application-guide.md -> ### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer"
+    ],
+    "local_references": [
+      {
+        "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "heading": "# 방법 A: 직접 실행",
+        "excerpt": "# 방법 A: 직접 실행 python3 run_factory_cli.py --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa",
+        "score": 1.0
+      },
+      {
+        "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "heading": "# 방법 B: af CLI alias (설치된 경우)",
+        "excerpt": "# 방법 B: af CLI alias (설치된 경우) af --task \"8x8 minesweeper game with mines\" --project minesweeper-baseline --mode fsa ``` > **주의**: `--brief`, `--target-path` 플래그는 존재하지 않음. 파서 파라미터: `--task/-t`, `--project/-p`, `--mode`, `--pipeline` 등 (`run_factory_cli.py:55...",
+        "score": 0.3208
+      },
+      {
+        "path": "docs/codex/2026-05-08-af-productization-application-guide.md",
+        "heading": "### 권장 강제 매핑",
+        "excerpt": "### 권장 강제 매핑 - Rule Engine -> Game Logic Dev - Realtime Server/WebSocket -> Backend Dev - UI/화면/입력 -> Frontend Dev - 테스트/회귀/품질게이트 -> QA Engineer",
+        "score": 0.1262
+      },
+      {
+        "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "heading": "### Brief 선택: **minesweeper** (가벼움)",
+        "excerpt": "### Brief 선택: **minesweeper** (가벼움) 직전 세션 \"포커 게임 live run\" 보다 가벼운 케이스 선택. Web 미요구, 단순 게임 로직.",
+        "score": 0.1244
+      },
+      {
+        "path": "docs/2026-05-08-work-item-parallel-measurement-handoff.md",
+        "heading": "## 5. 결과 형식",
+        "excerpt": "## 5. 결과 형식 `runtime/timing/minesweeper-baseline_baseline.jsonl` 예상 출력: ```jsonl {\"doc_type\":\"plan\",\"work_item\":\"minesweeper-baseline\",\"elapsed_sec\":58.2,\"refine_attempts\":0,\"output_chars\":3200,\"ts\":1746700000} {\"doc_type\":\"spec\",\"work_item\":\"minesweeper-ba...",
+        "score": 0.097
+      }
+    ],
+    "web_references": [],
+    "llm_prior_references": [],
+    "notebook_summary": "",
+    "requested_role": "General Assistant",
+    "route": {
+      "pipeline": "project",
+      "intent": "trivial",
+      "confidence": 50,
+      "reasoning": "Keyword fallback due to LLM failure; score=3; role=general assistant",
+      "risk_level": "normal"
+    },
+    "generated_at": "2026-05-08T11:10:42"
+  }
+}

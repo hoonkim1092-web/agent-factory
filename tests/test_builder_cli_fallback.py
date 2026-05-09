@@ -90,6 +90,8 @@ def test_builder_without_cli_or_google_key_returns_no_api_key(monkeypatch, tmp_p
     builder_mod = _load_builder(monkeypatch, tmp_path, provider=None)
     monkeypatch.setattr(builder_mod, "SKILLS_DIR", str(tmp_path / "skills"))
     monkeypatch.setattr(builder_mod, "RUNS_DIR", str(tmp_path / "runs"))
+    # 자동탐지로 로컬 CLI가 잡히지 않도록 빈 리스트 반환
+    monkeypatch.setattr(builder_mod, "get_requested_cli_providers", lambda raw=None: [])
 
     builder = builder_mod.SandboxedBuilder(types.SimpleNamespace(pick=lambda _stage: "models/gemini-2.5-flash"))
     ok, code_path, meta = builder.build_skill(

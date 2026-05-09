@@ -55,6 +55,7 @@ from core.skill_procurer import SkillOrchestrator
 from core.agent_runner import ModelRouter, AgentRunner
 from core.git_manager import GitManager
 from core.fsa_loop import FSALoop
+from core.ise_loop import ISELoop
 from core.dynamic_orchestrator import DynamicOrchestrator
 from core.request_router import RequestRouter
 from core.project_pipeline import ProjectPipeline
@@ -95,6 +96,7 @@ class AgentFactory:
         set_visualizer(self.visualizer)
 
         self.ultra = FSALoop(self.runner, self.agent_mgr, visualizer=self.visualizer)
+        self.ise = ISELoop(fsa_loop=self.ultra, runner=self.runner, agent_mgr=self.agent_mgr, visualizer=self.visualizer)
         self.request_router = RequestRouter()
 
         # [COLLAB] 싱글톤 broker + reservation: 모든 오케스트레이터가 공유
@@ -274,6 +276,57 @@ class AgentFactory:
             return self.req.analyze(agent, task_input, workspace=workspace)
         return self.req.analyze(agent, task_input)
 
+    @staticmethod
+    def _collect_clarification_answers(questions: list) -> list[str]:
+        """Clarification 질문을 출력하고 사용자 답변을 수집한다.
+
+        Returns:
+            답변 문자열 리스트 (질문 수와 동일한 길이).
+            /skip 입력 시 모든 질문의 기본값으로 채운 리스트.
+        """
+        print()
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        print("\033[1;36m  Clarification — 설계 정확도 향상\033[0m")
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        print("  프로젝트를 더 정확하게 설계하기 위해 몇 가지 확인이 필요합니다.")
+        print("  Enter = 기본값 사용,  /skip = 전체 스킵 (기본값 일괄 적용)")
+        print()
+
+        answers: list[str] = []
+        for q in questions:
+            q_id = q.get("id", "Q?")
+            question_text = q.get("question", "")
+            why = q.get("why", "")
+            options = q.get("options") or []
+            default = q.get("default", options[0] if options else "")
+
+            print(f"  \033[33m{q_id}.\033[0m {question_text}")
+            if why:
+                print(f"      \033[90m→ {why}\033[0m")
+            for i, opt in enumerate(options, 1):
+                marker = "  \033[32m[기본값]\033[0m" if opt == default else ""
+                print(f"      {i}) {opt}{marker}")
+
+            try:
+                raw = input("      답변: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                raw = "/skip"
+
+            if raw.lower() == "/skip":
+                print("  \033[90m[스킵] 전체 질문 기본값 적용\033[0m")
+                return [q.get("default", "") for q in questions]
+
+            # 숫자 입력 → 해당 옵션 선택
+            if raw.isdigit():
+                idx = int(raw) - 1
+                raw = options[idx] if 0 <= idx < len(options) else default
+
+            answers.append(raw if raw else default)
+            print()
+
+        print("\033[36m" + "─" * 60 + "\033[0m")
+        return answers
+
     def _run_project_with_approval(
         self,
         task_input: str,
@@ -286,20 +339,70 @@ class AgentFactory:
         """
         프로젝트 파이프라인을 2-Phase 로 실행한다.
 
-        Phase 1 — prepare(): 문서 생성 + work-item 자동 채움
+        Phase 1a — prepare_brief(): Evidence + Brief 생성
+        Phase 1.5 — Clarification: 모호성 제거 (approval 모드에서만)
+        Phase 1b — prepare_documents(): RolePlan + TaskBoard + Documents
         승인 게이트: 사용자가 문서를 검토하고 승인 또는 편집
         Phase 2 — execute(): 승인 확인 → 에이전트 실행
         """
-        # Phase 1: 문서 생성
-        print("\n[Pipeline] Phase 1: 프로젝트 문서 생성 중...")
+        # Phase 1a: Brief 생성
+        print("\n[Pipeline] Phase 1a: Evidence + Brief 생성 중...")
         try:
-            prepared = self.project_pipeline.prepare(
+            prepared_brief = self.project_pipeline.prepare_brief(
                 task_input=task_input,
                 workspace=workspace,
                 execution_mode=execution_mode,
                 enable_build=enable_build,
                 requested_role=requested_role,
                 route=route,
+            )
+        except Exception as exc:
+            print(f"\n  [오류] Brief 생성 실패: {exc}")
+            return {"ok": False, "reason": "prepare_failed", "message": str(exc)}
+
+        # Phase 1.5: Clarification (approval 모드에서만)
+        if execution_mode == "approval":
+            try:
+                from core.clarification import (
+                    generate_clarification_questions,
+                    should_skip_clarification,
+                    merge_clarification,
+                )
+                pipeline_type = str((route or {}).get("pipeline", "project"))
+                if not should_skip_clarification(
+                    prepared_brief.project_brief,
+                    pipeline=pipeline_type,
+                    execution_mode=execution_mode,
+                ):
+                    questions = generate_clarification_questions(
+                        prepared_brief.project_brief,
+                        workspace=workspace,
+                        run_id=prepared_brief.run_id,
+                    )
+                    if questions:
+                        answers = self._collect_clarification_answers(questions)
+                        prepared_brief.project_brief = merge_clarification(
+                            prepared_brief.project_brief, questions, answers
+                        )
+                        # Clarification 반영 후 disk의 project_brief.json 원자적 갱신
+                        _pb_path = prepared_brief.project_brief_path
+                        if _pb_path:
+                            try:
+                                self.project_pipeline._write_json(
+                                    _pb_path, prepared_brief.project_brief
+                                )
+                            except Exception as _write_exc:
+                                print(f"  [Clarification] brief 파일 갱신 실패: {_write_exc}")
+            except Exception as _clar_exc:
+                print(f"  [Clarification] 스킵 (오류): {_clar_exc}")
+
+        # Phase 1b: 문서 생성
+        print("\n[Pipeline] Phase 1b: 문서 생성 중...")
+        try:
+            prepared = self.project_pipeline.prepare_documents(
+                prepared_brief,
+                execution_mode=execution_mode,
+                enable_build=enable_build,
             )
         except Exception as exc:
             print(f"\n  [오류] 프로젝트 문서 생성 실패: {exc}")
@@ -332,7 +435,7 @@ class AgentFactory:
                 return {"ok": False, "reason": "cancelled_by_user"}
 
             if choice in ("1", "approve", "a"):
-                approved = gate.approve(approver="user")
+                approved = gate.approve(approver="user", run_id=prepared.run_id)
                 if not approved:
                     print("  [오류] approval-gate.md 를 찾을 수 없습니다.")
                     return {"ok": False, "reason": "gate_file_missing"}
@@ -405,7 +508,7 @@ class AgentFactory:
         if route.get("pipeline") == "project":
             target_workspace = workspace or PROJECT_ROOT
             print(f"\n[Router] project pipeline selected: {route.get('reasoning', '')}")
-            if execution_mode == "fsa":
+            if execution_mode in ("fsa", "ise"):
                 return self.project_pipeline.run(
                     task_input=task_input,
                     workspace=target_workspace,
@@ -464,6 +567,12 @@ class AgentFactory:
             if "workspace" in ultra_params:
                 ultra_kwargs["workspace"] = workspace
             run_metrics = self.ultra.run_mission(agent, task_input, **ultra_kwargs) or {}
+        elif execution_mode == "ise":
+            ise_params = inspect.signature(self.ise.run_mission).parameters
+            ise_kwargs = {"run_id": run_id}
+            if "workspace" in ise_params:
+                ise_kwargs["workspace"] = workspace
+            run_metrics = self.ise.run_mission(agent, task_input, **ise_kwargs) or {}
         else:
             run_metrics = self._invoke_runner(agent, task_input, run_id=run_id, auto_approve=False, workspace=workspace)
 
@@ -614,20 +723,56 @@ class AgentFactory:
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Agent Factory CLI")
+    subparsers = parser.add_subparsers(dest="subcommand")
+
+    sync_todo_parser = subparsers.add_parser("project", help="프로젝트 관리 명령")
+    sync_todo_sub = sync_todo_parser.add_subparsers(dest="project_cmd")
+    sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
+    sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
+    sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+
     parser.add_argument("task", nargs="*", help="Task description")
-    parser.add_argument("--mode", choices=["approval", "fsa"], default="approval", help="Execution mode")
+    parser.add_argument("--mode", choices=["approval", "fsa", "ise"], default="approval", help="Execution mode")
     parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
     parser.add_argument("--role", default="General", help="Agent role")
     parser.add_argument("--build", action="store_true", help="Enable skill building")
-    
+
     args = parser.parse_args()
-    
+
+    if args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
+        from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
+        from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map
+        import os
+        project_dir = os.path.abspath(args.project_dir)
+        if args.dry_run:
+            board = load_project_board(project_dir)
+            if not board or not board.get("tasks"):
+                print("[sync] board가 비어있거나 없음 — 변경 없음")
+            else:
+                status_map = _instruction_status_map(board)
+                items = normalize_project_todo_items(board_todo_items(board))
+                print(f"[sync] dry-run: {len(items)} items")
+                for item in items:
+                    mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
+                    print(f"  - [{mark}] {item}")
+        else:
+            ok, msg = sync_todo_from_board(project_dir)
+            prefix = "[sync]" if ok else "[sync] ERROR:"
+            print(f"{prefix} {msg}")
+        import sys
+        sys.exit(0)
+
     task_input = " ".join(args.task).strip()
-    execution_mode = "fsa" if (args.fsa or args.mode == "fsa") else "approval"
-    
+    if args.fsa or args.mode == "fsa":
+        execution_mode = "fsa"
+    elif args.mode == "ise":
+        execution_mode = "ise"
+    else:
+        execution_mode = "approval"
+
     if not task_input:
         task_input = prompt_mission_template("Agent Factory")
-        
+
     AgentFactory().run(
         task_input=task_input,
         role_spec=args.role,

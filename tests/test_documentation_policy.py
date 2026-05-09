@@ -1,4 +1,5 @@
 import importlib
+import os
 
 
 def test_ensure_documentation_files_creates_korean_skeletons(monkeypatch, tmp_path):
@@ -51,7 +52,123 @@ def test_inject_documentation_contract_is_idempotent(monkeypatch):
     assert "docs/change_history.md" in combined
     assert "ko-KR" in combined
     assert "한국어" in combined
+    assert "[Design Review Contract]" in combined
+    assert "docs/plans/" in combined
+    assert "review_request" in combined
     assert inject_documentation_contract(combined) == combined
+
+
+def _make_board(*tasks):
+    return {"tasks": [{"instruction": instr, "status": status} for instr, status in tasks]}
+
+
+def test_write_project_todo_no_board_all_unchecked(tmp_path):
+    from core.documentation_policy import write_project_todo
+    write_project_todo(str(tmp_path), ["Task A", "Task B"])
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [ ] Task A" in content
+    assert "- [ ] Task B" in content
+
+
+def test_write_project_todo_board_completed(tmp_path):
+    from core.documentation_policy import write_project_todo
+    board = _make_board(("Task A", "completed"), ("Task B", "pending"))
+    write_project_todo(str(tmp_path), ["Task A", "Task B"], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [x] Task A" in content
+    assert "- [ ] Task B" in content
+
+
+def test_write_project_todo_board_in_progress(tmp_path):
+    from core.documentation_policy import write_project_todo
+    board = _make_board(("Task A", "in_progress"))
+    write_project_todo(str(tmp_path), ["Task A"], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [/] Task A" in content
+
+
+def test_write_project_todo_board_blocked_failed(tmp_path):
+    from core.documentation_policy import write_project_todo
+    board = _make_board(("Task B", "blocked"), ("Task F", "failed"))
+    write_project_todo(str(tmp_path), ["Task B", "Task F"], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [!] Task B" in content
+    assert "- [!] Task F" in content
+
+
+def test_write_project_todo_documentation_items_always_unchecked(tmp_path):
+    from core.documentation_policy import write_project_todo, documentation_todo_items
+    doc_items = documentation_todo_items()
+    board = _make_board()
+    write_project_todo(str(tmp_path), [], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    for item in doc_items:
+        assert f"- [ ] {item}" in content
+
+
+def test_write_project_todo_duplicate_instruction_conservative(tmp_path):
+    from core.documentation_policy import write_project_todo
+    board = {"tasks": [
+        {"instruction": "Task A", "status": "completed"},
+        {"instruction": "Task A", "status": "pending"},
+    ]}
+    write_project_todo(str(tmp_path), ["Task A"], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    # pending 우선 → [ ]
+    assert "- [ ] Task A" in content
+    assert "- [x]" not in content
+
+
+def test_write_project_todo_long_instruction_no_truncation(tmp_path):
+    from core.documentation_policy import write_project_todo
+    instr_a = "Implement unit tests for the authentication module and verify edge cases thoroughly"
+    instr_b = "Implement unit tests for the authentication module and verify boundary conditions"
+    board = _make_board((instr_a, "completed"), (instr_b, "pending"))
+    write_project_todo(str(tmp_path), [instr_a, instr_b], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert f"- [x] {instr_a}" in content
+    assert f"- [ ] {instr_b}" in content
+
+
+def test_write_project_todo_whitespace_normalization(tmp_path):
+    from core.documentation_policy import write_project_todo
+    board = _make_board(("Task  A", "completed"))
+    write_project_todo(str(tmp_path), ["Task  A"], board=board)
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [x]" in content
+
+
+def test_update_project_board_task_syncs_todo(tmp_path, monkeypatch):
+    import json
+    from core.project_task_board import update_project_board_task, write_project_board
+
+    board = {
+        "tasks": [
+            {"task_id": "t1", "instruction": "Do something", "owner_role": "dev", "status": "pending"},
+        ]
+    }
+    write_project_board(str(tmp_path), board)
+    monkeypatch.setenv("AF_TODO_SYNC", "1")
+    update_project_board_task(str(tmp_path), "dev", "Do something", "completed", task_id="t1")
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert "- [x] Do something" in content
+
+
+def test_update_project_board_task_todo_sync_disabled(tmp_path, monkeypatch):
+    import json
+    from core.project_task_board import update_project_board_task, write_project_board
+
+    board = {
+        "tasks": [
+            {"task_id": "t1", "instruction": "Do something", "owner_role": "dev", "status": "pending"},
+        ]
+    }
+    write_project_board(str(tmp_path), board)
+    monkeypatch.setenv("AF_TODO_SYNC", "0")
+    (tmp_path / ".todo.md").write_text("original\n", encoding="utf-8")
+    update_project_board_task(str(tmp_path), "dev", "Do something", "completed", task_id="t1")
+    content = (tmp_path / ".todo.md").read_text(encoding="utf-8")
+    assert content == "original\n"
 
 
 def test_project_pipeline_todo_includes_documentation_tasks(monkeypatch, tmp_path):

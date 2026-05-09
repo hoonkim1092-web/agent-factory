@@ -1,0 +1,165 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(git rm *)",
+      "Bash(git stash *)",
+      "Bash(git clean *)",
+      "Bash(git reset *)",
+      "Bash(git mv *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git config *)",
+      "Bash(./start_db agent-factory *)",
+      "Bash(codex --version)",
+      "Bash(codex --help)",
+      "Bash(codex exec *)",
+      "Bash(where codex *)",
+      "Bash(command -v codex)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(supabase --version)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"exit_code=$?\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(wait)",
+      "Bash(grep \"\\\\.py$\")",
+      "Bash(npm list *)",
+      "mcp__codex__codex",
+      "Bash(AF_SKIP_REVIEW_GATE=1 git add scripts/run.py scripts/cli_hook_bridge.py .gitignore .claude/settings.local.template.json)",
+      "Bash(AF_SKIP_REVIEW_GATE=1 git add NEXT_STEPS.md)",
+      "Bash(pip index *)",
+      "Bash(pip install *)",
+      "Bash(awk -F'|' '{print $2}' .af_review_queue/hook_events.log)",
+      "Bash(awk '{print $1}')",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ohmyopenagent.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(jobs -l)",
+      "Bash(bash --version)",
+      "Bash(rm *)",
+      "Skill(update-config)"
+    ],
+    "deny": [
+      "Bash(del:*)",
+      "Bash(erase:*)",
+      "Bash(Remove-Item:*)",
+      "Bash(cmd /c del:*)",
+      "Bash(powershell -Command Remove-Item:*)",
+      "Bash(pwsh -Command Remove-Item:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git restore --worktree:*)",
+      "Bash(git restore --staged:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_design_pending.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_code_review",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_design_review",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_agent_record",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-16T12:24:00.298957+00:00",
+  "workspace": "/Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor",
+  "project_desc": "동행복권 API에서 최근 500회차 로또 당첨번호를 수집·통계 분석하여 가중 랜덤 기반 1등 후보 5조합을 추천하는 macOS CLI 도구를 개발한다.",
+  "roles": [
+    "backend_dev",
+    "qa_engineer"
+  ],
+  "state_board": {
+    "completed_subtasks": [
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_build_2"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 동행복권 API 데이터 수집 모듈 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: QA Engineer 검증 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_7_verify_3"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: backend_dev가 구현 중인 API 수집 모듈의 테스트를 선제적으로 작성한다. scope 단계에서 정의된 인터페이스 기반으로 (1) API 응답 파싱 정합성 테스트 (2) 네트워크 에러/타임아웃 시 재시도 로직 테스트 (3) 비정상 회차번호 입력 시 에러 처리 테스트 (4) 500회차 범위 순회 로직 경계값 테스트를 pytest로 작성한다. mock/fixture를 활용하여 실제 API 호출 없이 검증 가능하도록 한다. 프로젝트 디렉토리 구조를 먼저 확인하고, 기존 scope 문서와 코드를 참조하여 테스트를 작성한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_1_pretest"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 동행복권 API 데이터 수집 모듈을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_build_2"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 동행복권 API 데이터 수집 모듈 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_1_verify_3"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "Backend Dev가 구현 완료한 동행복권 API 데이터 수집 모듈(lotto_cli/fetcher.py)의 실제 동작을 검증한다. (1) 기존에 작성한 tests/test_fetcher.py 테스트가 모두 통과하는지 pytest로 실행한다. (2) py_compile로 모듈 문법 검증한다. (3) 실제 API 1회 호출(최신 회차 1건)로 응답 구조와 파싱 정합성을 확인한다. (4) 테스트 실패 시 원인을 분석하고 코드 수정이 필요하면 구체적 수정 사항을 handoff 메모에 기록한다. 프로젝트 루트는 /Users/hoon/workTree/agent-factory/projects/lotto_cli 이다. 먼저 프로젝트 디렉토리 구조와 기존 코드를 확인한 후 검증을 진행한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_1_verify"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_2_scope_1"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_2_build_2"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: SQLite 기반 당첨번호 캐시 저장소 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_2_verify_3"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: backend_dev가 구현 완료한 SQLite 캐시 저장소(cache_store.py)의 실제 동작을 검증한다.\n\n프로젝트 루트: /Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor\n\n검증 절차:\n1. py_compile로 src/lotto/cache_store.py 문법 검증\n2. cd /Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor && python -m pytest tests/test_cache_store.py -v 실행\n3. 테스트 결과 분석: 실패 테스트가 있으면 원인 분석 후 코드 수정\n4. 추가 엣지케이스 테스트 작성 (필요 시):\n   - 대량 데이터(500건) 일괄 저장 성능 확인\n   - 파일 기반 DB에서 저장 후 재연결 시 데이터 보존 확인\n   - DrawResult의 경계값(번호 1, 45, 보너스 번호) 저장/조회 검증\n5. fetcher.py ↔ cache_store.py 통합 시나리오 테스트: fetcher로 가져온 데이터를 cache_store에 저장하고 다시 조회하는 E2E 흐름 확인 (mock 기반)\n6. 검증 결과를 handoff 메모로 남긴다\n\n기존 테스트 파일: tests/test_cache_store.py (이미 기본 테스트가 작성되어 있음)\n참고: PYTHONPATH에 프로젝트 루트를 포함해야 import가 동작한다",
+        "result": "Success",
+        "task_id": "qa_engineer_module_2_verify"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_3_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: backend_dev가 구현 중인 통계 분석 엔진(analyzer.py)의 테스트를 선제적으로 작성한다.\n\n프로젝트 루트: /Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor\n스코프 문서: docs/scope-통계-분석-엔진.md\n\n테스트 파일: tests/test_analyzer.py\n\n스코프 문서의 인터페이스 정의를 먼저 읽고, 다음 테스트를 pytest로 작성한다:\n\n1. compute_frequencies 테스트:\n   - 알려진 입력(DrawResult 3~5건)에 대해 각 번호 출현 횟수가 정확한지 검증\n   - 빈 리스트 입력 시 모든 빈도 0 또는 빈 dict 반환 검증\n   - 번호 1과 45의 경계값 테스트\n\n2. compute_pair_cooccurrence 테스트:\n   - 알려진 입력에 대해 (a,b) 쌍 동시출현 횟수 정확성 검증\n   - 단일 추첨(1건)에서 C(6,2)=15개 쌍 생성 검증\n   - 정렬 보장: 키가 항상 (min, max) 순서인지 검증\n\n3. compute_window_stats 테스트:\n   - window=50일 때 최근 50건만 사용하는지 검증\n   - 전체 데이터가 window보다 적을 때 전체 사용 검증\n\n4. compute_weights 테스트:\n   - 가중치 합산 비율(전체 40% + 최근 60%) 공식 검증\n   - 반환된 가중치가 모두 양수인지 검증\n   - 모든 번호(1~45)에 대해 가중치가 존재하는지 검증\n\n5. AnalysisResult 컨테이너 테스트:\n   - 모든 필드가 올바르게 저장되는지 검증\n\n기존 모델 참조: src/lotto/models.py의 DrawResult 클래스 구조를 먼저 확인\nfixture로 테스트용 DrawResult 목록을 만들어 재사용\n모든 주석과 테스트명은 한국어로 작성\nPYTHONPATH에 프로젝트 루트 포함 필요",
+        "result": "Success",
+        "task_id": "qa_engineer_module_3_pretest"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_3_build_2"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: backend_dev가 아직 scope를 정의하지 않은 모듈 4(가중 랜덤 기반 5조합 추천 생성기)에 대해, 프로젝트 요구사항 기반으로 테스트를 선제적으로 작성한다.\n\n프로젝트 루트: /Users/hoon/workTree/agent-factory/projects/lotto_pattern_predictor\n\n먼저 프로젝트 디렉토리 구조, 기존 코드(models.py, analyzer.py 스코프 문서), 그리고 tests/ 디렉토리를 확인한다.\n\n테스트 파일: tests/test_recommender.py\n\n프로젝트 목표('가중 랜덤 기반 1등 후보 5조합 추천')에서 추론한 인터페이스 기반으로 다음 테스트를 pytest로 작성한다:\n\n1. 추천 조합 기본 검증:\n   - 5조합이 반환되는지 검증\n   - 각 조합이 정확히 6개 번호를 포함하는지 검증\n   - 모든 번호가 1~45 범위인지 검증\n   - 각 조합 내 번호가 오름차순 정렬되어 있는지 검증\n   - 조합 간 중복이 없는지 검증\n\n2. 가중치 반영 검증:\n   - 높은 가중치 번호가 통계적으로 더 자주 선택되는지 (100회 반복 실행 후 빈도 비교)\n   - 가중치가 0인 번호는 선택되지 않는지 검증\n   - 균등 가중치일 때 균등 분포에 가까운지 검증\n\n3. 엣지케이스:\n   - 가중치 딕셔너리가 비어있을 때 에러 처리\n   - 6개 미만의 번호에만 가중치가 있을 때 에러 처리\n\n기존 모델 참조: src/lotto/models.py의 DrawResult 클래스\nanalyzer.py의 compute_weights 반환 형태 참조\nfixture로 가중치 딕셔너리를 만들어 재사용\n모든 주석과 테스트명은 한국어로 작성\nPYTHONPATH에 프로젝트 루트 포함 필요",
+        "result": "Success",
+        "task_id": "qa_engineer_module_4_pretest"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 번호별 출현빈도·동시출현·구간 통계 분석 엔진 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_3_verify_3"
+      }
+    ],
+    "failed_subtasks": [],
+    "interrupted_subtasks": [],
+    "agents_status": {
+      "backend_dev": "idle",
+      "qa_engineer": "idle"
+    },
+    "current_status": "stopped_max_cycles"
+  },
+  "active_assignments": {}
+}

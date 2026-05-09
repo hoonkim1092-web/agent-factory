@@ -1,0 +1,31 @@
+{
+  "role_id": "frontend_dev",
+  "name": "Frontend Dev",
+  "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+  "required_skills": [
+    "responsive_mobile_web_ui",
+    "frontend_smoke_testing"
+  ],
+  "owned_modules": [
+    "frontend_dev_module_2",
+    "frontend_dev_module_3",
+    "frontend_dev_module_4",
+    "frontend_dev_module_5",
+    "frontend_dev_module_8"
+  ],
+  "feature_slices": [
+    "모바일 반응형 추천 웹 UI을(를) 구현한다.",
+    "조합 카드 시각화 컴포넌트을(를) 구현한다.",
+    "파라미터 슬라이더 컨트롤을(를) 구현한다.",
+    "오프라인 캐시 폴백 모듈을(를) 구현한다.",
+    "모바일 웹 설계 문서을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-04-18T01:25:30"
+}

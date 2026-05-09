@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-04-18T00:00:00Z",
+  "source": "offline",
+  "draws_used": 500,
+  "combos": [
+    {
+      "numbers": [3, 11, 18, 27, 35, 44],
+      "score": 0.91,
+      "odd_even_ratio": "3:3",
+      "section_distribution": [2, 1, 1, 1, 1]
+    },
+    {
+      "numbers": [1, 9, 14, 28, 33, 42],
+      "score": 0.87,
+      "odd_even_ratio": "2:4",
+      "section_distribution": [2, 1, 0, 2, 1]
+    }
+  ]
+}

@@ -1,0 +1,645 @@
+{
+  "claims": [],
+  "sources": [
+    {
+      "source_id": "web_001",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design – Frontend Masters Blog",
+      "trust_score": 0.467,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_002",
+      "url": "https://www.reddit.com/r/todoist/comments/1nkkvjq/how_do_you_all_archive_your_tasks_for_easy/",
+      "title": "How do you all archive your tasks for easy searchability or reference ...",
+      "trust_score": 0.061,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_003",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_004",
+      "url": "https://www.minzkn.com/vibecoding/pages/project-todo-app.html",
+      "title": "Todo 앱 구축 - AI Vibe Coding 가이드 /with MINZKN",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_005",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_006",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_007",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_008",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_009",
+      "url": "https://medium.com/@qabbalilyas/clean-architecture-a-practical-guide-with-a-to-do-app-example-a892d478ea39",
+      "title": "Clean Architecture: A Practical Guide with a To-Do App Example",
+      "trust_score": 0.523,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_010",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.436,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_011",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.488,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_012",
+      "url": "https://nicelydone.club/flows/archive",
+      "title": "Archiving User Flow Examples — + SaaS UX Patterns | Nicelydone",
+      "trust_score": 0.131,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_013",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_014",
+      "url": "https://dribbble.com/search/todo-app",
+      "title": "Browse thousands of Todo App images for design inspiration",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_015",
+      "url": "https://dev.to/fonyuygita/building-a-react-todo-app-learn-to-setup-a-complete-ui-structure-bfm",
+      "title": "Building a React Todo App: Learn to setup a complete UI structure😎 - DEV Community",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_016",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_017",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_018",
+      "url": "https://www.abstractspoon.com/wiki/doku.php?id=archives",
+      "title": "Archiving Tasks [ToDoList © AbstractSpoon]",
+      "trust_score": 0.995,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_019",
+      "url": "https://medium.com/@ckn.deesit/designing-a-to-do-list-application-ffcbe80f2fdf",
+      "title": "Designing a To-Do List Application | by Chakrin Deesit",
+      "trust_score": 0.481,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_020",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.403,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_021",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.426,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_022",
+      "url": "https://webdesign.tutsplus.com/to-do-app-with-vanilla-javascript--cms-35258t",
+      "title": "How to Build a TODO App With Vanilla JavaScript (and Local Storage) | Envato Tuts+",
+      "trust_score": 0.378,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_023",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_024",
+      "url": "https://dribbble.com/search/todo",
+      "title": "Browse thousands of Todo images for design inspiration - Dribbble",
+      "trust_score": 0.992,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_025",
+      "url": "https://substack.com/home/post/p-193377967",
+      "title": "Building a Simple To-Do List App with JavaScript",
+      "trust_score": 0.549,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_026",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.517,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_027",
+      "url": "https://www.sevenmentor.com/build-a-full-stack-project-todo-app",
+      "title": "Guide to Build a Full Stack Project: Todo App | SevenMentor",
+      "trust_score": 0.603,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_028",
+      "url": "https://www.freecodecamp.org/news/flutter-stacked-architecture-todo-app/",
+      "title": "How to Use Stacked Architecture to Build a Flutter Todo App",
+      "trust_score": 0.584,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_029",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_030",
+      "url": "https://medium.com/@qabbalilyas/clean-architecture-a-practical-guide-with-a-to-do-app-example-a892d478ea39",
+      "title": "Clean Architecture: A Practical Guide with a To-Do App Example",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_031",
+      "url": "https://algo.monster/liteproblems/2590",
+      "title": "2590. Design a Todo List - In-Depth Explanation - AlgoMonster",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_032",
+      "url": "https://www.todoist.com/inspiration/todo-list-bankruptcy",
+      "title": "I Declare To-Do List Bankruptcy! (and you should too)",
+      "trust_score": 0.998,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_033",
+      "url": "https://stackoverflow.com/questions/70753148/error-archiving-or-generating-signed-bundle-of-my-app-whereas-it-works-fine-in-d",
+      "title": "xcode - Error archiving or generating signed bundle of my App whereas it works fine in debug mode - Stack Overflow",
+      "trust_score": 0.145,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_034",
+      "url": "https://www.reddit.com/r/webdev/comments/1bwjfpo/what_are_some_common_mistakes_to_avoid_when/",
+      "title": "What are some common mistakes to avoid when designing ... - Reddit",
+      "trust_score": 0.023,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_035",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_036",
+      "url": "https://mathspp.com/blog/textual-tutorial-build-a-todo-app-in-python",
+      "title": "Textual tutorial – build a TODO app in Python | mathspp",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_037",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.31,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_038",
+      "url": "https://www.ada.gov/resources/small-entity-compliance-guide/",
+      "title": "Accessibility of Web Content and Mobile Apps Provided by State and Local Government Entities: A Small Entity Complian...",
+      "trust_score": 0.204,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_039",
+      "url": "https://www.nngroup.com/articles/edge-cases/",
+      "title": "The Edge Cases that Break Hearts (And Products) - NN/G",
+      "trust_score": 0.971,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_040",
+      "url": "https://www.nytimes.com/wirecutter/reviews/best-to-do-list-app/",
+      "title": "The 3 Best To-Do List Apps of 2026 | Reviews by Wirecutter",
+      "trust_score": 0.945,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_041",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.362,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_042",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.294,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_043",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.284,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_044",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.199,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_045",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_046",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_047",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_048",
+      "url": "https://www.freecodecamp.org/news/build-a-todo-app-from-scratch-with-reactjs/",
+      "title": "How to Build a TODO App from Scratch with React.js",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_049",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_050",
+      "url": "https://codesignal.com/learn/courses/building-a-full-featured-to-do-list-application-1/lessons/data-validation-and-error-handling-in-your-to-do-list-application",
+      "title": "Data Validation and Error Handling in Your To-Do List Application",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_051",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_052",
+      "url": "https://algo.monster/liteproblems/2590",
+      "title": "2590. Design a Todo List - In-Depth Explanation - AlgoMonster",
+      "trust_score": 0.998,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_053",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.407,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_054",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.301,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_055",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_056",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_057",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.488,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_058",
+      "url": "https://nicelydone.club/flows/archive",
+      "title": "Archiving User Flow Examples — + SaaS UX Patterns | Nicelydone",
+      "trust_score": 0.131,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_059",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_060",
+      "url": "https://dribbble.com/search/todo",
+      "title": "Browse thousands of Todo images for design inspiration - Dribbble",
+      "trust_score": 0.992,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_061",
+      "url": "https://substack.com/home/post/p-193377967",
+      "title": "Building a Simple To-Do List App with JavaScript",
+      "trust_score": 0.549,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_062",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.517,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_063",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_064",
+      "url": "https://medium.com/@qabbalilyas/clean-architecture-a-practical-guide-with-a-to-do-app-example-a892d478ea39",
+      "title": "Clean Architecture: A Practical Guide with a To-Do App Example",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_065",
+      "url": "https://algo.monster/liteproblems/2590",
+      "title": "2590. Design a Todo List - In-Depth Explanation - AlgoMonster",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_066",
+      "url": "https://www.todoist.com/inspiration/todo-list-bankruptcy",
+      "title": "I Declare To-Do List Bankruptcy! (and you should too)",
+      "trust_score": 0.998,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_067",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_068",
+      "url": "https://mathspp.com/blog/textual-tutorial-build-a-todo-app-in-python",
+      "title": "Textual tutorial – build a TODO app in Python | mathspp",
+      "trust_score": 0.999,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_069",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.362,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_070",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.294,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_071",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.284,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_072",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.199,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_073",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_074",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_075",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_076",
+      "url": "https://www.freecodecamp.org/news/build-a-todo-app-from-scratch-with-reactjs/",
+      "title": "How to Build a TODO App from Scratch with React.js",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_077",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 1.0,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_078",
+      "url": "https://algo.monster/liteproblems/2590",
+      "title": "2590. Design a Todo List - In-Depth Explanation - AlgoMonster",
+      "trust_score": 0.998,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_079",
+      "url": "https://frontendmasters.com/blog/building-a-todo-app-from-scratch-step-1-planning-design/",
+      "title": "Building a TODO App from Scratch — Step 1 — Planning & Design",
+      "trust_score": 0.407,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    },
+    {
+      "source_id": "web_080",
+      "url": "https://medium.com/product-manager-journal/designing-a-simple-todo-app-b4d4ed9300a4",
+      "title": "Designing a Simple Todo App - by Chakkaradeep Chandran - Medium",
+      "trust_score": 0.301,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T17:35:55"
+    }
+  ]
+}

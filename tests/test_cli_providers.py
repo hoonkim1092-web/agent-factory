@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+import sys
 import types
 
 import pytest
@@ -33,7 +34,7 @@ def test_cli_provider_registry_defaults_and_filtering():
     assert get_requested_cli_providers("claude_cli, gemini, codex_cli") == ["claude_cli", "codex_cli"]
     assert default_chat_model_for_provider("claude_cli") == "claude"
     assert default_chat_model_for_provider("gemini_cli") == "gemini"
-    assert default_chat_model_for_provider("codex_cli") == "gpt-5"
+    assert default_chat_model_for_provider("codex_cli") == ""
     assert supports_cli_bootstrap("gemini_cli") is True
     assert supports_cli_bootstrap("gemini") is False
     assert engine_api_keys_disabled("gemini_cli") is True
@@ -59,7 +60,7 @@ def test_config_paths_ignores_engine_api_keys_when_disabled(monkeypatch, tmp_pat
 @pytest.mark.parametrize(
     ("provider_id", "expected_prefix", "expected_items", "prompt_in_command"),
     [
-        ("claude_cli", ["claude"], ["-p", "--append-system-prompt", "--output-format", "json", "--permission-mode", "bypassPermissions"], True),
+        ("claude_cli", ["claude"], ["-p", "--append-system-prompt", "--output-format", "json", "--permission-mode", "bypassPermissions"], False),
         ("gemini_cli", ["gemini"], ["-p", "--output-format", "json", "--sandbox", "--approval-mode", "yolo"], True),
         (
             "codex_cli",
@@ -95,8 +96,11 @@ def test_build_cli_command_uses_provider_specific_defaults(provider_id, expected
         assert item in cmd
     if prompt_in_command:
         assert any("execute task" in part for part in cmd)
+    else:
+        assert not any("execute task" in part for part in cmd)
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows path handling only tested on Windows")
 def test_codex_cli_path_override_keeps_exec_subcommand(monkeypatch):
     from core.providers.cli import CliChatRequest, build_cli_command
 
@@ -123,6 +127,7 @@ def test_codex_cli_path_override_keeps_exec_subcommand(monkeypatch):
     ]
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows npm shim only applicable on Windows")
 def test_build_cli_command_falls_back_to_windows_roaming_npm_shim(monkeypatch):
     from core.providers.cli import CliChatRequest, build_cli_command
 
@@ -617,6 +622,37 @@ def test_execute_cli_chat_sends_codex_prompt_via_stdin(tmp_path):
     assert result["ok"] is True
     assert seen["cmd"][-1] == "-"
     assert seen["input"].startswith("[Task]\nReturn AGENT_FACTORY_OK")
+
+
+def test_execute_cli_chat_sends_claude_prompt_via_stdin(tmp_path):
+    from core.providers.cli import CliChatRequest, execute_cli_chat
+
+    workspace = tmp_path / "proj"
+    workspace.mkdir(parents=True, exist_ok=True)
+    seen = {}
+
+    def cli_runner(*args, **kwargs):
+        seen["cmd"] = list(args[0])
+        seen["input"] = kwargs.get("input")
+        return types.SimpleNamespace(returncode=0, stdout='{"result":"AGENT_FACTORY_OK"}', stderr="")
+
+    result = execute_cli_chat(
+        CliChatRequest(
+            provider_id="claude_cli",
+            model="claude",
+            system_prompt="system prompt",
+            task_input="Return AGENT_FACTORY_OK",
+            workspace=str(workspace),
+            run_id="run_claude_stdin",
+        ),
+        run_command=cli_runner,
+    )
+
+    assert result["ok"] is True
+    assert "-p" in seen["cmd"]
+    assert not any("Return AGENT_FACTORY_OK" in part for part in seen["cmd"])
+    assert seen["input"] is not None
+    assert "Return AGENT_FACTORY_OK" in seen["input"]
 
 
 def test_execute_cli_chat_runs_codex_auth_preflight_and_auto_login(monkeypatch, tmp_path):

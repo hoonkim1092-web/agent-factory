@@ -1,0 +1,34 @@
+{
+  "role_id": "frontend_dev",
+  "name": "Frontend Dev",
+  "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+  "required_skills": [
+    "cross_platform_build"
+  ],
+  "owned_modules": [
+    "frontend_dev_module_1",
+    "frontend_dev_module_2",
+    "frontend_dev_module_3",
+    "frontend_dev_module_4",
+    "frontend_dev_module_5",
+    "frontend_dev_module_6",
+    "frontend_dev_module_7"
+  ],
+  "feature_slices": [
+    "동행복권 회차 수집기 모듈을(를) 구현한다.",
+    "회차 데이터 로컬 캐시 저장소을(를) 구현한다.",
+    "통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)을(를) 구현한다.",
+    "패턴 기반 번호 조합 추천기을(를) 구현한다.",
+    "터미널 포맷 출력 리포트을(를) 구현한다.",
+    "PyInstaller 빌드 스펙 및 산출물을(를) 구현한다.",
+    "사용자 실행 가이드 문서을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-04-17T01:29:29"
+}

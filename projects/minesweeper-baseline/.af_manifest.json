@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-08T02:25:18.893767+00:00",
+  "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline",
+  "project_desc": "Build a playable 8x8 CLI minesweeper game where the player can reveal cells and flag mines.",
+  "roles": [
+    "frontend_dev",
+    "backend_dev",
+    "game_logic_dev",
+    "designer",
+    "qa_engineer",
+    "qa_engineer_code_reviewer",
+    "qa_engineer_cross_validator",
+    "game_logic_dev_code_reviewer",
+    "game_logic_dev_cross_validator"
+  ],
+  "state_board": {
+    "completed_subtasks": [
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 단위 테스트 스위트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_4_scope_1"
+      },
+      {
+        "role": "game_logic_dev",
+        "subtask": "Game Logic Dev: Game Logic Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "game_logic_dev_module_6_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 단위 테스트 스위트 (pytest)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_4_build_2"
+      },
+      {
+        "role": "game_logic_dev",
+        "subtask": "Game Logic Dev: 핵심 규칙과 상태 전이를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "game_logic_dev_module_6_build_2"
+      },
+      {
+        "role": "designer",
+        "subtask": "Product Designer: Product Designer 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "designer_module_7_scope_1"
+      },
+      {
+        "role": "qa_engineer_code_reviewer",
+        "subtask": "[Code Review] qa_engineer_module_4 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_4_code_review"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_5_scope_1"
+      }
+    ],
+    "failed_subtasks": [],
+    "interrupted_subtasks": [],
+    "agents_status": {
+      "frontend_dev": "working",
+      "backend_dev": "working",
+      "game_logic_dev": "idle",
+      "designer": "working",
+      "qa_engineer": "idle",
+      "qa_engineer_code_reviewer": "idle",
+      "qa_engineer_cross_validator": "working",
+      "game_logic_dev_code_reviewer": "working",
+      "game_logic_dev_cross_validator": "idle"
+    },
+    "current_status": "running"
+  },
+  "active_assignments": {
+    "run_1778206851_frontend_dev_975d1e": {
+      "role": "frontend_dev",
+      "subtask": "Frontend Dev: 8x8 지뢰찾기 CLI 실행 파일 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+      "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline"
+    },
+    "run_1778207043_game_logic_dev_code_reviewer_f9f2b2": {
+      "role": "game_logic_dev_code_reviewer",
+      "subtask": "[Code Review] game_logic_dev_module_6 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+      "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline"
+    },
+    "run_1778207083_designer_bf7dda": {
+      "role": "designer",
+      "subtask": "Product Designer: 정보 구조와 화면 흐름, 비주얼 방향을 설계한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+      "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline"
+    },
+    "run_1778207101_qa_engineer_cross_validator_216c38": {
+      "role": "qa_engineer_cross_validator",
+      "subtask": "[Cross Validate] qa_engineer_module_4 전체 정합성을 교차검증한다.",
+      "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline"
+    },
+    "run_1778207118_backend_dev_7237fe": {
+      "role": "backend_dev",
+      "subtask": "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+      "workspace": "/Users/hoon/workTree/agent-factory/projects/minesweeper-baseline"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "role_id": "backend_dev",
+  "run_id": "project_run_1776339648_backend_dev",
+  "skills": [
+    {
+      "skill_id": "http_api_integration",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "sqlite_data_persistence",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "data_visualization_terminal",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "json_data_processing",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 4,
+    "installed": 4,
+    "by_mode": {
+      "direct_install": 4
+    }
+  },
+  "generated_at": "2026-04-16T20:48:06"
+}

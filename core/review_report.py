@@ -256,6 +256,7 @@ class DocumentReviewSession:
             ReviewReport with critic/cross/judge results
         """
         from core.review_runner import (
+            detect_blocked_providers,
             detect_providers,
             run_aggregation,
             run_critic_review,
@@ -264,9 +265,18 @@ class DocumentReviewSession:
             select_review_pair,
         )
 
+        # G5: AUTH_EXPIRED provider 있으면 즉시 BLOCK (부분 만료 포함)
+        blocked = detect_blocked_providers()
+        if blocked:
+            return self._empty_report(
+                round_num, "BLOCK",
+                f"인증 만료 provider: {', '.join(blocked)} — `<cli> login` 후 재시도",
+            )
+
         providers = detect_providers()
         if not providers:
-            return self._empty_report(round_num, "PASS", "프로바이더 없음 — 스킵")
+            # G4: SKIP으로 분리 — 미검증이지만 메트릭은 PASS와 구분
+            return self._empty_report(round_num, "SKIP", "사용 가능한 provider 없음 — T2/T3 검증 생략")
 
         # 문서 내용 합산
         doc_content = "\n\n---\n\n".join(
@@ -288,9 +298,9 @@ class DocumentReviewSession:
             prompt_file="doc_critic",
         )
 
-        # Cross 실행 (enterprise + 2개 이상 프로바이더)
+        # Cross 실행 (G2: enterprise 게이팅 제거 — provider 2개 이상이면 실행)
         cross_result = None
-        if self.level == "enterprise" and len(providers) >= 2:
+        if len(providers) >= 2:
             _, cross_provider = select_review_pair(providers)
             cross_result = run_cross_review(
                 provider=cross_provider,
@@ -299,9 +309,9 @@ class DocumentReviewSession:
                 prompt_file="doc_cross_review",
             )
 
-        # Judge 실행 (enterprise)
+        # Judge 실행 (cross가 있을 때만)
         judge_result = None
-        if self.level == "enterprise" and critic_result:
+        if cross_result and critic_result:
             judge_provider = select_judge(providers)
             raw_agg = run_aggregation(
                 judge_provider,
@@ -321,7 +331,7 @@ class DocumentReviewSession:
                 aggregated_output=raw_agg,
             )
 
-        # dynamic: critic verdict를 그대로 사용
+        # provider 1개(critic만) — critic verdict를 그대로 사용
         if not judge_result and critic_result:
             judge_result = JudgeResult(
                 provider=critic_provider,

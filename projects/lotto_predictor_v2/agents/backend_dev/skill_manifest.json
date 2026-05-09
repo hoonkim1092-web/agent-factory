@@ -1,0 +1,32 @@
+{
+  "role_id": "backend_dev",
+  "run_id": "project_run_1776356618_backend_dev",
+  "skills": [
+    {
+      "skill_id": "http_api_client",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    },
+    {
+      "skill_id": "data_caching",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 2,
+    "installed": 2,
+    "by_mode": {
+      "direct_install": 2
+    }
+  },
+  "generated_at": "2026-04-17T01:29:29"
+}

@@ -19,6 +19,29 @@
 # ============================================================================
 set -euo pipefail
 
+# ----------------------------------------------------------------------------
+# CLI 옵션 파싱 (--with-graphify)
+# ----------------------------------------------------------------------------
+WITH_GRAPHIFY=0
+for arg in "$@"; do
+    case "$arg" in
+        --with-graphify) WITH_GRAPHIFY=1 ;;
+        --help|-h)
+            cat <<'EOF'
+Agent Factory CLI installer
+
+사용법:
+  bash install-af.sh [옵션]
+
+옵션:
+  --with-graphify    graphify 외부 도구도 함께 설치 (uv tool, ~1-2분 추가)
+  --help, -h         이 도움말
+EOF
+            exit 0
+            ;;
+    esac
+done
+
 AF_VERSION="${AF_VERSION:-1.2.21}"
 AF_TAG="af-fsa_v${AF_VERSION}"
 # GitHub tag tarball root는 `<repo>-<tag>/` 형식.
@@ -251,6 +274,42 @@ else
     fi
 fi
 
+# ----------------------------------------------------------------------------
+# Step 10 (옵션): graphify 외부 도구 설치 (--with-graphify)
+# ----------------------------------------------------------------------------
+if [ "${WITH_GRAPHIFY}" -eq 1 ]; then
+    c_yellow "► graphify 외부 도구 설치 (--with-graphify)..."
+
+    # uv 자동 설치 (없으면). curl|sh 패턴은 공급망 위험이 있으나 astral-sh 공식 권장.
+    if ! command -v uv >/dev/null 2>&1; then
+        c_yellow "  uv 미설치 → 자동 설치 시도..."
+        if command -v curl >/dev/null 2>&1; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+        else
+            c_yellow "! curl 없음 → uv 수동 설치 필요: https://docs.astral.sh/uv/"
+            c_yellow "  graphify 설치 건너뜀"
+        fi
+    fi
+
+    if command -v uv >/dev/null 2>&1; then
+        if uv tool install 'graphifyy>=0.4.27,<0.5.0' --python 3.13; then
+            # uv tool bin 경로를 PATH에 추가 (af-critic HIGH#5 fix).
+            UV_BIN_DIR=$(uv tool bin 2>/dev/null || echo "$HOME/.local/bin")
+            export PATH="$UV_BIN_DIR:$PATH"
+
+            if command -v graphify >/dev/null 2>&1; then
+                c_green "✓ graphify 설치 완료: $(graphify --version 2>&1 | head -1)"
+                c_yellow "  PATH 영구 등록 필요: 새 쉘에서 \$PATH에 ${UV_BIN_DIR}이 포함되도록 ~/.zshrc 또는 ~/.bashrc에 추가"
+            else
+                c_yellow "! graphify CLI 미감지 → \$PATH 확인 필요 (예상 경로: ${UV_BIN_DIR})"
+            fi
+        else
+            c_yellow "! graphifyy 설치 실패 → 수동 실행: uv tool install 'graphifyy>=0.4.27,<0.5.0' --python 3.13"
+        fi
+    fi
+fi
+
 echo ""
 c_cyan "============================================================"
 c_green "  설치 완료! v${AF_VERSION}"
@@ -259,4 +318,9 @@ echo ""
 echo "  새 쉘을 열거나 아래 명령으로 시작:"
 c_yellow "    af --help"
 c_yellow "    af setup"
+if [ "${WITH_GRAPHIFY}" -ne 1 ]; then
+    echo ""
+    echo "  graphify 외부 도구도 설치하려면:"
+    c_yellow "    bash install-af.sh --with-graphify"
+fi
 echo ""

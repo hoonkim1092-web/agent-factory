@@ -1,0 +1,37 @@
+{
+  "claims": [],
+  "sources": [
+    {
+      "source_id": "web_001",
+      "url": "https://m.blog.naver.com/sinophoenix999/221803783095",
+      "title": "포커 룰, 규칙, 용어정리 : 네이버 블로그",
+      "trust_score": 0.289,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T23:51:33"
+    },
+    {
+      "source_id": "web_002",
+      "url": "https://ihwain.co.kr/article/%EC%9D%B4%EC%9A%A9%EC%95%88%EB%82%B4-faq/3/18/",
+      "title": "HWAIN 이용안내 FAQ | 자주 묻는 질문",
+      "trust_score": 0.185,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T23:51:33"
+    },
+    {
+      "source_id": "web_003",
+      "url": "https://vig.cdn.sos.ca.gov/2022/general/ko/pdf/complete-vig.pdf",
+      "title": "[PDF] 2022년 11월 8일, 화요일",
+      "trust_score": 0.051,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T23:51:33"
+    },
+    {
+      "source_id": "web_004",
+      "url": "https://namu.wiki/w/%EC%B9%A8%EC%B0%A9%EB%A7%A8?uuid=56e16d73-7825-412d-b374-82c580c672d5",
+      "title": "침착맨 (r2521 판) - 나무위키",
+      "trust_score": 0.042,
+      "retrieval_method": "tavily_search",
+      "fetched_at": "2026-05-07T23:51:33"
+    }
+  ]
+}

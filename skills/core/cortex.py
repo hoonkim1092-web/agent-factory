@@ -12,7 +12,6 @@ load_dotenv()
 # --- Configuration ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Auto-detect Project ID from current directory name
@@ -71,7 +70,7 @@ class CortexClient:
             vector = self.embed(content)
             payload = {
                 "content": content,
-                "metadata": {**metadata, "project_id": PROJECT_ID},
+                "metadata": {**metadata, "project_id": metadata.get("project_id", PROJECT_ID)},
                 "embedding": vector
             }
             
@@ -92,18 +91,20 @@ class CortexClient:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    def recall(self, query, threshold=0.7, limit=4):
-        """Retrieve relevant memories."""
+    def recall(self, query, threshold=0.7, limit=4, project_id=None):
+        """Retrieve relevant memories. project_id defaults to module-level PROJECT_ID."""
         if not self.sb_url or not self.sb_key:
             return {"ok": False, "error": "Supabase credentials missing"}
 
         try:
             query_vector = self.embed_query(query)
+            # project_id=None means cross-project search — omit filter entirely.
+            filter_dict = {} if project_id is None else {"project_id": project_id}
             payload = {
                 "query_embedding": query_vector,
                 "match_threshold": threshold,
                 "match_count": limit,
-                "filter": {"project_id": PROJECT_ID}
+                "filter": filter_dict,
             }
             
             url = f"{self.sb_url}/rest/v1/rpc/match_cortex_memory"
@@ -162,7 +163,7 @@ def apply(ctx):
         query = args.get("query")
         if not query:
             return {"ok": False, "error": "Missing query"}
-        return client.recall(query)
+        return client.recall(query, project_id=ctx.get("project_id", PROJECT_ID))
 
     elif action == "save":
         inp = args.get("input")
@@ -175,7 +176,8 @@ def apply(ctx):
         metadata = {
             "output": out,
             "explanation": expl,
-            "agent": ctx.get("agent_role", "unknown")
+            "agent": ctx.get("agent_role", "unknown"),
+            "project_id": ctx.get("project_id", PROJECT_ID),
         }
         return client.save_memory(inp, metadata)
 

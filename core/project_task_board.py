@@ -1,8 +1,12 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from core.file_io import write_text
 from core.file_lock import locked_file
@@ -10,7 +14,68 @@ from core.utils import now_iso, safe_id
 
 BOARD_FILENAME = "project_board_state.json"
 TASK_EXECUTION_PLAN_REL_PATH = os.path.join("docs", "task_execution_plan.md")
-_PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "verify": 3}
+_PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "code_review": 3, "cross_validate": 4, "verify": 5}
+
+_MODULE_SUFFIX_RE = re.compile(r"^(.+)_(\d+)$")
+
+
+def _module_sort_key(module_id: str) -> tuple[str, int]:
+    # module_10이 module_2보다 먼저 정렬되지 않도록 숫자 접미사를 분리해 정수 비교.
+    # 접미사가 없는 id(예: "backend_dev")는 원본을 prefix로 유지 — 빈 prefix("", 0)로
+    # 붕괴시키면 모든 정렬 버킷 앞으로 끌려오는 silent sort 오염이 발생한다.
+    # (af-critic 2026-04-15 WARN-1 대응; 기존 lazy quantifier `(.*?)` 는 "backend_dev"를
+    # ("", 0)으로 파싱하는 버그가 있었음.)
+    if not module_id:
+        return ("", 0)
+    match = _MODULE_SUFFIX_RE.match(module_id)
+    if match:
+        return (match.group(1), int(match.group(2)))
+    return (module_id, 0)
+
+
+# max_cycles: phase별 가중치 기반 동적 계산 (실측 기반)
+# - scope: 평균 5 cycle (scope 문서 작성 + Lilith 배정)
+# - build: 평균 20 cycle (CLI 실행 3~6분 + stall 대기 + Lilith 개입)
+# - verify: 평균 8 cycle (검증 + handoff)
+# - 기타(integrate 등): 10 cycle
+# Run Budget(토큰 예산)이 상위 guard로 작동하므로 과다 산정 무해.
+_PHASE_CYCLE_WEIGHTS = {"scope": 8, "build": 25, "code_review": 6, "cross_validate": 6, "verify": 12}
+_DEFAULT_PHASE_WEIGHT = 10
+MAX_CYCLES_FLOOR = 100
+
+
+def compute_max_cycles(workspace: str, logger=None) -> int:
+    """
+    board의 pending/blocked 태스크 수에 비례해 orchestration max_cycles 상한을 계산한다.
+
+    `dynamic_orchestrator._orchestration_loop` 진입 시 + 10 cycle마다 호출된다.
+    (af-critic 2026-04-15 WARN-3/WARN-4 대응: 기존 closure였던 것을 모듈 함수로 추출해
+    테스트가 규칙을 복제하지 않도록 단일 진실원천을 보장한다.)
+
+    예외 시 `logger`가 주어지면 경고를 남기고 `MAX_CYCLES_FLOOR`로 fallback.
+    """
+    try:
+        board = load_project_board(workspace) or {}
+    except Exception as exc:
+        if logger is not None:
+            logger(f"compute_max_cycles: load_project_board 실패 → {type(exc).__name__}: {exc}")
+        return MAX_CYCLES_FLOOR
+
+    try:
+        tasks = board.get("tasks") or []
+        if not isinstance(tasks, list):
+            return MAX_CYCLES_FLOOR
+        weighted_total = 0
+        for t in tasks:
+            if isinstance(t, dict) and str(t.get("status") or "pending") in {"pending", "blocked"}:
+                phase = str(t.get("phase") or "build")
+                weighted_total += _PHASE_CYCLE_WEIGHTS.get(phase, _DEFAULT_PHASE_WEIGHT)
+    except Exception as exc:
+        if logger is not None:
+            logger(f"compute_max_cycles: board 파싱 실패 → {type(exc).__name__}: {exc}")
+        return MAX_CYCLES_FLOOR
+
+    return max(MAX_CYCLES_FLOOR, weighted_total)
 
 
 def default_planning_steps() -> list[dict[str, Any]]:
@@ -83,10 +148,132 @@ def _module_status(tasks: list[dict[str, Any]]) -> str:
     return "pending"
 
 
-def _pick_owner_role(deliverable: str, roles: list[dict[str, Any]]) -> str:
+# B2-6 v7: INFRA 접두사 집합 — dynamic_orchestrator가 사용하는 모든 인프라성 note 패턴
+_INFRA_NOTE_PREFIXES: tuple[str, ...] = (
+    "infra_failure:",   # dynamic_orchestrator.py:747 (quota, auth 등)
+    "lineage_maxed:",   # dynamic_orchestrator.py:765 (lineage 상한 강제 degrade)
+    "fsa_failed:",      # dynamic_orchestrator.py:822 (FSA 루프 복구 실패, 인프라성 재시도 소진)
+)
+
+
+def _task_is_infra_failure(task: dict) -> bool:
+    """task의 notes가 INFRA 접두사 중 하나를 포함하면 True."""
+    notes = task.get("notes")
+    candidates: list[str] = []
+    if isinstance(notes, list):
+        candidates = [n for n in notes if isinstance(n, str)]
+    elif isinstance(notes, str):
+        candidates = [notes]
+    for n in candidates:
+        stripped = n.strip()
+        if any(stripped.startswith(p) for p in _INFRA_NOTE_PREFIXES):
+            return True
+    return False
+
+
+def _build_board_maps(board: dict) -> tuple[dict[str, dict], dict[str, dict]]:
+    """board를 한 번 스캔하여 task_map, module_map을 빌드한다 (O(n) 1회)."""
+    if not isinstance(board, dict):
+        return {}, {}
+    task_map = {
+        str(t.get("task_id") or ""): t
+        for t in (board.get("tasks") or [])
+        if isinstance(t, dict) and t.get("task_id")
+    }
+    module_map = {
+        str(m.get("id") or ""): m
+        for m in (board.get("modules") or [])
+        if isinstance(m, dict) and m.get("id")
+    }
+    return task_map, module_map
+
+
+def module_outcome_from_board(
+    board: dict, module_id: str,
+    task_map: dict[str, dict] | None = None,
+    module_map: dict[str, dict] | None = None,
+) -> str:
+    """INFRA failure task를 필터링한 모듈 outcome 반환.
+
+    반환값: "completed" | "at_risk" | "skip"
+    """
+    if not isinstance(board, dict) or not module_id:
+        return "skip"
+    if task_map is None or module_map is None:
+        task_map, module_map = _build_board_maps(board)
+
+    mod = module_map.get(module_id)
+    if not mod:
+        return "skip"
+    module_tasks = [
+        task_map[str(tid)] for tid in (mod.get("task_ids") or [])
+        if str(tid) in task_map
+    ]
+    if not module_tasks:
+        return "skip"
+
+    non_infra = [t for t in module_tasks if not _task_is_infra_failure(t)]
+    if not non_infra:
+        return "skip"
+
+    statuses = {str(t.get("status") or "pending") for t in non_infra}
+    if statuses == {"completed"}:
+        return "completed"
+    if "failed" in statuses:
+        return "at_risk"
+    return "skip"
+
+
+def detect_owner_drift(
+    module: dict, board: dict,
+    task_map: dict[str, dict] | None = None,
+) -> list[tuple[str, str, str]]:
+    """모듈 내 (INFRA·review 외) task의 owner_role이 module.owner_role과 다른 경우 목록 반환.
+
+    각 tuple은 (task_id, expected_owner, actual_owner). 빈 리스트는 falsy → 기존 if 호출처 회귀 없음.
+    """
+    mod_owner = str(module.get("owner_role") or "")
+    if not mod_owner:
+        return []
+    if task_map is None:
+        task_map, _ = _build_board_maps(board)
+    mismatches: list[tuple[str, str, str]] = []
+    for tid in (module.get("task_ids") or []):
+        t = task_map.get(str(tid))
+        if not t:
+            continue
+        if _task_is_infra_failure(t):
+            continue
+        if str(t.get("phase") or "") in {"code_review", "cross_validate"}:
+            continue
+        task_owner = str(t.get("owner_role") or "")
+        if task_owner and task_owner != mod_owner:
+            mismatches.append((str(tid), mod_owner, task_owner))
+    return mismatches
+
+
+def _pick_owner_role(
+    deliverable: str,
+    roles: list[dict[str, Any]],
+    workspace: str | None = None,
+) -> str:
     text = safe_id(deliverable)
     if not roles:
         return "general_dev"
+
+    # Phase 4: strategy_ledger 우선 조회
+    try:
+        from core.memory_system.strategy_ledger import get_strategy_ledger
+        ledger = get_strategy_ledger(workspace)
+        ledger_role = ledger.lookup_best_role(deliverable)
+        if ledger_role:
+            valid_ids = {safe_id(r.get("id") or "") for r in roles}
+            if ledger_role in valid_ids:
+                return ledger_role
+    except Exception as exc:
+        logger.warning("strategy ledger lookup 실패: %s", exc)
+
+    # 키워드 폴백
     keyword_map = (
         ("qa", ("qa", "test", "guard", "verify", "검증", "테스트")),
         ("frontend", ("ui", "screen", "page", "front", "layout", "ux", "웹")),
@@ -170,6 +357,7 @@ def _task_template(
 
     if slices:
         for slice_name in slices:
+            slice_task_id = f"T-{len(tasks):03d}"
             tasks.append({
                 "phase": "build",
                 "title": f"{role_name}: {slice_name}",
@@ -178,8 +366,10 @@ def _task_template(
                     f"{slice_name} 구현 완료.",
                     "관련 파일과 산출물이 갱신된다.",
                 ],
+                "e2e_command": f"# TODO: e2e command for {slice_task_id} (build)",
             })
     else:
+        build_task_id = f"T-{len(tasks):03d}"
         tasks.append({
             "phase": "build",
             "title": f"{role_name}: {module_name} 기능을 구현한다.",
@@ -188,8 +378,10 @@ def _task_template(
                 f"{module_name}의 핵심 기능이 구현된다.",
                 "관련 파일과 산출물이 갱신된다.",
             ],
+            "e2e_command": f"# TODO: e2e command for {build_task_id} (build)",
         })
 
+    verify_task_id = f"T-{len(tasks):03d}"
     tasks.append({
         "phase": "verify",
         "title": f"{role_name}: {module_name} 결과를 검증하고 handoff를 남긴다.",
@@ -198,6 +390,7 @@ def _task_template(
             "검증 결과가 정리된다.",
             "잔여 리스크와 후속 작업이 기록된다.",
         ],
+        "e2e_command": f"# TODO: e2e command for {verify_task_id} (verify)",
     })
     return tasks
 
@@ -218,7 +411,12 @@ def _deliverable_to_module_name(deliverable: str) -> str:
     return name or deliverable
 
 
-def _auto_modules(task_input: str, project_brief: dict[str, Any], roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _auto_modules(
+    task_input: str,
+    project_brief: dict[str, Any],
+    roles: list[dict[str, Any]],
+    workspace: str | None = None,
+) -> list[dict[str, Any]]:
     deliverables = _clean_list(project_brief.get("deliverables"))
     goal = _clean_text(project_brief.get("goal") or task_input)
     modules: list[dict[str, Any]] = []
@@ -226,7 +424,7 @@ def _auto_modules(task_input: str, project_brief: dict[str, Any], roles: list[di
     role_module_counts: dict[str, int] = {}
 
     for deliverable in deliverables:
-        owner_role = _pick_owner_role(deliverable, roles)
+        owner_role = _pick_owner_role(deliverable, roles, workspace=workspace)
         owner = next((role for role in roles if role["id"] == owner_role), roles[0] if roles else {"id": owner_role, "name": owner_role, "objective": goal})
         role_module_counts[owner_role] = role_module_counts.get(owner_role, 0) + 1
         module_index += 1
@@ -302,18 +500,24 @@ def _normalize_tasks(module: dict[str, Any], owner_role: str, owner_name: str) -
                 "acceptance": _clean_list(raw.get("acceptance")),
                 "artifacts": _clean_list(raw.get("artifacts")),
                 "status": _clean_text(raw.get("status") or "pending") or "pending",
+                "e2e_command": _clean_text(raw.get("e2e_command") or ""),
             }
         )
     return tasks
 
 
-def enrich_role_plan(task_input: str, project_brief: dict[str, Any], role_plan: dict[str, Any]) -> dict[str, Any]:
+def enrich_role_plan(
+    task_input: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    workspace: str | None = None,
+) -> dict[str, Any]:
     plan = dict(role_plan or {})
     goal = _clean_text(project_brief.get("goal") or task_input)
     roles = _normalize_roles(plan, goal)
     planning_steps = _normalize_planning_steps(plan)
     raw_modules = plan.get("modules")
-    modules_input = raw_modules if isinstance(raw_modules, list) and raw_modules else _auto_modules(task_input, project_brief, roles)
+    modules_input = raw_modules if isinstance(raw_modules, list) and raw_modules else _auto_modules(task_input, project_brief, roles, workspace=workspace)
 
     normalized_modules: list[dict[str, Any]] = []
     owned_modules_by_role: dict[str, list[str]] = {role["id"]: [] for role in roles}
@@ -322,7 +526,11 @@ def enrich_role_plan(task_input: str, project_brief: dict[str, Any], role_plan: 
     for index, raw_module in enumerate(modules_input, start=1):
         if not isinstance(raw_module, dict):
             continue
-        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(_clean_text(raw_module.get("name")), roles))
+        deliverable_text = " ".join(filter(None, [
+            _clean_text(raw_module.get("name")),
+            *_clean_list(raw_module.get("deliverables")),
+        ]))
+        owner_role = safe_id(raw_module.get("owner_role") or _pick_owner_role(deliverable_text, roles, workspace=workspace))
         owner = next((role for role in roles if role["id"] == owner_role), None)
         if owner is None and roles:
             owner = roles[0]
@@ -391,8 +599,9 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
         for raw_task in (module.get("tasks") or []):
             if not isinstance(raw_task, dict):
                 continue
+            _task_id = _clean_text(raw_task.get("id"))
             task = {
-                "task_id": _clean_text(raw_task.get("id")),
+                "task_id": _task_id,
                 "title": _clean_text(raw_task.get("title") or raw_task.get("instruction")),
                 "instruction": _clean_text(raw_task.get("instruction") or raw_task.get("title")),
                 "owner_role": safe_id(raw_task.get("owner_role") or module.get("owner_role")),
@@ -402,6 +611,7 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
                 "acceptance": _clean_list(raw_task.get("acceptance")),
                 "artifacts": _clean_list(raw_task.get("artifacts")),
                 "status": _clean_text(raw_task.get("status") or "pending") or "pending",
+                "lineage_id": _clean_text(raw_task.get("lineage_id")) or _task_id,
                 "notes": [],
                 "updated_at": now_iso(),
             }
@@ -472,8 +682,22 @@ def board_todo_items(board: dict[str, Any]) -> list[str]:
 
 
 def write_project_board(workspace: str, board: dict[str, Any]) -> str:
+    import tempfile
     path = os.path.join(os.path.abspath(workspace), BOARD_FILENAME)
-    write_text(path, json.dumps(_recalculate_board(dict(board or {})), ensure_ascii=False, indent=2) + "\n")
+    dir_ = os.path.dirname(path) or "."
+    os.makedirs(dir_, exist_ok=True)
+    payload = json.dumps(_recalculate_board(dict(board or {})), ensure_ascii=False, indent=2) + "\n"
+    fd, tmp = tempfile.mkstemp(dir=dir_, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(payload)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return path
 
 
@@ -506,12 +730,32 @@ def _dependency_satisfied(dep: str, board: dict[str, Any], completed_ids: set[st
         return True
     if dependency in completed_ids:
         return True
-    for task in (board.get("tasks") or []):
+    tasks = [t for t in (board.get("tasks") or []) if isinstance(t, dict)]
+    for task in tasks:
         if safe_id(task.get("task_id")) == dependency and task.get("status") == "completed":
             return True
+    # module-level 의존성 — module.status는 `_recalculate_board`가 호출돼야 갱신되므로
+    # load_project_board/write_project_board 사이에 stale할 수 있다. 그 race를 피하기 위해
+    # module 내부 task들이 모두 completed인지 직접 검증한다.
+    # (af-cross-review 2026-04-15 Q1 대응)
     for module in (board.get("modules") or []):
-        if safe_id(module.get("id")) == dependency and module.get("status") == "completed":
-            return True
+        if not isinstance(module, dict):
+            continue
+        if safe_id(module.get("id")) != dependency:
+            continue
+        module_task_ids = [safe_id(tid) for tid in module.get("task_ids") or [] if safe_id(tid)]
+        if not module_task_ids:
+            # 빈 모듈은 보수적으로 불만족 취급 (기존 동작과 동일)
+            return module.get("status") == "completed"
+        task_map = {safe_id(t.get("task_id")): t for t in tasks}
+        for tid in module_task_ids:
+            if tid in completed_ids:
+                continue
+            tgt = task_map.get(tid)
+            if tgt and tgt.get("status") == "completed":
+                continue
+            return False
+        return True
     return False
 
 
@@ -522,11 +766,15 @@ def next_board_tasks(board: dict[str, Any], available_roles: list[str], complete
     chosen: list[dict[str, str]] = []
     used_roles: set[str] = set()
     tasks = [task for task in (board.get("tasks") or []) if isinstance(task, dict)]
+    # module waterfall: 같은 module을 scope→build→verify까지 끝낸 뒤 다음 module로.
+    # phase 우선 정렬(구 동작)이었을 때 "모든 모듈의 scope만 먼저 소화하다가 max_cycles에
+    # 걸려 build 단계 진입 실패"하던 회귀를 방지한다. (2026-04-15 `lotto-pattern-predictor`
+    # 실측: 32 태스크 중 scope 4개만 완료.)
     ordered_tasks = sorted(
         tasks,
         key=lambda item: (
+            _module_sort_key(str(item.get("module_id") or "")),
             _PHASE_ORDER.get(str(item.get("phase") or "build"), 99),
-            str(item.get("module_id") or ""),
             str(item.get("task_id") or ""),
         ),
     )
@@ -586,7 +834,28 @@ def update_project_board_task(workspace: str, role: str, instruction: str, statu
         if not updated:
             return False
         write_project_board(workspace, board)
+        if os.getenv("AF_TODO_SYNC", "1") != "0":
+            try:
+                from core.documentation_policy import write_project_todo
+                write_project_todo(workspace, board_todo_items(board), board=board)
+            except Exception as exc:
+                print(f"[System] .todo.md 동기화 실패: {exc}")
     return True
+
+
+def sync_todo_from_board(workspace: str) -> tuple[bool, str]:
+    """board 상태로 .todo.md를 재생성한다. CLI sync-todo 서브커맨드에서 호출."""
+    board = load_project_board(workspace)
+    if not board or not board.get("tasks"):
+        return False, "board가 비어있거나 없음"
+    from core.documentation_policy import write_project_todo
+    items = board_todo_items(board)
+    write_project_todo(workspace, items, board=board)
+    summary = board.get("summary") or {}
+    total = int(summary.get("total_tasks") or 0)
+    completed = int(summary.get("completed_tasks") or 0)
+    in_progress = int(summary.get("in_progress_tasks") or 0)
+    return True, f"{completed} [x], {in_progress} [/], {total - completed - in_progress} [ ] / total {total}"
 
 
 def append_project_board_note(workspace: str, note: str, task_id: str = "", role: str = "", instruction: str = "") -> bool:
@@ -757,3 +1026,113 @@ def write_task_execution_plan(workspace: str, project_brief: dict[str, Any], rol
     )
     write_text(target_path, "\n".join(lines).rstrip() + "\n")
     return target_path
+
+
+def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[dict[str, Any]]:
+    """build phase 태스크 완료 시 code_review + cross_validate 태스크를 board에 주입한다.
+
+    단일 locked_file 트랜잭션 안에서 board를 읽고 수정하고 쓴다 (원자성 보장).
+    비코드 산출물(phase != 'build')이면 빈 리스트를 반환한다.
+    """
+    if not isinstance(completed_task, dict):
+        return []
+    if str(completed_task.get("phase") or "") != "build":
+        return []
+
+    module_id = str(completed_task.get("module_id") or "")
+    owner_role = str(completed_task.get("owner_role") or "")
+    build_task_id = str(completed_task.get("task_id") or "")
+    if not module_id or not owner_role or not build_task_id:
+        return []
+
+    board_path = os.path.join(os.path.abspath(workspace), BOARD_FILENAME)
+    review_tasks: list[dict[str, Any]] = []
+
+    with locked_file(board_path):
+        board = load_project_board(workspace)
+        if not board or not board.get("tasks"):
+            return []
+
+        existing_ids = {safe_id(t.get("task_id")) for t in board["tasks"] if isinstance(t, dict)}
+
+        # Code Review 태스크
+        cr_task_id = f"{module_id}_code_review"
+        if safe_id(cr_task_id) not in existing_ids:
+            cr_task = {
+                "task_id": cr_task_id,
+                "title": f"Code Review: {module_id}",
+                "instruction": f"[Code Review] {module_id} build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+                "owner_role": f"{owner_role}_code_reviewer",
+                "module_id": module_id,
+                "phase": "code_review",
+                "depends_on": [build_task_id],
+                "acceptance": [],
+                "artifacts": [],
+                "status": "pending",
+                "notes": [],
+                "updated_at": now_iso(),
+                "e2e_command": f"# TODO: e2e command for {cr_task_id} (code_review)",
+            }
+            board["tasks"].append(cr_task)
+            review_tasks.append(cr_task)
+
+        # Cross Validate 태스크 (CLI 2개 이상일 때만)
+        last_review_id = cr_task_id
+        try:
+            from core.providers.registry import detect_installed_cli_providers, pick_review_provider
+            available = detect_installed_cli_providers()
+            available_count = len(available)
+        except Exception:
+            available = []
+            available_count = 1
+
+        if available_count >= 2:
+            # 작성자와 다른 provider를 교차검증에 사용
+            author_provider = str(completed_task.get("provider_id") or (available[0] if available else ""))
+            review_provider = pick_review_provider(author_provider)
+
+            cv_task_id = f"{module_id}_cross_validate"
+            if safe_id(cv_task_id) not in existing_ids:
+                cv_task = {
+                    "task_id": cv_task_id,
+                    "title": f"Cross Validate: {module_id}",
+                    "instruction": f"[Cross Validate] {module_id} 전체 정합성을 교차검증한다.",
+                    "owner_role": f"{owner_role}_cross_validator",
+                    "module_id": module_id,
+                    "phase": "cross_validate",
+                    "depends_on": [cr_task_id],
+                    "review_provider": review_provider,
+                    "acceptance": [],
+                    "artifacts": [],
+                    "status": "pending",
+                    "notes": [],
+                    "updated_at": now_iso(),
+                    "e2e_command": f"# TODO: e2e command for {cv_task_id} (cross_validate)",
+                }
+                board["tasks"].append(cv_task)
+                review_tasks.append(cv_task)
+                last_review_id = cv_task_id
+
+        # verify 태스크의 depends_on에 마지막 리뷰 태스크 추가 (phase+module_id로 검색)
+        for task in board["tasks"]:
+            if not isinstance(task, dict):
+                continue
+            if (str(task.get("module_id") or "") == module_id
+                    and str(task.get("phase") or "") == "verify"):
+                deps = task.get("depends_on", [])
+                if last_review_id not in deps:
+                    deps.append(last_review_id)
+                    task["depends_on"] = deps
+
+        # module.task_ids에 리뷰 태스크 등록 (module 완료 상태 정확성 보장)
+        for module in board.get("modules", []):
+            if isinstance(module, dict) and str(module.get("id") or "") == module_id:
+                module.setdefault("task_ids", []).extend(
+                    [t["task_id"] for t in review_tasks]
+                )
+                break
+
+        if review_tasks:
+            write_project_board(workspace, board)
+
+    return review_tasks

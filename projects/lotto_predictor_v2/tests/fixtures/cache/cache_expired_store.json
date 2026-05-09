@@ -1,0 +1,23 @@
+{
+  "_comment": "만료와 무효화 시나리오용 예시 저장소다. 체크포인트 시각이 오래되어 stale 판정이 나야 하고, 특정 회차 무효화 후 miss 로 바뀌어야 한다.",
+  "metadata": {
+    "version": 1,
+    "generated_at": "2026-04-17T09:00:00+09:00",
+    "last_fetched_at": "2026-04-10T09:00:00+09:00",
+    "freshness_hours": 24
+  },
+  "draws": [
+    {
+      "drwNo": 498,
+      "drwNoDate": "2024-03-16",
+      "numbers": [1, 7, 13, 21, 32, 44],
+      "bnusNo": 9
+    },
+    {
+      "drwNo": 499,
+      "drwNoDate": "2024-03-23",
+      "numbers": [5, 12, 24, 26, 39, 42],
+      "bnusNo": 20
+    }
+  ]
+}

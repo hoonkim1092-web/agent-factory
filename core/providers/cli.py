@@ -120,21 +120,22 @@ _AUTH_REQUIRED_MARKERS = (
     "not logged in",
     "not authenticated",
     "authentication required",
+    "authentication_error",
+    "invalid authentication credentials",
     "login required",
     "please login",
     "please log in",
     "run `codex login`",
     "run codex login",
     "sign in required",
+    "failed to authenticate",
 )
 
 _HOOK_FAILURE_MARKERS = (
     "can't open file",
-    "hook",
-    "cli_hook_bridge",
-    "hook_bridge",
-    "sessionstart",
-    "userpromptsubmit",
+    "hook_runner.py] failed",
+    "cli_hook_bridge.py] failed",
+    "hook_bridge.py] failed",
 )
 
 
@@ -573,7 +574,10 @@ def _compose_prompt(request: CliChatRequest, spec: CliProviderSpec, system_promp
 
 
 def _detect_repo_root(workspace: str) -> str:
-    current = Path(str(workspace or "")).resolve()
+    try:
+        current = Path(str(workspace or "")).resolve()
+    except (NotImplementedError, OSError):
+        return ""
     if current.is_file():
         current = current.parent
     for candidate in (current, *current.parents):
@@ -667,7 +671,28 @@ def _extract_text(stdout: str) -> str:
             parts = [item for item in payload if isinstance(item, str) and item.strip()]
             if parts:
                 return "\n".join(parts)
+
     return raw
+
+
+def _extract_codex_agent_message(stderr: str) -> str:
+    """codex exec stderr에서 agent_message 이벤트의 최종 응답을 추출한다."""
+    raw = str(stderr or "").strip()
+    if not raw:
+        return ""
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    for line in reversed(lines):
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(obj, dict) and obj.get("type") == "event_msg":
+            inner = obj.get("payload", {})
+            if isinstance(inner, dict) and inner.get("type") == "agent_message":
+                msg = str(inner.get("message", "") or "").strip()
+                if msg:
+                    return msg
+    return ""
 
 
 def execute_cli_chat(
@@ -816,13 +841,19 @@ def execute_cli_chat(
 
     elapsed = int(time.monotonic() - started)
     text = _extract_text(completed.stdout)
+    # codex exec는 stderr에 agent_message로 응답을 출력하고 returncode=1을 반환할 수 있음
+    if request.provider_id == "codex_cli" and not text.strip():
+        text = _extract_codex_agent_message(completed.stderr)
+    issue = _classify_cli_issue(completed.stdout, completed.stderr)
     ok = completed.returncode == 0 and bool(text.strip())
+    if not ok and request.provider_id == "codex_cli" and bool(text.strip()):
+        if issue not in ("auth_required", "permission_denied", "hook_failure"):
+            ok = True
     mins, secs = divmod(elapsed, 60)
     if ok:
         failure_reason = request.provider_id
         print(f"  ✅ [{display_name}] 완료 ({mins}분 {secs}초)", flush=True)
     else:
-        issue = _classify_cli_issue(completed.stdout, completed.stderr)
         failure_reason = f"{request.provider_id}_{issue}" if issue else f"{request.provider_id}_failed"
         print(f"  ❌ [{display_name}] 실패: {failure_reason} ({mins}분 {secs}초)", flush=True)
     result = {

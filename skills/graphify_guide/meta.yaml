@@ -1,0 +1,33 @@
+id: graphify_guide
+name: Graphify Usage Guide
+version: 0.1.0
+description: graphify 액션 스킬을 언제 어떻게 호출해야 하는지에 대한 knowledge skill. retrieval engine이 자동 발견·컨텍스트 주입.
+when_to_use: 코드베이스 구조 이해, 함수 영향 범위 분석, 지식그래프 기반 질의가 필요할 때
+when_NOT_to_use: 단순 키워드 grep으로 충분한 경우. graphify CLI 미설치 환경
+when_to_use_keywords:
+  - graphify
+  - knowledge_graph
+  - 지식그래프
+  - blast_radius
+  - 코드영향범위
+  - dependency_graph
+  - call_graph
+  - code_structure
+  - 코드구조
+  - 함수관계
+  - 영향범위분석
+category: research
+type: knowledge
+capabilities:
+  - graphify_guide
+dependencies:
+  - graphify
+status: active
+source: builtin
+last_test_ok: true
+author: agent-factory
+tags:
+  - graphify
+  - knowledge_graph
+  - guide
+content_path: SKILL.md

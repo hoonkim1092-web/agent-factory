@@ -1,0 +1,64 @@
+{
+  "workspace_notes": [],
+  "local_references": [],
+  "web_references": [],
+  "llm_prior_references": [
+    {
+      "title": "[LLM prior] Concept: HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning ",
+      "excerpt": "HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning numbers by draw round as JSON",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Frequency analysis of individual numbers and pair/triplet co-occurrence across h",
+      "excerpt": "Frequency analysis of individual numbers and pair/triplet co-occurrence across historical draws",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Weighted random sampling without replacement to select 6 numbers from 1-45 based",
+      "excerpt": "Weighted random sampling without replacement to select 6 numbers from 1-45 based on computed weights",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    },
+    {
+      "title": "[LLM prior] Concept: Lotto 6/45 probability space: C(45,6) = 8,145,060 combinations — no statistical ",
+      "excerpt": "Lotto 6/45 probability space: C(45,6) = 8,145,060 combinations — no statistical method improves true odds",
+      "url": "",
+      "source_type": "llm_prior",
+      "weight": 0.4,
+      "verified": false,
+      "score": 0.4
+    }
+  ],
+  "notebook_summary": "Conversation ID: a6e109cb-b12e-4120-97e8-aabdbafb2b3e Use --conversation-id for follow-up questions",
+  "evidence_summary": [
+    "LLM prior knowledge (unverified): HTTP GET to the 동행복권 (dhlottery.co.kr) public API endpoint that returns winning numbers by draw round as JSON",
+    "LLM prior knowledge (unverified): Frequency analysis of individual numbers and pair/triplet co-occurrence across historical draws",
+    "NotebookLM synthesis: Conversation ID: a6e109cb-b12e-4120-97e8-aabdbafb2b3e Use --conversation-id for follow-up questions"
+  ],
+  "sufficiency_gate_passed": false,
+  "_warnings": [
+    "evidence_quality_warn: score=0.353, gaps=['local_references_insufficient (found 0, need 3+)', 'local_avg_score_low (0.00 < 0.25)', 'sufficiency_gate_not_passed', 'evidence_summary_shallow (3 items, need 4+)']"
+  ],
+  "_verification": {
+    "score": 0.353,
+    "status": "warn",
+    "gaps": [
+      "local_references_insufficient (found 0, need 3+)",
+      "local_avg_score_low (0.00 < 0.25)",
+      "sufficiency_gate_not_passed",
+      "evidence_summary_shallow (3 items, need 4+)"
+    ],
+    "attempt": 2
+  }
+}

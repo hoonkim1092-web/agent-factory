@@ -1,0 +1,723 @@
+{
+  "execution_strategy": "parallel",
+  "planning_steps": [
+    {
+      "id": "scope_contracts",
+      "name": "범위와 계약 정의",
+      "objective": "기능 경계를 모듈 단위로 나누고 역할별 인터페이스를 고정한다.",
+      "exit_criteria": [
+        "모든 작업이 owner_role과 depends_on을 가진다.",
+        "핵심 산출물이 모듈별로 정리된다."
+      ]
+    },
+    {
+      "id": "vertical_slice_build",
+      "name": "기능 슬라이스 구현",
+      "objective": "독립 배포 가능한 작은 기능 단위로 구현을 진행한다.",
+      "exit_criteria": [
+        "각 모듈이 최소 1개의 구현 작업을 가진다.",
+        "기능 슬라이스가 파일/산출물 기준으로 분리된다."
+      ]
+    },
+    {
+      "id": "integration_handoff",
+      "name": "통합과 핸드오프",
+      "objective": "역할 간 의존성을 정리하고 결과를 다음 작업자가 이어받을 수 있게 만든다.",
+      "exit_criteria": [
+        "의존 작업이 정리되고 handoff 기준이 명시된다.",
+        "검증 전에 필요한 연결 작업이 완료된다."
+      ]
+    },
+    {
+      "id": "verification_closeout",
+      "name": "검증과 마감",
+      "objective": "기능 동작, 회귀 리스크, 남은 이슈를 명시적으로 검증한다.",
+      "exit_criteria": [
+        "검증 작업이 존재한다.",
+        "잔여 리스크와 후속 작업이 기록된다."
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "frontend_dev",
+      "name": "Frontend Dev",
+      "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+      "required_skills": [
+        "cross_platform_build"
+      ],
+      "owned_modules": [
+        "frontend_dev_module_1",
+        "frontend_dev_module_2",
+        "frontend_dev_module_3",
+        "frontend_dev_module_4",
+        "frontend_dev_module_5",
+        "frontend_dev_module_6",
+        "frontend_dev_module_7"
+      ]
+    },
+    {
+      "id": "backend_dev",
+      "name": "Backend Dev",
+      "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "required_skills": [
+        "http_api_client",
+        "data_caching"
+      ],
+      "owned_modules": [
+        "backend_dev_module_8"
+      ]
+    },
+    {
+      "id": "game_logic_dev",
+      "name": "Game Logic Dev",
+      "objective": "핵심 규칙과 상태 전이를 구현한다.",
+      "required_skills": [
+        "error_retry_handling"
+      ],
+      "owned_modules": [
+        "game_logic_dev_module_9"
+      ]
+    },
+    {
+      "id": "qa_engineer",
+      "name": "QA Engineer",
+      "objective": "핵심 플로우와 회귀 시나리오를 검증한다.",
+      "required_skills": [
+        "integration_test_guard"
+      ],
+      "owned_modules": [
+        "qa_engineer_module_10"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "frontend_dev_module_1",
+      "name": "동행복권 회차 수집기 모듈",
+      "summary": "동행복권 회차 수집기 모듈을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "동행복권 회차 수집기 모듈"
+      ],
+      "feature_slices": [
+        "동행복권 회차 수집기 모듈을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_1_scope_1",
+          "title": "Frontend Dev: 동행복권 회차 수집기 모듈 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 동행복권 회차 수집기 모듈 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "동행복권 회차 수집기 모듈 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_1_build_2",
+          "title": "Frontend Dev: 동행복권 회차 수집기 모듈 기능을 구현한다.",
+          "instruction": "Frontend Dev: 동행복권 회차 수집기 모듈을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_1_scope_1"
+          ],
+          "acceptance": [
+            "동행복권 회차 수집기 모듈의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_1_verify_3",
+          "title": "Frontend Dev: 동행복권 회차 수집기 모듈 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 동행복권 회차 수집기 모듈 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_1_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_2",
+      "name": "회차 데이터 로컬 캐시 저장소",
+      "summary": "회차 데이터 로컬 캐시 저장소을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "회차 데이터 로컬 캐시 저장소"
+      ],
+      "feature_slices": [
+        "회차 데이터 로컬 캐시 저장소을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_2_scope_1",
+          "title": "Frontend Dev: 회차 데이터 로컬 캐시 저장소 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 회차 데이터 로컬 캐시 저장소 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "회차 데이터 로컬 캐시 저장소 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_2_build_2",
+          "title": "Frontend Dev: 회차 데이터 로컬 캐시 저장소 기능을 구현한다.",
+          "instruction": "Frontend Dev: 회차 데이터 로컬 캐시 저장소을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_2_scope_1"
+          ],
+          "acceptance": [
+            "회차 데이터 로컬 캐시 저장소의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_2_verify_3",
+          "title": "Frontend Dev: 회차 데이터 로컬 캐시 저장소 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 회차 데이터 로컬 캐시 저장소 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_2_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_3",
+      "name": "통계 분석 엔진",
+      "summary": "통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)"
+      ],
+      "feature_slices": [
+        "통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_3_scope_1",
+          "title": "Frontend Dev: 통계 분석 엔진 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 통계 분석 엔진 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "통계 분석 엔진 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_3_build_2",
+          "title": "Frontend Dev: 통계 분석 엔진 기능을 구현한다.",
+          "instruction": "Frontend Dev: 통계 분석 엔진(빈도·연속·홀짝·구간·트렌드)을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_3_scope_1"
+          ],
+          "acceptance": [
+            "통계 분석 엔진의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_3_verify_3",
+          "title": "Frontend Dev: 통계 분석 엔진 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 통계 분석 엔진 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_3_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_4",
+      "name": "패턴 기반 번호 조합 추천기",
+      "summary": "패턴 기반 번호 조합 추천기을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "패턴 기반 번호 조합 추천기"
+      ],
+      "feature_slices": [
+        "패턴 기반 번호 조합 추천기을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_4_scope_1",
+          "title": "Frontend Dev: 패턴 기반 번호 조합 추천기 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 패턴 기반 번호 조합 추천기 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "패턴 기반 번호 조합 추천기 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_4_build_2",
+          "title": "Frontend Dev: 패턴 기반 번호 조합 추천기 기능을 구현한다.",
+          "instruction": "Frontend Dev: 패턴 기반 번호 조합 추천기을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_4_scope_1"
+          ],
+          "acceptance": [
+            "패턴 기반 번호 조합 추천기의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_4_verify_3",
+          "title": "Frontend Dev: 패턴 기반 번호 조합 추천기 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 패턴 기반 번호 조합 추천기 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_4_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_5",
+      "name": "터미널 포맷 출력 리포트",
+      "summary": "터미널 포맷 출력 리포트을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "터미널 포맷 출력 리포트"
+      ],
+      "feature_slices": [
+        "터미널 포맷 출력 리포트을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_5_scope_1",
+          "title": "Frontend Dev: 터미널 포맷 출력 리포트 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 터미널 포맷 출력 리포트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "터미널 포맷 출력 리포트 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_5_build_2",
+          "title": "Frontend Dev: 터미널 포맷 출력 리포트 기능을 구현한다.",
+          "instruction": "Frontend Dev: 터미널 포맷 출력 리포트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_5_scope_1"
+          ],
+          "acceptance": [
+            "터미널 포맷 출력 리포트의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_5_verify_3",
+          "title": "Frontend Dev: 터미널 포맷 출력 리포트 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 터미널 포맷 출력 리포트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_5_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_6",
+      "name": "PyInstaller 빌드 스펙 및 산출물",
+      "summary": "PyInstaller 빌드 스펙 및 산출물을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "PyInstaller 빌드 스펙 및 산출물"
+      ],
+      "feature_slices": [
+        "PyInstaller 빌드 스펙 및 산출물을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_6_scope_1",
+          "title": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "PyInstaller 빌드 스펙 및 산출물 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_6_build_2",
+          "title": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물 기능을 구현한다.",
+          "instruction": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_6_scope_1"
+          ],
+          "acceptance": [
+            "PyInstaller 빌드 스펙 및 산출물의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_6_verify_3",
+          "title": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: PyInstaller 빌드 스펙 및 산출물 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_6_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_7",
+      "name": "사용자 실행 가이드 문서",
+      "summary": "사용자 실행 가이드 문서을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "사용자 실행 가이드 문서"
+      ],
+      "feature_slices": [
+        "사용자 실행 가이드 문서을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_7_scope_1",
+          "title": "Frontend Dev: 사용자 실행 가이드 문서 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 사용자 실행 가이드 문서 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "사용자 실행 가이드 문서 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_7_build_2",
+          "title": "Frontend Dev: 사용자 실행 가이드 문서 기능을 구현한다.",
+          "instruction": "Frontend Dev: 사용자 실행 가이드 문서을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_7_scope_1"
+          ],
+          "acceptance": [
+            "사용자 실행 가이드 문서의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "frontend_dev_module_7_verify_3",
+          "title": "Frontend Dev: 사용자 실행 가이드 문서 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 사용자 실행 가이드 문서 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_7_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "backend_dev_module_8",
+      "name": "Backend Dev 구현",
+      "summary": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "owner_role": "backend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "동행복권 회차 수집기 모듈"
+      ],
+      "feature_slices": [
+        "서버, 데이터, 외부 연동 레이어를 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "backend_dev_module_8_scope_1",
+          "title": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의한다.",
+          "instruction": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "backend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "Backend Dev 구현 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "backend_dev_module_8_build_2",
+          "title": "Backend Dev: Backend Dev 구현 기능을 구현한다.",
+          "instruction": "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "backend_dev",
+          "phase": "build",
+          "depends_on": [
+            "backend_dev_module_8_scope_1"
+          ],
+          "acceptance": [
+            "Backend Dev 구현의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "backend_dev_module_8_verify_3",
+          "title": "Backend Dev: Backend Dev 구현 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Backend Dev: Backend Dev 구현 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "backend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "backend_dev_module_8_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "game_logic_dev_module_9",
+      "name": "Game Logic Dev 구현",
+      "summary": "핵심 규칙과 상태 전이를 구현한다.",
+      "owner_role": "game_logic_dev",
+      "depends_on": [],
+      "deliverables": [
+        "동행복권 회차 수집기 모듈"
+      ],
+      "feature_slices": [
+        "핵심 규칙과 상태 전이를 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "game_logic_dev_module_9_scope_1",
+          "title": "Game Logic Dev: Game Logic Dev 구현 범위와 인터페이스를 정의한다.",
+          "instruction": "Game Logic Dev: Game Logic Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "game_logic_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "Game Logic Dev 구현 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "game_logic_dev_module_9_build_2",
+          "title": "Game Logic Dev: Game Logic Dev 구현 기능을 구현한다.",
+          "instruction": "Game Logic Dev: 핵심 규칙과 상태 전이를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "game_logic_dev",
+          "phase": "build",
+          "depends_on": [
+            "game_logic_dev_module_9_scope_1"
+          ],
+          "acceptance": [
+            "Game Logic Dev 구현의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "game_logic_dev_module_9_verify_3",
+          "title": "Game Logic Dev: Game Logic Dev 구현 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Game Logic Dev: Game Logic Dev 구현 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "game_logic_dev",
+          "phase": "verify",
+          "depends_on": [
+            "game_logic_dev_module_9_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "qa_engineer_module_10",
+      "name": "QA Engineer 검증",
+      "summary": "핵심 플로우와 회귀 시나리오를 검증한다.",
+      "owner_role": "qa_engineer",
+      "depends_on": [],
+      "deliverables": [
+        "동행복권 회차 수집기 모듈"
+      ],
+      "feature_slices": [
+        "핵심 플로우와 회귀 시나리오를 검증한다."
+      ],
+      "tasks": [
+        {
+          "id": "qa_engineer_module_10_scope_1",
+          "title": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의한다.",
+          "instruction": "QA Engineer: QA Engineer 검증 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "qa_engineer",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "QA Engineer 검증 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "qa_engineer_module_10_build_2",
+          "title": "QA Engineer: QA Engineer 검증 기능을 구현한다.",
+          "instruction": "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "qa_engineer",
+          "phase": "build",
+          "depends_on": [
+            "qa_engineer_module_10_scope_1"
+          ],
+          "acceptance": [
+            "QA Engineer 검증의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        },
+        {
+          "id": "qa_engineer_module_10_verify_3",
+          "title": "QA Engineer: QA Engineer 검증 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "QA Engineer: QA Engineer 검증 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "qa_engineer",
+          "phase": "verify",
+          "depends_on": [
+            "qa_engineer_module_10_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "todo_items": [
+    "Frontend Dev: 사용자 화면과 상호작용 레이어를 구현한다.",
+    "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다.",
+    "Game Logic Dev: 핵심 규칙과 상태 전이를 구현한다.",
+    "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
+  ],
+  "plan_summary": {
+    "goal": "한국 로또 6/45 최근 500회차 1등 당첨번호를 동행복권 API에서 수집·통계 분석하여 패턴 기반 1등 번호 5개 조합을 추천하고 PyInstaller로 더블클릭 실행 가능한 단일 실행 파일로 배포하는 데스크톱 도구를 구축한다.",
+    "role_count": 4,
+    "module_count": 10,
+    "task_count": 30
+  },
+  "generated_at": "2026-04-17T01:24:58",
+  "pd_agent": {
+    "id": "pd_director",
+    "name": "Lilith Bootstrap"
+  }
+}

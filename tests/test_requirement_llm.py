@@ -3,14 +3,23 @@ import json
 
 def test_model_router_requirement_compares_multiple_engine_candidates(monkeypatch):
     monkeypatch.delenv("AGENT_CHAT_PROVIDER", raising=False)
+    monkeypatch.delenv("AGENT_CHAT_MODEL", raising=False)  # 외부 env로 인한 강제모델 우회 차단
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-secret")
     monkeypatch.setenv("OPENAI_API_KEY", "openai-secret")
     monkeypatch.setenv("GOOGLE_API_KEY", "google-secret")
     monkeypatch.delenv("AGENT_DISABLE_ENGINE_API_KEYS", raising=False)
 
+    import core.providers.registry as _registry
     import core.requirement_llm as requirement_llm
+    import core.model_router as model_router
     from core.model_router import ModelRouter
 
+    # _runtime_providers 글로벌 상태 리셋 (다른 테스트의 configure_providers() 오염 방어)
+    monkeypatch.setattr(_registry, "_runtime_providers", [])
+    monkeypatch.setattr(_registry, "_installed_cli_cache", None)
+    # get_active_provider_setting() auto-detect 경로 차단 (model_router.py:158, requirement_llm.py:135)
+    monkeypatch.setattr(requirement_llm, "get_requested_cli_providers", lambda raw=None: [])
+    monkeypatch.setattr(model_router, "get_requested_cli_providers", lambda raw=None: [])
     monkeypatch.setattr(requirement_llm, "_pick_anthropic_model", lambda tier: "claude-4.6-sonnet")
     monkeypatch.setattr(requirement_llm, "_pick_openai_model", lambda prefer_reasoning=False, prefer_mini=False: "gpt-5")
     monkeypatch.setattr(requirement_llm, "get_best_model", lambda priority_list=None: "models/gemini-2.5-pro")
@@ -28,13 +37,22 @@ def test_model_router_requirement_compares_multiple_engine_candidates(monkeypatc
 def test_requirement_analyzer_uses_cli_provider_when_engine_api_keys_disabled(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_CHAT_PROVIDER", "codex_cli")
     monkeypatch.setenv("AGENT_DISABLE_ENGINE_API_KEYS", "1")
+    # codex_cli 모델이 registry에서 ""이므로 AGENT_CHAT_MODEL로 강제 지정
+    monkeypatch.setenv("AGENT_CHAT_MODEL", "gpt-5")
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
+    import core.providers.registry as _registry
     import core.requirement_llm as requirement_llm
     from core.manager import RequirementAnalyzer
     from core.model_router import ModelRouter
+
+    # _runtime_providers 글로벌 상태 리셋 (다른 테스트의 configure_providers() 오염 방어)
+    monkeypatch.setattr(_registry, "_runtime_providers", [])
+    monkeypatch.setattr(_registry, "_installed_cli_cache", None)
+    # requirement_llm.py:135의 get_requested_cli_providers를 codex_cli로 강제
+    monkeypatch.setattr(requirement_llm, "get_requested_cli_providers", lambda raw=None: ["codex_cli"])
 
     calls = []
 

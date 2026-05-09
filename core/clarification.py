@@ -136,42 +136,40 @@ def merge_clarification(
     enriched = dict(project_brief)
     clarification_log: list[dict] = []
 
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
     for q, answer in zip(questions, answers):
         selected = answer.strip() if answer.strip() else q.get("default", "")
         clarification_log.append({
-            "question": q["question"],
+            "question": q.get("question", ""),
             "answer": selected,
             "category": q.get("category", "scope"),
         })
+
+        def _append_to(field: str, value: str) -> None:
+            enriched.setdefault(field, [])
+            if isinstance(enriched[field], list):
+                enriched[field].append(value)
+            else:
+                _log.warning("clarification: field '%s' is not a list, skipping append", field)
 
         category = q.get("category", "")
         if category == "ui":
             enriched["architecture_style"] = selected
         elif category == "deployment":
-            enriched.setdefault("constraints", [])
-            if isinstance(enriched["constraints"], list):
-                enriched["constraints"].append(f"배포: {selected}")
+            _append_to("constraints", f"배포: {selected}")
         elif category == "data":
-            enriched.setdefault("constraints", [])
-            if isinstance(enriched["constraints"], list):
-                enriched["constraints"].append(f"데이터 소스: {selected}")
+            _append_to("constraints", f"데이터 소스: {selected}")
         elif category == "scope":
             if any(kw in selected for kw in ["불필요", "없", "제외"]):
-                enriched.setdefault("non_goals", [])
-                if isinstance(enriched["non_goals"], list):
-                    enriched["non_goals"].append(selected)
+                _append_to("non_goals", selected)
             else:
-                enriched.setdefault("deliverables", [])
-                if isinstance(enriched["deliverables"], list):
-                    enriched["deliverables"].append(selected)
+                _append_to("deliverables", selected)
         elif category == "performance":
-            enriched.setdefault("constraints", [])
-            if isinstance(enriched["constraints"], list):
-                enriched["constraints"].append(f"성능: {selected}")
+            _append_to("constraints", f"성능: {selected}")
         elif category == "integration":
-            enriched.setdefault("constraints", [])
-            if isinstance(enriched["constraints"], list):
-                enriched["constraints"].append(f"연동: {selected}")
+            _append_to("constraints", f"연동: {selected}")
 
     enriched["clarification_log"] = clarification_log
     return enriched
