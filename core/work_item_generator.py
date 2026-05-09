@@ -552,6 +552,7 @@ def _fallback_impl_tasks(
         "- Commit after each module-level implementation milestone\n\n"
         "## Definition Of Done\n\n"
         "- All task checkboxes are complete\n"
+        "- 모든 태스크에 e2e_command 기재 — 실제 검증 명령어 또는 `# TODO: <설명>` (BLOCK 트리거)\n"
         "- verification-report.md 작성 완료 (`templates/verify-handoff.md.tpl` 참고)\n"
         "  - `e2e_command:` 필드에 실행 명령어 기재\n"
         "  - `- verdict:` 필드에 PASS/WARN/BLOCK 기재\n"
@@ -785,7 +786,7 @@ def _generate_implementation_tasks(
         "## Task Evidence\n\n"
         "## Task List\n"
         "(각 태스크: - [ ] 태스크 제목 / task_id: T-001 / owner_role / phase / depends_on / "
-        "acceptance / artifacts / estimated_complexity / implementation_hint)\n\n"
+        "acceptance / e2e_command / artifacts / estimated_complexity / implementation_hint)\n\n"
         "## Blockers\n\n"
         "## Rollback Sign-Off\n\n"
         "## Definition Of Done\n\n"
@@ -796,7 +797,10 @@ def _generate_implementation_tasks(
         "- acceptance는 검증 가능한 문장\n"
         "- Acceptance Criteria entries should reference spec §N when relevant\n"
         "- 태스크 순서: scope → build → integrate → verify\n"
-        "- 태스크 ID는 T-001부터 순차 부여"
+        "- 태스크 ID는 T-001부터 순차 부여\n"
+        "- 모든 태스크에 e2e_command 포함: 실제 검증 명령어 (예: `pytest -k T-001 -q`, "
+        "`bash scripts/smoke.sh`, `node tests/e2e/auth.test.js`). "
+        "작성 불가 시 `# TODO: <설명>` 으로 명시 (BLOCK 트리거 — 의도된 동작)"
     )
 
     def _fb() -> str:
@@ -945,6 +949,79 @@ def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) 
         return ""
 
 
+def _is_e2e_missing(value: object) -> bool:
+    """e2e_command 값이 누락으로 간주되어야 하면 True.
+
+    빈값 OR `# TODO` 시작 모두 missing으로 카운트.
+    """
+    v = _clean(value or "")
+    if not v:
+        return True
+    return v.startswith("# TODO") or v.startswith("#TODO")
+
+
+def _backfill_e2e_from_tasks_md(tasks_content: str, task_board: dict) -> dict:
+    """implementation-tasks.md의 'e2e_command:' 라인을 추출해 task_board에 반영.
+
+    파서 계약:
+    - e2e_command 라인 패턴: ^[-*]\\s+e2e_command:\\s+(.+)$ (re.MULTILINE)
+    - task_id 매칭: 해당 e2e_command 라인 직전 최대 5줄에서 task_id: T-NNN 탐색
+      → splitlines() 기반 line-window (regex DOTALL은 줄 수 제한 불가)
+    - 같은 task_id가 여러 번 등장하면 첫 번째 매칭만 사용
+    - task_id 매칭 실패 → 해당 항목 silent skip
+    - 추출값이 # TODO 시작 → 기존 마커 그대로 (덮어쓰지 않음)
+    - 파싱 전체 실패(예외) → 기존 task_board 반환
+    """
+    import re as _re
+    _E2E_RE = _re.compile(r'^[-*]\s+e2e_command:\s+(.+)$')
+    _TID_RE = _re.compile(r'^[-*]\s+task_id:\s*(T-\d+)')
+    try:
+        lines = tasks_content.splitlines()
+        result: dict[str, str] = {}
+        for i, line in enumerate(lines):
+            m = _E2E_RE.match(line.strip())
+            if not m:
+                continue
+            e2e_val = m.group(1).strip()
+            if e2e_val.startswith("# TODO"):
+                continue
+            task_id = None
+            for j in range(max(0, i - 5), i):
+                tm = _TID_RE.match(lines[j].strip())
+                if tm:
+                    task_id = tm.group(1)
+            if task_id and task_id not in result:
+                result[task_id] = e2e_val
+        if result:
+            tasks = task_board.get("tasks") or []
+            # 1차: 정확한 task_id 매칭
+            for t in tasks:
+                if not isinstance(t, dict):
+                    continue
+                tid = _clean(t.get("task_id") or t.get("id") or "")
+                if tid in result:
+                    t["e2e_command"] = result[tid]
+
+            # 2차: positional fallback — T-NNN 순서를 task_board 순서에 매핑
+            # (normalize_tasks가 {module_id}_{phase}_{index} 형식 ID를 사용하므로
+            #  exact match가 실패하는 경우 T-001 → tasks[0], T-002 → tasks[1])
+            _NUM_PAT = _re.compile(r'^T-(\d+)$')
+            seq_map: dict[int, str] = {
+                int(m.group(1)): v
+                for k, v in result.items()
+                if (m := _NUM_PAT.match(k))
+            }
+            if seq_map:
+                task_list = [t for t in tasks if isinstance(t, dict)]
+                for seq_num, e2e_val in sorted(seq_map.items()):
+                    idx = seq_num - 1
+                    if idx < len(task_list) and _is_e2e_missing(task_list[idx].get("e2e_command")):
+                        task_list[idx]["e2e_command"] = e2e_val
+    except Exception:
+        pass
+    return task_board
+
+
 def generate_work_items(
     workspace: str,
     slug: str,
@@ -1039,18 +1116,24 @@ def generate_work_items(
     write_text(tasks_path, tasks_content)
     files["implementation-tasks.md"] = tasks_path
 
+    # P2: backfill e2e_command from tasks markdown into task_board (best-effort)
+    try:
+        task_board = _backfill_e2e_from_tasks_md(tasks_content, task_board)
+    except Exception as _bf_exc:
+        _LOGGER.debug("backfill_e2e skip: %s", _bf_exc)
+
     # --- 텔레메트리 dump ---
     try:
         write_initial_record(workspace, slug, [plan_result, spec_result, design_result, tasks_result])
     except Exception as _te:
         _LOGGER.debug("telemetry dump skip: %s", _te)
 
-    # e2e_command 누락 태스크 경고
+    # e2e_command 누락 태스크 경고 + warning_registry record
     tasks_list = [t for t in (task_board.get("tasks") or []) if isinstance(t, dict)]
     missing_e2e = [
         _clean(t.get("task_id") or t.get("id") or "?")
         for t in tasks_list
-        if not _clean(t.get("e2e_command") or "")
+        if _is_e2e_missing(t.get("e2e_command"))
     ]
     if missing_e2e:
         _LOGGER.warning(
@@ -1062,7 +1145,7 @@ def generate_work_items(
             from core.warning_registry import WarningRegistry as _WR
             _phase_groups: dict[str, list[str]] = {}
             for _t in tasks_list:
-                if _clean(_t.get("e2e_command") or ""):
+                if not _is_e2e_missing(_t.get("e2e_command")):
                     continue
                 _tid = _clean(_t.get("task_id") or _t.get("id") or "?")
                 _ph = _clean(_t.get("phase") or "build")
@@ -1083,6 +1166,13 @@ def generate_work_items(
                 )
         except Exception as _e2e_exc:
             _LOGGER.debug("warning_registry record skip (e2e_command_missing): %s", _e2e_exc)
+
+    # P2: summarize() → decision report 작성 (fail-closed)
+    try:
+        from core.warning_registry import WarningRegistry as _WR2  # noqa: PLC0415
+        _WR2(workspace=workspace).summarize(project_slug=slug)
+    except Exception as _sum_exc:
+        _LOGGER.warning("warning_registry summarize failed: %s", _sum_exc)
 
     gate = ApprovalGate(doc_root, slug, runtime_workspace=workspace)
     gate.initialize(work_item_id, run_id=run_id)

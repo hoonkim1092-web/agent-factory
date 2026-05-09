@@ -1,18 +1,22 @@
-"""Warning Registry — P1 패키지.
+"""Warning Registry — P2 패키지.
 
 SoT: <workspace>/runtime/warnings/<slug>/<rule_id>.jsonl (append-only)
 Cache: <workspace>/runtime/warnings/<slug>/_summary.json (read-on-demand)
+Decision: <workspace>/runtime/warnings/<slug>/_decision.json (P2)
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 
 from core.file_lock import locked_file
 from core.utils import now_iso
+
+_LOGGER = logging.getLogger(__name__)
 
 _PHASE_ORDER = {"scope", "build", "integrate", "code_review", "cross_validate", "verify"}
 
@@ -164,14 +168,29 @@ class WarningRegistry:
                 fh.write(json.dumps(asdict(rec), ensure_ascii=False) + "\n")
 
     def summarize(self, *, project_slug: str) -> dict:
-        """_summary.json을 SoT 풀스캔으로 재계산해 원자적 write 후 반환."""
+        """_summary.json을 SoT 풀스캔으로 재계산해 원자적 write 후 반환.
+
+        P2: 끝에서 decision report 작성 (fail-closed). import 실패도 fail-closed.
+        """
         slug_dir = os.path.join(self.warnings_root, project_slug)
         os.makedirs(slug_dir, exist_ok=True)
         summary_path = os.path.join(slug_dir, "_summary.json")
         summary_lock_path = os.path.join(slug_dir, "_summary.json.lock")
 
         with locked_file(summary_lock_path, timeout=10):
-            summary = _build_summary(project_slug, slug_dir)
+            try:
+                summary = _build_summary(project_slug, slug_dir)
+            except Exception as exc:
+                _LOGGER.error("_build_summary failed — fail-closed: %s", exc)
+                _write_minimal_block_decision(
+                    slug_dir, project_slug=project_slug,
+                    summary_last_updated=now_iso(),
+                    error_repr=repr(exc),
+                )
+                raise
+            # P2: escalation_phase 마커 도입
+            summary["escalation_phase"] = "P2"
+
             payload = json.dumps(summary, ensure_ascii=False, indent=2)
             fd, tmp = tempfile.mkstemp(dir=slug_dir, suffix=".tmp")
             try:
@@ -184,6 +203,37 @@ class WarningRegistry:
                 except OSError:
                     pass
                 raise
+
+            # P2: decision report (fail-closed — import 실패도 차단 처리)
+            try:
+                from core.escalation_evaluator import (  # noqa: PLC0415
+                    compute_run_decision, load_policy,
+                )
+                from core.escalation_decision_report import (  # noqa: PLC0415
+                    write_decision_report, write_error_decision,
+                )
+                decision = compute_run_decision(
+                    summary, load_policy(), current_phase="P2"
+                )
+                write_decision_report(
+                    decision, slug_dir,
+                    summary_last_updated=summary["last_updated"],
+                )
+            except Exception as exc:
+                _LOGGER.error("decision evaluator failure — fail-closed: %s", exc)
+                try:
+                    from core.escalation_decision_report import write_error_decision  # noqa: PLC0415
+                    write_error_decision(
+                        slug_dir, project_slug=project_slug,
+                        summary_last_updated=summary["last_updated"],
+                        error_repr=repr(exc),
+                    )
+                except Exception:
+                    _write_minimal_block_decision(
+                        slug_dir, project_slug=project_slug,
+                        summary_last_updated=summary["last_updated"],
+                        error_repr=repr(exc),
+                    )
 
         return summary
 
@@ -217,10 +267,59 @@ def _count_rule_records(slug_dir: str, rule_id: str) -> int:
     return count
 
 
+def _write_minimal_block_decision(
+    slug_dir: str,
+    *,
+    project_slug: str,
+    summary_last_updated: str,
+    error_repr: str,
+) -> None:
+    """write_error_decision import도 실패한 극단 케이스용 최소 _decision.json."""
+    payload = {
+        "decision_schema_version": 1,
+        "project_slug": project_slug,
+        "last_updated": now_iso(),
+        "generated_from_summary_last_updated": summary_last_updated,
+        "escalation_phase": "P2",
+        "block": True,
+        "blocking_rules": [],
+        "reason": "evaluator_import_error",
+        "error": error_repr,
+    }
+    path = os.path.join(slug_dir, "_decision.json")
+    fd, tmp = tempfile.mkstemp(dir=slug_dir, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
 def _build_summary(project_slug: str, slug_dir: str) -> dict:
-    """slug_dir의 모든 <rule_id>.jsonl을 스캔해 by_rule + by_phase 집계."""
+    """slug_dir의 모든 <rule_id>.jsonl을 스캔해 by_rule + by_phase 집계.
+
+    P2 추가: any_override + repeat_count_max 두 필드.
+    """
     by_rule: dict[str, dict] = {}
     by_severity: dict[str, int] = {"warn": 0, "block_candidate": 0, "block": 0}
+
+    # P2: _overrides.json에서 override 상태 로드 (slug_dir의 _overrides.json 직접 읽기)
+    overridden_rules: set[str] = set()
+    overrides_file = os.path.join(slug_dir, "_overrides.json")
+    if os.path.isfile(overrides_file):
+        try:
+            with open(overrides_file, encoding="utf-8") as _of:
+                _od = json.load(_of)
+            for entry in _od.get("overrides") or []:
+                rid = entry.get("rule_id")
+                if rid:
+                    overridden_rules.add(rid)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"_overrides.json corrupt: {exc}") from exc
 
     if not os.path.isdir(slug_dir):
         pass
@@ -243,6 +342,7 @@ def _build_summary(project_slug: str, slug_dir: str) -> dict:
                     cnt = r.get("count", 1)
                     phase = r.get("affected_phase", "")
                     ts = r.get("ts", "")
+                    repeat_cnt = r.get("repeat_count", 1)
 
                     if rid not in by_rule:
                         by_rule[rid] = {
@@ -251,6 +351,8 @@ def _build_summary(project_slug: str, slug_dir: str) -> dict:
                             "last_ts": ts,
                             "severity": sev,
                             "by_phase": {},
+                            "repeat_count_max": repeat_cnt,
+                            "any_override": rid in overridden_rules,
                         }
                     entry = by_rule[rid]
                     entry["count"] += cnt
@@ -259,6 +361,8 @@ def _build_summary(project_slug: str, slug_dir: str) -> dict:
                     if ts > entry["last_ts"]:
                         entry["last_ts"] = ts
                         entry["severity"] = sev
+                    if repeat_cnt > entry["repeat_count_max"]:
+                        entry["repeat_count_max"] = repeat_cnt
                     if phase:
                         entry["by_phase"][phase] = entry["by_phase"].get(phase, 0) + cnt
 

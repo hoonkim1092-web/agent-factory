@@ -303,6 +303,32 @@ def _run_warning_repair_subcommand(rest: list[str]) -> None:
     print(f"[warning-repair] _summary.json rebuilt for slug={args.slug}")
 
 
+def _run_warning_override_subcommand(rest: list[str]) -> None:
+    """warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]"""
+    import argparse
+    parser = argparse.ArgumentParser(prog="af warning-override")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", required=True, help="프로젝트 slug")
+    parser.add_argument("--rule", required=True, help="override할 rule_id")
+    parser.add_argument("--reason", default="", help="override 사유 (추가 시 필수)")
+    parser.add_argument("--remove", action="store_true", help="override 제거 (재차단)")
+    args = parser.parse_args(rest)
+
+    from core.warning_overrides import upsert_override, remove_override
+    if args.remove:
+        remove_override(args.workspace, args.slug, args.rule)
+        print(f"[warning-override] removed slug={args.slug} rule={args.rule}")
+    else:
+        if not args.reason.strip():
+            parser.error("--reason 은 override 추가 시 필수")
+        upsert_override(args.workspace, args.slug, args.rule, args.reason)
+        print(f"[warning-override] added slug={args.slug} rule={args.rule}")
+
+    # summary 재계산 → decision report 갱신
+    from core.warning_registry import WarningRegistry
+    WarningRegistry(workspace=args.workspace).summarize(project_slug=args.slug)
+
+
 def _run_resume_subcommand(rest: list[str]) -> None:
     """resume <run_id> — 중단된 run을 재개한다.
 
@@ -415,8 +441,9 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
     "nightly-status":  _run_nightly_status,
     "nightly-tick":    _run_nightly_tick,
     "resume":          _run_resume_subcommand,
-    "warning-summary": _run_warning_summary_subcommand,
-    "warning-repair":  _run_warning_repair_subcommand,
+    "warning-summary":  _run_warning_summary_subcommand,
+    "warning-repair":   _run_warning_repair_subcommand,
+    "warning-override": _run_warning_override_subcommand,
 }
 
 
@@ -458,8 +485,9 @@ _STAGE1_USAGE = {
     "nightly-stop":    "usage: af nightly-stop [--workspace PATH]    # 야간 자율 모드 비활성화",
     "nightly-status":  "usage: af nightly-status [--workspace PATH]    # 야간 파이프라인 상태 조회",
     "nightly-tick":    "usage: af nightly-tick [--workspace PATH]    # 수동 1회 tick 실행",
-    "warning-summary": "usage: af warning-summary --workspace PATH --slug SLUG    # WARN 요약 출력",
-    "warning-repair":  "usage: af warning-repair --workspace PATH --slug SLUG    # _summary.json 재생성",
+    "warning-summary":  "usage: af warning-summary --workspace PATH --slug SLUG    # WARN 요약 출력",
+    "warning-repair":   "usage: af warning-repair --workspace PATH --slug SLUG    # _summary.json 재생성",
+    "warning-override": "usage: af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]   # P2 false-positive override",
 }
 
 

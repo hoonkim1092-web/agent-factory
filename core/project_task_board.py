@@ -357,6 +357,7 @@ def _task_template(
 
     if slices:
         for slice_name in slices:
+            slice_task_id = f"T-{len(tasks):03d}"
             tasks.append({
                 "phase": "build",
                 "title": f"{role_name}: {slice_name}",
@@ -365,8 +366,10 @@ def _task_template(
                     f"{slice_name} 구현 완료.",
                     "관련 파일과 산출물이 갱신된다.",
                 ],
+                "e2e_command": f"# TODO: e2e command for {slice_task_id} (build)",
             })
     else:
+        build_task_id = f"T-{len(tasks):03d}"
         tasks.append({
             "phase": "build",
             "title": f"{role_name}: {module_name} 기능을 구현한다.",
@@ -375,8 +378,10 @@ def _task_template(
                 f"{module_name}의 핵심 기능이 구현된다.",
                 "관련 파일과 산출물이 갱신된다.",
             ],
+            "e2e_command": f"# TODO: e2e command for {build_task_id} (build)",
         })
 
+    verify_task_id = f"T-{len(tasks):03d}"
     tasks.append({
         "phase": "verify",
         "title": f"{role_name}: {module_name} 결과를 검증하고 handoff를 남긴다.",
@@ -385,6 +390,7 @@ def _task_template(
             "검증 결과가 정리된다.",
             "잔여 리스크와 후속 작업이 기록된다.",
         ],
+        "e2e_command": f"# TODO: e2e command for {verify_task_id} (verify)",
     })
     return tasks
 
@@ -1065,6 +1071,7 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
                 "status": "pending",
                 "notes": [],
                 "updated_at": now_iso(),
+                "e2e_command": f"# TODO: e2e command for {cr_task_id} (code_review)",
             }
             board["tasks"].append(cr_task)
             review_tasks.append(cr_task)
@@ -1100,6 +1107,7 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
                     "status": "pending",
                     "notes": [],
                     "updated_at": now_iso(),
+                    "e2e_command": f"# TODO: e2e command for {cv_task_id} (cross_validate)",
                 }
                 board["tasks"].append(cv_task)
                 review_tasks.append(cv_task)

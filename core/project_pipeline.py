@@ -1273,6 +1273,21 @@ class ProjectPipeline:
                 "gate_path": gate.gate_path,
             }
 
+        # P2: escalation block 체크 (승인 체크 직후)
+        blocked, block_decision = gate.read_block_decision()
+        if blocked:
+            _bd = block_decision or {}
+            return {
+                "ok": False,
+                "reason": "escalation_block",
+                "blocking_rules": _bd.get("blocking_rules", []),
+                "decision_report": os.path.join(
+                    prepared.workspace, "runtime", "warnings",
+                    prepared.work_item_slug, "_decision.md",
+                ),
+                "message": "escalation 차단. _decision.md 를 확인하고 e2e_command 보강 또는 warning-override 후 재실행하세요.",
+            }
+
         # -- 편집 내용 반영 --
         # target_path 설정 시 문서는 doc_root에 있으므로 workspace가 아닌 doc_root 사용
         doc_root = prepared._effective_doc_root()

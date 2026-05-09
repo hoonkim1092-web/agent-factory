@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-09 | version: v1.2.24 -->
+<!-- last_updated: 2026-05-10 | version: v1.2.25 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -47,7 +47,11 @@
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점 | `main()` |
-| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate` |
+| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2) |
+| `core/escalation_evaluator.py` | P2 에스컬레이션 규칙 평가 | `RunDecision`, `EscalationDecision`, `evaluate()`, `compute_run_decision()`, `load_policy()` |
+| `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
+| `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
+| `core/warning_registry.py` | WARN 기록 SoT + summarize + decision 트리거 | `WarningRecord`, `WarningRegistry`, `_build_summary()`, `_write_minimal_block_decision()` |
 | `core/ast_engine.py` | AST 분석 엔진 (ast-grep-py wrapper) | `search()`, `replace()`, `search_file()` |
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
 | `core/review_bundle.py` | 리뷰 번들 생성 thin wrapper (Phase 2-prep D) | `build()`, `save()`, `load()` |
@@ -602,10 +606,10 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 ---
 
-### §3.8 Warning Registry (`core/warning_registry.py`, `core/escalation_evaluator.py`)
-<!-- last_updated: 2026-05-09 (P1 신설 — WarningRecord schema + SoT jsonl + EscalationDecision stub) -->
+### §3.8 Warning Registry (`core/warning_registry.py`, `core/escalation_evaluator.py`, `core/escalation_decision_report.py`, `core/warning_overrides.py`)
+<!-- last_updated: 2026-05-10 (P2 구현 — escalation_evaluator 본체 + decision_report + warning_overrides + fail-closed chain) -->
 
-**목적**: AF 파이프라인에서 발화되는 WARN을 표준 스키마로 기록하고, 임계 초과 시 BLOCK으로 승격할 수 있는 기반을 마련한다.
+**목적**: AF 파이프라인에서 발화되는 WARN을 표준 스키마로 기록하고, 임계 초과 시 BLOCK으로 승격하는 완전한 P2 escalation 시스템.
 
 **핵심 클래스/함수**:
 
@@ -613,15 +617,38 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 |------|------|------|
 | `WarningRecord` | `core/warning_registry.py` | 단일 WARN 기록 dataclass (record_id, schema_version, affected_phase, repeat_count 포함) |
 | `WarningRegistry` | `core/warning_registry.py` | `.record()` / `.summarize()` / `.rebuild_caches()` / `.repair()` 공개 API |
+| `_build_summary()` | `core/warning_registry.py` | `repeat_count_max` + `any_override` 포함 summary dict 생성 |
+| `_write_minimal_block_decision()` | `core/warning_registry.py` | 최종 fail-closed fallback — 모든 예외 처리 실패 시 `block=True` 최소 JSON 기록 |
 | `EscalationDecision` | `core/escalation_evaluator.py` | escalation 결과 dataclass (block, severity, reason, rule_id, activate_at) |
-| `evaluate()` | `core/escalation_evaluator.py` | P1 stub — 항상 `EscalationDecision(block=False, reason="inactive_phase")` 반환 |
-| `_load_policy()` | `core/escalation_evaluator.py` | `config/escalation_policy.yaml` 로드 (frozen-aware `BASE_DIR`) |
+| `RunDecision` | `core/escalation_evaluator.py` | P2 run-level 결정 dataclass (block, blocking_rules, reason, escalation_phase) |
+| `evaluate()` | `core/escalation_evaluator.py` | P2 full — rule_not_active→inactive_phase→false_positive→exempt→block_when threshold 순차 평가 |
+| `compute_run_decision()` | `core/escalation_evaluator.py` | summary dict → 룰별 virtual WarningRecord 생성 후 `evaluate()` fan-out → `RunDecision` |
+| `load_policy()` | `core/escalation_evaluator.py` | `config/escalation_policy.yaml` 로드 (frozen-aware `BASE_DIR`, P2에서 public 노출) |
+| `write_decision_report()` | `core/escalation_decision_report.py` | `RunDecision` → `_decision.md` + `_decision.json` 원자 기록 |
+| `write_error_decision()` | `core/escalation_decision_report.py` | evaluator 예외 시 fail-closed `block=True` decision 기록 |
+| `upsert_override()` | `core/warning_overrides.py` | `_overrides.json`에 rule override 추가 (locked_file + atomic replace) |
+| `remove_override()` | `core/warning_overrides.py` | `_overrides.json`에서 rule override 제거 |
+| `overrides_path()` | `core/warning_overrides.py` | `<workspace>/runtime/warnings/<slug>/_overrides.json` 경로 반환 |
+| `read_block_decision()` | `core/approval_gate.py` | `_decision.json` 읽어 `(blocked: bool, decision: dict | None)` 반환. P2 env + 파일 없음 → `(True, …)` fail-closed |
 
-**저장 위치** (`<workspace>/runtime/warnings/`):
-- `<slug>/<rule_id>.jsonl` — append-only SoT (locked_file 보호)
-- `<slug>/_summary.json` — read-on-demand cache (atomic write, 별도 `.lock`)
-- `_index.json` — 등록된 rule_id 목록 (git commit 대상)
-- `.gitignore` 3줄: `/runtime/warnings/*` + `!.gitkeep` + `!_index.json`
+**저장 위치** (`<workspace>/runtime/warnings/<slug>/`):
+- `<rule_id>.jsonl` — append-only SoT (locked_file 보호)
+- `_summary.json` — summarize cache. P2: `escalation_phase: "P2"` 마커 포함
+- `_decision.json` — run-level block/pass 결정. `decision_schema_version=1`, `escalation_phase`, `blocking_rules[]`
+- `_decision.md` — 사람이 읽을 수 있는 결정 보고서
+- `_overrides.json` — false-positive override 목록 (`schema_version=1`, `overrides[]`)
+- `_index.json` / `.gitignore` — git commit 대상 (SoT jsonl/summary/decision은 gitignore)
+
+**escalation_phase 마커 프로토콜**:
+- `summarize()` 호출 시 `_summary.json["escalation_phase"] = "P2"` 기록
+- `read_block_decision()`: phase 마커 없음 → P1 compat fail-open `(False, None)`
+- `read_block_decision()`: P2 env + `_decision.json` 없음 → fail-closed `(True, decision_missing)`
+- forward compat: `decision["escalation_phase"] ≤ expected_phase` → block 값 그대로 통과
+
+**fail-closed chain** (`summarize()` 내부):
+1. `compute_run_decision()` + `write_decision_report()` — 정상 경로
+2. except → `write_error_decision()` (block=True, reason="evaluator_error")
+3. except → `_write_minimal_block_decision()` (최소 JSON, 예외 무시)
 
 **record_id 정책**: `f"{slug}:{rule_id}:{hash8(stable_payload)}"` — `ts` 제외 stable hash, dedup으로 retry 안전.
 
@@ -631,11 +658,27 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 3. `evidence_quality_warn` — `core/project_pipeline.py:757` `_vr.status != "pass"` 시 record
 4. `plan_verifier_warn` — `core/project_pipeline.py:983` `passed=False` 시 record (`affected_phase=""`)
 
-**ApprovalGate 변경**: `__init__(workspace, slug, *, runtime_workspace=None)` — rename 없이 keyword 추가. `_render()`에 `gate_decision_report:` 절대경로 라인 주입. 호출처 2곳 (`work_item_generator:1061`, `project_pipeline:95`) `runtime_workspace=workspace` 추가.
+**P2 project_task_board e2e_command TODO 마커**:
+- `_task_template()`: build/verify 태스크 → `"e2e_command": "# TODO: e2e command for T-XXX (build|verify)"`
+- `inject_review_tasks()`: code_review/cross_validate → `"e2e_command": "# TODO: e2e command for T-XXX (code_review|cross_validate)"`
+- scope 태스크는 `e2e_command` 필드 없음 (exempt)
 
-**CLI**: `af warning-summary --workspace PATH --slug SLUG` / `af warning-repair --workspace PATH --slug SLUG` (frozen 진입점 `run_factory_cli.py`).
+**P2 work_item_generator**:
+- `_is_e2e_missing(value)` — `not value` OR `startswith("# TODO")` / `"#TODO"` → True
+- `_backfill_e2e_from_tasks_md(tasks_content, task_board)` — Phase 1: T-NNN exact match; Phase 2 positional fallback (T-001→tasks[0])
+- LLM 프롬프트에 `e2e_command` 필드 + "모든 태스크에 포함" 규칙 추가
+- record loop 후 `WarningRegistry(workspace).summarize(project_slug=slug)` 호출
 
-**테스트**: `tests/test_warning_registry.py` (11 케이스) · `tests/test_warning_registry_migration_callsites.py` (5) · `tests/test_approval_gate_runtime_workspace.py` (4) · `tests/test_warning_registry_cli.py` (4) · `tests/test_warning_registry_schema_evolution.py` (1) = **총 25 케이스 PASS**.
+**ApprovalGate 변경**: `__init__(workspace, slug, *, runtime_workspace=None)` — P2에서 `read_block_decision()` 추가.
+
+**project_pipeline 변경**: `execute()` 내 `is_execution_open()` 직후 `gate.read_block_decision()` → blocked 시 `{"ok": False, "reason": "escalation_block", ...}` 반환.
+
+**CLI**: `af warning-summary` / `af warning-repair` (P1) · `af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]` (P2: false-positive override + 즉시 decision 재생성).
+
+**af.spec hiddenimports**: `core.escalation_decision_report` + `core.warning_overrides` 추가.
+
+**테스트**: P1 25케이스 + P2 신규 10파일 39케이스 = **총 64 케이스 PASS**
+- P2 신규: `test_escalation_evaluator` (10) · `test_decision_report` (3) · `test_approval_gate_block_decision` (6) · `test_pipeline_block_enforcement` (2) · `test_warning_override_cli` (3) · `test_task_template_e2e_command` (3) · `test_inject_review_tasks_e2e_command` (1) · `test_summary_schema_repeat_count` (1) · `test_work_item_generator_backfill` (9) · `test_wig_summarize_wiring` (1)
 
 ---
 
@@ -1340,6 +1383,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-10 | v1.2.25 | feat(P2-warning-registry): escalation_evaluator 본체 구현 — `RunDecision`·`compute_run_decision()`·`load_policy()` public. `core/escalation_decision_report.py` 신규: `write_decision_report()`·`write_error_decision()`. `core/warning_overrides.py` 신규: `upsert_override()`·`remove_override()`. `warning_registry.summarize()` P2 escalation_phase 마커 + fail-closed decision chain. `approval_gate.read_block_decision()` P2 fail-closed. `project_pipeline.execute()` escalation_block 체크. `project_task_board._task_template()` + `inject_review_tasks()` e2e_command TODO 마커. `work_item_generator._is_e2e_missing()`·`_backfill_e2e_from_tasks_md()`·summarize 호출. `run_factory_cli warning-override` 서브커맨드. af.spec hiddenimports 2건. 테스트 P1 25 + P2 39 = **64 케이스 PASS**. §3.8 P2 갱신. |
 | 2026-05-09 | v1.2.24 | fix(P1-warning-registry): `_record_ledger_outcomes(project_slug: str = "")` 시그니처 추가 — `project_id = project_slug or os.path.basename(workspace)`로 workspace basename 대신 work_item_slug 우선 사용. cross-review BLOCK 수정. |
 | 2026-05-09 | v1.2.23 | feat(P1-warning-registry): `core/warning_registry.py` + `core/escalation_evaluator.py` 신설 — WarningRecord schema v1, WarningRegistry(record/summarize/rebuild_caches/repair), EscalationDecision stub(block=False), _load_policy(escalation_policy.yaml frozen-aware). `core/project_task_board.detect_owner_drift()` bool→list[tuple]. `core/approval_gate.py` __init__(runtime_workspace=None) keyword 추가 + _render() gate_decision_report 주입. 호출처 2곳(work_item_generator:1061, project_pipeline:95) runtime_workspace 추가. 4건 WARN 마이그레이션(e2e_command_missing/owner_role_mismatch/evidence_quality_warn/plan_verifier_warn). CLI(warning-summary/warning-repair). runtime/warnings/.gitkeep+_index.json. .gitignore 3줄. af.spec hiddenimports. 테스트 25 케이스 PASS. §3.8 신규. |
 | 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서 줄바꿈·공백 일괄 정규화 — 84개 파일 이중 빈줄→단일 빈줄, agents/ YAML·profile.md 포함, README·SYNC_GUIDE·PROJECT_LOG 적용, 내용 변경 없음` |

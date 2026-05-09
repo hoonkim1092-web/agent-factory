@@ -13,6 +13,7 @@ work-item approval-gate.md를 프로그램적으로 관리.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 from typing import Any
@@ -170,6 +171,85 @@ class ApprovalGate:
             self.invalidate(reason=f"문서 변경 감지 (자동): {', '.join(changed)}")
             return False
         return True
+
+    def read_block_decision(self) -> tuple[bool, dict | None]:
+        """escalation _decision.json을 읽어 (blocked, decision_dict) 반환 (fail-closed).
+
+        - _summary.json 부재 → (False, None) — P1 호환 fail-open
+        - _summary.json 존재 + escalation_phase 마커 없음 → (False, None) — P1 산출
+        - escalation_phase 마커 있음 + _decision.json 누락/stale/parse_error → fail-closed
+        - AF_SKIP_ESCALATION=1 → 즉시 (False, None) — rollback 긴급 우회
+        """
+        if os.environ.get("AF_SKIP_ESCALATION") == "1":
+            return False, None
+
+        warnings_dir = os.path.join(
+            self.runtime_workspace, "runtime", "warnings", self.slug
+        )
+        summary_path = os.path.join(warnings_dir, "_summary.json")
+        decision_path = os.path.join(warnings_dir, "_decision.json")
+
+        if not os.path.isfile(summary_path):
+            return False, None
+        try:
+            with open(summary_path, encoding="utf-8") as fh:
+                summary = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            return False, None
+
+        expected_phase = summary.get("escalation_phase")
+        summary_last = summary.get("last_updated", "")
+
+        if not expected_phase:
+            return False, None
+
+        # 여기부터 P2+ 환경 — fail-closed 분기
+        if not os.path.isfile(decision_path):
+            return True, {
+                "block": True,
+                "reason": "decision_missing",
+                "blocking_rules": [],
+                "expected_phase": expected_phase,
+            }
+        try:
+            with open(decision_path, encoding="utf-8") as fh:
+                d = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            return True, {
+                "block": True,
+                "reason": "decision_parse_error",
+                "blocking_rules": [],
+                "expected_phase": expected_phase,
+            }
+
+        # phase 검증 — 순방향 호환 (old decision은 새 phase에서도 유효)
+        _PHASE_ORDER_EC = {"P1": 1, "P2": 2, "P3": 3, "P4": 4, "P5": 5, "P6": 6}
+        decision_phase = d.get("escalation_phase", "")
+        decision_phase_num = _PHASE_ORDER_EC.get(decision_phase, 0)
+        expected_phase_num = _PHASE_ORDER_EC.get(expected_phase, 0)
+        # decision이 expected_phase보다 미래 phase로 평가됨 → 이상 상태 → fail-closed
+        if decision_phase_num > expected_phase_num:
+            return True, {
+                "block": True,
+                "reason": "decision_phase_mismatch",
+                "blocking_rules": [],
+                "expected_phase": expected_phase,
+                "actual_phase": decision_phase,
+            }
+        # decision_phase_num <= expected_phase_num → 순방향 호환
+
+        # stale (decision이 더 오래된 summary 기준)
+        decision_summary_ts = d.get("generated_from_summary_last_updated", "")
+        if decision_summary_ts and summary_last and decision_summary_ts < summary_last:
+            return True, {
+                "block": True,
+                "reason": "decision_stale",
+                "blocking_rules": [],
+                "summary_last": summary_last,
+                "decision_summary_ts": decision_summary_ts,
+            }
+
+        return bool(d.get("block")), d
 
     def check_validity(self) -> tuple[bool, list[str]]:
         """
