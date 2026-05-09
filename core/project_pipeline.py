@@ -1317,6 +1317,7 @@ class ProjectPipeline:
             status=status,
             role_plan=prepared.role_plan,
             workspace=workspace,
+            project_slug=prepared.work_item_slug,
         )
 
         append_dashboard_run(
@@ -1372,6 +1373,7 @@ class ProjectPipeline:
         status: str,
         role_plan: dict,
         workspace: str,
+        project_slug: str = "",
     ) -> None:
         """프로젝트 실행 후 strategy ledger에 모듈별 outcome을 기록한다.
 
@@ -1403,7 +1405,7 @@ class ProjectPipeline:
         task_map, module_map = _build_board_maps(board)
 
         ledger = get_strategy_ledger(workspace)
-        project_id = os.path.basename(workspace)
+        project_id = project_slug or os.path.basename(workspace)
 
         batch: list[tuple[str, str, str, bool]] = []
         seen: set[tuple[str, str]] = set()

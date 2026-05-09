@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-09 | version: v1.2.23 -->
+<!-- last_updated: 2026-05-09 | version: v1.2.24 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1340,6 +1340,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-09 | v1.2.24 | fix(P1-warning-registry): `_record_ledger_outcomes(project_slug: str = "")` 시그니처 추가 — `project_id = project_slug or os.path.basename(workspace)`로 workspace basename 대신 work_item_slug 우선 사용. cross-review BLOCK 수정. |
 | 2026-05-09 | v1.2.23 | feat(P1-warning-registry): `core/warning_registry.py` + `core/escalation_evaluator.py` 신설 — WarningRecord schema v1, WarningRegistry(record/summarize/rebuild_caches/repair), EscalationDecision stub(block=False), _load_policy(escalation_policy.yaml frozen-aware). `core/project_task_board.detect_owner_drift()` bool→list[tuple]. `core/approval_gate.py` __init__(runtime_workspace=None) keyword 추가 + _render() gate_decision_report 주입. 호출처 2곳(work_item_generator:1061, project_pipeline:95) runtime_workspace 추가. 4건 WARN 마이그레이션(e2e_command_missing/owner_role_mismatch/evidence_quality_warn/plan_verifier_warn). CLI(warning-summary/warning-repair). runtime/warnings/.gitkeep+_index.json. .gitignore 3줄. af.spec hiddenimports. 테스트 25 케이스 PASS. §3.8 신규. |
 | 2026-05-08 | v1.2.22 | `chore(docs): 전체 문서 줄바꿈·공백 일괄 정규화 — 84개 파일 이중 빈줄→단일 빈줄, agents/ YAML·profile.md 포함, README·SYNC_GUIDE·PROJECT_LOG 적용, 내용 변경 없음` |
 | 2026-05-08 | v1.2.22 | chore(docs): 전체 마크다운 파일 개행 정규화 — AGENTS.md·GEMINI.md 등 84개 파일 연속 빈 줄 제거, agents/ YAML·profile.md 공백 일괄 정리, artifacts/·docs/ 문서 동일 적용 |
