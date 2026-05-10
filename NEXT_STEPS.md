@@ -3,17 +3,18 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: 2026-05-11 KST — **Work-Item 병렬화 v3 작성 완료, cross-review 3라운드 대기. (P4a v1.2.27 ship 완료, P4b는 measurement 데이터 축적 대기.)**
 >
-> ## 🔥 진행 중 — Work-Item 병렬화 v3 (Opus 4.7, 2026-05-10~11)
+> ## 🔥 진행 중 — Work-Item 병렬화 v3.1 (Opus 4.7, 2026-05-10~11)
 >
-> - **v3 문서**: `docs/2026-05-08-work-item-parallel-option-c-design-v3.md` (1421 lines)
-> - **v2 cross-review 2라운드** (`docs/reviews/2026-05-08-142400-...`): WARN 13건 (5 High + 2 Medium + 2 Low + 1 HOLD + 1 REJECT) — **v3가 흡수**
-> - **흡수 결과**:
->   - 5 High 모두 처리 (F1 refine guard / F2 timeout transport / F3 Episode Hints / F4 _exec_stage1·3 / F5 sync close)
->   - 2 Medium 처리 (F7 telemetry 경로 / F12 Stage 3 budget trigger)
->   - 2 Medium close (F6 fallback 4개 grep / F8 _PLACEHOLDER_REFINE_MAX=2 grep)
->   - 2 Low 처리 (F9 outline mismatch / F10 _dname 형식)
->   - 1 REJECT 유지 (F11 af.spec — 이미 등록됨)
-> - **다음**: cross-review 3라운드 (codex). PASS 시 Sonnet으로 본 구현 진입 (C-3stages: `core/work_item_generator.py` + `core/requirement_llm.py` + `core/work_item_telemetry.py` 신설 등).
+> - **v3.1 문서**: `docs/2026-05-08-work-item-parallel-option-c-design-v3.md` (1481 lines)
+> - **v3 1라운드 cross-review** (`docs/reviews/2026-05-11-001451-...-v3-design-review.md`): **BLOCK 11건** (Critical 2 + High 5 + Medium 3 + HOLD 1) — Cross provider error로 Critic 단독, evidence file:line 강력
+> - **v3.1 흡수 결과**:
+>   - **Critical 2** 처리: F1/F2를 "설계 명세 흡수 / 코드 (c) 미구현 — 본 PR 후속" status 명시화 (§0a Implementation Status 컬럼 추가)
+>   - **F2 baseline 정정**: anthropic은 `urllib.request.urlopen` (httpx 아님). §10 코드블록 urllib 재작성
+>   - **High 4**: §11 line 번호 일괄 갱신 (`_call_*_api:78/98/118` / `_generate_doc_with_llm:562` / `_generate_and_refine:1184` / `generate_work_items:1025` 등). af.spec 76→**82,83**. expected_count 12 통일. F9 빈 문자열 반환 명시
+>   - **Medium 3**: §15 R7 신설 (Stage 2 abandoned + Stage 3 race), R8 신설 (§9 dir mtime 정책). §6 budget의 F1 guard 의존성 명시
+>   - **HOLD 1**: Cross provider 인증 후 v3.1 cross-review 2라운드 재실행
+> - **v2 → v3 흡수분 (참고)**: 5 High + 2 Medium + 2 Low (F1~F12) — §0a 표에 기록
+> - **다음**: v3.1 commit + cross-review 2라운드 (codex provider 정상 시) → PASS 시 Sonnet으로 본 구현 PR (`core/work_item_generator.py`/`core/requirement_llm.py`/`core/work_item_telemetry.py:14, 45` 등 — 코드 변경은 모두 본 PR 후속의 (c) 항목).
 >
 > ---
 >
