@@ -608,7 +608,7 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 ---
 
 ### §3.8 Warning Registry & Stats (`core/warning_registry.py`, `core/escalation_evaluator.py`, `core/escalation_decision_report.py`, `core/warning_overrides.py`, `core/warning_stats.py`)
-<!-- last_updated: 2026-05-10 (P3 구현 — warning_stats 신규, warning-stats/export CLI, _index.json schema v2, source_path 정정) -->
+<!-- last_updated: 2026-05-10 (P4a 구현 — current_phase 단일 진실원(yaml), rule-level mode 필드, escalation_phase 동적화, rollback 4단) -->
 
 **목적**: AF 파이프라인에서 발화되는 WARN을 표준 스키마로 기록하고, 임계 초과 시 BLOCK으로 승격하는 완전한 P2 escalation 시스템.
 
@@ -622,11 +622,12 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 | `_write_minimal_block_decision()` | `core/warning_registry.py` | 최종 fail-closed fallback — 모든 예외 처리 실패 시 `block=True` 최소 JSON 기록 |
 | `EscalationDecision` | `core/escalation_evaluator.py` | escalation 결과 dataclass (block, severity, reason, rule_id, activate_at) |
 | `RunDecision` | `core/escalation_evaluator.py` | P2 run-level 결정 dataclass (block, blocking_rules, reason, escalation_phase) |
-| `evaluate()` | `core/escalation_evaluator.py` | P2 full — rule_not_active→inactive_phase→false_positive→exempt→block_when threshold 순차 평가 |
+| `evaluate()` | `core/escalation_evaluator.py` | P4a: rule_not_active→inactive_phase→false_positive→**mode 분기(off/observation/enforce)**→exempt→block_when threshold 순차 평가 |
 | `compute_run_decision()` | `core/escalation_evaluator.py` | summary dict → 룰별 virtual WarningRecord 생성 후 `evaluate()` fan-out → `RunDecision` |
 | `load_policy()` | `core/escalation_evaluator.py` | `config/escalation_policy.yaml` 로드 (frozen-aware `BASE_DIR`, P2에서 public 노출) |
+| `read_current_phase()` | `core/escalation_evaluator.py` | **P4a 신규**: policy dict에서 `current_phase` 읽기. 부재/invalid → `"P2"` fallback |
 | `write_decision_report()` | `core/escalation_decision_report.py` | `RunDecision` → `_decision.md` + `_decision.json` 원자 기록 |
-| `write_error_decision()` | `core/escalation_decision_report.py` | evaluator 예외 시 fail-closed `block=True` decision 기록 |
+| `write_error_decision()` | `core/escalation_decision_report.py` | evaluator 예외 시 fail-closed `block=True` decision 기록. **P4a**: `current_phase` kwarg 추가 (기본 `"P2"`) |
 | `upsert_override()` | `core/warning_overrides.py` | `_overrides.json`에 rule override 추가 (locked_file + atomic replace) |
 | `remove_override()` | `core/warning_overrides.py` | `_overrides.json`에서 rule override 제거 |
 | `overrides_path()` | `core/warning_overrides.py` | `<workspace>/runtime/warnings/<slug>/_overrides.json` 경로 반환 |
@@ -634,22 +635,24 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 **저장 위치** (`<workspace>/runtime/warnings/<slug>/`):
 - `<rule_id>.jsonl` — append-only SoT (locked_file 보호)
-- `_summary.json` — summarize cache. P2: `escalation_phase: "P2"` 마커 포함
+- `_summary.json` — summarize cache. P4a: `escalation_phase` 동적 (yaml `current_phase`에서 로드, fallback `"P2"`)
 - `_decision.json` — run-level block/pass 결정. `decision_schema_version=1`, `escalation_phase`, `blocking_rules[]`
 - `_decision.md` — 사람이 읽을 수 있는 결정 보고서
 - `_overrides.json` — false-positive override 목록 (`schema_version=1`, `overrides[]`)
 - `_index.json` / `.gitignore` — git commit 대상 (SoT jsonl/summary/decision은 gitignore)
 
-**escalation_phase 마커 프로토콜**:
-- `summarize()` 호출 시 `_summary.json["escalation_phase"] = "P2"` 기록
+**escalation_phase 마커 프로토콜 (P4a 갱신)**:
+- `current_phase`는 yaml 단일 진실원. `summarize()` 초입에 `policy = load_policy()` 한 번 호출 후 `read_current_phase(policy)` → `summary["escalation_phase"] = current_phase` 기록 (split read 금지)
+- yaml 부재/invalid `current_phase` → `"P2"` fallback (기존 P2 동작 100% 보존)
 - `read_block_decision()`: phase 마커 없음 → P1 compat fail-open `(False, None)`
-- `read_block_decision()`: P2 env + `_decision.json` 없음 → fail-closed `(True, decision_missing)`
+- `read_block_decision()`: env + `_decision.json` 없음 → fail-closed `(True, decision_missing)`
 - forward compat: `decision["escalation_phase"] ≤ expected_phase` → block 값 그대로 통과
 
-**fail-closed chain** (`summarize()` 내부):
-1. `compute_run_decision()` + `write_decision_report()` — 정상 경로
-2. except → `write_error_decision()` (block=True, reason="evaluator_error")
-3. except → `_write_minimal_block_decision()` (최소 JSON, 예외 무시)
+**fail-closed chain** (`summarize()` 내부, P4a 재구성):
+1. policy single-load + `_build_summary()` — 전처리
+2. `_build_summary()` 예외 → `write_error_decision(current_phase=current_phase)` (imports ok 시) / `_write_minimal_block_decision()` (최후)
+3. `compute_run_decision()` + `write_decision_report()` — 정상 경로
+4. 예외 → `write_error_decision(current_phase=current_phase)` → `_write_minimal_block_decision()` (최종 floor, P2 하드코딩 유지)
 
 **record_id 정책**: `f"{slug}:{rule_id}:{hash8(stable_payload)}"` — `ts` 제외 stable hash, dedup으로 retry 안전.
 
@@ -710,6 +713,37 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 **CLI**: `af warning-summary` / `af warning-repair` (P1) · `af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]` (P2: false-positive override + 즉시 decision 재생성) · `af warning-stats` / `af warning-export` (P3: 분포 통계 + 산출물 추출).
 
 **af.spec hiddenimports**: `core.escalation_decision_report` + `core.warning_overrides` (P2) + `core.warning_stats` (P3) 추가.
+
+**P4a — 활성화 메커니즘 (v1.2.27)**:
+
+`_PolicyRule.mode` 필드 (신규):
+| mode | 동작 | severity | reason |
+|------|------|----------|--------|
+| `"enforce"` | 기존 동작 — threshold 도달 시 `block=True` | `"block"` | `"threshold_met"` |
+| `"observation"` | threshold 평가하되 block 미발생. 도달 시 `"block_candidate"` | `"block_candidate"` / `"warn"` | `"observation_threshold_met"` / `"observation_below_threshold"` |
+| `"off"` | 즉시 return, threshold 평가 없음 | `"warn"` | `"mode_off"` |
+
+mode 분기 위치: `false_positive_override` 통과 직후, `exempt_when` 검사 앞단. override한 record는 mode 무관 warn 유지.
+
+`EscalationDecision.severity` 활성 슬롯:
+| severity | 실제 발화 reason | block |
+|----------|-----------------|-------|
+| `"warn"` | rule_not_active / inactive_phase / mode_off / false_positive_override / exempt_phase / below_threshold / observation_below_threshold | False |
+| `"block_candidate"` | **observation_threshold_met** (P4a 첫 발화) | False |
+| `"block"` | threshold_met (enforce) | True |
+
+`config/escalation_policy.yaml` v1 스키마:
+- top-level `current_phase: "P4"` — `read_current_phase()` 진입점 (단일 진실원)
+- rule-level `mode: "enforce"|"observation"|"off"` — 부재 시 `"enforce"` fallback
+- `current_phase` 부재/invalid → `"P2"` fallback (기존 P2 환경 100% 호환)
+
+rollback 4단:
+1. `AF_SKIP_ESCALATION=1` — 전체 escalation 우회
+2. yaml `current_phase` 강등 (`"P3"` / `"P2"`) — P4 rule 전부 inactive_phase
+3. yaml rule `mode: "off"` — 특정 rule 단위 무력화
+4. yaml `activate_at: never` — rule 영구 비활성
+
+P4a BLOCK 0건 보장: yaml의 P4 rule(`owner_role_mismatch`, `evidence_quality_warn`) 전부 `mode: "observation"`. P4b가 `mode: "enforce"`로 toggle 후 실제 BLOCK 시작.
 
 **테스트**: P1 25케이스 + P2 신규 10파일 39케이스 + P3 신규 2파일 16케이스 = **총 80 케이스 PASS**
 - P2 신규: `test_escalation_evaluator` (10) · `test_decision_report` (3) · `test_approval_gate_block_decision` (6) · `test_pipeline_block_enforcement` (2) · `test_warning_override_cli` (3) · `test_task_template_e2e_command` (3) · `test_inject_review_tasks_e2e_command` (1) · `test_summary_schema_repeat_count` (1) · `test_work_item_generator_backfill` (9) · `test_wig_summarize_wiring` (1)
@@ -1418,6 +1452,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-10 | v1.2.27 | feat(P4a-owner-lint-activation): `config/escalation_policy.yaml` v0→v1 (`current_phase: "P4"`, rule-level `mode: observation/enforce`). `core/escalation_evaluator.py`: `_PolicyRule.mode` 필드 신규 + mode 유효성 검증(enforce/observation/off 외 raise) + `read_current_phase(policy) → str` 헬퍼 신규 + `evaluate()` mode 분기(false_positive_override 직후 — off→mode_off, observation→block_candidate/warn, enforce→기존). `core/escalation_decision_report.py`: `write_error_decision` `current_phase: str = "P2"` kwarg 추가 + payload 동적화. `core/warning_registry.py:summarize()` 재구성: policy single-load(split read 금지) → current_phase 동적화 → _build_summary → `summary["escalation_phase"] = current_phase` → JSON write → decision report (2곳 `write_error_decision(current_phase=)` 전달, `_write_minimal_block_decision` 최후 floor 유지). `version.py` 1.2.27, `install-af.ps1` 8곳 일괄. 신규 테스트 3파일 12케이스 (`test_escalation_evaluator_p4a`, `test_warning_registry_p4a`, `test_escalation_policy_yaml_p4a`). P1 25 + P2 39 + P3 16 + **P4a 12 = 92 케이스 PASS** (기존 80 회귀 포함). §3.8 P4a 갱신. |
 | 2026-05-10 | v1.2.26 | feat(P3-owner-lint-measurement): `core/warning_stats.py` 신규 — `iter_warning_records()` + `collect_workspace_stats()` + `_load_index()` + `_compute_distribution()` (read-only, WarningRegistry.summarize 미사용). `run_factory_cli` `warning-stats`/`warning-export` 서브커맨드 + `_STAGE1_DISPATCH`/`_STAGE1_USAGE` 2 entry 추가. `core/project_pipeline.py:1466` `source_path` `:1401`→`:1455` 1줄 정정. `runtime/warnings/_index.json` in-place schema v1→v2 (`measure_at: "P3"`, `mode: "observation"`, `source: ":1455"`). `af.spec` hiddenimports `core.warning_stats`. `version.py` 1.2.26. `install-af.ps1` 8곳 일괄. `tests/test_warning_stats.py` 7케이스 + `tests/test_warning_stats_cli.py` 9케이스 신규. P1 25 + P2 39 + P3 16 = **총 80 케이스 PASS**. §0 `core/warning_stats` 행 신규 + §3.8 P3 갱신. |
 | 2026-05-10 | v1.2.25 | feat(P2-warning-registry): escalation_evaluator 본체 구현 — `RunDecision`·`compute_run_decision()`·`load_policy()` public. `core/escalation_decision_report.py` 신규: `write_decision_report()`·`write_error_decision()`. `core/warning_overrides.py` 신규: `upsert_override()`·`remove_override()`. `warning_registry.summarize()` P2 escalation_phase 마커 + fail-closed decision chain. `approval_gate.read_block_decision()` P2 fail-closed. `project_pipeline.execute()` escalation_block 체크. `project_task_board._task_template()` + `inject_review_tasks()` e2e_command TODO 마커. `work_item_generator._is_e2e_missing()`·`_backfill_e2e_from_tasks_md()`·summarize 호출. `run_factory_cli warning-override` 서브커맨드. af.spec hiddenimports 2건. 테스트 P1 25 + P2 39 = **64 케이스 PASS**. §3.8 P2 갱신. |
 | 2026-05-09 | v1.2.24 | fix(P1-warning-registry): `_record_ledger_outcomes(project_slug: str = "")` 시그니처 추가 — `project_id = project_slug or os.path.basename(workspace)`로 workspace basename 대신 work_item_slug 우선 사용. cross-review BLOCK 수정. |

@@ -42,6 +42,7 @@ class RunDecision:
 class _PolicyRule:
     rule_id: str
     activate_at: str = "never"
+    mode: str = "enforce"           # "enforce" | "observation" | "off"
     block_when: dict | None = None
     exempt_when: dict | None = None
     rationale: str = ""
@@ -53,9 +54,13 @@ class _PolicyRule:
             raise ValueError(
                 f"block_when must be mapping or omitted, got {type(bw).__name__}"
             )
+        mode = d.get("mode", "enforce")
+        if mode not in ("enforce", "observation", "off"):
+            raise ValueError(f"mode must be enforce|observation|off, got {mode!r}")
         return cls(
             rule_id=d["rule_id"],
             activate_at=d.get("activate_at", "never"),
+            mode=mode,
             block_when=bw,
             exempt_when=d.get("exempt_when"),
             rationale=d.get("rationale", ""),
@@ -76,6 +81,14 @@ def load_policy() -> dict:
 
 # P1 호환 — 내부 코드는 load_policy()를 사용하지만 _load_policy()도 유지
 _load_policy = load_policy
+
+
+def read_current_phase(policy: dict) -> str:
+    """yaml top-level current_phase 반환. 부재/invalid → "P2" fallback (호환)."""
+    cp = policy.get("current_phase")
+    if cp in _PHASE_ORDER_ESCALATION and cp != "never":
+        return cp
+    return "P2"
 
 
 def _find_rule(policy: dict, rule_id: str) -> _PolicyRule | None:
@@ -125,6 +138,41 @@ def evaluate(
             rule_id=record.rule_id, activate_at=rule.activate_at,
         )
 
+    # P4a: mode 분기 (false_positive_override 직후, exempt/threshold 앞단)
+    if rule.mode == "off":
+        return EscalationDecision(
+            block=False, severity="warn", reason="mode_off",
+            rule_id=record.rule_id, activate_at=rule.activate_at,
+        )
+    if rule.mode == "observation":
+        if rule.exempt_when:
+            ex_phases = rule.exempt_when.get("affected_phase_in") or []
+            if record.affected_phase in ex_phases:
+                return EscalationDecision(
+                    block=False, severity="warn",
+                    reason=f"observation_exempt_phase:{record.affected_phase}",
+                    rule_id=record.rule_id, activate_at=rule.activate_at,
+                )
+        bw = rule.block_when or {}
+        cond_phase = bw.get("affected_phase_in")
+        cond_count = bw.get("count_per_run_min", 1)
+        cond_repeat = bw.get("repeat_count_min", 0)
+        phase_match = (cond_phase is None) or (record.affected_phase in cond_phase)
+        count_match = record.count >= cond_count
+        repeat_match = record.repeat_count >= cond_repeat
+        if phase_match and count_match and repeat_match:
+            return EscalationDecision(
+                block=False, severity="block_candidate",
+                reason="observation_threshold_met",
+                rule_id=record.rule_id, activate_at=rule.activate_at,
+            )
+        return EscalationDecision(
+            block=False, severity="warn",
+            reason="observation_below_threshold",
+            rule_id=record.rule_id, activate_at=rule.activate_at,
+        )
+
+    # enforce 경로 (기존 동작)
     # exempt 우선 — 매칭되면 즉시 면제
     if rule.exempt_when:
         ex_phases = rule.exempt_when.get("affected_phase_in") or []

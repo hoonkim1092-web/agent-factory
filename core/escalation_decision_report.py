@@ -31,6 +31,7 @@ def write_error_decision(
     project_slug: str,
     summary_last_updated: str,
     error_repr: str,
+    current_phase: str = "P2",
 ) -> None:
     """evaluator 오류 시 fail-closed: block=True, reason="evaluator_error" 강제 작성."""
     payload = {
@@ -38,9 +39,9 @@ def write_error_decision(
         "project_slug": project_slug,
         "last_updated": now_iso(),
         "generated_from_summary_last_updated": summary_last_updated,
-        "escalation_phase": "P2",
+        "escalation_phase": current_phase,
         "block": True,
-        "activate_phase": "P2",
+        "activate_phase": current_phase,
         "blocking_rules": [],
         "reason": "evaluator_error",
         "rule_decisions": [],
@@ -54,7 +55,7 @@ def write_error_decision(
         f"# Escalation Decision — {project_slug}",
         "",
         f"- last_updated: {payload['last_updated']}",
-        "- activate_phase: P2",
+        f"- activate_phase: {current_phase}",
         "- block: true",
         "- blocking_rules: (evaluator error)",
         "- reason: evaluator_error",

@@ -1,28 +1,35 @@
-# escalation_policy.yaml — v0 (P1)
+# escalation_policy.yaml — v1 (P4a)
 # phase 키: core/project_task_board.py:17 _PHASE_ORDER 와 정확히 일치해야 함.
 # 허용 값: scope, build, integrate, code_review, cross_validate, verify
-version: 0
+# 변경: top-level current_phase 신설, rule별 mode 옵션 필드.
+# 호환: current_phase 부재 → "P2" fallback / mode 부재 → "enforce" fallback.
+version: 1
+current_phase: "P4"         # P4a 진입 (BLOCK은 mode=observation으로 차단)
+
 rules:
   - rule_id: e2e_command_missing
     activate_at: P2
+    mode: "enforce"
     block_when:
       affected_phase_in: [build, integrate, code_review, cross_validate, verify]
       count_per_run_min: 1
     exempt_when:
       affected_phase_in: [scope]
-    rationale: "build 이후 단계에서는 e2e 검증 명령이 필수. scope phase는 task가 placeholder 상태일 수 있어 exempt."
+    rationale: "build 이후 단계에서는 e2e 검증 명령이 필수. P2부터 enforce."
 
   - rule_id: owner_role_mismatch
     activate_at: P4
+    mode: "observation"
     block_when:
-      repeat_count_min: 3
-    rationale: "P3 measurement 기간 후 임계 결정 — 초기엔 보수적. P4에서 활성."
+      repeat_count_min: 3   # placeholder — P4b가 P3 measurement 데이터로 확정
+    rationale: "P3 measurement 후 임계 결정 (P4b). P4a는 observation으로 block-candidate 분포 가시화만."
 
   - rule_id: evidence_quality_warn
     activate_at: P4
+    mode: "observation"
     block_when:
-      count_per_run_min: 5
-    rationale: "근거 부족이 일정 수준 누적되면 후속 문서 신뢰도 붕괴. P4에서 활성."
+      count_per_run_min: 5  # placeholder — P4b가 결정
+    rationale: "근거 부족 누적 임계. P4b가 측정 후 결정."
 
   - rule_id: plan_verifier_warn
     activate_at: never

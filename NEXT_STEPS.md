@@ -1,117 +1,106 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P3 구현 완료 v1.2.26 (commit 61aad4ef). warning-stats/export CLI + _index.json schema v2 + 3-tier PASS. 다음: P4 설계 진입.**
+> 마지막 업데이트: 2026-05-10 KST — **P4a 구현 완료 v1.2.27 (71 케이스 PASS). 다음: 3-tier 게이트 (af-test-runner → af-critic → af-cross-review) → commit → push.**
 >
-> ## ✅ P3 구현 완료 (v1.2.26, commit 61aad4ef)
+> ## ✅ P4a 구현 완료 상태 (v1.2.27)
 >
-> - `core/warning_stats.py` 신규 — `iter_warning_records`, `collect_workspace_stats`, `_load_index`, `_compute_distribution`
-> - `run_factory_cli.py` — `warning-stats` / `warning-export` 서브커맨드 + `resume` USAGE 핫픽스
-> - `core/project_pipeline.py:1466` — source_path `:1401` → `:1455`
-> - `runtime/warnings/_index.json` — schema v2, `measure_at: P3`, `mode: observation`
-> - 테스트 P3 신규 16케이스 + 기존 64 = **80 PASS**
-> - 3-tier 게이트: PASS (af-test-runner / af-critic WARN 2 수정 / af-cross-review ACCEPT 1 수정 + HOLD 해소)
+> ### 완료 목록
+> - `core/escalation_evaluator.py` ✅ (`_PolicyRule.mode` + `read_current_phase()` + `evaluate()` mode 분기)
+> - `tests/test_escalation_evaluator_p4a.py` ✅ (7 케이스 PASS)
+> - `core/warning_registry.py` ✅ (single-load 패턴, `summary["escalation_phase"]` 동적화)
+> - `core/escalation_decision_report.py` ✅ (`write_error_decision` `current_phase` kwarg 동적화)
+> - `tests/test_warning_registry_p4a.py` ✅ (3 케이스 PASS)
+> - `config/escalation_policy.yaml` ✅ (v1, `current_phase: "P4"`, mode 필드)
+> - `tests/test_escalation_policy_yaml_p4a.py` ✅ (2 케이스 PASS)
+> - `version.py` → `1.2.27` ✅
+> - `install-af.ps1` → `1.2.27` 8곳 ✅
+> - `Master_Blueprint.md` §3.8 + §12 갱신 ✅
+> - **71 케이스 PASS** (P4a 12 + 기존 회귀 포함)
 >
-> ## 🔥 다음 세션 — P4 진입
+> ### 🔥 다음: 3-tier 게이트 + commit
 >
-> P3 분석 데이터 기반으로 `owner_role_mismatch` BLOCK 임계값 결정 설계.
+> ## ✅ P4a 설계 v2 상태 (참고용)
+>
+> - 설계문서: `docs/2026-05-10-p4a-owner-lint-activation-mechanics-design.md` (v2)
+> - cross-review (1라운드): `docs/reviews/2026-05-10-210923-p4a-owner-lint-activation-mechanics-design-review.md` — BLOCK 1 + WARN 6 + REJECT 1 + PASS 2
+> - **결정 근거 (2026-05-10)**: 측정 데이터 0건(`runtime/warnings/*.jsonl` = 0) 상태에서 임계 결정 불가 → P4를 **P4a (mechanics)** + **P4b (threshold)**로 분리. P4a는 활성화 기계장치만 ship, owner_role_mismatch / evidence_quality_warn 모두 `mode: observation`으로 시작 (BLOCK 0건 보장).
+> - **v2 흡수 항목**:
+>   - F4 (BLOCK): reason 표현 통일 (`observation_threshold_met` / `observation_below_threshold` / `mode_off`)
+>   - F5 (결정 강제): mode 분기 위치를 `false_positive_override` **직후**로 변경 — override semantics 보존, P4b candidate count 데이터 오염 방지
+>   - F2/F3 + F7 + F9 + F12: §3.2/§3.4 _index.json 동기 P4b 명시 / §8.1 P4 환경 e2e enforce 회귀 가드 / §5.4 표현 보완 / §10 #1 single-load 패턴 강화
+>
+> ## 🔥 다음 세션 — P4a 구현 진입
 >
 > ```bash
 > git pull --ff-only
 > python start_db.py agent-factory
-> # /model → Opus (설계 단계)
+> # /model → Sonnet 4.6 (구현 단계)
 > ```
 >
-> P4 범위 (설계문서 작성 → 교차검증 → 구현):
-> - `config/escalation_policy.yaml` — `owner_role_mismatch` `activate_at: P4` 실제 활성화, 임계값 결정
-> - `core/escalation_evaluator.py` — `current_phase == "P4"` 분기 활성화
-> - `core/warning_registry.py:load_global()` stub 해제 (필요 시)
-> - P3 분석 결과 (`af warning-stats`) 기반으로 `repeat_count_min` 결정
->
-> ## ✅ P3 설계 v4 상태 (참고용)
->
-> - 설계문서: `docs/2026-05-10-p3-owner-lint-measurement-design.md` (v4)
-> - cross-review (3 라운드 누계):
->   - `docs/reviews/2026-05-10-080449-...md` v1 (WARN, ACCEPT 10 + HOLD 2)
->   - `docs/reviews/2026-05-10-082359-...md` v3 (BLOCK, ACCEPT 9 + HOLD 1)
->   - `docs/reviews/2026-05-10-084032-...md` v4 (BLOCK, ACCEPT 12)
-> - HOLD/v4 처방 사용자 결정 (2026-05-10):
->   - v1 #11 `--slug` 옵션 포함, v1 #12 install-af.ps1 8곳 일괄
->   - v4 #4 처방으로 **v3 #1 (`_index.json` config/ 이동) retract** — `runtime/warnings/_index.json` in-place 갱신으로 단순화
->   - v4 ACCEPT 12 모두 본문 반영 (CSV json.dumps, warnings 단일 채널, --slug path traversal, median float, --top truncation 메타, --out atomic 등)
-> - **모델 전환 권장**: 다음 세션 시작 후 `/model` 입력 → Sonnet 4.6으로 전환 후 구현 진입
->
-> ## 🔥 다음 세션 진입 시 우선 작업
->
-> ```
-> git pull --ff-only
-> python start_db.py agent-factory
-> # 모델 Sonnet으로 전환
-> ```
->
-> ### 구현 순서 (설계 §7 PR 변경 파일 8개 — 의존성 순. v4 retract로 11→8)
+> ### 구현 순서 (설계 §7 PR 변경 파일 10개 — 의존성 순)
 >
 > | # | 파일 | 변경 | 의존 |
 > |---|------|------|------|
-> | 1 | `core/warning_stats.py` | 신규 (~170줄) — `iter_warning_records` + `collect_workspace_stats` + `_load_index` (side-effect 없음, `core.config_paths` import 금지) + `_compute_distribution` (median float 강제) | (없음) |
-> | 2 | `tests/test_warning_stats.py` | 신규 7 케이스 (§8.1) | #1 |
-> | 3 | `run_factory_cli.py` | `_run_warning_stats_subcommand` + `_run_warning_export_subcommand` + `_STAGE1_DISPATCH`/`_STAGE1_USAGE` 각 2 entry. `--slug` sanitization (path traversal 방어) 포함. `--out` atomic write. | #1 |
-> | 4 | `tests/test_warning_stats_cli.py` | 신규 9 케이스 (§8.2) | #1, #3 |
-> | 5 | `core/project_pipeline.py:1466` | `source_path="...:1401"` → `:1455` (1줄, callsite 기준) | (독립) |
-> | 6 | `runtime/warnings/_index.json` | **in-place 갱신**: schema_version 1 → 2, `measure_at: "P3"` + `mode: "observation"` (owner_role_mismatch만), source `:1455`. **위치 이동 안 함** (v4 #4 retract) | (독립) |
-> | 7 | `af.spec` + `version.py` + `install-af.ps1` | hiddenimports `core.warning_stats`. version `1.2.26`. install-af.ps1 8곳 일괄. | (마지막) |
-> | 8 | `Master_Blueprint.md` | §0 신규 row + §3.8 measurement phase / CLI 4종 / index in-place schema v2 / source_path 정정 + §12 변경 이력 | 모든 코드 변경 후 |
+> | 1 | `core/escalation_evaluator.py` | `_PolicyRule.mode` 필드 (`enforce`/`observation`/`off`) + `read_current_phase()` 헬퍼 + `evaluate()` mode 분기 (false_positive_override **직후**, exempt_when 처리 포함). 신규 ~30줄 + exempt 처리 ~10줄. | (없음) |
+> | 2 | `tests/test_escalation_evaluator_p4a.py` | 신규 7 케이스 (§8.1) — observation/off/enforce/fallback/override 우회/P4 환경 e2e enforce 회귀 | #1 |
+> | 3 | `core/warning_registry.py:215-217, 192` | `policy = load_policy()` 한 번 호출 후 `current_phase = read_current_phase(policy)` + `summary["escalation_phase"] = current_phase` + `compute_run_decision(... policy=policy, current_phase=current_phase)` 같은 객체 전달 (single-load 패턴) | #1 |
+> | 4 | `core/escalation_decision_report.py:28-50` | `write_error_decision`에 `current_phase: str = "P2"` kwarg + payload `escalation_phase` 동적화 | #1 |
+> | 5 | `core/warning_registry.py:226-236` | `write_error_decision` 호출에 `current_phase=current_phase` 전달 (yaml load 실패 시 fallback "P2") | #3, #4 |
+> | 6 | `tests/test_warning_registry_p4a.py` | 신규 3 케이스 (§8.2) — escalation_phase=P4 마커 / yaml 부재 시 P2 fallback / write_error_decision 동적 phase | #3, #5 |
+> | 7 | `config/escalation_policy.yaml` | `version: 0 → 1`, `current_phase: "P4"` 신설, e2e_command_missing `mode: "enforce"`, owner_role_mismatch + evidence_quality_warn `mode: "observation"` | #1~#6 (코드 준비 후 yaml flip) |
+> | 8 | `tests/test_escalation_policy_yaml_p4a.py` | 신규 2 케이스 (§8.3) — yaml schema 검증 / invalid mode raise | #7 |
+> | 9 | `af.spec` + `version.py` + `install-af.ps1` | version `1.2.27`. install-af.ps1 8곳 일괄 (`grep -c '1\.2\.26' install-af.ps1` = 0 사후 검증). af.spec hiddenimports 변경 없음 (신규 모듈 0). | (마지막) |
+> | 10 | `Master_Blueprint.md` | §3.8 Warning Registry & Stats 갱신 (current_phase 단일 진실원, mode 필드, severity 활성 슬롯) + §12 변경 이력 | 모든 코드 변경 후 |
 >
-> ### baseline grep 의무 (구현 진입 시 1차 검증)
+> ### baseline grep 의무 (구현 진입 시 1차 검증 — 7 좌표)
 >
-> | 파일:줄 | 역할 |
-> |---------|------|
-> | `core/warning_registry.py:170-238` | `summarize()` 본체 — **호출 금지** (decision report fail-closed 부작용 회피, read-only 보장) |
-> | `core/warning_registry.py:302-376 _build_summary` | 단일 slug summary 구조 (`by_rule[<rid>] = {count, first_ts, last_ts, severity, by_phase, repeat_count_max, any_override}`) — `collect_workspace_stats` 출력 컬럼과 정합 |
-> | `core/project_pipeline.py:1331` | `_record_ledger_outcomes`는 `crashed/unknown` 외 모든 status에서 호출 — 모집단 검증 |
-> | `core/project_pipeline.py:1454-1469` | `owner_role_mismatch` record 호출처 (P1 마이그레이션) — **변경 없음, line 1466 source_path만 정정** |
-> | `core/file_lock.py:38,53` | `locked_file()` — stats는 사용 X (read-only) |
-> | `core/config_paths.py:38-41` | `if getattr(sys, "frozen", False): BASE_DIR = ...` frozen-aware path — `_load_index`에서 `sys._MEIPASS` fallback과 정합 확인 |
-> | `runtime/warnings/_index.json:1-28` | 현 schema v1 — P3 PR에서 **in-place 갱신** (위치 그대로). **참조 부재 사전 grep**: `grep -rn "_index.json" core/ scripts/ tests/ run_factory_cli.py af.spec` 결과 0건이어야 함 (메타데이터 only). v4 #4 retract: config/ 이동 안 함, af.spec datas 추가 없음. |
-> | `config/escalation_policy.yaml:15-19` | `owner_role_mismatch.activate_at: P4` — **변경 없음** (BLOCK semantics 미변경) |
-> | `core/escalation_evaluator.py` | **import 금지** (read-only analytics 보장 → cross-review #13 REJECT 근거) |
-> | `run_factory_cli.py:281-329` | `_run_warning_summary_subcommand` 패턴 — `_run_warning_stats_subcommand`/`_run_warning_export_subcommand` 동일 스타일로 작성 |
-> | `run_factory_cli.py:444-446` | `_STAGE1_DISPATCH` dispatch — `warning-stats`/`warning-export` 2 entry 추가 (`_HANDLERS`는 존재하지 않음 — baseline 검증 v3 #2) |
-> | `run_factory_cli.py:474-491` | `_STAGE1_USAGE` 한 줄 도움말 — 2 entry 추가 |
-> | `af.spec:33-50` | hiddenimports + datas 등록 패턴 |
-> | `install-af.ps1:3,6,27,34,105,106,110,251` | `1.2.25` 리터럴 8곳 (실측) — 1.2.26으로 일괄 교체 |
+> | 파일:줄 | 역할 / 검증 사실 |
+> |---------|------------------|
+> | `core/warning_registry.py:215-217` | 현 `current_phase="P2"` 하드코딩 1줄 (변경 대상). 같은 함수에 `policy = load_policy()` 한 번 호출 후 single-load 패턴 적용. |
+> | `core/warning_registry.py:192` | `summary["escalation_phase"] = "P2"` 하드코딩 1줄 (변경 대상). |
+> | `core/warning_registry.py:283` | `_write_minimal_block_decision` payload `"escalation_phase": "P2"` — **유지** (write_error_decision import 실패 시 floor, approval_gate 순방향 호환). |
+> | `core/escalation_decision_report.py:41` | `write_error_decision` payload `"P2"` 하드코딩 (kwarg로 동적화 대상). |
+> | `core/escalation_decision_report.py:97` | `_write_decision_json` payload `decision.activate_phase` (이미 동적, 변경 없음). |
+> | `core/approval_gate.py:226` | `_PHASE_ORDER_EC` P4 등록 — 변경 없음, 회귀 테스트만 추가 (`decision_phase_mismatch` 미발화 보장). |
+> | `core/escalation_evaluator.py:25` | `severity` docstring `"block_candidate"` 명목 슬롯 — P4a에서 처음 사용. |
 >
-> ### 핵심 시맨틱 결정 (설계 v4 §3.3, §3.4, §4, §5 명세 — 구현자가 임의로 변경 금지)
+> | 사전 사실 (변경 진입 전 grep으로 확인) |
+> |---|
+> | `find runtime/warnings -name '*.jsonl' \| wc -l` = **0** (측정 데이터 0건 = P4b 임계 결정 데이터 부재) |
+> | `grep -E '^current_phase\|mode:' config/escalation_policy.yaml \| wc -l` = **0** (P4a 변경 전 yaml에 두 키 부재) |
+> | `grep -c '1\.2\.26' install-af.ps1` = **8** (P4a 후 0이어야 함) |
+> | `runtime/warnings/_index.json` `owner_role_mismatch.mode` = `"observation"` (P3 도입), `evidence_quality_warn.mode` 부재 (P4b에서 동기) |
 >
-> 1. **`--phase`는 record-level filter**. 매칭 record만 모든 집계 반영. `applied_filters: {phase}` + `by_phase_total` (필터된) + `by_phase_total_unfiltered` (전체) 동시 출력. **export에도 동일 적용** (v4 #5).
-> 2. **`distribution`은 3 차원**: `by_project_count` / `by_project_repeat_count_max` / `by_per_record_count`. 마지막이 P4 임계 결정 직결.
-> 3. **`warnings: list[str]` 단일 채널 SoT** (v4 #3). `collect_workspace_stats()`가 항상 list 반환. 비어있어도 `[]`. stderr는 부가 출력. 테스트는 stdout `warnings` 필드 검증.
-> 4. **`iter_warning_records()` 단일 채널**: stats/export 공유. `os.scandir + is_dir() + not startswith("_")`로 메타파일 자동 필터.
-> 5. **`p95 = math.ceil(0.95 * n) - 1` (0-based nearest-rank)**. n<20일 때 `warnings:`에 1줄. **`median = float(statistics.median(values))` 강제 캐스팅** (v4 #8 정수 누출 방지).
-> 6. **`--mode summary --format csv` → argparse error**.
-> 7. **`--slug` path traversal 방어** (v4 #7): 빈 문자열/`/`/`\`/`..` 거부. argparse error.
-> 8. **`--top` truncation은 `projects[]`만**. `totals`/`distribution`/`by_phase_total`은 full population. **`project_count_total` + `project_count_returned` 메타** (v4 #9).
-> 9. **CSV `affected_ids`는 `json.dumps(list, ensure_ascii=False)` 문자열** (v4 #2 — `\;` escape 비표준이라 폐기).
-> 10. **`--out` atomic write** (v4 #10): 같은 디렉토리 temp file + `os.replace`. 실패 시 cleanup + nonzero exit.
-> 11. **`_load_index()`는 side-effect 없는 direct read** (v4 #4): `os.path.join(abs_workspace, "runtime", "warnings", "_index.json")`. **`core.config_paths` import 금지** (`os.makedirs` 부작용). 파일 없으면 validation skip + `warnings:`에 1줄.
+> ### 핵심 시맨틱 결정 (설계 v2 §10 — 구현자가 임의로 변경 금지)
+>
+> 1. **`current_phase`는 yaml 단일 진실원**. env/code hardcode 금지. `read_current_phase()` 한 함수만 진입점. 호출자(`warning_registry.summarize`)는 `policy = load_policy()` 한 번 호출 후 `current_phase`/`compute_run_decision` 모두 같은 policy 객체 사용 — split read 금지.
+> 2. **mode 분기 위치는 `false_positive_override` 직후, `exempt_when` 검사 앞단**. override semantics 보존 (override한 record는 mode 무관 warn). exempt_when은 observation 경로에서도 적용 (enforce 토글 시 일관).
+> 3. **observation에서도 threshold 평가** — 도달 시 `severity="block_candidate" reason="observation_threshold_met"`, 미달 시 `severity="warn" reason="observation_below_threshold"`. P4b가 `_decision.json`만 봐도 candidate 분포 추적 가능.
+> 4. **mode default = `"enforce"`**. yaml 부재 시 enforce. 기존 P2 동작 100% 보존.
+> 5. **`current_phase` fallback = `"P2"`**. yaml 부재/invalid 시 P2. P4 폭주 차단.
+> 6. **`_write_minimal_block_decision` (`warning_registry.py:283`)는 `"P2"` 하드코딩 유지**. yaml 로드 + write_error_decision import 더블 fail 시 floor.
+> 7. **mode 값 검증**: `"enforce"|"observation"|"off"` 외 raise. yaml 오타 즉시 노출.
+> 8. **`activate_at: never` rule은 mode 무관 rule_not_active**. observation으로 우회 못 함 — never가 강함.
+> 9. **P4a는 BLOCK 발화 0건 보장**. P4 rule 둘 다 observation. 테스트 9가 회귀 가드.
+> 10. **버전 bump 1.2.26 → 1.2.27**. install-af.ps1 8곳 일괄. af.spec hiddenimports 변경 없음 (신규 모듈 0).
 >
 > ### 구현 진입 명령
 >
 > ```bash
-# 0. 전제: docs/2026-05-10-p3-owner-lint-measurement-design.md (v4) 읽기 — §11.6/§11.7 v3/v4 흡수표 우선
-# 1. 구현 순서대로 위 파일 8개 작성 (§7)
-python -m pytest tests/test_warning_stats.py tests/test_warning_stats_cli.py -v
-# 2. 회귀 검증 (P1 25 + P2 39 = 64 케이스)
-python -m pytest tests/test_warning_registry.py tests/test_warning_registry_cli.py tests/test_warning_registry_migration_callsites.py tests/test_escalation_evaluator.py tests/test_approval_gate_runtime_workspace.py -v
-# 3. frozen 빌드 smoke (host OS 1개)
-python build_exe.py
-./dist/af-1.2.26/af warning-stats --workspace . --rule owner_role_mismatch
-./dist/af-1.2.26/af warning-stats --workspace . --rule unknown_rule  # warnings에 검증 메시지 + jsonl 스캔 진행 (v4 #7 데이터 보존)
-./dist/af-1.2.26/af warning-export --workspace . --format csv --rule owner_role_mismatch --out /tmp/out.csv  # atomic write 검증
-# 4. 사후 검증: install-af.ps1 1.2.25 0건
-grep -c '1\.2\.25' install-af.ps1   # 0이어야 함
-# 5. 3-tier 게이트: af-test-runner → af-critic → af-cross-review
-# 6. PR 생성 (af-fsa 퍼블릭 레포 별도 릴리즈는 사용자 결정)
+> # 0. 전제: docs/2026-05-10-p4a-owner-lint-activation-mechanics-design.md (v2) 읽기 — §10 핵심 시맨틱 우선
+> # 1. 구현 순서대로 위 파일 10개 작성 (§7)
+> python -m pytest tests/test_escalation_evaluator_p4a.py tests/test_warning_registry_p4a.py tests/test_escalation_policy_yaml_p4a.py -v
+> # 2. 회귀 검증 (P1 25 + P2 39 + P3 16 = 80 + P4a 12 = 92 케이스 목표)
+> python -m pytest tests/test_warning_registry.py tests/test_escalation_evaluator.py tests/test_decision_report.py tests/test_approval_gate_block_decision.py tests/test_approval_gate_runtime_workspace.py -v
+> # 3. frozen 빌드 smoke (host OS 1개)
+> python build_exe.py
+> ./dist/af-1.2.27/af warning-stats --workspace . --rule owner_role_mismatch  # P3 CLI 회귀
+> # _decision.md / _summary.json 확인 — escalation_phase: "P4" 마커 + block: false / blocking_rules: 없음
+> # 4. 사후 검증: install-af.ps1 1.2.26 0건
+> grep -c '1\.2\.26' install-af.ps1   # 0이어야 함
+> # 5. 3-tier 게이트: af-test-runner → af-critic → af-cross-review
+> # 6. PR 생성 (af-fsa 퍼블릭 레포 별도 릴리즈는 사용자 결정)
 > ```
 >
 > ### 머지 전 3-tier 게이트 (CLAUDE.md Review-Gate 규칙)
@@ -119,6 +108,13 @@ grep -c '1\.2\.25' install-af.ps1   # 0이어야 함
 > - core/*.py 수정이므로 Tier 2~3 → **af-test-runner → af-critic → af-cross-review** 순서 자동 발화
 > - 모두 PASS 또는 WARN-only면 머지 가능 (BLOCK 시 수정 후 재발화, max_rounds=2 캡)
 > - WARN-only이면 advisory 기록만, 자동 수정 의무 없음
+>
+> ## 📜 P3 v1.2.26 완료 (참고용)
+>
+> - 설계: `docs/2026-05-10-p3-owner-lint-measurement-design.md` (v4)
+> - 구현: commit `61aad4ef` — `core/warning_stats.py`, `run_factory_cli.py warning-stats/export`, `_index.json` schema v2 (mode: observation marker)
+> - 80 PASS (P1 25 + P2 39 + P3 16). 3-tier 게이트 통과.
+> - **P4b 데이터 입력**: `af warning-stats --rule owner_role_mismatch` 출력의 `distribution.by_per_record_count` (P3 §3.3) 가 P4b `repeat_count_min` 결정 1차 데이터.
 >
 > ---
 >

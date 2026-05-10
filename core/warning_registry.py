@@ -178,18 +178,48 @@ class WarningRegistry:
         summary_lock_path = os.path.join(slug_dir, "_summary.json.lock")
 
         with locked_file(summary_lock_path, timeout=10):
+            # P4a: single-load policy (split read 금지 — escalation_phase 마커 + decision 동기)
+            try:
+                from core.escalation_evaluator import (  # noqa: PLC0415
+                    compute_run_decision, load_policy, read_current_phase,
+                )
+                from core.escalation_decision_report import (  # noqa: PLC0415
+                    write_decision_report, write_error_decision,
+                )
+                policy = load_policy()
+                current_phase = read_current_phase(policy)
+                _esc_ok = True
+            except Exception:
+                current_phase = "P2"
+                _esc_ok = False
+
             try:
                 summary = _build_summary(project_slug, slug_dir)
             except Exception as exc:
                 _LOGGER.error("_build_summary failed — fail-closed: %s", exc)
-                _write_minimal_block_decision(
-                    slug_dir, project_slug=project_slug,
-                    summary_last_updated=now_iso(),
-                    error_repr=repr(exc),
-                )
+                if _esc_ok:
+                    try:
+                        write_error_decision(
+                            slug_dir, project_slug=project_slug,
+                            summary_last_updated=now_iso(),
+                            error_repr=repr(exc),
+                            current_phase=current_phase,
+                        )
+                    except Exception:
+                        _write_minimal_block_decision(
+                            slug_dir, project_slug=project_slug,
+                            summary_last_updated=now_iso(),
+                            error_repr=repr(exc),
+                        )
+                else:
+                    _write_minimal_block_decision(
+                        slug_dir, project_slug=project_slug,
+                        summary_last_updated=now_iso(),
+                        error_repr=repr(exc),
+                    )
                 raise
-            # P2: escalation_phase 마커 도입
-            summary["escalation_phase"] = "P2"
+
+            summary["escalation_phase"] = current_phase
 
             payload = json.dumps(summary, ensure_ascii=False, indent=2)
             fd, tmp = tempfile.mkstemp(dir=slug_dir, suffix=".tmp")
@@ -204,35 +234,43 @@ class WarningRegistry:
                     pass
                 raise
 
-            # P2: decision report (fail-closed — import 실패도 차단 처리)
-            try:
-                from core.escalation_evaluator import (  # noqa: PLC0415
-                    compute_run_decision, load_policy,
-                )
-                from core.escalation_decision_report import (  # noqa: PLC0415
-                    write_decision_report, write_error_decision,
-                )
-                decision = compute_run_decision(
-                    summary, load_policy(), current_phase="P2"
-                )
-                write_decision_report(
-                    decision, slug_dir,
-                    summary_last_updated=summary["last_updated"],
-                )
-            except Exception as exc:
-                _LOGGER.error("decision evaluator failure — fail-closed: %s", exc)
+            # decision report (fail-closed)
+            if _esc_ok:
+                try:
+                    decision = compute_run_decision(summary, policy, current_phase=current_phase)
+                    write_decision_report(
+                        decision, slug_dir,
+                        summary_last_updated=summary["last_updated"],
+                    )
+                except Exception as exc:
+                    _LOGGER.error("decision evaluator failure — fail-closed: %s", exc)
+                    try:
+                        write_error_decision(
+                            slug_dir, project_slug=project_slug,
+                            summary_last_updated=summary["last_updated"],
+                            error_repr=repr(exc),
+                            current_phase=current_phase,
+                        )
+                    except Exception:
+                        _write_minimal_block_decision(
+                            slug_dir, project_slug=project_slug,
+                            summary_last_updated=summary["last_updated"],
+                            error_repr=repr(exc),
+                        )
+            else:
                 try:
                     from core.escalation_decision_report import write_error_decision  # noqa: PLC0415
                     write_error_decision(
                         slug_dir, project_slug=project_slug,
                         summary_last_updated=summary["last_updated"],
-                        error_repr=repr(exc),
+                        error_repr="escalation_import_failed",
+                        current_phase=current_phase,
                     )
                 except Exception:
                     _write_minimal_block_decision(
                         slug_dir, project_slug=project_slug,
                         summary_last_updated=summary["last_updated"],
-                        error_repr=repr(exc),
+                        error_repr="escalation_import_failed",
                     )
 
         return summary
