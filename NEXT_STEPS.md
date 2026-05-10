@@ -1,7 +1,103 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P2 코드 구현 완료 + push 완료. commit `fa04d35d`. `v1.2.25`. 브랜치: `2026-05-07-memory-gitignore-cleanup`. 다음: PR 생성 or P3 설계.**
+> 마지막 업데이트: 2026-05-10 KST — **P3 설계 v4 PASS (cross-review v1 WARN + v3/v4 BLOCK 누계 ACCEPT 33건 흡수). 브랜치: `2026-05-07-memory-gitignore-cleanup`. 다음: P3 코드 구현 진입 (Sonnet 권장).**
+>
+> ## ✅ P3 설계 v4 상태
+>
+> - 설계문서: `docs/2026-05-10-p3-owner-lint-measurement-design.md` (v4)
+> - cross-review (3 라운드 누계):
+>   - `docs/reviews/2026-05-10-080449-...md` v1 (WARN, ACCEPT 10 + HOLD 2)
+>   - `docs/reviews/2026-05-10-082359-...md` v3 (BLOCK, ACCEPT 9 + HOLD 1)
+>   - `docs/reviews/2026-05-10-084032-...md` v4 (BLOCK, ACCEPT 12)
+> - HOLD/v4 처방 사용자 결정 (2026-05-10):
+>   - v1 #11 `--slug` 옵션 포함, v1 #12 install-af.ps1 8곳 일괄
+>   - v4 #4 처방으로 **v3 #1 (`_index.json` config/ 이동) retract** — `runtime/warnings/_index.json` in-place 갱신으로 단순화
+>   - v4 ACCEPT 12 모두 본문 반영 (CSV json.dumps, warnings 단일 채널, --slug path traversal, median float, --top truncation 메타, --out atomic 등)
+> - **모델 전환 권장**: 다음 세션 시작 후 `/model` 입력 → Sonnet 4.6으로 전환 후 구현 진입
+>
+> ## 🔥 다음 세션 진입 시 우선 작업
+>
+> ```
+> git pull --ff-only
+> python start_db.py agent-factory
+> # 모델 Sonnet으로 전환
+> ```
+>
+> ### 구현 순서 (설계 §7 PR 변경 파일 8개 — 의존성 순. v4 retract로 11→8)
+>
+> | # | 파일 | 변경 | 의존 |
+> |---|------|------|------|
+> | 1 | `core/warning_stats.py` | 신규 (~170줄) — `iter_warning_records` + `collect_workspace_stats` + `_load_index` (side-effect 없음, `core.config_paths` import 금지) + `_compute_distribution` (median float 강제) | (없음) |
+> | 2 | `tests/test_warning_stats.py` | 신규 7 케이스 (§8.1) | #1 |
+> | 3 | `run_factory_cli.py` | `_run_warning_stats_subcommand` + `_run_warning_export_subcommand` + `_STAGE1_DISPATCH`/`_STAGE1_USAGE` 각 2 entry. `--slug` sanitization (path traversal 방어) 포함. `--out` atomic write. | #1 |
+> | 4 | `tests/test_warning_stats_cli.py` | 신규 9 케이스 (§8.2) | #1, #3 |
+> | 5 | `core/project_pipeline.py:1466` | `source_path="...:1401"` → `:1455` (1줄, callsite 기준) | (독립) |
+> | 6 | `runtime/warnings/_index.json` | **in-place 갱신**: schema_version 1 → 2, `measure_at: "P3"` + `mode: "observation"` (owner_role_mismatch만), source `:1455`. **위치 이동 안 함** (v4 #4 retract) | (독립) |
+> | 7 | `af.spec` + `version.py` + `install-af.ps1` | hiddenimports `core.warning_stats`. version `1.2.26`. install-af.ps1 8곳 일괄. | (마지막) |
+> | 8 | `Master_Blueprint.md` | §0 신규 row + §3.8 measurement phase / CLI 4종 / index in-place schema v2 / source_path 정정 + §12 변경 이력 | 모든 코드 변경 후 |
+>
+> ### baseline grep 의무 (구현 진입 시 1차 검증)
+>
+> | 파일:줄 | 역할 |
+> |---------|------|
+> | `core/warning_registry.py:170-238` | `summarize()` 본체 — **호출 금지** (decision report fail-closed 부작용 회피, read-only 보장) |
+> | `core/warning_registry.py:302-376 _build_summary` | 단일 slug summary 구조 (`by_rule[<rid>] = {count, first_ts, last_ts, severity, by_phase, repeat_count_max, any_override}`) — `collect_workspace_stats` 출력 컬럼과 정합 |
+> | `core/project_pipeline.py:1331` | `_record_ledger_outcomes`는 `crashed/unknown` 외 모든 status에서 호출 — 모집단 검증 |
+> | `core/project_pipeline.py:1454-1469` | `owner_role_mismatch` record 호출처 (P1 마이그레이션) — **변경 없음, line 1466 source_path만 정정** |
+> | `core/file_lock.py:38,53` | `locked_file()` — stats는 사용 X (read-only) |
+> | `core/config_paths.py:38-41` | `if getattr(sys, "frozen", False): BASE_DIR = ...` frozen-aware path — `_load_index`에서 `sys._MEIPASS` fallback과 정합 확인 |
+> | `runtime/warnings/_index.json:1-28` | 현 schema v1 — P3 PR에서 **in-place 갱신** (위치 그대로). **참조 부재 사전 grep**: `grep -rn "_index.json" core/ scripts/ tests/ run_factory_cli.py af.spec` 결과 0건이어야 함 (메타데이터 only). v4 #4 retract: config/ 이동 안 함, af.spec datas 추가 없음. |
+> | `config/escalation_policy.yaml:15-19` | `owner_role_mismatch.activate_at: P4` — **변경 없음** (BLOCK semantics 미변경) |
+> | `core/escalation_evaluator.py` | **import 금지** (read-only analytics 보장 → cross-review #13 REJECT 근거) |
+> | `run_factory_cli.py:281-329` | `_run_warning_summary_subcommand` 패턴 — `_run_warning_stats_subcommand`/`_run_warning_export_subcommand` 동일 스타일로 작성 |
+> | `run_factory_cli.py:444-446` | `_STAGE1_DISPATCH` dispatch — `warning-stats`/`warning-export` 2 entry 추가 (`_HANDLERS`는 존재하지 않음 — baseline 검증 v3 #2) |
+> | `run_factory_cli.py:474-491` | `_STAGE1_USAGE` 한 줄 도움말 — 2 entry 추가 |
+> | `af.spec:33-50` | hiddenimports + datas 등록 패턴 |
+> | `install-af.ps1:3,6,27,34,105,106,110,251` | `1.2.25` 리터럴 8곳 (실측) — 1.2.26으로 일괄 교체 |
+>
+> ### 핵심 시맨틱 결정 (설계 v4 §3.3, §3.4, §4, §5 명세 — 구현자가 임의로 변경 금지)
+>
+> 1. **`--phase`는 record-level filter**. 매칭 record만 모든 집계 반영. `applied_filters: {phase}` + `by_phase_total` (필터된) + `by_phase_total_unfiltered` (전체) 동시 출력. **export에도 동일 적용** (v4 #5).
+> 2. **`distribution`은 3 차원**: `by_project_count` / `by_project_repeat_count_max` / `by_per_record_count`. 마지막이 P4 임계 결정 직결.
+> 3. **`warnings: list[str]` 단일 채널 SoT** (v4 #3). `collect_workspace_stats()`가 항상 list 반환. 비어있어도 `[]`. stderr는 부가 출력. 테스트는 stdout `warnings` 필드 검증.
+> 4. **`iter_warning_records()` 단일 채널**: stats/export 공유. `os.scandir + is_dir() + not startswith("_")`로 메타파일 자동 필터.
+> 5. **`p95 = math.ceil(0.95 * n) - 1` (0-based nearest-rank)**. n<20일 때 `warnings:`에 1줄. **`median = float(statistics.median(values))` 강제 캐스팅** (v4 #8 정수 누출 방지).
+> 6. **`--mode summary --format csv` → argparse error**.
+> 7. **`--slug` path traversal 방어** (v4 #7): 빈 문자열/`/`/`\`/`..` 거부. argparse error.
+> 8. **`--top` truncation은 `projects[]`만**. `totals`/`distribution`/`by_phase_total`은 full population. **`project_count_total` + `project_count_returned` 메타** (v4 #9).
+> 9. **CSV `affected_ids`는 `json.dumps(list, ensure_ascii=False)` 문자열** (v4 #2 — `\;` escape 비표준이라 폐기).
+> 10. **`--out` atomic write** (v4 #10): 같은 디렉토리 temp file + `os.replace`. 실패 시 cleanup + nonzero exit.
+> 11. **`_load_index()`는 side-effect 없는 direct read** (v4 #4): `os.path.join(abs_workspace, "runtime", "warnings", "_index.json")`. **`core.config_paths` import 금지** (`os.makedirs` 부작용). 파일 없으면 validation skip + `warnings:`에 1줄.
+>
+> ### 구현 진입 명령
+>
+> ```bash
+# 0. 전제: docs/2026-05-10-p3-owner-lint-measurement-design.md (v4) 읽기 — §11.6/§11.7 v3/v4 흡수표 우선
+# 1. 구현 순서대로 위 파일 8개 작성 (§7)
+python -m pytest tests/test_warning_stats.py tests/test_warning_stats_cli.py -v
+# 2. 회귀 검증 (P1 25 + P2 39 = 64 케이스)
+python -m pytest tests/test_warning_registry.py tests/test_warning_registry_cli.py tests/test_warning_registry_migration_callsites.py tests/test_escalation_evaluator.py tests/test_approval_gate_runtime_workspace.py -v
+# 3. frozen 빌드 smoke (host OS 1개)
+python build_exe.py
+./dist/af-1.2.26/af warning-stats --workspace . --rule owner_role_mismatch
+./dist/af-1.2.26/af warning-stats --workspace . --rule unknown_rule  # warnings에 검증 메시지 + jsonl 스캔 진행 (v4 #7 데이터 보존)
+./dist/af-1.2.26/af warning-export --workspace . --format csv --rule owner_role_mismatch --out /tmp/out.csv  # atomic write 검증
+# 4. 사후 검증: install-af.ps1 1.2.25 0건
+grep -c '1\.2\.25' install-af.ps1   # 0이어야 함
+# 5. 3-tier 게이트: af-test-runner → af-critic → af-cross-review
+# 6. PR 생성 (af-fsa 퍼블릭 레포 별도 릴리즈는 사용자 결정)
+> ```
+>
+> ### 머지 전 3-tier 게이트 (CLAUDE.md Review-Gate 규칙)
+>
+> - core/*.py 수정이므로 Tier 2~3 → **af-test-runner → af-critic → af-cross-review** 순서 자동 발화
+> - 모두 PASS 또는 WARN-only면 머지 가능 (BLOCK 시 수정 후 재발화, max_rounds=2 캡)
+> - WARN-only이면 advisory 기록만, 자동 수정 의무 없음
+>
+> ---
+>
+> ## 📜 이전 라운드 — P2 v1.2.25 완료 (참고용)
 >
 > ## ✅ P2 구현 완료 상태
 >
