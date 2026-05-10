@@ -1,6 +1,6 @@
 {
   "skill_id": "new_skill",
-  "skill_path": "D:\\hoonProJect\\worktrees\\agent-factory\\skills\\new_skill\\skill.py",
+  "skill_path": "/Users/hoon/workTree/agent-factory/skills/new_skill/skill.py",
   "evals_path": "",
   "static_gate": {
     "ok": true,
@@ -41,6 +41,6 @@
     "details": []
   },
   "recommended_stage": "candidate",
-  "report_path": "D:\\hoonProJect\\worktrees\\agent-factory\\skills\\new_skill\\skill-eval-report.json",
-  "written_at": "2026-05-07T17:30:50"
+  "report_path": "/Users/hoon/workTree/agent-factory/skills/new_skill/skill-eval-report.json",
+  "written_at": "2026-05-10T23:25:11"
 }

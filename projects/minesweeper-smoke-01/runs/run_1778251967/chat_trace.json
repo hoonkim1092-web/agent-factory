@@ -1,0 +1,14 @@
+{
+  "run_id": "run_1778251967",
+  "project_id": "minesweeper_smoke_01",
+  "agent_name": "agent_general_assistant",
+  "agent_role": "General Assistant",
+  "task": "minesweeper work items",
+  "task_id": "skill",
+  "transcript": [],
+  "result": {
+    "ok": false,
+    "reason": "hook_event_bus_blocked_pre"
+  },
+  "updated_at": "2026-05-08T23:53:02"
+}

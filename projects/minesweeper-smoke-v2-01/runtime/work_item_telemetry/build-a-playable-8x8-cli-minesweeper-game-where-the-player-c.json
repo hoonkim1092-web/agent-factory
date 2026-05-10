@@ -1,0 +1,40 @@
+{
+  "docs": {
+    "plan": {
+      "elapsed_sec": 52.276298703000066,
+      "used_fallback": false,
+      "timeout_fallback": false,
+      "placeholder_refine_attempts": 0,
+      "provider_id": "claude_cli",
+      "model": "claude",
+      "t1_refine_attempts": 0
+    },
+    "spec": {
+      "elapsed_sec": 104.16085018000012,
+      "used_fallback": false,
+      "timeout_fallback": false,
+      "placeholder_refine_attempts": 0,
+      "provider_id": "claude_cli",
+      "model": "claude",
+      "t1_refine_attempts": 0
+    },
+    "design": {
+      "elapsed_sec": 82.61117158800334,
+      "used_fallback": false,
+      "timeout_fallback": false,
+      "placeholder_refine_attempts": 0,
+      "provider_id": "claude_cli",
+      "model": "claude",
+      "t1_refine_attempts": 0
+    },
+    "tasks": {
+      "elapsed_sec": 126.11359752600401,
+      "used_fallback": false,
+      "timeout_fallback": false,
+      "placeholder_refine_attempts": 0,
+      "provider_id": "claude_cli",
+      "model": "claude",
+      "t1_refine_attempts": 0
+    }
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "original_request": "8인 네트워크 포커게임",
+  "goal": "WebSocket 기반 실시간 멀티플레이 포커 게임 서버 및 클라이언트 구현",
+  "background_context": "Manus AI가 WSOP/TDA 규칙 기반 8인 포커 게임의 실제 작동 시나리오를 상세히 시뮬레이션했으며, codex의 설계문서에서 D3 품질 계약 시스템과의 통합 경로가 제시되었다. 현재 과제는 연결 끊김 복구, 동시 액션 처리, 세션 상태 지속성 등 기술적 구현 과제를 해결하여 실제 작동 가능한 프로토타입을 완성하는 것이다.",
+  "problem_statement": "네트워크 포커 게임에서 WebSocket 불안정성으로 인한 연결 끊김, 다중 플레이어의 동시 액션 순서 보장, 플레이어 재접속 시 게임 상태 일관성 복원이 핵심 과제이며, 이를 D3 품질 계약 시스템(compound detection 포함)과 통합하여 자동 검증해야 한다.",
+  "target_path": "/Users/hoon/workTree/agent-factory/projects/p4-verify",
+  "constraints": [
+    "WSOP 공식 규정 및 Poker TDA 2024 규칙 준수 필수",
+    "D3 품질 계약 시스템 integration (포커게임, 8인 네트워크 포커 compound detection)",
+    "회귀 테스트 6개 프롬프트 통과 (포커, 포커게임, 8인 네트워크 포커게임, 체스, 쇼핑몰, 블로그, 채팅앱)",
+    "WebSocket 연결 안정성: 재접속 시 세션 상태 복원 필수",
+    "동시성 처리: 큐 기반 액션 순서 보장"
+  ],
+  "required_skills": [
+    "websocket_real_time_communication",
+    "game_state_persistence_redis",
+    "concurrent_action_queue_ordering",
+    "poker_rule_engine_wsop_tda",
+    "network_session_recovery",
+    "quality_contract_system_integration",
+    "protocol_message_serialization"
+  ],
+  "role_hints": [
+    "backend_game_server_engineer",
+    "real_time_protocol_designer",
+    "poker_game_logic_specialist",
+    "network_reliability_engineer",
+    "qa_contract_verification_lead"
+  ],
+  "deliverables": [
+    "포커 게임 로직 엔진 (WSOP/TDA 규칙)",
+    "WebSocket 기반 실시간 게임 서버",
+    "플레이어 세션 복구 시스템 (Redis)",
+    "동시 액션 큐 처리 모듈",
+    "D3 품질 계약 통합 검증기",
+    "웹 클라이언트 (8인 게임 UI)",
+    "회귀 테스트 스위트 (6도메인)"
+  ],
+  "risks": [
+    "WebSocket 연결 끊김 시 플레이어 상태 불일치 (server/client)",
+    "동시 베팅 액션 순서 보장 실패로 게임 규칙 위반",
+    "Redis 세션 만료/손실로 복원 불가능",
+    "D3 compound detection 미지원으로 포커게임/8인 네트워크 프롬프트 실패",
+    "WSOP/TDA 규칙 모호 해석으로 회귀 테스트 불합격",
+    "scalability: 8명 초과 동시 플레이어 처리 미지원"
+  ],
+  "research_notes": [
+    "Manus AI 시뮬레이션: 핵심 과제는 '웹소켓 연결 안정성' + '동시성 처리' + 'Redis 세션 복원'",
+    "codex 설계: D3 temporal phase는 domain YAML 선택 전에 'work type' + 'capability' + 'risk coverage' 진단 필수",
+    "D3 Phase 1 임시 패치: compound detection for 포커게임 등 (permanent fix는 future phase)",
+    "회귀 테스트: 포커 3개 + 비포커 3개 프롬프트로 cross-domain 안정성 검증",
+    "Reference: docs/Manus/8인 네트워크 플레이 포커 게임.md §6 구현 시 핵심 고려사항",
+    "local_references=5",
+    "Local reference: docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md -> # 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p..."
+  ],
+  "tech_stack": [
+    "Python 3.11+",
+    "WebSocket (asyncio + websockets library)",
+    "Redis (session state persistence)",
+    "SQLite (game history/audit log)",
+    "Pydantic (message schema validation)",
+    "React/TypeScript (web client)",
+    "D3 quality-contract system (codex integration)"
+  ],
+  "data_model": [
+    {
+      "entity": "GameSession",
+      "fields": [
+        "session_id",
+        "players: List[PlayerId]",
+        "game_state: GamePhase",
+        "community_cards: List[Card]",
+        "pot: int",
+        "current_bet: int",
+        "created_at",
+        "last_activity_at"
+      ],
+      "storage": "redis"
+    },
+    {
+      "entity": "Player",
+      "fields": [
+        "player_id",
+        "name",
+        "chip_stack: int",
+        "hole_cards: List[Card]",
+        "position: SeatNumber",
+        "status: PlayerStatus",
+        "websocket_connection_id"
+      ],
+      "storage": "memory (session-scoped)"
+    },
+    {
+      "entity": "ActionQueue",
+      "fields": [
+        "session_id",
+        "actions: List[PlayerAction]",
+        "timestamp_order: List[int]"
+      ],
+      "storage": "redis"
+    },
+    {
+      "entity": "HandHistory",
+      "fields": [
+        "hand_id",
+        "session_id",
+        "players: List[PlayerId]",
+        "hole_cards: Dict[PlayerId, List[Card]]",
+        "community_cards: List[Card]",
+        "actions: List[Action]",
+        "winner: PlayerId",
+        "pot_distribution: Dict[PlayerId, int]",
+        "completed_at"
+      ],
+      "storage": "sqlite"
+    },
+    {
+      "entity": "D3QualityContract",
+      "fields": [
+        "contract_id",
+        "prompt",
+        "domain",
+        "capabilities_required: List[str]",
+        "risks_identified: List[str]",
+        "verification_status: ContractStatus"
+      ],
+      "storage": "sqlite"
+    }
+  ],
+  "user_flows": [
+    "플레이어: 웹 클라이언트 접속 -> 시스템: WebSocket 연결 수립 및 세션 ID 할당",
+    "플레이어 8명: 대기실 입장 -> 시스템: 각 플레이어 칩 스택 초기화 및 좌석 배치",
+    "딜러: 게임 시작 신호 -> 시스템: 각 플레이어에게 2장 홀 카드 딜 + 게임 상태 브로드캐스트",
+    "플레이어들: 동시에 베팅 액션 전송 -> 시스템: 액션 큐에 타임스탬프 순서대로 입력 후 순서대로 처리",
+    "플레이어: 액션 중 WebSocket 끊김 -> 시스템: Redis 세션에서 상태 복구, 재접속 시 현재 게임 상태 복원",
+    "라운드 종료: 승자 판정 -> 시스템: WSOP/TDA 규칙 적용 후 팟 분배",
+    "D3 검증: 포커게임 프롬프트 입력 -> 시스템: quality-contract 엔진이 domain + capability + risk 진단 후 계약 생성"
+  ],
+  "non_goals": [
+    "실제 금전 거래 또는 카지노 라이센싱",
+    "플레이어 인증 및 계정 시스템 (별도 AAA 서비스)",
+    "관리자 대시보드 또는 운영자 도구",
+    "모바일 앱 (웹 클라이언트 반응형만)",
+    "국제화/번역 (한국어 포커 규칙 문서 제공으로 제한)",
+    "토너먼트 모드 또는 랭킹 시스템"
+  ],
+  "architecture_style": "web_app",
+  "recommended_architecture": "real_time_multiplayer_game_backend",
+  "recommended_tech_stack": [
+    "Python 3.11+ (async game server)",
+    "asyncio + websockets (real-time protocol)",
+    "Redis 7+ (session/state persistence)",
+    "SQLite 3 (hand history audit log)",
+    "Pydantic 2.x (message validation)",
+    "React 18 + TypeScript (web client)",
+    "D3 quality-contract codex integration"
+  ],
+  "required_capabilities": [
+    "websocket_bidirectional_communication",
+    "distributed_session_state_management",
+    "concurrent_event_queue_ordering",
+    "game_rule_engine_execution",
+    "network_failure_recovery",
+    "quality_contract_synthesis",
+    "regression_test_harness"
+  ],
+  "skill_gap_hypotheses": [
+    "D3 compound detection이 '포커게임' 같은 복합어를 인식하지 못함 → Phase 1 임시 패치 필요",
+    "큐 기반 동시성 보장이 선택적/부분적 → 모든 플레이어 액션에 대한 순서 정합성 검증 체크리스트 필수",
+    "Redis 재접속 후 세션 복구 시뮬레이션 테스트 미흡 → 의도적 네트워크 끊김 시나리오 포함"
+  ],
+  "verification_focus": [
+    "D3 D3-compound 패치: 포커, 포커게임, 8인 네트워크 포커게임 모두 quality-contract 생성 확인",
+    "회귀 테스트 6프롬프트: (포커, 포커게임, 8인 네트워크 포커게임, 체스, 쇼핑몰, 블로그, 채팅앱) 모두 non-empty contract",
+    "WebSocket 재접속: 플레이어 의도적 끊김 후 30초 내 재접속 → 게임 상태 정확히 복원 확인",
+    "동시 액션 순서: 8명이 동시 베팅 → 서버 로그에서 타임스탬프 순 처리 확인",
+    "WSOP/TDA 규칙 정합성: 올인, 사이드팟, 커뮤니티 카드 배분 등 8개 시나리오 검증",
+    "세션 만료 복원 불가 시나리오: Redis 명시적 삭제 후 재접속 → 정상 에러 처리 확인"
+  ],
+  "maintenance_strategy": [
+    "D3 compound detection은 Phase 1 임시 패치로만 기록 (NEXT_STEPS.md에 'permanent root fix pending' 표기)",
+    "게임 규칙 변경 시: Manus AI 시뮬레이션 문서 업데이트 → 회귀 테스트 커버리지 재검증",
+    "WebSocket 통신 프로토콜 변경 시: 클라이언트/서버 버전 호환성 명시 (Breaking change log)",
+    "Redis 세션 스키마 변경 시: 마이그레이션 스크립트 + 기존 세션 graceful 복구 정책 수립"
+  ],
+  "source_backed_claims": [
+    "WebSocket 안정성 + 재접속 복구는 Manus AI 시뮬레이션의 §6 '구현 시 핵심 고려사항'에서 explicit",
+    "동시성은 '여러 플레이어가 동시에 액션을 전송하는 경우, 서버는 큐(Queue) 방식으로 요청...'으로 명시",
+    "D3 Phase 1은 codex 설계문서의 '임시 D3 호환성 패치' 섹션에서 compound detection 대상 명시",
+    "회귀 테스트 6프롬프트는 codex Phase 6에서 '최소 테스트 프롬프트' 목록 제시"
+  ],
+  "workspace_notes": [],
+  "evidence_summary": [
+    "Local reference: docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md -> # 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p..."
+  ],
+  "local_references": [
+    {
+      "path": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+      "heading": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션",
+      "excerpt": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+      "score": 1.0
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "### Phase 6: Regression Test Multiple Domains",
+      "excerpt": "### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+      "score": 0.6582
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "### Phase 1: Temporary D3 Unblock",
+      "excerpt": "### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p...",
+      "score": 0.3512
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "## Design Principle",
+      "excerpt": "## Design Principle The system should not ask only: ```text Which domain YAML applies? ``` It should first ask: ```text What kind of work is this, what capabilities are requested, and what risks must be covered? ``` For example, the request: ```text 8인 네트워크...",
+      "score": 0.2545
+    },
+    {
+      "path": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+      "heading": "## 6. 구현 시 핵심 고려 사항",
+      "excerpt": "## 6. 구현 시 핵심 고려 사항 실제 개발 시 가장 중요하게 다루어야 할 기술적 과제는 **WebSocket 연결 안정성**입니다. 네트워크 불안정으로 인해 클라이언트의 연결이 끊어지는 경우, 서버는 해당 플레이어의 세션 상태를 Redis에 보존하고 재접속 시 현재 게임 상태를 복원하여 전송해야 합니다. 또한 **동시성 처리(Concurrency)**에 주의해야 합니다. 여러 플레이어가 동시에 액션을 전송하는 경우, 서버는 큐(Queue) 방식으로 요청...",
+      "score": 0.1416
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "requested_role": "",
+  "route": {},
+  "generated_at": "2026-05-07T21:40:53"
+}

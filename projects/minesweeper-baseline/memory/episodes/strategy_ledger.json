@@ -1,0 +1,93 @@
+{
+  "role_assignments": [
+    {
+      "deliverable_pattern": "8x8 지뢰찾기 cli 실행",
+      "owner_role": "frontend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "지뢰 배치 및 셀",
+      "owner_role": "frontend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "패배 판정 및 보드",
+      "owner_role": "frontend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "승리/패배 판정 및 보드",
+      "owner_role": "frontend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "단위 테스트 스위트",
+      "owner_role": "qa_engineer",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "단위 테스트 스위트 (pytest)",
+      "owner_role": "qa_engineer",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "backend dev 구현",
+      "owner_role": "backend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "8x8 지뢰찾기 cli 실행",
+      "owner_role": "backend_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "game logic dev 구현",
+      "owner_role": "game_logic_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "8x8 지뢰찾기 cli 실행",
+      "owner_role": "game_logic_dev",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "product designer 구현",
+      "owner_role": "designer",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    },
+    {
+      "deliverable_pattern": "8x8 지뢰찾기 cli 실행",
+      "owner_role": "designer",
+      "project_id": "minesweeper-baseline",
+      "pass_count": 1,
+      "fail_count": 0
+    }
+  ],
+  "failure_patterns": [],
+  "auto_save_stats": {
+    "total": 0,
+    "pass": 0
+  }
+}

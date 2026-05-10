@@ -4513,3 +4513,23 @@ _Review skipped (--no-llm or LLM unavailable)_
 No issues found.
 
 The diff shows only trailing-whitespace normalization across documentation and markdown files — no logic, security surface, or error-handling paths are affected.
+
+---
+
+## 2026-05-10 13:08 — `main` (cea09c5a)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/warning_stats.py
+
+**Changed (15)**: `Master_Blueprint.md, af.spec, core/project_pipeline.py, install-af.ps1, run_factory_cli.py, run_output.txt, runtime/warnings/_index.json, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py, version.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-10 22:44 — `main` (d1a85c70)
+
+**Context**: edit: /Users/hoon/workTree/agent-factory/core/escalation_evaluator.py
+
+**Changed (11)**: `NEXT_STEPS.md, core/escalation_evaluator.py, docs/code_review/code-review.md, run_output.txt, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

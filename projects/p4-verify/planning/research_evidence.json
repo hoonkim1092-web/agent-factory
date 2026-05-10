@@ -1,0 +1,141 @@
+{
+  "workspace_notes": [],
+  "local_references": [
+    {
+      "path": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+      "heading": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션",
+      "excerpt": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+      "score": 1.0
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "### Phase 6: Regression Test Multiple Domains",
+      "excerpt": "### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+      "score": 0.6582
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "### Phase 1: Temporary D3 Unblock",
+      "excerpt": "### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p...",
+      "score": 0.3512
+    },
+    {
+      "path": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+      "heading": "## Design Principle",
+      "excerpt": "## Design Principle The system should not ask only: ```text Which domain YAML applies? ``` It should first ask: ```text What kind of work is this, what capabilities are requested, and what risks must be covered? ``` For example, the request: ```text 8인 네트워크...",
+      "score": 0.2545
+    },
+    {
+      "path": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+      "heading": "## 6. 구현 시 핵심 고려 사항",
+      "excerpt": "## 6. 구현 시 핵심 고려 사항 실제 개발 시 가장 중요하게 다루어야 할 기술적 과제는 **WebSocket 연결 안정성**입니다. 네트워크 불안정으로 인해 클라이언트의 연결이 끊어지는 경우, 서버는 해당 플레이어의 세션 상태를 Redis에 보존하고 재접속 시 현재 게임 상태를 복원하여 전송해야 합니다. 또한 **동시성 처리(Concurrency)**에 주의해야 합니다. 여러 플레이어가 동시에 액션을 전송하는 경우, 서버는 큐(Queue) 방식으로 요청...",
+      "score": 0.1416
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "evidence_summary": [
+    "Local reference: docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md -> # 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+    "Local reference: docs/codex/2026-05-07-research-quality-contract-refactor-design.md -> ### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p..."
+  ],
+  "sufficiency_gate_passed": true,
+  "research_plan": {
+    "mode": "fast_synthesis",
+    "secondary_modes": [],
+    "scores": {
+      "freshness_score": 0,
+      "external_stack_score": 1,
+      "operational_risk_score": 0,
+      "data_pipeline_score": 0,
+      "live_project_score": 0,
+      "deep_decision_score": 0,
+      "archive_score": 0
+    },
+    "reason": "",
+    "requires_web": false,
+    "requires_tavily_extract": false,
+    "requires_notebooklm": false,
+    "requires_deep_source_pack": false,
+    "risk_level": "normal",
+    "requires_research": false,
+    "domain": "poker",
+    "research_depth": "shallow"
+  },
+  "source_pack": {
+    "sources": [
+      {
+        "source_id": "local_001",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+        "excerpt": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+        "content_full": "# 8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션 **작성:** Manus AI **기준 규칙:** WSOP(World Series of Poker) 공식 규정 및 Poker TDA 2024 규칙 [1] [2] ---",
+        "authority_level": "primary",
+        "relevance_score": 1.0,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_002",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+        "excerpt": "### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+        "content_full": "### Phase 6: Regression Test Multiple Domains Minimum test prompts: - `포커 만들기` - `포커게임 만들기` - `8인 네트워크 포커게임 만들어줘` - `체스 게임 만들기` - `쇼핑몰 만들기` - `블로그 시스템 만들기` - `실시간 채팅앱 만들기` Expected result: - All prompts produce a non-empty quality contract. - Poker prompts...",
+        "authority_level": "primary",
+        "relevance_score": 0.6582,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_003",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+        "excerpt": "### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p...",
+        "content_full": "### Phase 1: Temporary D3 Unblock Purpose: finish the current poker-specific D3 verification without pretending the root issue is fixed. Actions: - Patch compound detection such as `포커게임`. - Record in `NEXT_STEPS` that this is a temporary D3 compatibility p...",
+        "authority_level": "primary",
+        "relevance_score": 0.3512,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_004",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/codex/2026-05-07-research-quality-contract-refactor-design.md",
+        "excerpt": "## Design Principle The system should not ask only: ```text Which domain YAML applies? ``` It should first ask: ```text What kind of work is this, what capabilities are requested, and what risks must be covered? ``` For example, the request: ```text 8인 네트워크...",
+        "content_full": "## Design Principle The system should not ask only: ```text Which domain YAML applies? ``` It should first ask: ```text What kind of work is this, what capabilities are requested, and what risks must be covered? ``` For example, the request: ```text 8인 네트워크...",
+        "authority_level": "primary",
+        "relevance_score": 0.2545,
+        "selected_reason": "local_rag_result"
+      },
+      {
+        "source_id": "local_005",
+        "source_type": "local",
+        "retrieval_method": "local_rag",
+        "url": "",
+        "title": "docs/Manus/8인 네트워크 플레이 포커 게임 — 실제 작동 시나리오 시뮬레이션.md",
+        "excerpt": "## 6. 구현 시 핵심 고려 사항 실제 개발 시 가장 중요하게 다루어야 할 기술적 과제는 **WebSocket 연결 안정성**입니다. 네트워크 불안정으로 인해 클라이언트의 연결이 끊어지는 경우, 서버는 해당 플레이어의 세션 상태를 Redis에 보존하고 재접속 시 현재 게임 상태를 복원하여 전송해야 합니다. 또한 **동시성 처리(Concurrency)**에 주의해야 합니다. 여러 플레이어가 동시에 액션을 전송하는 경우, 서버는 큐(Queue) 방식으로 요청...",
+        "content_full": "## 6. 구현 시 핵심 고려 사항 실제 개발 시 가장 중요하게 다루어야 할 기술적 과제는 **WebSocket 연결 안정성**입니다. 네트워크 불안정으로 인해 클라이언트의 연결이 끊어지는 경우, 서버는 해당 플레이어의 세션 상태를 Redis에 보존하고 재접속 시 현재 게임 상태를 복원하여 전송해야 합니다. 또한 **동시성 처리(Concurrency)**에 주의해야 합니다. 여러 플레이어가 동시에 액션을 전송하는 경우, 서버는 큐(Queue) 방식으로 요청...",
+        "authority_level": "primary",
+        "relevance_score": 0.1416,
+        "selected_reason": "local_rag_result"
+      }
+    ]
+  },
+  "structured_evidence": {},
+  "unmet_gaps": [],
+  "_verification": {
+    "score": 0.706,
+    "status": "pass",
+    "gaps": [
+      "no_external_evidence",
+      "evidence_summary_shallow (3 items, need 4+)"
+    ],
+    "attempt": 0
+  }
+}
