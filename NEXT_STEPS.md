@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P4a 구현 완료 v1.2.27 (71 케이스 PASS). 다음: 3-tier 게이트 (af-test-runner → af-critic → af-cross-review) → commit → push.**
+> 마지막 업데이트: 2026-05-10 KST — **P4a 구현 완료 v1.2.27 ship. commit `d61b1d68`, push 완료. 다음: P4b (threshold 결정, mode enforce toggle) — P3 measurement 데이터 수집 후 진입.**
 >
-> ## ✅ P4a 구현 완료 상태 (v1.2.27)
+> ## ✅ P4a v1.2.27 ship 완료
 >
 > ### 완료 목록
 > - `core/escalation_evaluator.py` ✅ (`_PolicyRule.mode` + `read_current_phase()` + `evaluate()` mode 분기)
@@ -13,12 +13,19 @@
 > - `tests/test_warning_registry_p4a.py` ✅ (3 케이스 PASS)
 > - `config/escalation_policy.yaml` ✅ (v1, `current_phase: "P4"`, mode 필드)
 > - `tests/test_escalation_policy_yaml_p4a.py` ✅ (2 케이스 PASS)
-> - `version.py` → `1.2.27` ✅
-> - `install-af.ps1` → `1.2.27` 8곳 ✅
+> - `version.py` → `1.2.27` ✅, `install-af.ps1` 8곳 ✅
 > - `Master_Blueprint.md` §3.8 + §12 갱신 ✅
-> - **71 케이스 PASS** (P4a 12 + 기존 회귀 포함)
+> - **71 케이스 PASS** (P4a 12 + 기존 회귀), 3-tier 게이트 WARN-only 통과
+> - commit `d61b1d68` + push ✅
 >
-> ### 🔥 다음: 3-tier 게이트 + commit
+> ### Advisory (cross-review WARN — 수정 의무 없음)
+> - `read_current_phase()` list 타입 yaml 입력 시 TypeError → fail-closed (배포 yaml 정상이므로 즉각 영향 없음. P4b 진입 시 타입 가드 1줄 추가 권장)
+> - 설계문서 §10 #2 stale 문구 (코드는 정확)
+>
+> ### 🔥 다음: P4b (threshold 결정)
+> - `af warning-stats --rule owner_role_mismatch` 출력의 `distribution.by_per_record_count` 수집 후 `repeat_count_min` 결정
+> - `config/escalation_policy.yaml`: owner_role_mismatch + evidence_quality_warn `mode: "observation" → "enforce"` toggle
+> - `runtime/warnings/_index.json`: evidence_quality_warn `mode` 필드 동기
 >
 > ## ✅ P4a 설계 v2 상태 (참고용)
 >
