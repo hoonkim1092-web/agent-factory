@@ -18,22 +18,42 @@
 
 ## 0a. v3 변경 요약 (v2 cross-review 2라운드 13건 흡수)
 
-| 분류 | v2 결정 | v3 결정 | 흡수 finding |
-|------|---------|---------|------------|
-| Refine loop budget | Stage 2 timeout만 보호 (단일 호출 기준) | per-iteration `iter_timeout = max(1, deadline - time.monotonic() - 5)` 산식. 잔여 ≤0 이면 refine skip + warn. Stage 3 진입 전 5s grace wait | **F1** (High) |
-| `_call_*_api` timeout | 미연결 (transport 단절) | 시그니처에 `timeout_sec: int = 120` 추가. anthropic→`httpx.Client(timeout=)`, openai→`with_options(timeout=)`, google→`ThreadPoolExecutor.future.result(timeout=)` | **F2** (High) |
-| Episode Hints 주입 | 누락 (회귀 위험) | `_exec_stage1` 반환 직전 `plan_result.content += _build_episode_hints_section(...)` 명시 | **F3** (High) |
-| `_exec_stage1`/`_exec_stage3` 명세 | pseudocode 변수만 | §7a (Stage 1 풀 구현), §7b (Stage 3 풀 구현 + spec_outline 전달) 신설 | **F4** (High) |
-| asyncio block 위험 | 미명시 | `core/project_pipeline.py:1231 def execute(`은 sync (grep 검증 — `async def execute` 0건). NOT APPLICABLE → §3에 sync 불변식 명시 | **F5** (High) close |
-| fallback 함수 4개 | "있다고 가정" | grep 검증: `_fallback_feature_plan:199` / `_fallback_feature_spec:274` / `_fallback_impl_design:378` / `_fallback_impl_tasks:511` — 4개 모두 존재 (2026-05-10) | **F6** (Medium) close |
-| 텔레메트리 경로 | `Path(workspace)/runtime/work_item_telemetry` | `workspace_runtime_dir(workspace) / "work_item_telemetry"` (런타임 경로 컨벤션 통일) | **F7** (Medium) |
-| `_PLACEHOLDER_REFINE_MAX` | 미인용 | grep 검증: `core/work_item_generator.py:26 _PLACEHOLDER_REFINE_MAX = 2`. v2 budget 산정(267s + 2×120s = 507s) 그대로 유효. F1 guard로 누계 보호 | **F8** (Medium) close |
-| outline mismatch 복구 | 경고만 + 불완전 outline 반환 | `expected_count=12` 불일치 시 **빈 문자열 반환** (incomplete outline 금지). tasks prompt가 빈 outline 처리 | **F9** (Low) |
-| `_dname` 형식 | 불명 | doc_type 문자열 (`plan`/`spec`/`design`/`tasks`). telemetry json `docs` 키와 정합 | **F10** (Low) |
-| `core.work_item_telemetry` af.spec | "누락" 주장 | grep 검증: `af.spec:76`에 이미 존재 (v2 cross 라운드에서도 확인). REJECT 유지 | **F11** (High) REJECT |
-| Stage 3 budget 110s | provisional, 측정 보류 | §14 Step 4.1 trigger 명시: tasks `timeout_fallback` 비율 >20%면 P95+20% 마진 재산정 | **F12** (Medium) provisional |
+> **본 v3 PR의 범위 — 명시 (v3.1 보강)**: v3는 **설계 문서 PR**이다. F1/F2/F3/F4 등의 흡수는 "**설계 명세에 코드 변경 명시 = 흡수**"이며, 실제 코드 plumbing(`core/work_item_generator.py`/`core/requirement_llm.py` 수정)은 **본 PR 머지 후 후속 코드 PR**의 책임. 본 PR 머지 시점에 baseline 코드는 그대로 유지된다. v3.1 cross-review에서 "F1 표기 vs 코드 미구현"으로 BLOCK된 부분은 status 컬럼으로 명시적 분리.
 
-> **요약**: v2가 BLOCK→WARN으로 다운그레이드됐으나 5 High + 2 Medium + 2 Low + 1 HOLD가 미흡수 상태였음. v3는 10건을 in-place 흡수, 2건(F11/F12)은 grep 또는 측정 후 처리로 정합 정리. v2 본문은 §1~§15에서 패치 표기로 보존.
+| # | 분류 | v2 결정 | v3 결정 (설계 명세) | Implementation Status | 흡수 |
+|---|------|---------|---------|----------------------|------|
+| F1 | Refine loop budget | Stage 2 timeout만 보호 | per-iteration `iter_timeout = max(1, deadline - time.monotonic() - 5)`. ≤0 이면 refine skip+warn. Stage 3 진입 전 5s grace wait. (§6 v3 보강 + §7a/§7b 호출 측 deadline 전달) | **(c) 미구현 — 본 PR 후속 코드 PR이 `core/work_item_generator.py:1184 _generate_and_refine` 시그니처에 `deadline` 추가** | High |
+| F2 | `_call_*_api` timeout | 미연결 | 시그니처에 `timeout_sec: int = 120` 추가. baseline 정합 — anthropic은 `urllib.request.urlopen(request, timeout=timeout_sec)` 유지(현 코드가 urllib), openai는 `client.with_options(timeout=)`, google은 `ThreadPoolExecutor.future.result(timeout=)` 래핑 (§10 v3 보강) | **(c) 미구현 — 본 PR 후속. baseline `core/requirement_llm.py:78,98,118` 함수 시그니처 수정** | High |
+| F3 | Episode Hints 주입 | 누락 | `_exec_stage1` 반환 직전 `plan_result.content += _build_episode_hints_section(...)` 명시 (§7a) | **(c) 미구현 — 본 PR 후속. 현재 호출은 `core/work_item_generator.py:1055`에 직접 위치, Stage 재구성 시 이동 필요** | High |
+| F4 | `_exec_stage1`/`_exec_stage3` 명세 | pseudocode 변수만 | §7a (Stage 1 풀 구현), §7b (Stage 3 풀 구현 + spec_outline 전달) 신설 — **본 v3.1 본문에 포함됨** | **(c) 미구현 — 본 PR 후속. 함수 자체가 baseline에 부재** | High |
+| F5 | asyncio block 위험 | 미명시 | `core/project_pipeline.py:1231 def execute(`은 sync (grep 검증 — `async def execute` 0건). NOT APPLICABLE → §3에 sync 불변식 명시 | **(a) 이미 정합 — baseline은 sync** | High close |
+| F6 | fallback 함수 4개 | "있다고 가정" | grep 검증: `_fallback_feature_plan:199` / `_fallback_feature_spec:274` / `_fallback_impl_design:378` / `_fallback_impl_tasks:511` 모두 존재 | **(a) 이미 구현** | Medium close |
+| F7 | 텔레메트리 경로 | `Path(workspace)/"runtime"/"work_item_telemetry"` | `workspace_runtime_dir(workspace) / "work_item_telemetry"` (컨벤션 통일) | **(b) 본 PR 후속에서 `core/work_item_telemetry.py:14, 45` 두 위치 동시 수정** | Medium |
+| F8 | `_PLACEHOLDER_REFINE_MAX` | 미인용 | grep 검증: `core/work_item_generator.py:26 _PLACEHOLDER_REFINE_MAX = 2`. budget 산정(267s + 2×120s = 507s) 유효. **F1 guard 미구현 시 budget 초과 위험은 §15 R7으로 등록** | **(a) 이미 정합 (값 확인)** | Medium close |
+| F9 | outline mismatch 복구 | 경고만 + 부분 outline | **`expected_count=12` 통일** (§0a/§8/실제 코드 모두 12). 결정: 본 PR 후속 코드에서 `_extract_section_outline` (`core/work_item_generator.py:813`)이 mismatch 시 **빈 문자열 반환** — 현재 baseline은 `"\n".join(lines)` 부분 outline 반환 (L832) | **(c) 본 PR 후속 코드에서 동작 변경** | Low |
+| F10 | `_dname` 형식 | 불명 | doc_type 문자열 (`plan`/`spec`/`design`/`tasks`). telemetry json `docs` 키와 정합 | **(b) 명세 정정 (코드 변경 없음)** | Low |
+| F11 | `core.work_item_telemetry` af.spec | "누락" 주장 | grep 검증: `af.spec:82` `core.cli_session_cleanup`, `af.spec:83` `core.work_item_telemetry` — **둘 다 이미 등록**. REJECT 유지 | **(a) 이미 정합** | High REJECT |
+| F12 | Stage 3 budget 110s | provisional, 측정 보류 | §14 Step 4.1 trigger 명시: tasks `timeout_fallback` 비율 >20%면 P95+20% 마진 재산정 | **(b) 측정 후 결정** | Medium |
+
+### v3.1 1라운드 BLOCK (Critic 단독, Cross provider error) 흡수 — 11건
+
+> 출처: `docs/reviews/2026-05-11-001451-2026-05-08-work-item-parallel-option-c-design-v3-design-review.md`. Cross provider가 error로 미실행 → Critic 단독. 단 evidence가 file:line 단위로 강력해서 모두 ACCEPT/HOLD.
+
+| # | Severity | 처리 |
+|---|----------|------|
+| 1 | Critical | F1 "흡수" → **"설계 명세 흡수 / 코드 (c) 미구현 — 후속 PR"**. 위 status 컬럼으로 명시 |
+| 2 | Critical | F2 baseline 정정 — anthropic은 `urllib.request.urlopen` (httpx 아님). §10 v3 보강 코드블록 재작성 (urllib 기반) |
+| 3 | High | "신규" 표기된 `core/cli_session_cleanup.py` (5/10 02:01) / `core/work_item_telemetry.py` (5/10 02:01)는 이미 존재 — §11 변경표 status (a)로 분리 |
+| 4 | High | §11 라인 번호 일괄 갱신: `_generate_doc_with_llm:562`, `_generate_and_refine:1184`, `_refine_document:1263`, `generate_work_items:1025`, 4 generator `:613/656/698/755`, `_call_*_api:78/98/118`. F11 `af.spec:76` → `82, 83` 정정 |
+| 5 | High | `expected_count` 3중 통일: §0a/§8/실제 코드 모두 12. F9 결정 명확화 — 본 PR 후속 코드 PR이 `""` 반환으로 동작 변경 |
+| 6 | High | F7 path `core/work_item_telemetry.py:14, 45` 두 위치 동시 수정 명시 |
+| 7 | High | §7a/§7b 본문은 v3에 추가됨 (line 637, 681). 코드의 `_exec_stage1`/`_exec_stage3` 함수는 baseline에 부재 — (c) 본 PR 후속에서 추가 |
+| 8 | Medium | §6 budget 산정의 F1 guard 의존성을 §15 R7로 명시 (F1 미구현 시 worst-case 507s 위험) |
+| 9 | Medium | §15 R7 신설 — Stage 2 abandoned future subprocess + Stage 3 hook race. F1 5s grace wait이 통합 방어선 |
+| 10 | Medium | §9 cleanup 디렉토리 mtime 정책 — 자식 max(mtime) 기반 판정으로 변경 명시 (또는 디렉토리 TTL 60일+ 분리) |
+| 11 | HOLD | Cross provider 인증 후 v3.1 commit + cross-review 2라운드 재실행 |
+
+> **요약 (v3.1)**: v3가 "흡수" 표기와 baseline 코드 사이에 분리된 status를 명시 안 한 게 1라운드 BLOCK 핵심 사유. v3.1은 (1) Implementation Status 컬럼 추가로 설계 명세 vs 실 코드 분리, (2) baseline grep 결과로 line 번호 일괄 갱신, (3) anthropic urllib 사실 정정, (4) §15 R7 + §9 cleanup mtime 정책 신설로 자체 모순 해소. 코드 변경은 본 PR 범위 외 — 후속 코드 PR 책임.
 
 ---
 
@@ -811,13 +831,15 @@ import re
 _SECTION_HEADER_RE = re.compile(r"^\s*##\s+(.+?)\s*$")
 _TOC_PATTERNS = ("toc", "table of contents", "목차")
 
-def _extract_section_outline(markdown: str, expected_count: int = 11) -> str:
+def _extract_section_outline(markdown: str, expected_count: int = 12) -> str:
     """## 섹션 헤더만 뽑아 §N 형식으로 정렬한 목차 텍스트 반환.
 
     - `**bold**` `_italic_` 마크다운 마커 제거
     - 공백 정규화
     - TOC 섹션 자체는 제외 (재귀 인용 방지)
     - assert: 헤더 수가 expected_count와 일치해야 traceability §N 매칭 안전
+    - **v3.1 (F9)**: mismatch 시 빈 문자열 반환 (incomplete outline 금지). caller(`_exec_stage3` / tasks prompt)는 빈 문자열을 "outline unavailable" 표기로 대체.
+      현 baseline (`core/work_item_generator.py:813`)은 `"\n".join(lines)` 부분 outline 반환 (L832) — 본 PR 후속 코드에서 변경.
     """
     lines = []
     section_idx = 0
@@ -835,11 +857,13 @@ def _extract_section_outline(markdown: str, expected_count: int = 11) -> str:
         section_idx += 1
         lines.append(f"§{section_idx} {title}")
 
-    # 섹션 카운트 어설션 — 미달 시 traceability 매칭 위험 알림
+    # 섹션 카운트 어설션 — v3.1: mismatch 시 빈 문자열 반환 (F9)
     if section_idx != expected_count:
         _LOGGER.warning(
-            "spec_outline section count mismatch: got=%d expected=%d", section_idx, expected_count,
+            "spec_outline section count mismatch: got=%d expected=%d → outline empty",
+            section_idx, expected_count,
         )
+        return ""
 
     return "\n".join(lines)
 ```
@@ -1032,15 +1056,22 @@ def execute_document_prompt(
 
 > 이로써 v1의 OQ1 ("token usage 측정 가능?")이 §10 todo로 승격 — anthropic SDK의 `response.usage`, openai SDK의 `response.usage` 활용.
 
-### v3 보강 — `_call_*_api` 시그니처에 `timeout_sec` 추가 (F2 흡수)
+### v3 보강 — `_call_*_api` 시그니처에 `timeout_sec` 추가 (F2 흡수, v3.1 baseline 정정)
 
-**v2 누락 분석** (cross-review F2):
-v2 §10의 `execute_document_prompt(prompt, *, workspace, run_id, timeout_sec=120)`은 `timeout_sec`을 받지만, 그 아래 SDK 호출자 (`_call_google_api`, `_call_openai_api`, `_call_anthropic_api`) 시그니처에는 `timeout_sec` 파라미터 자체가 없음 (`core/requirement_llm.py:73, 84, 95` 기준 grep 검증 2026-05-10). 결과: `execute_document_prompt`에서 받은 `timeout_sec`이 transport 직전에 단절. 설계 §29의 "전 체인 전파" 약속 미이행.
+**v2 누락 + v3 baseline 오기 분석** (cross-review F2 + v3 1라운드 BLOCK #2):
+v2 §10의 `execute_document_prompt(prompt, *, workspace, run_id, timeout_sec=120)`은 `timeout_sec`을 받지만, 그 아래 SDK 호출자 시그니처에는 `timeout_sec` 파라미터 자체가 없음 (grep 검증 2026-05-11):
+- `core/requirement_llm.py:78` `def _call_google_api(model, prompt, *, return_usage=False)`
+- `core/requirement_llm.py:98` `def _call_openai_api(model, prompt, *, return_usage=False)`
+- `core/requirement_llm.py:118` `def _call_anthropic_api(model, prompt, *, return_usage=False)`
 
-**v3 변경 — `core/requirement_llm.py`:**
+특히 anthropic은 v3 초안이 `httpx.Client`로 가정했으나 **실제 baseline은 `urllib.request.urlopen(request, timeout=60)`** (`core/requirement_llm.py:139` 기준). 추가 의존성 도입 없이 urllib 기반으로 plumbing.
+
+**v3.1 변경 — `core/requirement_llm.py` (본 PR 후속 코드 PR 명세):**
 
 ```python
-import httpx  # anthropic raw HTTP용 (이미 의존성에 포함됨)
+import urllib.request
+import urllib.error
+import json
 import concurrent.futures as _cf  # google SDK timeout 래핑용
 
 def _call_anthropic_api(
@@ -1054,33 +1085,38 @@ def _call_anthropic_api(
     if not api_key:
         raise RuntimeError("missing_anthropic_api_key")
 
-    # raw HTTP (v2 §10 가정 유지) + httpx.Client(timeout=) 인젝션
-    with httpx.Client(timeout=float(timeout_sec)) as client:
-        resp = client.post(
-            "https://api.anthropic.com/v1/messages",
-            json={
-                "model": model,
-                "max_tokens": 4096,
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-        )
-        data = resp.json()
-    text = "".join(
-        block.get("text", "")
-        for block in data.get("content", [])
-        if block.get("type") == "text"
-    ).strip()
+    # baseline: urllib.request 사용 (v3.1 정정 — httpx 의존성 추가 없음)
+    payload = json.dumps({
+        "model": model,
+        "max_tokens": 4096,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "content-type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST",
+    )
+    # v3 plumbing: 하드코딩 60s → caller가 전달한 timeout_sec
+    with urllib.request.urlopen(request, timeout=timeout_sec) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    parts: list[str] = []
+    for item in data.get("content", []) or []:
+        if str(item.get("type", "")).strip() == "text":
+            value = str(item.get("text", "") or "").strip()
+            if value:
+                parts.append(value)
+    text = "\n".join(parts).strip()
     if not return_usage:
         return text
-    usage_raw = data.get("usage", {})
+    usage_raw = data.get("usage") or {}
     usage = _make_usage(
-        usage_raw.get("input_tokens", 0) or 0,
-        usage_raw.get("output_tokens", 0) or 0,
+        int(usage_raw.get("input_tokens", 0) or 0),
+        int(usage_raw.get("output_tokens", 0) or 0),
     )
     return text, usage
 
@@ -1172,7 +1208,7 @@ else:
 ```
 
 > **호환성**: 기존 호출자(`execute_requirement_prompt` 등)는 `timeout_sec` 파라미터 없이 호출 → default 120s 적용. 무영향.
-> **transport timeout 의미**: anthropic의 `httpx.Client(timeout=)`은 connect+read+write+pool 모두 동일 값. 큰 응답 streaming 시 read timeout이 핵심. openai의 `with_options(timeout=)`는 read timeout 우선. google의 `future.result(timeout=)`은 wall-clock (request/response 전체).
+> **transport timeout 의미** (v3.1 정정): anthropic의 `urllib.request.urlopen(request, timeout=...)`은 socket-level timeout (connect + read inactivity). 큰 응답 streaming 시 chunk 간 read 정체가 timeout 트리거. openai의 `with_options(timeout=)`는 read timeout 우선. google의 `future.result(timeout=)`은 wall-clock (request/response 전체).
 > **단위 일관성**: `_call_*_api` 시그니처가 모두 `timeout_sec: int = 120` (정수 초). SDK 내부에서 float 변환은 각 함수가 처리. v3 §10 v2 코드의 `timeout_sec=timeout_sec` 직접 전달이 안전.
 
 ---
@@ -1197,22 +1233,36 @@ else:
 | `af.spec` | hiddenimports | `core.cli_session_cleanup` 추가. `core.file_lock`은 이미 76라인 |
 | `runtime/work_item_telemetry/{slug}.json` | (신규 dump 위치) | `generate_work_items` 종료 시 4개 `DocGenerationResult` json dump |
 
-### v3 추가/수정 (F2 / F3 / F6 / F7 / F10 / F11 흡수)
+### v3.1 변경표 — baseline grep 결과 일괄 갱신 (Status 컬럼 추가)
 
-| 파일 | 라인 (현재) | v3 변경 |
-|------|------------|---------|
-| `core/requirement_llm.py:73` | `_call_google_api(model, prompt, *, return_usage=False)` | **시그니처에 `timeout_sec: int = 120` 추가**. SDK가 client-level timeout 미지원이므로 ThreadPoolExecutor + `future.result(timeout=)` 래핑 (§10 v3 보강) — **F2** |
-| `core/requirement_llm.py:84` | `_call_openai_api(...)` | `timeout_sec: int = 120` 추가. `client.with_options(timeout=float(timeout_sec))` 패턴 — **F2** |
-| `core/requirement_llm.py:95` | `_call_anthropic_api(...)` | `timeout_sec: int = 120` 추가. `httpx.Client(timeout=float(timeout_sec))` 패턴 (raw HTTP — v2 §10 가정 유지) — **F2** |
-| `core/requirement_llm.py:203` | `execute_document_prompt` API 분기 (`text, usage = _call_*_api(...)` 3곳) | `timeout_sec=timeout_sec` 인자 전달 — **F2** |
-| `core/work_item_generator.py:909` | `_build_episode_hints_section(project_brief, workspace) -> str` | 변경 없음. 단 `_exec_stage1` 반환 직전 호출이 §7a에 명시됨 — **F3** 회귀 방지 |
-| `core/work_item_generator.py:1055` | `episode_hints_section = _build_episode_hints_section(project_brief, workspace)` | v2 Stage 재구성으로 본 라인이 `_exec_stage1` 내부로 이동. 호출 자체는 보존 — **F3** |
-| `core/work_item_generator.py:813` | `_extract_section_outline(markdown, expected_count: int = 12) -> str` | mismatch 시 빈 문자열 반환 (incomplete outline 금지). v2의 "경고만 + 불완전 outline" 동작을 §7b/§8 변경으로 정정 — **F9** |
-| `core/work_item_generator.py:_generate_and_refine` | `def _generate_and_refine(... timeout_sec, run_id, workspace)` | 시그니처에 `deadline: float` (절대 monotonic) 추가. 내부 refine loop에서 매 iteration `_compute_iter_timeout()` 사용 — **F1** |
-| `core/work_item_telemetry.py:12` | `tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"` | `from core.continuity.runtime_paths import workspace_runtime_dir` 추가, `tele_dir = workspace_runtime_dir(workspace) / "work_item_telemetry"`. cleanup/검증 절차의 `<workspace>/.af_runtime/...` 컨벤션과 통일 — **F7** |
-| `core/work_item_generator.py:1003-1020` (T1 retry 블록) | `for _dname in ("plan", "spec", "design", "tasks"):` | `_dname` 형식 명세: doc_type 문자열 (`plan`/`spec`/`design`/`tasks`). `update_t1_refine_attempts(workspace, slug, _dname, 1)` 호출 시 telemetry json `docs[_dname].t1_refine_attempts` 키와 정합 — **F10** |
-| `af.spec` hiddenimports | 76라인 `core.work_item_telemetry`, `core.file_lock`, `core.cli_session_cleanup` | 이미 등록 (v2 cross 라운드 grep 검증). v3 추가 변경 없음 — **F11 REJECT 유지** |
-| `core/work_item_generator.py:199, 274, 378, 511` (fallback 함수 4개) | `_fallback_feature_plan`, `_fallback_feature_spec`, `_fallback_impl_design`, `_fallback_impl_tasks` | 4개 모두 존재 (grep 검증 2026-05-10). §12 cascade와 §7a/§7b의 `*_factory` 호출이 안전 — **F6 close** |
+> **Status 컬럼 의미**: (a) baseline에 이미 존재 — 변경 없음 / (b) 본 PR (설계 문서)에서 명세 정정 / (c) 본 PR 후속 코드 PR에서 plumbing 필요. v3.1이 1라운드 #3, #4 흡수하여 모든 라인 번호를 grep(2026-05-11) 결과로 일괄 갱신.
+
+| 파일 | 실제 라인 (2026-05-11 grep) | v3.1 명세 | Status | Findings |
+|------|----------------------------|----------|--------|----------|
+| `core/requirement_llm.py:78` | `def _call_google_api(model, prompt, *, return_usage=False)` | 시그니처에 `timeout_sec: int = 120` 추가. google SDK는 client-level timeout 미지원 → `_cf.ThreadPoolExecutor(max_workers=1)` + `future.result(timeout=float(timeout_sec))` 래핑 | (c) | **F2** |
+| `core/requirement_llm.py:98` | `def _call_openai_api(model, prompt, *, return_usage=False)` | `timeout_sec: int = 120` 추가. `client.with_options(timeout=float(timeout_sec)).responses.create(...)` 패턴 | (c) | **F2** |
+| `core/requirement_llm.py:118` | `def _call_anthropic_api(model, prompt, *, return_usage=False)` — **`urllib.request.urlopen(request, timeout=60)` 하드코딩** (L139) | `timeout_sec: int = 120` 추가. `urllib.request.urlopen(request, timeout=timeout_sec)`로 변경 (httpx 의존성 도입 없음) | (c) | **F2** |
+| `core/requirement_llm.py:203` | `execute_document_prompt` API 분기 3곳 | `timeout_sec=timeout_sec` 인자 전달 | (c) | **F2** |
+| `core/work_item_generator.py:562` | `def _generate_doc_with_llm(...)` | 시그니처에 `doc_type, run_id, timeout_sec, workspace` 추가. `tuple[str, bool]` → `DocGenerationResult` 반환 | (c) | F3/F4 (boundary) |
+| `core/work_item_generator.py:613` (plan), `:656` (spec), `:698` (design), `:755` (tasks) | 4개 generator 함수 시그니처 | keyword-only `*, prev_plan="", prev_spec="", prev_design="", run_id="", timeout_sec=120, workspace=""`. `str` → `DocGenerationResult` 반환 | (c) | (boundary) |
+| `core/work_item_generator.py:909` | `def _build_episode_hints_section(project_brief, workspace) -> str` | 변경 없음 — `_exec_stage1` 반환 직전 호출 (§7a) | (a) | **F3** |
+| `core/work_item_generator.py:1055` | `episode_hints_section = _build_episode_hints_section(project_brief, workspace)` | v2 Stage 재구성으로 `_exec_stage1` 내부로 이동. 호출 자체 보존 | (c) | **F3** |
+| `core/work_item_generator.py:813` | `def _extract_section_outline(markdown, expected_count: int = 12) -> str` — **현 baseline은 mismatch 시 `_LOGGER.warning` + `"\n".join(lines)` 부분 outline 반환** (L831-832) | mismatch 시 **빈 문자열 반환**으로 변경 (`if section_idx != expected_count: return ""`). tasks prompt가 빈 outline 처리 | (c) | **F9** |
+| `core/work_item_generator.py:1025` | `def generate_work_items(...)` | sequential → C-3stages 재구성. `cleanup_stale_sessions()` 1회 호출. budget 600s. 텔레메트리 dump | (c) | (전체) |
+| `core/work_item_generator.py:1184` | `def _generate_and_refine(...)` (현재 deadline 인자 없음) | 시그니처에 `deadline: float` (절대 monotonic) 추가. 내부 refine loop에서 매 iteration `_compute_iter_timeout()` 사용 | (c) | **F1** |
+| `core/work_item_generator.py:1263` | `def _refine_document(...)` (현재 timeout 인자 없음) | 시그니처에 `timeout_sec: int` 추가. caller(`_generate_and_refine`)가 잔여시간 전달 | (c) | **F1** |
+| `core/work_item_generator.py:_exec_stage1`, `_exec_stage3` | **baseline에 부재** (`_exec_stage2`만 L860에 존재) | §7a/§7b 명세대로 신설. fallback 4개(L199/274/378/511) 호출 | (c) | **F4** |
+| `core/work_item_generator.py:1003-1020` (T1 retry 블록) | `for _dname in ("plan", "spec", "design", "tasks"):` | `_dname` doc_type 문자열로 명세 — telemetry json `docs[_dname].t1_refine_attempts` 키와 정합 | (b) | **F10** |
+| `core/work_item_telemetry.py:14` | `tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"` | `from core.continuity.runtime_paths import workspace_runtime_dir`, `tele_dir = workspace_runtime_dir(workspace) / "work_item_telemetry"` | (c) | **F7** |
+| `core/work_item_telemetry.py:45` | `tele_dir = Path(workspace) / "runtime" / "work_item_telemetry"` (write_initial_record 내) | 동일 변경 — **두 위치 동시 수정 필수** | (c) | **F7** |
+| `core/providers/session_adapter.py:281-304` | `_write_claude_settings` | 본문을 `with locked_file(str(settings_path), timeout=5):` wrap (§4) | (c) | (lock) |
+| `core/cli_session_cleanup.py` | **이미 존재** (5/10 02:01, 1613 bytes) | 변경 없음. `cleanup_stale_sessions(workspace, days=30)` 그대로 호출 | (a) | (§9) |
+| `core/work_item_telemetry.py` | **이미 존재** (5/10 02:01, 2651 bytes) | F7 path 변경 (위 두 행) | (a) | (§5/§11) |
+| `core/work_item_generator.py:199, 274, 378, 511` (fallback 4개) | `_fallback_feature_plan`, `_fallback_feature_spec`, `_fallback_impl_design`, `_fallback_impl_tasks` | 4개 모두 존재 (grep 검증). §12 cascade + §7a/§7b의 `*_factory` 호출 안전 | (a) | **F6 close** |
+| `af.spec:82` | `'core.cli_session_cleanup',` | 이미 등록 — 변경 없음 | (a) | **F11 REJECT** |
+| `af.spec:83` | `'core.work_item_telemetry',` | 이미 등록 — 변경 없음 (v3 초안 "76라인" 표기 정정 → 82, 83) | (a) | **F11 REJECT** |
+| `core/project_pipeline.py:948` | `generate_work_items` 호출 | 변경 없음 (반환은 `dict[str, str]` 그대로) | (a) | (caller) |
+| `runtime/work_item_telemetry/{slug}.json` | (dump 위치 — workspace_runtime_dir 적용 후 `<workspace>/.af_runtime/work_item_telemetry/{slug}.json`) | `generate_work_items` 종료 시 4개 `DocGenerationResult` json dump | (c) | (§5/§11) |
 
 ### T1 텔레메트리 atomic update (finding #8 해소)
 
@@ -1320,7 +1370,7 @@ files["approval-gate.md"] = gate.gate_path
    grep -nE "def _call_(google|openai|anthropic)_api" core/requirement_llm.py
    # 기대: 3개 모두 시그니처에 "timeout_sec: int = 120" 포함.
    ```
-   추가 동작 검증: anthropic raw HTTP의 `httpx.Client(timeout=...)` / openai SDK의 `with_options(timeout=...)` / google의 `_cf.ThreadPoolExecutor + future.result(timeout=...)` 호출이 단위 테스트로 timeout 강제 발동 확인 (mock으로 60s 슬립 후 timeout=2s 호출 → `RuntimeError` 또는 `TimeoutError` 전파).
+   추가 동작 검증: anthropic의 `urllib.request.urlopen(timeout=...)` / openai SDK의 `with_options(timeout=...)` / google의 `_cf.ThreadPoolExecutor + future.result(timeout=...)` 호출이 단위 테스트로 timeout 강제 발동 확인 (mock으로 60s 슬립 후 timeout=2s 호출 → `socket.timeout` / `RuntimeError` / `TimeoutError` 전파).
 
 ### Step 1 — prev_doc 의존도 정량 측정 (sample N≥5, finding #5 영향)
 
@@ -1393,6 +1443,8 @@ C-3stages 채택 조건:
 - **R4 (신규)**: `_call_anthropic_api(return_usage=True)` 시그니처 변경 시 다른 호출자 (`execute_requirement_prompt` 등) 호환성 — `return_usage=False` default로 기존 호출 무영향.
 - **R5 (신규)**: `runtime/work_item_telemetry/{slug}.json`이 `update_t1_refine_attempts` 동시 호출에 의해 corrupt — `locked_file()`로 atomic 보장.
 - **R6 (신규)**: Stage 1 LLM 실패가 단순 일시 오류가 아닌 **provider-wide outage**일 경우 Stage 2/3도 cascade fallback으로 떨어져 모든 4개 문서가 fallback 본문으로 채워질 수 있음 — `used_fallback=True` 컬럼 합계가 4건이면 outage 의심. §11 Step 4 비교표에 "fallback 비율" 컬럼 추가, 모니터링 별도 필요. provider-wide outage 자체는 본 설계 범위 밖이며 `core/requirement_llm.py:list_requirement_candidates()`의 다중 provider 폴백이 1차 방어선.
+- **R7 (v3.1 신규, 1라운드 #8 + #9 흡수)**: **Stage 2 abandoned future + Stage 3 hook race**. `cf.wait(timeout=remaining)` 만료 시 `not_done` future들의 LLM subprocess는 SIGTERM 수신 후 grace 5s 내 자체 종료가 일반적이지만, Stage 3가 같은 시점에 시작되면 `<workspace>/.af_runtime/cli_sessions/` + `_events.jsonl`을 동시 기록한다. §4 lock은 `_write_claude_settings` 본문만 보호하며 hook 호출 시점은 미보호. **방어선**: §6의 "Stage 3 진입 전 5s grace wait" (F1 guard)이 본 race에 대한 통합 방어. F1 미구현 시 R7도 active. 추가 방어로 Stage 3 진입 직전 `<workspace>/.af_runtime/cli_sessions/` 디렉토리 mtime이 (Stage 2 종료 + 5s) 이후이면 추가 1s wait 권고 — 실증 데이터로 P95 측정 후 결정 (§14 Step 2 신규 metric).
+- **R8 (v3.1 신규, 1라운드 #10 흡수)**: **§9 cleanup 디렉토리 mtime 의미 불일치**. POSIX dir mtime은 자식의 add/remove에만 갱신되며 자식 modify와 무관. 즉 30일 동안 append만 일어나는 디렉토리는 dir mtime이 stale → `cleanup_stale_sessions(workspace, days=30)`이 active 세션을 파괴할 수 있음. 반대로 자식 자주 추가되면 dir mtime 갱신 → 영원히 정리 안 됨. **방어선** (§9 정책 변경 명시): 디렉토리 entry 판정 시 `entry.stat().st_mtime` 대신 `max(c.stat().st_mtime for c in entry.rglob("*") if c.is_file())` (자식 파일 max mtime)으로 대체. 또는 디렉토리 cleanup TTL을 60일+로 분리. 본 PR 후속 코드 PR이 `core/cli_session_cleanup.py`에 적용.
 
 ### 미해결 (Open Questions)
 - **OQ1 (resolved)**: token usage는 §10에서 `usage_tokens` 컬럼으로 정식 추가. CLI provider는 빈 dict (CLI는 stdout만 노출).
@@ -1404,6 +1456,14 @@ C-3stages 채택 조건:
 
 ## 16. 변경 이력
 
+- 2026-05-11 (v3.1): v3 1라운드 cross-review (`docs/reviews/2026-05-11-001451-...-v3-design-review.md`) 11건 흡수.
+  - Cross provider error로 Critic 단독 평가였음 — evidence가 file:line 단위로 강력해서 모두 ACCEPT/HOLD.
+  - **Critical 2건 처리**: F1 (refine guard) / F2 (timeout transport)를 "**설계 명세 흡수 / 코드 (c) 미구현 — 본 PR 후속**"으로 status 명시. v3 초안의 "흡수" 표기가 baseline 코드 변경 미포함이라는 사실을 §0a에 Implementation Status 컬럼으로 명시화.
+  - **F2 baseline 정정**: anthropic은 `httpx.Client`가 아니라 `urllib.request.urlopen(timeout=60)` 하드코딩 (`core/requirement_llm.py:139`). v3.1 §10 코드블록을 urllib 기반으로 재작성 (의존성 추가 없음).
+  - **High 4건**: §11 변경표 line 번호 일괄 갱신 (`_call_*_api:78/98/118`, `_generate_doc_with_llm:562`, `_generate_and_refine:1184`, `_refine_document:1263`, `generate_work_items:1025`, 4 generator `:613/656/698/755`, `_extract_section_outline:813`, `work_item_telemetry.py:14, 45`). af.spec line 76 → **82, 83** 정정. `cli_session_cleanup` / `work_item_telemetry`는 (a) 이미 구현. `expected_count` §0a/§8/실제 코드 모두 12로 통일. F9 결정 — 빈 문자열 반환으로 본 PR 후속 코드 변경 명시.
+  - **Medium 3건**: §15 R7 신설 (Stage 2 abandoned future + Stage 3 race), R8 신설 (§9 cleanup 디렉토리 mtime 의미). §6 budget 산정의 F1 guard 의존성을 R7로 명시 — F1 미구현 시 worst-case 507s 위험.
+  - **HOLD 1건**: Cross provider 인증 후 v3.1 commit + cross-review 2라운드 재실행.
+  - 본 v3.1 commit 후 외부 CLI provider(codex/copilot/gemini-cli) 인증 상태 확인 후 cross-review 2라운드 트리거 — 단일 critic 의존 회피.
 - 2026-05-10 (v3): v2 cross-review 2라운드 (`docs/reviews/2026-05-08-142400-...`) 13건 흡수.
   - **5 High** 모두 처리 — F1 (refine loop budget guard, §6 보강 + §7 호출 측 deadline 전달), F2 (`_call_*_api(timeout_sec=)` 시그니처 통일, §10 보강), F3 (Episode Hints 주입, §7a 신설), F4 (`_exec_stage1`/`_exec_stage3` 풀 구현, §7a/§7b 신설), F5 (asyncio NOT APPLICABLE — sync 컨텍스트 검증 후 §3 불변식 + §14 Step 0.6 가드).
   - **2 Medium 처리** — F7 (telemetry 경로 `workspace_runtime_dir(workspace) / "work_item_telemetry"`, §11), F12 (Stage 3 budget provisional → §14 Step 4.1 재산정 trigger).
