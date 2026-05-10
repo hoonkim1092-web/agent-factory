@@ -1,9 +1,23 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P4a 구현 완료 v1.2.27 ship. commit `d61b1d68`, push 완료. 다음: P4b (threshold 결정, mode enforce toggle) — P3 measurement 데이터 수집 후 진입.**
+> 마지막 업데이트: 2026-05-11 KST — **Work-Item 병렬화 v3 작성 완료, cross-review 3라운드 대기. (P4a v1.2.27 ship 완료, P4b는 measurement 데이터 축적 대기.)**
 >
-> ## ✅ P4a v1.2.27 ship 완료
+> ## 🔥 진행 중 — Work-Item 병렬화 v3 (Opus 4.7, 2026-05-10~11)
+>
+> - **v3 문서**: `docs/2026-05-08-work-item-parallel-option-c-design-v3.md` (1421 lines)
+> - **v2 cross-review 2라운드** (`docs/reviews/2026-05-08-142400-...`): WARN 13건 (5 High + 2 Medium + 2 Low + 1 HOLD + 1 REJECT) — **v3가 흡수**
+> - **흡수 결과**:
+>   - 5 High 모두 처리 (F1 refine guard / F2 timeout transport / F3 Episode Hints / F4 _exec_stage1·3 / F5 sync close)
+>   - 2 Medium 처리 (F7 telemetry 경로 / F12 Stage 3 budget trigger)
+>   - 2 Medium close (F6 fallback 4개 grep / F8 _PLACEHOLDER_REFINE_MAX=2 grep)
+>   - 2 Low 처리 (F9 outline mismatch / F10 _dname 형식)
+>   - 1 REJECT 유지 (F11 af.spec — 이미 등록됨)
+> - **다음**: cross-review 3라운드 (codex). PASS 시 Sonnet으로 본 구현 진입 (C-3stages: `core/work_item_generator.py` + `core/requirement_llm.py` + `core/work_item_telemetry.py` 신설 등).
+>
+> ---
+>
+> ## ✅ P4a v1.2.27 ship 완료 (2026-05-10)
 >
 > ### 완료 목록
 > - `core/escalation_evaluator.py` ✅ (`_PolicyRule.mode` + `read_current_phase()` + `evaluate()` mode 분기)
