@@ -1463,7 +1463,7 @@ class ProjectPipeline:
                             {"task_id": tid, "expected": exp, "actual": act}
                             for tid, exp, act in mismatches
                         ]},
-                        source_path="core/project_pipeline.py:1401",
+                        source_path="core/project_pipeline.py:1455",
                     )
                 except Exception as _owr_exc:
                     logger.debug("warning_registry record skip (owner_role_mismatch): %s", _owr_exc)

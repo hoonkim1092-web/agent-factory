@@ -40,6 +40,7 @@ a = Analysis(
         'core.escalation_decision_report',
         'core.warning_registry',
         'core.warning_overrides',
+        'core.warning_stats',
         'core.ast_engine',
         'core.ast_memory_hub',
         'core.review_bundle',

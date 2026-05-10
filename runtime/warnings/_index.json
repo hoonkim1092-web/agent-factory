@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "description": "등록된 rule_id 목록 — 코드 변경과 함께 갱신 (P1)",
+  "schema_version": 2,
+  "description": "등록된 rule_id 목록 — 코드 변경과 함께 갱신 (P1). schema_version 2: measure_at/mode optional 필드 추가 (P3).",
   "rules": [
     {
       "rule_id": "e2e_command_missing",
@@ -10,7 +10,9 @@
     {
       "rule_id": "owner_role_mismatch",
       "activate_at": "P4",
-      "source": "core/project_pipeline.py:1401"
+      "measure_at": "P3",
+      "mode": "observation",
+      "source": "core/project_pipeline.py:1455"
     },
     {
       "rule_id": "evidence_quality_warn",

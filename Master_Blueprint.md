@@ -52,6 +52,7 @@
 | `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
 | `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
 | `core/warning_registry.py` | WARN 기록 SoT + summarize + decision 트리거 | `WarningRecord`, `WarningRegistry`, `_build_summary()`, `_write_minimal_block_decision()` |
+| `core/warning_stats.py` | P3 read-only 분석 도구 — workspace fan-out + 분포 통계 | `iter_warning_records()`, `collect_workspace_stats()`, `_load_index()`, `_compute_distribution()` |
 | `core/ast_engine.py` | AST 분석 엔진 (ast-grep-py wrapper) | `search()`, `replace()`, `search_file()` |
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
 | `core/review_bundle.py` | 리뷰 번들 생성 thin wrapper (Phase 2-prep D) | `build()`, `save()`, `load()` |
@@ -606,8 +607,8 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 ---
 
-### §3.8 Warning Registry (`core/warning_registry.py`, `core/escalation_evaluator.py`, `core/escalation_decision_report.py`, `core/warning_overrides.py`)
-<!-- last_updated: 2026-05-10 (P2 구현 — escalation_evaluator 본체 + decision_report + warning_overrides + fail-closed chain) -->
+### §3.8 Warning Registry & Stats (`core/warning_registry.py`, `core/escalation_evaluator.py`, `core/escalation_decision_report.py`, `core/warning_overrides.py`, `core/warning_stats.py`)
+<!-- last_updated: 2026-05-10 (P3 구현 — warning_stats 신규, warning-stats/export CLI, _index.json schema v2, source_path 정정) -->
 
 **목적**: AF 파이프라인에서 발화되는 WARN을 표준 스키마로 기록하고, 임계 초과 시 BLOCK으로 승격하는 완전한 P2 escalation 시스템.
 
@@ -673,12 +674,46 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 **project_pipeline 변경**: `execute()` 내 `is_execution_open()` 직후 `gate.read_block_decision()` → blocked 시 `{"ok": False, "reason": "escalation_block", ...}` 반환.
 
-**CLI**: `af warning-summary` / `af warning-repair` (P1) · `af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]` (P2: false-positive override + 즉시 decision 재생성).
+**P3 measurement phase 표** (`runtime/warnings/_index.json` schema v2):
 
-**af.spec hiddenimports**: `core.escalation_decision_report` + `core.warning_overrides` 추가.
+| rule_id | activate_at | measure_at | mode |
+|---------|-------------|------------|------|
+| e2e_command_missing | P2 | — | enforcement (묵시) |
+| owner_role_mismatch | P4 | **P3** | **observation** |
+| evidence_quality_warn | P4 | — | — |
+| plan_verifier_warn | never | — | — |
 
-**테스트**: P1 25케이스 + P2 신규 10파일 39케이스 = **총 64 케이스 PASS**
+**P3 신규 모듈 (`core/warning_stats.py`)**:
+
+| 심볼 | 역할 |
+|------|------|
+| `iter_warning_records(workspace, *, rule_id, slug)` | stats/export 공유 단일 iterator. `os.scandir + is_dir() + not startswith("_")` slug filter. malformed jsonl skip. |
+| `collect_workspace_stats(workspace, *, rule_id, slug, phase, top)` | workspace 전체 fan-out → ProjectStats[] + Distribution 3차원 + by_phase_total/unfiltered + warnings[]. |
+| `_load_index(workspace)` | side-effect-free direct read — `core.config_paths` import 금지. 없으면 None. |
+| `_compute_distribution(values)` | p95 nearest-rank (`math.ceil(0.95*n)-1`). median 항상 float 강제. |
+| `_validate_slug(slug)` | path traversal 방어. 위반 시 ValueError. |
+
+**CLI 4종**:
+
+| 서브커맨드 | 주요 인자 | 역할 |
+|-----------|---------|------|
+| `warning-summary` | `--workspace --slug` | P1: single-slug `_summary.json` dump |
+| `warning-repair` | `--workspace --slug` | P1: `_summary.json` 재생성 |
+| `warning-override` | `--workspace --slug --rule --reason [--remove]` | P2: false-positive override |
+| `warning-stats` | `--workspace [--slug] [--rule] [--top] [--phase]` | **P3**: workspace 전체 분포 통계 |
+| `warning-export` | `--workspace --format [--slug] [--rule] [--phase] [--mode] [--out]` | **P3**: CSV/JSON 산출물 추출 |
+
+**`_index.json` schema v2 갱신** (P3, in-place): `schema_version 1→2`, `owner_role_mismatch` + `measure_at: "P3"` + `mode: "observation"` + `source: ":1455"` 정정.
+
+**`core/project_pipeline.py:1466`**: `source_path` 리터럴 `:1401` → `:1455` (callsite 기준 정정, record schema 불변).
+
+**CLI**: `af warning-summary` / `af warning-repair` (P1) · `af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]` (P2: false-positive override + 즉시 decision 재생성) · `af warning-stats` / `af warning-export` (P3: 분포 통계 + 산출물 추출).
+
+**af.spec hiddenimports**: `core.escalation_decision_report` + `core.warning_overrides` (P2) + `core.warning_stats` (P3) 추가.
+
+**테스트**: P1 25케이스 + P2 신규 10파일 39케이스 + P3 신규 2파일 16케이스 = **총 80 케이스 PASS**
 - P2 신규: `test_escalation_evaluator` (10) · `test_decision_report` (3) · `test_approval_gate_block_decision` (6) · `test_pipeline_block_enforcement` (2) · `test_warning_override_cli` (3) · `test_task_template_e2e_command` (3) · `test_inject_review_tasks_e2e_command` (1) · `test_summary_schema_repeat_count` (1) · `test_work_item_generator_backfill` (9) · `test_wig_summarize_wiring` (1)
+- P3 신규: `test_warning_stats` (7) · `test_warning_stats_cli` (9)
 
 ---
 
@@ -1383,6 +1418,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-10 | v1.2.26 | feat(P3-owner-lint-measurement): `core/warning_stats.py` 신규 — `iter_warning_records()` + `collect_workspace_stats()` + `_load_index()` + `_compute_distribution()` (read-only, WarningRegistry.summarize 미사용). `run_factory_cli` `warning-stats`/`warning-export` 서브커맨드 + `_STAGE1_DISPATCH`/`_STAGE1_USAGE` 2 entry 추가. `core/project_pipeline.py:1466` `source_path` `:1401`→`:1455` 1줄 정정. `runtime/warnings/_index.json` in-place schema v1→v2 (`measure_at: "P3"`, `mode: "observation"`, `source: ":1455"`). `af.spec` hiddenimports `core.warning_stats`. `version.py` 1.2.26. `install-af.ps1` 8곳 일괄. `tests/test_warning_stats.py` 7케이스 + `tests/test_warning_stats_cli.py` 9케이스 신규. P1 25 + P2 39 + P3 16 = **총 80 케이스 PASS**. §0 `core/warning_stats` 행 신규 + §3.8 P3 갱신. |
 | 2026-05-10 | v1.2.25 | feat(P2-warning-registry): escalation_evaluator 본체 구현 — `RunDecision`·`compute_run_decision()`·`load_policy()` public. `core/escalation_decision_report.py` 신규: `write_decision_report()`·`write_error_decision()`. `core/warning_overrides.py` 신규: `upsert_override()`·`remove_override()`. `warning_registry.summarize()` P2 escalation_phase 마커 + fail-closed decision chain. `approval_gate.read_block_decision()` P2 fail-closed. `project_pipeline.execute()` escalation_block 체크. `project_task_board._task_template()` + `inject_review_tasks()` e2e_command TODO 마커. `work_item_generator._is_e2e_missing()`·`_backfill_e2e_from_tasks_md()`·summarize 호출. `run_factory_cli warning-override` 서브커맨드. af.spec hiddenimports 2건. 테스트 P1 25 + P2 39 = **64 케이스 PASS**. §3.8 P2 갱신. |
 | 2026-05-09 | v1.2.24 | fix(P1-warning-registry): `_record_ledger_outcomes(project_slug: str = "")` 시그니처 추가 — `project_id = project_slug or os.path.basename(workspace)`로 workspace basename 대신 work_item_slug 우선 사용. cross-review BLOCK 수정. |
 | 2026-05-09 | v1.2.23 | feat(P1-warning-registry): `core/warning_registry.py` + `core/escalation_evaluator.py` 신설 — WarningRecord schema v1, WarningRegistry(record/summarize/rebuild_caches/repair), EscalationDecision stub(block=False), _load_policy(escalation_policy.yaml frozen-aware). `core/project_task_board.detect_owner_drift()` bool→list[tuple]. `core/approval_gate.py` __init__(runtime_workspace=None) keyword 추가 + _render() gate_decision_report 주입. 호출처 2곳(work_item_generator:1061, project_pipeline:95) runtime_workspace 추가. 4건 WARN 마이그레이션(e2e_command_missing/owner_role_mismatch/evidence_quality_warn/plan_verifier_warn). CLI(warning-summary/warning-repair). runtime/warnings/.gitkeep+_index.json. .gitignore 3줄. af.spec hiddenimports. 테스트 25 케이스 PASS. §3.8 신규. |

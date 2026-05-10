@@ -329,6 +329,174 @@ def _run_warning_override_subcommand(rest: list[str]) -> None:
     WarningRegistry(workspace=args.workspace).summarize(project_slug=args.slug)
 
 
+def _run_warning_stats_subcommand(rest: list[str]) -> None:
+    """warning-stats --workspace PATH [--slug SLUG] [--rule RULE] [--top N] [--phase PHASE]"""
+    import argparse
+    import json
+    import sys
+    parser = argparse.ArgumentParser(prog="af warning-stats")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--slug", default=None, help="단일 project_slug filter (path traversal 방어)")
+    parser.add_argument("--rule", default="owner_role_mismatch", help="분석 대상 rule_id")
+    parser.add_argument("--top", type=int, default=10, help="projects[] 상위 N개 (0=전체)")
+    parser.add_argument("--phase", default=None, help="record-level phase filter")
+    args = parser.parse_args(rest)
+    if args.top < 0:
+        parser.error("--top must be >= 0")
+    if args.slug is not None:
+        slug_val = args.slug
+        import os as _os
+        if (not slug_val or "/" in slug_val or "\\" in slug_val or ".." in slug_val
+                or _os.path.basename(slug_val) != slug_val):
+            parser.error(f"invalid --slug value: {slug_val!r} (path traversal 방어)")
+    from core.warning_stats import collect_workspace_stats
+    result = collect_workspace_stats(
+        args.workspace,
+        rule_id=args.rule,
+        slug=args.slug,
+        phase=args.phase,
+        top=args.top,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _run_warning_export_subcommand(rest: list[str]) -> None:
+    """warning-export --workspace PATH --format {csv,json} [options]"""
+    import argparse
+    import csv
+    import datetime
+    import json
+    import os
+    import sys
+    parser = argparse.ArgumentParser(prog="af warning-export")
+    parser.add_argument("--workspace", required=True, help="AF 운영 데이터 루트")
+    parser.add_argument("--format", required=True, choices=["csv", "json"], dest="fmt", help="출력 포맷")
+    parser.add_argument("--rule", default="owner_role_mismatch", help="대상 rule_id")
+    parser.add_argument("--slug", default=None, help="단일 project_slug filter")
+    parser.add_argument("--phase", default=None, help="record-level phase filter (v4 #5)")
+    parser.add_argument("--mode", default="records", choices=["records", "summary"], help="records 또는 summary")
+    parser.add_argument("--out", default=None, help="출력 파일 절대경로 (없으면 stdout)")
+    args = parser.parse_args(rest)
+
+    if args.mode == "summary" and args.fmt == "csv":
+        parser.error("summary mode is incompatible with csv format")
+
+    if args.slug is not None:
+        slug_val = args.slug
+        if (not slug_val or "/" in slug_val or "\\" in slug_val or ".." in slug_val
+                or os.path.basename(slug_val) != slug_val):
+            parser.error(f"invalid --slug value: {slug_val!r} (path traversal 방어)")
+
+    from core.warning_stats import collect_workspace_stats, iter_warning_records
+
+    def _write_output(content: str, out_path: str | None) -> None:
+        if out_path is None:
+            sys.stdout.write(content)
+            return
+        out_path = os.path.abspath(out_path)
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        tmp_path = f"{out_path}.tmp.{os.getpid()}"
+        try:
+            with open(tmp_path, "w", encoding="utf-8", newline="") as fh:
+                fh.write(content)
+            os.replace(tmp_path, out_path)
+        except Exception as exc:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+            print(f"[warning-export] write failed: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+    abs_workspace = os.path.abspath(args.workspace)
+
+    if args.mode == "summary":
+        result = collect_workspace_stats(
+            args.workspace, rule_id=args.rule, slug=args.slug, phase=args.phase
+        )
+        _write_output(json.dumps(result, ensure_ascii=False, indent=2) + "\n", args.out)
+        return
+
+    # records 모드
+    result_warnings: list[str] = []
+    records_out: list[dict] = []
+
+    # scanned_slug_count: collect_workspace_stats와 동일 기준 — 실제 slug 디렉토리 수
+    warnings_root = os.path.join(abs_workspace, "runtime", "warnings")
+    if args.slug is not None:
+        scanned_slug_count = 1 if os.path.isdir(os.path.join(warnings_root, args.slug)) else 0
+    else:
+        scanned_slug_count = 0
+        if os.path.isdir(warnings_root):
+            try:
+                with os.scandir(warnings_root) as _it:
+                    for _e in _it:
+                        if _e.is_dir() and not _e.name.startswith("_"):
+                            scanned_slug_count += 1
+            except OSError:
+                pass
+
+    for slug_name, record, err_msg in iter_warning_records(
+        args.workspace, rule_id=args.rule, slug=args.slug
+    ):
+        if err_msg is not None:
+            result_warnings.append(err_msg)
+            continue
+        rec_phase = record.get("affected_phase", "")
+        if args.phase is not None and rec_phase != args.phase:
+            continue
+        records_out.append({"project_slug": slug_name, "record": record})
+
+    if scanned_slug_count > 1000 or len(records_out) > 100000:
+        result_warnings.append(
+            f"large export: scanned_slug_count={scanned_slug_count}, record_count={len(records_out)}"
+        )
+
+    exported_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    if args.fmt == "json":
+        payload = {
+            "schema_version": 1,
+            "rule_id": args.rule,
+            "workspace": abs_workspace,
+            "applied_filters": {"slug": args.slug, "phase": args.phase},
+            "exported_at": exported_at,
+            "scanned_slug_count": scanned_slug_count,
+            "record_count": len(records_out),
+            "records": records_out,
+            "warnings": result_warnings,
+        }
+        _write_output(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", args.out)
+    else:
+        # CSV records 모드
+        import io
+        buf = io.StringIO()
+        fieldnames = [
+            "project_slug", "record_id", "ts", "rule_id", "severity",
+            "affected_phase", "count", "repeat_count", "affected_ids", "source_path",
+        ]
+        writer = csv.DictWriter(buf, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL, lineterminator="\n")
+        writer.writeheader()
+        for item in records_out:
+            pslug = item["project_slug"]
+            rec = item["record"]
+            affected_ids = rec.get("affected_ids", [])
+            row = {
+                "project_slug": pslug,
+                "record_id": rec.get("record_id", ""),
+                "ts": rec.get("ts", ""),
+                "rule_id": rec.get("rule_id", ""),
+                "severity": rec.get("severity", ""),
+                "affected_phase": rec.get("affected_phase", ""),
+                "count": rec.get("count", ""),
+                "repeat_count": rec.get("repeat_count", ""),
+                "affected_ids": json.dumps(affected_ids, ensure_ascii=False),
+                "source_path": rec.get("source_path", ""),
+            }
+            writer.writerow(row)
+        _write_output(buf.getvalue(), args.out)
+
+
 def _run_resume_subcommand(rest: list[str]) -> None:
     """resume <run_id> — 중단된 run을 재개한다.
 
@@ -444,6 +612,8 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
     "warning-summary":  _run_warning_summary_subcommand,
     "warning-repair":   _run_warning_repair_subcommand,
     "warning-override": _run_warning_override_subcommand,
+    "warning-stats":    _run_warning_stats_subcommand,
+    "warning-export":   _run_warning_export_subcommand,
 }
 
 
@@ -485,9 +655,12 @@ _STAGE1_USAGE = {
     "nightly-stop":    "usage: af nightly-stop [--workspace PATH]    # 야간 자율 모드 비활성화",
     "nightly-status":  "usage: af nightly-status [--workspace PATH]    # 야간 파이프라인 상태 조회",
     "nightly-tick":    "usage: af nightly-tick [--workspace PATH]    # 수동 1회 tick 실행",
+    "resume":          "usage: af resume [RUN_ID]    # 중단된 run 재개. 인자 없으면 재개 가능 목록 표시",
     "warning-summary":  "usage: af warning-summary --workspace PATH --slug SLUG    # WARN 요약 출력",
     "warning-repair":   "usage: af warning-repair --workspace PATH --slug SLUG    # _summary.json 재생성",
     "warning-override": "usage: af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]   # P2 false-positive override",
+    "warning-stats":    "usage: af warning-stats --workspace PATH [--slug SLUG] [--rule RULE] [--top N] [--phase PHASE]    # P3 workspace 전체 분포 통계",
+    "warning-export":   "usage: af warning-export --workspace PATH --format {csv,json} [--slug SLUG] [--rule RULE] [--phase PHASE] [--mode {records,summary}] [--out PATH]    # P3 회의용 산출물 추출",
 }
 
 
