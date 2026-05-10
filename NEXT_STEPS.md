@@ -1,9 +1,34 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-10 KST — **P3 설계 v4 PASS (cross-review v1 WARN + v3/v4 BLOCK 누계 ACCEPT 33건 흡수). 브랜치: `2026-05-07-memory-gitignore-cleanup`. 다음: P3 코드 구현 진입 (Sonnet 권장).**
+> 마지막 업데이트: 2026-05-10 KST — **P3 구현 완료 v1.2.26 (commit 61aad4ef). warning-stats/export CLI + _index.json schema v2 + 3-tier PASS. 다음: P4 설계 진입.**
 >
-> ## ✅ P3 설계 v4 상태
+> ## ✅ P3 구현 완료 (v1.2.26, commit 61aad4ef)
+>
+> - `core/warning_stats.py` 신규 — `iter_warning_records`, `collect_workspace_stats`, `_load_index`, `_compute_distribution`
+> - `run_factory_cli.py` — `warning-stats` / `warning-export` 서브커맨드 + `resume` USAGE 핫픽스
+> - `core/project_pipeline.py:1466` — source_path `:1401` → `:1455`
+> - `runtime/warnings/_index.json` — schema v2, `measure_at: P3`, `mode: observation`
+> - 테스트 P3 신규 16케이스 + 기존 64 = **80 PASS**
+> - 3-tier 게이트: PASS (af-test-runner / af-critic WARN 2 수정 / af-cross-review ACCEPT 1 수정 + HOLD 해소)
+>
+> ## 🔥 다음 세션 — P4 진입
+>
+> P3 분석 데이터 기반으로 `owner_role_mismatch` BLOCK 임계값 결정 설계.
+>
+> ```bash
+> git pull --ff-only
+> python start_db.py agent-factory
+> # /model → Opus (설계 단계)
+> ```
+>
+> P4 범위 (설계문서 작성 → 교차검증 → 구현):
+> - `config/escalation_policy.yaml` — `owner_role_mismatch` `activate_at: P4` 실제 활성화, 임계값 결정
+> - `core/escalation_evaluator.py` — `current_phase == "P4"` 분기 활성화
+> - `core/warning_registry.py:load_global()` stub 해제 (필요 시)
+> - P3 분석 결과 (`af warning-stats`) 기반으로 `repeat_count_min` 결정
+>
+> ## ✅ P3 설계 v4 상태 (참고용)
 >
 > - 설계문서: `docs/2026-05-10-p3-owner-lint-measurement-design.md` (v4)
 > - cross-review (3 라운드 누계):
