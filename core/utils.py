@@ -201,12 +201,18 @@ def resolve_existing_path(path_text: str) -> str | None:
 
 
 def to_portable_path(path_text: str) -> str:
+    # Convert an abs/rel path to repo-relative POSIX when it lives under
+    # BASE_DIR. We intentionally do NOT require the path to exist on disk —
+    # eval/promotion reports are serialized before the file is flushed, and
+    # PC-specific abs paths must never leak into committed artifacts.
+    # Paths outside BASE_DIR fall back to abs (POSIX-normalized).
     p = str(path_text or "").strip()
     if not p:
         return p
-    abs_p = resolve_existing_path(p)
-    if not abs_p:
+    # Already a portable rel path (no abs prefix, no backslash) — keep as-is.
+    if not os.path.isabs(p) and "\\" not in p:
         return p
+    abs_p = os.path.normpath(p if os.path.isabs(p) else os.path.join(BASE_DIR, p))
     try:
         rel = os.path.relpath(abs_p, BASE_DIR)
         if not rel.startswith(".."):

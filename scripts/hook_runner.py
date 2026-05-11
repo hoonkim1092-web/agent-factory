@@ -97,6 +97,21 @@ def _extract_file_path(payload: dict) -> str:
     return str(ti.get("file_path") or "")
 
 
+def _portable_fp(fp: str, root: str) -> str:
+    # Convert Claude Code's absolute file_path to repo-relative POSIX so
+    # downstream context strings (code-review.md, blueprint logs) stay
+    # PC-portable. Falls back to original on failure / out-of-tree paths.
+    if not fp:
+        return fp
+    try:
+        rel = os.path.relpath(fp, root)
+    except Exception:
+        return fp
+    if rel.startswith(".."):
+        return fp
+    return rel.replace("\\", "/")
+
+
 def _log_hook_event(builtin: str, file: str, exit_code: int, error: str = "") -> None:
     """훅 실행 시점·파일·결과를 append-only 로그에 기록. 실패는 silently swallow."""
     try:
@@ -168,9 +183,10 @@ def _post_edit_code_review(payload: dict) -> int:
     script = os.path.join(root, "scripts", "code_review_updater.py")
     if not os.path.isfile(script):
         return 0
+    fp_ctx = _portable_fp(fp, root)
     try:
         r = subprocess.run(
-            [sys.executable, script, "--no-llm", "--context", f"edit: {fp}"],
+            [sys.executable, script, "--no-llm", "--context", f"edit: {fp_ctx}"],
             timeout=120, cwd=root, capture_output=True,
         )
         _log_hook_event("post_edit_code_review", fp, r.returncode)
@@ -189,9 +205,10 @@ def _post_edit_blueprint(payload: dict) -> int:
     script = os.path.join(root, "scripts", "blueprint_updater.py")
     if not os.path.isfile(script):
         return 0
+    fp_ctx = _portable_fp(fp, root)
     try:
         r = subprocess.run(
-            [sys.executable, script, "--no-llm", "--context", f"edit: {fp}"],
+            [sys.executable, script, "--no-llm", "--context", f"edit: {fp_ctx}"],
             timeout=120, cwd=root, capture_output=True,
         )
         _log_hook_event("post_edit_blueprint", fp, r.returncode)

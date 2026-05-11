@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 from core.file_io import read_yaml
 from core.skill_feedback import SkillFeedbackLoop
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, to_portable_path
 
 
 EVAL_REPORT_FILENAME = "skill-eval-report.json"
@@ -93,16 +93,18 @@ class SkillEvalReport:
     written_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        # Persist paths as repo-relative POSIX (PC-portable) so eval reports
+        # don't churn across machines. Internal callers keep abs in memory.
         return {
             "skill_id": self.skill_id,
-            "skill_path": self.skill_path,
-            "evals_path": self.evals_path,
+            "skill_path": to_portable_path(self.skill_path) if self.skill_path else self.skill_path,
+            "evals_path": to_portable_path(self.evals_path) if self.evals_path else self.evals_path,
             "static_gate": dict(self.static_gate),
             "contract_eval": self.contract_eval.to_dict(),
             "hidden_eval": self.hidden_eval.to_dict(),
             "shadow_eval": self.shadow_eval.to_dict(),
             "recommended_stage": self.recommended_stage,
-            "report_path": self.report_path,
+            "report_path": to_portable_path(self.report_path) if self.report_path else self.report_path,
             "written_at": self.written_at,
         }
 

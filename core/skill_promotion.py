@@ -9,7 +9,7 @@ from typing import Any
 from core.policy import resolve_quality_gate_policy
 from core.skill_eval_harness import SkillEvalReport, _phase_from_payload, _shadow_from_payload, load_eval_report
 from core.skill_feedback import SkillFeedbackLoop, SkillFeedbackSummary
-from core.utils import lock_skill_state, now_iso, read_project_policies, read_skill_lock, safe_id
+from core.utils import lock_skill_state, now_iso, read_project_policies, read_skill_lock, safe_id, to_portable_path
 
 
 PROMOTION_REPORT_FILENAME = "skill-promotion.json"
@@ -28,7 +28,12 @@ class PromotionDecision:
     written_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        # Persist promotion_path as repo-relative POSIX so PC-specific abs paths
+        # don't pollute skill-promotion.json across machines.
+        if data.get("promotion_path"):
+            data["promotion_path"] = to_portable_path(data["promotion_path"])
+        return data
 
 
 class SkillPromotionManager:
@@ -192,8 +197,8 @@ class SkillPromotionManager:
                     "installable": decision.installable,
                     "reason": decision.reason,
                     "evidence": decision.evidence,
-                    "report_path": report.report_path,
-                    "promotion_path": decision.promotion_path,
+                    "report_path": to_portable_path(report.report_path) if report.report_path else report.report_path,
+                    "promotion_path": to_portable_path(decision.promotion_path) if decision.promotion_path else decision.promotion_path,
                 },
             )
         except Exception:
