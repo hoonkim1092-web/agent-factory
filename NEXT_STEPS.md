@@ -1,9 +1,19 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-11 KST (Opus 세션) — **🔥 다음 작업: B안(자동 sync hook 보강) 구현 진입. 사용자 결정 완료, 설계 6단계 합의 직전. 다음 세션은 Sonnet 4.6으로 진입 권장 (구현 단계).**
+> 마지막 업데이트: 2026-05-11 KST (Opus 후속 세션) — **✅ B안(자동 sync hook 보강) 구현·push 완료 commit `72ecea66` (Sonnet 4.6, 11:13 KST). 다음 진입 대상은 사용자 결정 대기 — P4b는 `runtime/warnings/*.jsonl` 데이터 수집 대기, Codex cross-review 재시도는 2026-05-13 이후 가능.**
 >
-> ## 🔥 다음 세션 — Blueprint 정합성 B안 구현 (Sonnet 4.6 권장)
+> ## ✅ Blueprint 정합성 B안 완료 (Sonnet 4.6, 2026-05-11) — commit `72ecea66`
+>
+> **완료 요약** (이하 본문은 설계 기록 보존):
+> - 6단계 전부 구현·실행: `--full-sync` 모드 / 삭제 감지 (`_deleted_files`/`_remove_section_0_rows`) / `last_updated` §12와 분리 / `.githooks/pre-commit` 동기 sync 블록 / 1회 `--full-sync` 실행 (§0 stub 61개 추가, `last_updated v1.2.25 → v1.2.28`) / `Master_Blueprint.md` §12 이력
+> - 결함 4건 모두 해소: post-commit 비동기/stderr 버림(보조 유지), last_updated §12 종속, 삭제 미처리, 기존 누락 58개
+> - 검증: maxdepth=1 미등록 58 → 0
+> - 잔여 scope: subdirectory 110개는 §3 narrative 영역 (자동 sync 범위 외 — 의도된 결정)
+>
+> ---
+>
+> ## 📜 B안 설계 기록 (참고용 보존, Opus 2026-05-11)
 >
 > ### 결정 결과 (2026-05-11 Opus 세션)
 > - **선택**: **B안 — 자동 sync hook 보강** (5개 옵션 중 추천)
