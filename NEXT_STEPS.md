@@ -1,7 +1,61 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-11 KST (Opus 후속 세션) — **✅ B안(자동 sync hook 보강) 구현·push 완료 commit `72ecea66` (Sonnet 4.6, 11:13 KST). 다음 진입 대상은 사용자 결정 대기 — P4b는 `runtime/warnings/*.jsonl` 데이터 수집 대기, Codex cross-review 재시도는 2026-05-13 이후 가능.**
+> 마지막 업데이트: 2026-05-11 KST (Opus 후속 세션) — **🔥 다음 작업: Domain Gate + Superpowers 패턴 흡수 설계 v2 (BLOCK 11건 흡수). Codex cross-review 재시도는 2026-05-13 01:00 KST 이후. 설계문서 v1은 이 commit에 보존.**
+>
+> ## 🔥 다음 세션 — Domain Gate 설계 v2 흡수 (Sonnet 4.6 권장)
+>
+> ### 컨텍스트
+> - **설계문서 v1**: `docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md` (419 lines, Draft)
+> - **Cross-review 결과**: `docs/reviews/2026-05-11-163128-...-design-review.md` — **Verdict: BLOCK** (11 ACCEPT)
+> - **Cross Review provider error** — codex 누락, Critic single-source. **5/13 01:00 KST 이후 codex 재시도 권장**
+>
+> ### BLOCK 흡수 대상 11건 (모두 ACCEPT)
+>
+> **Critical 3건 (Phase A 진입 전 필수)**:
+> 1. §3.3 / §10.2 식별자 교체 — `"feature"` → `"feature_update"`, `"architecture-change"` 도입 시 `core/control/work_kind.py:9` `_WORK_KIND_PRIORITY` + `ISSUE_KIND_MAP` 동시 갱신을 §7.2에 추가
+> 2. §3.2 ApprovalGate ↔ work_kind 통합 경로 명시 — 3가지 옵션 중 1택: (i) `__init__(work_kind=)` (ii) `approve(work_kind=)` (iii) `intake.py`가 gate 메타에 미리 기재. work_kind 호출 스택 다이어그램 1장 첨부
+> 3. §10.3 dead code 처분 옵션 A(즉시 제거)로 변경 — 동기 갱신 4파일: `core/skill_pack_bootstrapper.py` / `af.spec:122` / `tests/test_compact_step2.py` / `Master_Blueprint.md` §3.8.4 + §0
+>
+> **High 2건 (Phase A 작업에 포함)**:
+> 4. §5.1 LOC를 "Phase B 후 확정" 표기 또는 Superpowers 3개 스킬(`brainstorming` / `systematic-debugging` / `verification-before-completion`) 실측치 첨부
+> 5. PROJECT_CONTEXT stale 감지를 Phase A 안에 최소 1건 포함 — (a) last_updated 30일 초과 시 trigger 또는 (b) cross-review 체크리스트에 sample diff 1건 추가
+>
+> **Medium/Low 6건 (병렬 처리 가능)**:
+> 6. ADR 번호 부여 규칙 `ADR-YYYYMMDD-HHMM-<slug>` + git workflow 정책
+> 7. domain-review verdict 검증 시점 (`approve()` 직전 권장) + 예외 형태 `BlockedExecutionError("missing domain-review verdict")` 명시
+> 8. frozen build에서 `docs/decisions/` 경로 해석 검증 + ApprovalGate base path (`workspace` vs `runtime_workspace`) 명시
+> 9. MIT attribution — 흡수 SKILL.md 헤더에 `inspired_by: obra/superpowers/<skill_id>` 메타 정책
+> 10. 점진 활성 단계 전환 측정 지표 2~3개 (예: `BlockedExecutionError` 발생률, verdict 분포) + 결정자 명시
+> 11. §13 체크리스트 ✅ → `- [ ]` 변경
+>
+> **Missing from Design (별도 처리 권장, Critic 제기)**:
+> - work_kind 호출 스택 다이어그램 (Critical #2와 직결, 필수)
+> - `domain-review.md` 누락 vs verdict 누락 vs verdict=BLOCK 3가지 상태 구분 로직
+> - Phase B 평가 점수 외부 검증 절차
+> - `docs/decisions/` git workflow 정책 (PR 단위 vs 직접 commit, status 전환)
+> - rollback 시나리오 (`requires_domain_review` 환경변수 토글 등)
+>
+> ### 진입 명령
+> ```bash
+> git pull --ff-only
+> python start_db.py agent-factory
+> # /model → Sonnet 4.6 (v2 작성)
+> # 1. v1 설계문서 읽기: docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md
+> # 2. cross-review 결과 읽기: docs/reviews/2026-05-11-163128-...-design-review.md
+> # 3. 설계문서 v2 작성 (in-place 수정 또는 새 파일 docs/2026-05-13-domain-gate-...-design-v2.md)
+> # 4. 5/13 01:00 이후 → Codex cross-review 재시도 (af-cross-review 자동 발화)
+> # 5. PASS 후 Phase A 구현 진입
+> ```
+>
+> ### 의사결정 기준 (구현자가 임의 변경 금지)
+> 1. **외부 import 0건 원칙** (§5.2) — `from superpowers ...` / marketplace 호출 / `.claude/plugins/` 직접 참조 모두 금지
+> 2. **GStack 자동 설치 폐기** (§6.1) — 4/22 Q8 Phase B 결정 폐기, 사용자 수동 설치만
+> 3. **Superpowers 14개 패키지 통째 import 폐기** (§6.2)
+> 4. **Phase A `requires_domain_review` 기본값 False 출발** (점진 활성, §10.2)
+> 5. **점수표 기반 통합안 우위** — 직전 권장안 77 vs 사용자 요구안 58 vs **통합안 85** (§1.3, double-count 보정 후)
+>
+> ---
 >
 > ## ✅ Blueprint 정합성 B안 완료 (Sonnet 4.6, 2026-05-11) — commit `72ecea66`
 >
