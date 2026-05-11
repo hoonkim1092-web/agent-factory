@@ -74,6 +74,7 @@
 > - `.claude/agents/af-cross-review.md`: 케이스 2 (외부 0개) 메시지에 single-vendor 모드 라벨 + judge 해석 가이드 + verdict 라인 `[single-vendor]` 마커 추가
 > - 옵션 1+3 통합 적용 (Critic=Sonnet, Implementer=Opus 모델 사이즈 분리는 이미 frontmatter에 적용 상태, 명시적 정책으로 굳힘)
 > - **코드 변경 0건** → review-gate 자동 통과
+> - ⚠️ **사후 정정 (2026-05-11)**: Phase 1의 detection 효과 ~5%(옵션 1)는 Phase 3 단계 1(영역 SKILL 동적 로드, 30~50%)에 흡수됨. **Phase 1의 잔존 가치는 옵션 3 (명칭 정직화 = single-vendor 함정 방지)뿐**. 옵션 1 frontmatter는 비용 0이라 그대로 둠. 미래 세션이 "Phase 1 = detection 향상"으로 오해하지 말 것.
 >
 > ### Phase 2 ✅ 완료 (2026-05-11 Opus, this sprint)
 > - `core/review_report.py`: `ReviewerResult.vendor_mode` 필드 추가 (multi/single/same-vendor)
