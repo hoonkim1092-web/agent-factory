@@ -73,6 +73,62 @@ def _new_files(workspace: str) -> list[str]:
     return [f.strip() for f in out.splitlines() if f.strip()]
 
 
+def _deleted_files(workspace: str) -> list[str]:
+    """삭제된 파일 (staged 우선, 없으면 HEAD 비교)."""
+    out = _git(["diff", "--diff-filter=D", "--name-only", "--staged"], workspace)
+    if not out:
+        out = _git(["diff", "--diff-filter=D", "--name-only", "HEAD"], workspace)
+    return [f.strip() for f in out.splitlines() if f.strip()]
+
+
+def _all_core_maxdepth1(workspace: str) -> list[str]:
+    """core/ 직하 *.py 목록 (서브디렉토리 제외)."""
+    core_dir = os.path.join(workspace, "core")
+    result = []
+    try:
+        for name in os.listdir(core_dir):
+            if name.endswith(".py") and os.path.isfile(os.path.join(core_dir, name)):
+                result.append(f"core/{name}")
+    except Exception:
+        pass
+    return sorted(result)
+
+
+def _registered_core_files(blueprint_path: str) -> set[str]:
+    """§0 테이블에 이미 등록된 core/*.py 집합."""
+    try:
+        with open(blueprint_path, encoding="utf-8") as f:
+            content = f.read()
+        return set(re.findall(r"`(core/[a-z_]+\.py)`", content))
+    except Exception:
+        return set()
+
+
+def _remove_section_0_rows(blueprint_path: str, deleted_files: list[str]) -> bool:
+    """§0 테이블에서 삭제된 core/*.py 행 제거. 제거했으면 True."""
+    core_deleted = [f.replace("\\", "/") for f in deleted_files
+                    if f.replace("\\", "/").startswith("core/") and f.endswith(".py")]
+    if not core_deleted:
+        return False
+    try:
+        with open(blueprint_path, encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception:
+        return False
+
+    removed = False
+    new_lines = []
+    for line in lines:
+        if any(re.search(rf"^\|\s*`{re.escape(fp)}`\s*\|", line) for fp in core_deleted):
+            removed = True
+        else:
+            new_lines.append(line)
+
+    if removed:
+        _atomic_write(blueprint_path, "".join(new_lines))
+    return removed
+
+
 def _diff_content(workspace: str) -> str:
     out = _git(["diff", "HEAD"], workspace, timeout=15)
     if len(out) > DIFF_MAX_CHARS:
@@ -242,6 +298,24 @@ def _update_section_0(blueprint_path: str, new_core_files: list[str], workspace:
     return added
 
 
+def full_sync(workspace: str, blueprint_path: str) -> int:
+    """--full-sync: maxdepth=1 미등록 파일 일괄 stub 등록 + last_updated 강제 갱신.
+    Returns: 추가된 파일 수."""
+    all_files = _all_core_maxdepth1(workspace)
+    registered = _registered_core_files(blueprint_path)
+    unregistered = [f for f in all_files if f not in registered]
+
+    added = 0
+    if unregistered:
+        if _update_section_0(blueprint_path, unregistered, workspace):
+            added = len(unregistered)
+
+    version = _read_version(workspace)
+    _update_header_metadata(blueprint_path, version)
+    print(f"[blueprint_updater] full-sync 완료: {added}개 stub 추가, last_updated → {version}")
+    return added
+
+
 # ── §12 update ──────────────────────────────────────────────────────────────
 
 def _already_logged(blueprint_path: str, commit_hash: str) -> bool:
@@ -355,9 +429,16 @@ def update_blueprint(workspace: str, context: str, no_llm: bool) -> bool:
     if new_core:
         _update_section_0(blueprint_path, new_core, workspace)
 
-    # 헤더 메타데이터 갱신
+    # §0 삭제 감지
+    deleted = _deleted_files(workspace)
+    deleted_core = [f for f in deleted
+                    if f.replace("\\", "/").startswith("core/") and f.endswith(".py")]
+    if deleted_core:
+        _remove_section_0_rows(blueprint_path, deleted_core)
+
+    # 헤더 메타데이터 갱신 — trigger 파일 변경 시 항상 (§12 성공 여부 무관)
+    _update_header_metadata(blueprint_path, version)
     if updated:
-        _update_header_metadata(blueprint_path, version)
         print(f"[blueprint_updater] {blueprint_path} updated — {entry[:80]}")
 
     return updated
@@ -379,6 +460,10 @@ def main() -> None:
         "--context", default="",
         help="Short description of current work"
     )
+    parser.add_argument(
+        "--full-sync", action="store_true",
+        help="maxdepth=1 미등록 core/*.py 일괄 stub 등록 + last_updated 강제 갱신"
+    )
     args = parser.parse_args()
 
     workspace = args.workspace or _detect_workspace()
@@ -386,8 +471,19 @@ def main() -> None:
         print(f"[blueprint_updater] workspace not found: {workspace}", file=sys.stderr)
         sys.exit(0)
 
-    # debounce (PostToolUse에서 빈번 호출 방지)
-    # no_llm 여부와 무관하게 적용 — 우회 시 편집마다 §12에 항목이 누적됨
+    blueprint_path = os.path.join(os.path.abspath(workspace), BLUEPRINT_REL)
+
+    if args.full_sync:
+        if not os.path.exists(blueprint_path):
+            print(f"[blueprint_updater] blueprint not found: {blueprint_path}", file=sys.stderr)
+            sys.exit(0)
+        try:
+            full_sync(workspace, blueprint_path)
+        except Exception as exc:
+            print(f"[blueprint_updater] full-sync error: {exc}", file=sys.stderr)
+        sys.exit(0)
+
+    # debounce (PostToolUse에서 빈번 호출 방지, --full-sync는 적용 안 함)
     if not _should_run_debounce(workspace):
         sys.exit(0)
 

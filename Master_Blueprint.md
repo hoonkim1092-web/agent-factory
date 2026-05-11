@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-10 | version: v1.2.25 -->
+<!-- last_updated: 2026-05-11 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -134,6 +134,64 @@
 | `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
 | `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
 
+| `core/agent_reservation.py` | agent reservation | `AgentLease`, `AgentReservationManager` |
+| `core/capability_intent.py` | capability intent | — |
+| `core/clarification.py` | clarification | `generate_clarification_questions()`, `should_skip_clarification()`, `merge_clarification()` |
+| `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
+| `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
+| `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
+| `core/conversation_manager.py` | conversation manager | `ConversationResult`, `TranscriptStore`, `ConversationManager` |
+| `core/conversation_prompts.py` | conversation prompts | `build_conversation_prompt()`, `build_moderator_decision_prompt()`, `build_consensus_check_prompt()` |
+| `core/conversation_room.py` | conversation room | `ConversationBudget`, `ConversationTurn`, `ConsensusResult` |
+| `core/conversation_task_adapter.py` | conversation task adapter | `ConversationToTaskAdapter` |
+| `core/external_skill_candidate_importer.py` | external skill candidate importer | — |
+| `core/external_skill_source_ids.py` | external skill source ids | `safe_id()`, `normalize_external_source_id()`, `legacy_external_source_ids()` |
+| `core/external_skill_sources.py` | external skill sources | — |
+| `core/file_io.py` | file io | `read_yaml()`, `write_yaml()`, `write_text()` |
+| `core/file_lock.py` | file lock | `locked_file()` |
+| `core/hashline_editor.py` | hashline editor | `HashlineEditor` |
+| `core/implementation_language_policy.py` | implementation language policy | `enforce_os_language_for_human_text()`, `implementation_language_profile()`, `implementation_language_contract_text()` |
+| `core/install_candidate_utils.py` | install candidate utils | `safe_id()`, `infer_source_id_from_candidate_key()`, `canonical_install_candidate_key()` |
+| `core/intent.py` | intent | `IntentGate` |
+| `core/ise_stall_detector.py` | ise stall detector | `StallDetector` |
+| `core/knowledge_skill.py` | knowledge skill | `KnowledgeSkill` |
+| `core/langchain_adapter.py` | langchain adapter | `LangChainToolAdapter`, `LangChainChatModelFactory`, `PydanticOutputAdapter` |
+| `core/lsp_bridge.py` | lsp bridge | `LSPBridge` |
+| `core/mcp_adapter.py` | mcp adapter | `MCPServerConnection`, `MCPAdapter` |
+| `core/memory.py` | memory | `read_core_memory()` |
+| `core/onboarding_wizard.py` | onboarding wizard | `OnboardingWizard` |
+| `core/parallel_critique.py` | parallel critique | `CritiqueResult`, `MergedCritique`, `ParallelCritiqueEngine` |
+| `core/pdca_commands.py` | pdca commands | `PDCACommandRegistry` |
+| `core/pdca_state.py` | pdca state | `PDCAPhase`, `ProjectLevel`, `PDCAState` |
+| `core/pipeline_quality.py` | pipeline quality | `VerdictResult`, `AggregatedVerdict`, `PipelineStageGuard` |
+| `core/plan_verifier.py` | plan verifier | `PlanVerifyResult`, `PlanVerifier` |
+| `core/policy.py` | policy | — |
+| `core/project_init.py` | project init | `ensure_project_files()` |
+| `core/registry.py` | registry | `ToolRegistry` |
+| `core/registry_manager.py` | registry manager | `RegistryManager` |
+| `core/request_router.py` | request router | `RequestRouter` |
+| `core/retrieval_router.py` | retrieval router | `RetrievalStrategy`, `RetrievalPlan`, `RetrievalRouter` |
+| `core/review_report.py` | review report | `ReviewerResult`, `JudgeResult`, `ReviewReport` |
+| `core/review_runner.py` | review runner | `detect_providers()`, `detect_blocked_providers()`, `select_review_pair()` |
+| `core/role_decomposer.py` | role decomposer | `log()`, `get_random_signature()`, `load_policy()` |
+| `core/rubric_compiler.py` | rubric compiler | `DimensionScore`, `RubricResult`, `RubricCompiler` |
+| `core/runner.py` | runner | `RunPipeline` |
+| `core/security_scanner.py` | security scanner | `security_scan()` |
+| `core/semantic_embedder.py` | semantic embedder | `SemanticEmbedder` |
+| `core/skill_autodiscover.py` | skill autodiscover | `SkillAutoDiscovery` |
+| `core/skill_context_config.py` | skill context config | `SkillLoaderConfig` |
+| `core/skill_feedback.py` | skill feedback | — |
+| `core/skill_metadata.py` | skill metadata | `SkillCategory`, `SkillType`, `SkillMetadata` |
+| `core/skill_preflight.py` | skill preflight | `PreflightResult`, `PreflightEvaluator` |
+| `core/skill_retrieval_engine.py` | skill retrieval engine | — |
+| `core/skill_spec_synthesizer.py` | skill spec synthesizer | — |
+| `core/synergy_runner.py` | synergy runner | — |
+| `core/template_input.py` | template input | `prompt_mission_template()` |
+| `core/terminal_bridge.py` | terminal bridge | `TerminalBridge` |
+| `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
+| `core/text_integrity.py` | text integrity | `TextFileFormat`, `TextFileSnapshot` |
+| `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `strip_code_fences()` |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -1452,6 +1510,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-11 | v1.2.28 | fix(blueprint-sync-B): Blueprint §0 자동 sync hook 보강 (B안). `scripts/blueprint_updater.py`: `_deleted_files()` 신규(staged→HEAD 순 diff-filter=D), `_all_core_maxdepth1()` 신규(os.listdir maxdepth=1), `_registered_core_files()` 신규(§0 grep), `_remove_section_0_rows()` 신규(삭제 파일 §0 행 제거), `full_sync()` 신규(미등록 일괄 stub 등록 + last_updated 강제 갱신), `--full-sync` CLI 옵션 추가(debounce 우회), `update_blueprint()` 삭제 감지 통합 + `_update_header_metadata` §12 성공 조건에서 분리(항상 갱신). `.githooks/pre-commit`: Blueprint 자동 동기화 블록 추가(코드 변경 감지 → `--no-llm` 동기 호출 → unstaged Blueprint 자동 stage → STAGED 재캡처). 1회 `--full-sync` 실행: §0 stub 61개 추가, last_updated v1.2.25→v1.2.28 동기. 미등록 core/*.py maxdepth=1: 58→0. |
 | 2026-05-11 | v1.2.28 | feat(work-item-parallel-v3.1): Work-Item 병렬화 v3.1 §11 (c) 항목 전체 구현. `core/work_item_generator.py`: `_GRACE_SEC=5` 상수 신설. `_exec_stage1(deadline, work_item_id, project_brief, role_plan, *, base_run_id, workspace)` 신설 — plan 생성 + `_build_episode_hints_section` append (F3/F4). `_exec_stage3(deadline, design_result, spec_result, ..., task_board, *, base_run_id, workspace)` 신설 — `_extract_section_outline(expected_count=12)` + tasks 생성 (F4/F9). `_generate_and_refine` 시그니처에 `deadline: float = 0.0` 추가 — deadline>0 시 init timeout_sec 재계산 + refine loop 매 iteration 전 remaining≤_GRACE_SEC 체크/break (F1). `_refine_document` 시그니처에 `timeout_sec: int = 120` 추가. `_extract_section_outline` mismatch 시 `""` 반환 (F9). `_exec_stage2` `timeout_sec=llm_timeout` → `deadline=deadline` 전달. `generate_work_items` Stage1/3 인라인 → `_exec_stage1`/`_exec_stage3` 교체 + Stage3 진입 전 `time.sleep(_GRACE_SEC)` 추가 (R7). `core/requirement_llm.py`: `concurrent.futures` 모듈레벨 import. `_call_google_api` `timeout_sec: int = 120` + ThreadPoolExecutor manual(`fut.result(timeout=) / shutdown(wait=False)`). `_call_openai_api` `timeout_sec` + `client.with_options(timeout=)`. `_call_anthropic_api` `timeout_sec` + `urlopen(timeout=timeout_sec)`. `execute_document_prompt` 3 API 호출에 `timeout_sec=timeout_sec` 전달 (F2). `core/work_item_telemetry.py`: 경로 `workspace_runtime_dir(workspace) / "work_item_telemetry"` 2곳 (F7). `core/cli_session_cleanup.py`: 디렉토리 mtime → 자식 파일 max mtime fallback (R8). `version.py` 1.2.28, `install-af.ps1` 8곳. 3-tier: Tier1 24 PASS / Tier2 BLOCK→PASS(Google ThreadPoolExecutor 수정) / Tier3 SKIP(Codex 한도 2026-05-13 reset). §0 4행 갱신. |
 | 2026-05-10 | v1.2.27 | feat(P4a-owner-lint-activation): `config/escalation_policy.yaml` v0→v1 (`current_phase: "P4"`, rule-level `mode: observation/enforce`). `core/escalation_evaluator.py`: `_PolicyRule.mode` 필드 신규 + mode 유효성 검증(enforce/observation/off 외 raise) + `read_current_phase(policy) → str` 헬퍼 신규 + `evaluate()` mode 분기(false_positive_override 직후 — off→mode_off, observation→block_candidate/warn, enforce→기존). `core/escalation_decision_report.py`: `write_error_decision` `current_phase: str = "P2"` kwarg 추가 + payload 동적화. `core/warning_registry.py:summarize()` 재구성: policy single-load(split read 금지) → current_phase 동적화 → _build_summary → `summary["escalation_phase"] = current_phase` → JSON write → decision report (2곳 `write_error_decision(current_phase=)` 전달, `_write_minimal_block_decision` 최후 floor 유지). `version.py` 1.2.27, `install-af.ps1` 8곳 일괄. 신규 테스트 3파일 12케이스 (`test_escalation_evaluator_p4a`, `test_warning_registry_p4a`, `test_escalation_policy_yaml_p4a`). P1 25 + P2 39 + P3 16 + **P4a 12 = 92 케이스 PASS** (기존 80 회귀 포함). §3.8 P4a 갱신. |
 | 2026-05-10 | v1.2.26 | feat(P3-owner-lint-measurement): `core/warning_stats.py` 신규 — `iter_warning_records()` + `collect_workspace_stats()` + `_load_index()` + `_compute_distribution()` (read-only, WarningRegistry.summarize 미사용). `run_factory_cli` `warning-stats`/`warning-export` 서브커맨드 + `_STAGE1_DISPATCH`/`_STAGE1_USAGE` 2 entry 추가. `core/project_pipeline.py:1466` `source_path` `:1401`→`:1455` 1줄 정정. `runtime/warnings/_index.json` in-place schema v1→v2 (`measure_at: "P3"`, `mode: "observation"`, `source: ":1455"`). `af.spec` hiddenimports `core.warning_stats`. `version.py` 1.2.26. `install-af.ps1` 8곳 일괄. `tests/test_warning_stats.py` 7케이스 + `tests/test_warning_stats_cli.py` 9케이스 신규. P1 25 + P2 39 + P3 16 = **총 80 케이스 PASS**. §0 `core/warning_stats` 행 신규 + §3.8 P3 갱신. |

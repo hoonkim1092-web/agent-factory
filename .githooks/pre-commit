@@ -4,6 +4,19 @@
 BLUEPRINT="Master_Blueprint.md"
 STAGED=$(git diff --cached --name-only)
 
+# ── Blueprint 자동 동기화 (pre-commit, 동기, --no-llm) ──
+_PRE_CODE=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
+if [ -n "$_PRE_CODE" ]; then
+    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+    [ -x "$VENV_PYTHON" ] && _BPY="$VENV_PYTHON" || _BPY="python3"
+    "$_BPY" "${REPO_ROOT}/scripts/blueprint_updater.py" --no-llm 2>/dev/null || true
+    if git diff --name-only 2>/dev/null | grep -q "^${BLUEPRINT}$"; then
+        git add "${BLUEPRINT}" 2>/dev/null || true
+    fi
+    STAGED=$(git diff --cached --name-only)
+fi
+
 # ── 기존: Blueprint 스테이징 체크 ──
 CODE_CHANGED=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
 
