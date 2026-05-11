@@ -41,7 +41,7 @@ def test_prepare_cli_session_writes_claude_hook_settings(tmp_path: Path):
     assert "hook_runner.py" in hook_command
     assert "cli_hook_bridge" in hook_command
     if os.name == "nt":
-        assert "C:/Project/" in hook_command or "C:/" in hook_command
+        import re; assert re.search(r"[A-Z]:/", hook_command), f"Windows 절대경로 없음: {hook_command}"
         assert "\\scripts\\hook_runner.py" not in hook_command
     assert "permissions" in settings
     assert "Bash(rm:*)" in settings["permissions"]["deny"]
@@ -85,7 +85,7 @@ def test_prepare_cli_session_routes_gemini_hooks_via_generated_defaults_file(tmp
     assert "hook_runner.py" in hook_command
     assert "cli_hook_bridge" in hook_command
     if os.name == "nt":
-        assert "C:/Project/" in hook_command or "C:/" in hook_command
+        import re; assert re.search(r"[A-Z]:/", hook_command), f"Windows 절대경로 없음: {hook_command}"
         assert "\\scripts\\hook_runner.py" not in hook_command
     assert str(guard_path) in settings["policyPaths"]
     assert guard_path.exists()
