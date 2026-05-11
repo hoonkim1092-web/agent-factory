@@ -81,6 +81,16 @@
 > - 회귀 테스트 (`tests/test_review_gate_single_vendor.py` 신설)
 > - 작업 시점: Codex 한도 회복 5/13+ 또는 동시
 >
+> ### Phase 3 — 영역별 전문가 패널 (설계문서 v1 작성됨)
+> - **설계문서**: `docs/2026-05-11-tier2-domain-expert-panel-design.md` (Draft v1)
+> - **단계 1 (옵션 B, ~200 LOC, 2~2.5일)**: 단일 critic이 변경 영역 감지 후 SKILL 동적 로드 (38개 자체 스킬 활용)
+>   - `core/critic_skill_router.py` 신규 (영역 매핑)
+>   - `.claude/agents/af-critic.md` Step 0.5 추가 (SKILL 로드)
+>   - 회귀 테스트
+> - **단계 2 (옵션 A, 조건부, ~580 LOC)**: sub-agent 5개 + judge 패널 — 단계 1 detection 향상 측정 후 결정
+> - **cross-review**: 5/13 01:00 KST 이후 Codex 가용 시
+> - **타겟 효과**: detection 향상 50~70% (단계 1) / 70~90% (1+2 결합)
+>
 > ### 의사결정 근거
 > - Tier 2 외부화(옵션 2) 폐기 — Tier 3와 중복
 > - Tier 2 모델 사이즈 분리(옵션 1)는 효과 미미하지만 명시적 일관성 확보 차원에서 유지
