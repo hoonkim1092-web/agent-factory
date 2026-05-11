@@ -77,6 +77,28 @@ git diff HEAD~1 --stat
 ```
 변경된 파일 목록과 규모를 먼저 확인한다.
 
+### Step 1.5: 영역별 SKILL 동적 로드 (Tier 2 Phase 3 단계 1)
+
+변경 파일의 영역(프론트엔드/백엔드/오케스트레이터/메모리/도메인)에 따라 영역 전문 SKILL을 추천받아 체크리스트 컨텍스트를 보강한다.
+
+```bash
+CHANGED_FILES=$(git diff HEAD~1 --name-only 2>/dev/null | tr '\n' ' ')
+RECOMMENDED=$(python -m core.critic_skill_router --diff-paths "$CHANGED_FILES" 2>/dev/null)
+echo "추천 SKILL: $RECOMMENDED"
+
+# 각 SKILL.md를 읽어 영역별 체크리스트 확보 (Read 툴로)
+for SKILL_ID in $RECOMMENDED; do
+  SKILL_PATH="skills/$SKILL_ID/SKILL.md"
+  if [ -f "$SKILL_PATH" ]; then
+    echo "  → $SKILL_PATH 로드 권장"
+  fi
+done
+```
+
+응답 첫 줄 또는 verdict 직전에 `적용된 영역 SKILL: <목록>` 한 줄 표기 (사용자 검증 가능).
+
+추천된 SKILL의 체크리스트는 Step 3 일반 체크리스트에 **추가**로 적용한다 (대체 X). max 3개 (12-cap 정책).
+
 ### Step 2: 변경 코드 읽기
 변경된 모든 파일을 읽고, 변경 전후 diff를 분석한다.
 

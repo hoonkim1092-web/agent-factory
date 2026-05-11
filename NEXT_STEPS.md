@@ -75,21 +75,26 @@
 > - 옵션 1+3 통합 적용 (Critic=Sonnet, Implementer=Opus 모델 사이즈 분리는 이미 frontmatter에 적용 상태, 명시적 정책으로 굳힘)
 > - **코드 변경 0건** → review-gate 자동 통과
 >
-> ### Phase 2 후속 작업 (별도 sprint, ~50 LOC)
-> - `core/review_runner.py` 또는 judge 코드: Tier 3 PASS [single-vendor] 출력을 파싱해서 최종 결과에 자동 라벨링
-> - `scripts/review_gate.py`: single-vendor 모드 통과 시 commit message에 자동 라벨 prepend (예: `[single-vendor-validated]`)
-> - 회귀 테스트 (`tests/test_review_gate_single_vendor.py` 신설)
-> - 작업 시점: Codex 한도 회복 5/13+ 또는 동시
+> ### Phase 2 ✅ 완료 (2026-05-11 Opus, this sprint)
+> - `core/review_report.py`: `ReviewerResult.vendor_mode` 필드 추가 (multi/single/same-vendor)
+> - `core/review_runner.py`: `_extract_vendor_label()` 신규, run_aggregation() single-vendor notice 자동 prepend
+> - 9 회귀 테스트 PASS (`tests/test_review_runner_vendor_label.py`)
 >
-> ### Phase 3 — 영역별 전문가 패널 (설계문서 v1 작성됨)
-> - **설계문서**: `docs/2026-05-11-tier2-domain-expert-panel-design.md` (Draft v1)
-> - **단계 1 (옵션 B, ~200 LOC, 2~2.5일)**: 단일 critic이 변경 영역 감지 후 SKILL 동적 로드 (38개 자체 스킬 활용)
->   - `core/critic_skill_router.py` 신규 (영역 매핑)
->   - `.claude/agents/af-critic.md` Step 0.5 추가 (SKILL 로드)
->   - 회귀 테스트
-> - **단계 2 (옵션 A, 조건부, ~580 LOC)**: sub-agent 5개 + judge 패널 — 단계 1 detection 향상 측정 후 결정
-> - **cross-review**: 5/13 01:00 KST 이후 Codex 가용 시
-> - **타겟 효과**: detection 향상 50~70% (단계 1) / 70~90% (1+2 결합)
+> ### Phase 3 단계 1 ✅ 완료 (2026-05-11 Opus, this sprint)
+> - `core/critic_skill_router.py` 신규 (룰 기반 영역 매핑, max 3 SKILL, CLI 진입점)
+> - `.claude/agents/af-critic.md` Step 1.5 (영역별 SKILL 동적 로드) 추가
+> - `af.spec` hiddenimports 등록
+> - 17 회귀 테스트 PASS (`tests/test_critic_skill_router.py`)
+> - **위험**: 설계 v1만 있고 cross-review 미수행 (Codex 한도). Critic single-source 검증으로 진행, 5/13+ 후속 cross-review 권장
+>
+> ### Phase 3 단계 2 (조건부, 미착수)
+> - **단계 1 detection 향상 측정 후 결정** (4주간 finding 카테고리 통계)
+> - sub-agent 5개 (frontend/backend/architecture/security/distributed) + judge 패널 (~580 LOC)
+> - 단계 1로 충분하면 보류, 부족하면 진행
+>
+> ### 후속 (5/13+ cross-review)
+> - 도메인 게이트 v1 cross-review 재시도 (옵셔널)
+> - Tier 2 Phase 3 단계 1 설계 + 구현 cross-review (필수, BLOCK 흡수 시 v2)
 >
 > ### 의사결정 근거
 > - Tier 2 외부화(옵션 2) 폐기 — Tier 3와 중복

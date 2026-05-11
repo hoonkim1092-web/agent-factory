@@ -172,6 +172,7 @@ a = Analysis(
         'core.design_review_utils',
         'core.review_report',
         'core.review_runner',
+        'core.critic_skill_router',
         'core.pipeline_quality',
         # ── core.memory_system ──
         'core.memory_system',

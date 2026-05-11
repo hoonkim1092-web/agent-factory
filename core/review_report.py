@@ -33,6 +33,11 @@ class ReviewerResult:
     verdict: str = ""  # "BLOCK"/"WARN"/"PASS" (critic) or "ACCEPT"/"REJECT"/"HOLD" (cross)
     elapsed_seconds: float = 0.0
     token_count: int = 0
+    # Tier 2 Phase 2: vendor 다양성 라벨링.
+    # - "multi": 외부 프로바이더(codex/gemini 등) 참여 → 진짜 cross-vendor 검증
+    # - "single": cross-review SKIP 또는 same-vendor만 → single-vendor 모드
+    # - "same-vendor": critic role 자체 (Anthropic 셀프 페르소나 비판)
+    vendor_mode: str = "multi"
 
 
 @dataclass

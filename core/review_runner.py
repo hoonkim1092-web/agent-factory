@@ -187,10 +187,23 @@ def run_aggregation(
     workspace: str,
     prompt_name: str = "design_aggregation",
 ) -> str:
-    """취합 판정 실행. raw string 반환."""
+    """취합 판정 실행. raw string 반환.
+
+    Tier 2 Phase 2: cross_result에서 single-vendor 라벨 감지 시 judge prompt에
+    명시적 single-vendor 모드 안내를 prepend → judge가 결과 해석 시 함정 방지.
+    """
     template = _load_prompt(workspace, prompt_name)
+    vendor_notice = ""
+    if _extract_vendor_label(cross_result, "cross") == "single":
+        vendor_notice = (
+            "\n\n⚠️ **SINGLE-VENDOR MODE**: Cross Review에서 외부 프로바이더(codex/gemini) "
+            "참여 0건 또는 [single-vendor] 라벨 감지. 본 검증은 same-vendor(Anthropic) 단일 시각에 의존합니다. "
+            "Critic의 ACCEPT/PASS 결정도 외부 시각 검증을 거치지 않은 것이므로, "
+            "최종 verdict 작성 시 결과 라벨에 `[single-vendor-validated]` 마커를 부착하고, "
+            "사용자에게 외부 cross-review 재시도 권장을 명시하세요.\n\n"
+        )
     prompt = (
-        f"{template}\n\n---\n\n"
+        f"{template}{vendor_notice}\n\n---\n\n"
         f"## Critic Review\n\n{critic_result}\n\n---\n\n"
         f"## Cross Review\n\n{cross_result}\n\n---\n\n"
         f"## Original Document (for reference)\n\n{doc_content[:10000]}"
@@ -210,6 +223,21 @@ def _parse_verdict(raw: str) -> str:
     return "WARN"
 
 
+def _extract_vendor_label(raw: str, role: str) -> str:
+    """Tier 2 Phase 2: LLM 출력에서 vendor 모드 라벨 파싱.
+
+    - critic role: 항상 "same-vendor" (Anthropic 셀프 페르소나 비판)
+    - cross role: 출력에 [single-vendor] 마커 발견 시 "single", 정상 fan-out이면 "multi"
+    """
+    if role == "critic":
+        return "same-vendor"
+    # cross role: af-cross-review.md 케이스 2 (외부 프로바이더 0개)에서
+    # `## Tier 3 판정: PASS [single-vendor]` 형태로 마커 출력
+    if "[single-vendor]" in raw or "single-vendor 모드" in raw:
+        return "single"
+    return "multi"
+
+
 def run_critic_review(
     provider: str, doc_content: str, context: str = "",
     prompt_file: str = "design_critic",
@@ -225,6 +253,7 @@ def run_critic_review(
         findings_count=raw.count("[") // 2,
         verdict=_parse_verdict(raw),
         elapsed_seconds=time.time() - t0,
+        vendor_mode=_extract_vendor_label(raw, "critic"),
     )
 
 
@@ -242,4 +271,5 @@ def run_cross_review(
         provider=provider, role="cross", raw_output=raw,
         findings_count=raw.count("ACCEPT"),
         elapsed_seconds=time.time() - t0,
+        vendor_mode=_extract_vendor_label(raw, "cross"),
     )
