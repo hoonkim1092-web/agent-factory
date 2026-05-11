@@ -1,42 +1,81 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-11 KST — **🔥 다음 작업: Master_Blueprint.md 정합성 복구 옵션 결정 (사용자 결정 대기). Work-Item v1.2.28 ship 완료(commit `19ba4ab5`).**
+> 마지막 업데이트: 2026-05-11 KST (Opus 세션) — **🔥 다음 작업: B안(자동 sync hook 보강) 구현 진입. 사용자 결정 완료, 설계 6단계 합의 직전. 다음 세션은 Sonnet 4.6으로 진입 권장 (구현 단계).**
 >
-> ## 🔥 다음 세션 — Master_Blueprint.md 정합성 복구 (사용자 결정 대기)
+> ## 🔥 다음 세션 — Blueprint 정합성 B안 구현 (Sonnet 4.6 권장)
 >
-> ### 점검 결과 (2026-05-11)
+> ### 결정 결과 (2026-05-11 Opus 세션)
+> - **선택**: **B안 — 자동 sync hook 보강** (5개 옵션 중 추천)
+> - **이유**: Blueprint narrative(§1~§12) 보존하면서 §0 drift만 영구 차단, 외과적 변경
 >
-> | 검증 항목 | 측정값 | 결함 |
-> |----------|--------|------|
-> | `last_updated` 마커 | `v1.2.25` 표기 | 실제 `v1.2.28` — 3버전 stale |
-> | §0 등록 core/ 파일 | 127개 | 실제 maxdepth=1 = **139개 → 12 미등록** |
-> | 재귀(서브디렉토리) | 127개 | 실제 = **212개 → 85 미등록 (~40%)** |
-> | hook 검증 | 파일 mtime만 | **내용 정합성 미검증** |
+> ### 재검증된 측정값 (어제 측정 일부 보정)
 >
-> ### 미등록 핵심 파일 (이번 작업 의존)
-> - `core/file_io.py` — work_item_generator의 `write_text` import 근원
-> - `core/file_lock.py` — work_item_telemetry의 `locked_file` 근원
-> - `core/utils.py`, `core/concurrency.py`, `core/plan_verifier.py`, `core/skill_retrieval_engine.py` 외 53개
+> | 검증 항목 | 어제 기록 | 오늘 재검증 | 결함 |
+> |----------|----------|------------|------|
+> | `last_updated` 마커 | `v1.2.25` | `v1.2.25` (확인) | 3버전 stale (실제 v1.2.28) |
+> | §0 등록 unique core/ | 127개 | **102개** (정규식 보정) | — |
+> | core/ maxdepth=1 | 139 → 12 미등록 | 139 → **58 미등록** | 어제 측정 부정확 |
+> | core/ 재귀 | 212 → 85 미등록 | 212 → **110 미등록** | drift 추정보다 큼 |
 >
-> ### 결정해야 할 옵션 (사용자 결정 대기)
-> Blueprint 정합성 복구 방법 제안 — 다음 세션 시작 시 즉시 옵션 비교 제시 필요. 가능한 방향성:
+> ### 진단 — 기존 `scripts/blueprint_updater.py` 결함 4건 (drift 누적 원인)
 >
-> 1. **A안 — 1회성 일괄 보정**: 누락 85개를 §0 quick-ref에 일괄 추가 + last_updated 동기. 단점: 시간 ~2~3시간, 다음 drift도 재발 가능.
-> 2. **B안 — 자동 동기 hook 신규**: `.githooks/pre-commit`에 `scripts/blueprint_sync.py` 신설 — core/*.py 신규/삭제 감지 시 §0 행 자동 stub 생성/제거 + last_updated 자동 갱신. 단점: hook 구현 비용.
-> 3. **C안 — Blueprint 폐기 + 자동 색인 도입**: §0 quick-ref를 `scripts/index_core.py`로 매 commit hook에서 자동 생성한 `INDEX.md`로 대체. last_updated/누락 모두 자동 해결.
-> 4. **D안 — 현 상태 유지 + 운영 규율 강화**: WARN 보다는 부드러운 reminder hook만 — 사용자가 큐레이션 우선.
-> 5. **E안 — 혼합 (B + C)**: 자동 INDEX + 사람 작성 architecture narrative(§1~§12)를 분리.
+> | # | 결함 | 위치 | 영향 |
+> |---|------|------|------|
+> | 1 | `post-commit`에서 **비동기 + stderr 버림** (`&`, `2>/dev/null`) | `.githooks/post-commit:25` | 실패해도 사용자 모름 |
+> | 2 | `last_updated` 갱신이 **§12 prepend 성공 시에만** 호출 | `scripts/blueprint_updater.py:359-360` | §12 항목 안 만들어지면 마커 stale (v1.2.25 stale 원인) |
+> | 3 | **삭제 미처리** — `_new_files`만 보고 삭제된 core/*.py는 §0에서 안 빠짐 | `scripts/blueprint_updater.py:70-73`, `_update_section_0` | drift 양방향 누적 |
+> | 4 | **기존 누락 58개는 신규 감지 대상 아님** (`git diff --diff-filter=A`는 "이번 변경" 한정) | `scripts/blueprint_updater.py:70-73` | 한번 놓치면 영원히 등록 안 됨 |
 >
-> ### 점검 명령 재현
+> ### B안 보강 설계 6단계 (외과적 패치 + 1회 sync)
+>
+> | # | 변경 | 파일 | 검증 기준 |
+> |---|------|------|----------|
+> | 1 | `--full-sync` 모드 추가 — 누락 maxdepth=1 파일 일괄 stub 등록 + last_updated 강제 갱신 | `scripts/blueprint_updater.py` | 실행 후 미등록=0 (grep 검증) |
+> | 2 | 삭제 감지 추가 (`git diff --diff-filter=D --name-only`) — §0 행 자동 제거 | `scripts/blueprint_updater.py` | dummy add+delete 시뮬레이션 |
+> | 3 | `last_updated` 갱신을 §12 성공 조건과 **분리** → 항상 갱신 | `scripts/blueprint_updater.py:286-301` 분기 수정 | unit 호출 시 헤더 변동 확인 |
+> | 4 | `.githooks/pre-commit`에 **동기 호출** 추가 (`--no-llm`, post-commit 비동기는 보조로 유지) | `.githooks/pre-commit` | 더미 .py 추가 → commit → §0 행 자동 stage 확인 |
+> | 5 | 1회 `python scripts/blueprint_updater.py --full-sync` 실행 → §0 stub 58개 추가 + last_updated `v1.2.28` 동기 → commit | (실행만) | grep 재검증, §0 미등록=0 |
+> | 6 | Master_Blueprint.md §12에 변경 이력 추가 | `Master_Blueprint.md` | 같은 commit에 포함 |
+>
+> ### scope 결정 (확정)
+> - §0 자동 sync **maxdepth=1만**. 서브디렉토리 110개(`core/memory_system/`, `core/control/`, `core/continuity/` 등)는 §3 narrative에서 다루므로 자동화 범위 밖.
+> - **모델 권장**: 단계 1~4=Sonnet 4.6, 단계 5~6=any. 설계는 이미 Opus에서 완료.
+>
+> ### 측정 명령 재현
 > ```bash
-> grep -m 1 "last_updated" Master_Blueprint.md
-> cat version.py
-> # 등록 vs 실제 비교
+> # last_updated stale 확인
+> grep -m 1 "last_updated" Master_Blueprint.md   # 현재: v1.2.25, 목표: v1.2.28
+> # 미등록 58개 목록
 > comm -23 \
 >   <(find core -maxdepth 1 -name '*.py' | sed 's|.*/core/|core/|' | sort) \
->   <(grep -oE 'core/[a-z_]+\.py' Master_Blueprint.md | sort -u)
+>   <(grep -oE 'core/[a-z_]+\.py' Master_Blueprint.md | sort -u) | wc -l
+> # 기존 updater의 §0 삽입 marker
+> grep -n "### 서브디렉토리" Master_Blueprint.md  # line 137 직전에 stub 삽입됨
 > ```
+>
+> ### 진입 명령
+> ```bash
+> git pull --ff-only
+> python start_db.py agent-factory
+> # /model → Sonnet 4.6 (구현 단계)
+> # 1. scripts/blueprint_updater.py 패치 (단계 1~3) — 순서: --full-sync 모드 → 삭제 감지 → last_updated 분리
+> # 2. .githooks/pre-commit에 동기 호출 추가 (단계 4)
+> # 3. dry-run 검증: python scripts/blueprint_updater.py --full-sync --dry-run (옵션 추가 시) 또는 임시 백업 후 실 실행
+> # 4. python scripts/blueprint_updater.py --full-sync (단계 5)
+> # 5. Master_Blueprint.md §12 이력 + commit (단계 6, version bump 없으므로 패치 버전만 갱신 — 또는 1.2.28 유지)
+> ```
+>
+> ### 핵심 시맨틱 결정 (구현자 임의 변경 금지)
+> 1. **scope = maxdepth=1만** — 서브디렉토리는 §3 narrative 영역
+> 2. **`--full-sync`는 idempotent** — 이미 등록된 파일은 skip, stub만 추가
+> 3. **stub 행 format**: `_update_section_0`의 기존 포맷 그대로 (`| \`core/X.py\` | <role> | <symbols> |`), AST 기반 추출
+> 4. **삽입 위치**: 기존과 동일 — `### 서브디렉토리` 마커 직전
+> 5. **삭제 시 §0 행 제거**: 정규식 매칭 — `^\| `core/X\.py` \|.*\|$` 줄 단위 삭제
+> 6. **`last_updated` 갱신은 trigger 파일 변경 감지 시 무조건** — §12 prepend 성공/실패 무관
+> 7. **pre-commit hook 동기 호출**: 실패 시 commit 차단 X (exit 0 보장 — 기존 동작 유지). 결과만 자동 stage.
+>
+> ### 합의된 진행 절차 (B안 진행 승인은 이미 받음 — 다음 PC에서 구현만 진입)
 >
 > ---
 >
