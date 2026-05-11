@@ -20,13 +20,19 @@ import pytest
 
 _HAS_GENAI_NEW = importlib.util.find_spec("google.genai") is not None
 _HAS_GENAI_OLD = importlib.util.find_spec("google.generativeai") is not None
-_HAS_API_KEY = bool(os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
+
+# conftest.py가 GOOGLE_API_KEY를 "test-key" 더미로 채우므로 단순 truthy 검사로는
+# 항상 True가 되어 skip이 발화하지 않는다. 실제 키 prefix("AIza...") 또는 명시적
+# 화이트리스트가 아닌 dummy/placeholder 값은 "미설정"으로 간주해 skip.
+_DUMMY_API_KEY_SENTINELS = {"", "test-key", "dummy", "fake", "placeholder", "none", "null"}
+_RAW_API_KEY = (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
+_HAS_API_KEY = bool(_RAW_API_KEY) and _RAW_API_KEY.lower() not in _DUMMY_API_KEY_SENTINELS
 
 pytestmark = [
     pytest.mark.slow,
     pytest.mark.skipif(
         not _HAS_API_KEY,
-        reason="GOOGLE_API_KEY/GEMINI_API_KEY 미설정 — Gemini smoke 스킵",
+        reason="GOOGLE_API_KEY/GEMINI_API_KEY 미설정(또는 conftest 더미값) — Gemini smoke 스킵",
     ),
 ]
 
