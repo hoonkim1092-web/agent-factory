@@ -67,6 +67,27 @@
 >
 > ---
 >
+> ## 🔧 Tier 2 정직성 보강 — Phase 1 완료, Phase 2 후속 (2026-05-11 Opus)
+>
+> ### Phase 1 완료 (이 commit)
+> - `.claude/agents/af-critic.md`: description + 명시적 한계 표(vendor/시각 다양성/PASS 의미/사각지대) + 핵심 원칙 #5 (same-vendor 한계 인지) 추가
+> - `.claude/agents/af-cross-review.md`: 케이스 2 (외부 0개) 메시지에 single-vendor 모드 라벨 + judge 해석 가이드 + verdict 라인 `[single-vendor]` 마커 추가
+> - 옵션 1+3 통합 적용 (Critic=Sonnet, Implementer=Opus 모델 사이즈 분리는 이미 frontmatter에 적용 상태, 명시적 정책으로 굳힘)
+> - **코드 변경 0건** → review-gate 자동 통과
+>
+> ### Phase 2 후속 작업 (별도 sprint, ~50 LOC)
+> - `core/review_runner.py` 또는 judge 코드: Tier 3 PASS [single-vendor] 출력을 파싱해서 최종 결과에 자동 라벨링
+> - `scripts/review_gate.py`: single-vendor 모드 통과 시 commit message에 자동 라벨 prepend (예: `[single-vendor-validated]`)
+> - 회귀 테스트 (`tests/test_review_gate_single_vendor.py` 신설)
+> - 작업 시점: Codex 한도 회복 5/13+ 또는 동시
+>
+> ### 의사결정 근거
+> - Tier 2 외부화(옵션 2) 폐기 — Tier 3와 중복
+> - Tier 2 모델 사이즈 분리(옵션 1)는 효과 미미하지만 명시적 일관성 확보 차원에서 유지
+> - 진짜 가치는 옵션 3(명칭 정직화) — 사용자가 Tier 2 PASS = 안전이라 오해하는 함정 방지
+>
+> ---
+>
 > ## 📜 B안 설계 기록 (참고용 보존, Opus 2026-05-11)
 >
 > ### 결정 결과 (2026-05-11 Opus 세션)

@@ -75,14 +75,21 @@ echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
 **케이스 2 — `fan_out` 비어있음 (외부 AI 없음)**:
 
 ```
-## 교차 검증 SKIP — 외부 프로바이더 없음
+## 교차 검증 SKIP — 외부 프로바이더 없음 (⚠️ single-vendor 모드)
 
 Claude 외 가용 CLI 없음 (codex/gemini 미설치 또는 AF_SKIP_PROVIDER로 제외).
-Tier 3은 통과로 간주합니다.
+Tier 3은 통과로 간주하나, 본 변경의 검증은 **same-vendor(Anthropic) 단일 시각**에 의존합니다.
+
+⚠️ 결과 해석 가이드 (judge용):
+- Tier 1 (test-runner): 객관 사실 검증 — 시각 무관
+- Tier 2 (af-critic): same-vendor 셀프 페르소나 비판 — 다른 시각 아님
+- Tier 3 (cross-review): SKIP — 외부 시각 부재
+- 결론: 본 변경은 "외부 vendor 검증 통과"가 아닌 "single-vendor 모드 통과"로 분류됨.
+- 권장: 외부 CLI(codex/gemini) 인증 후 재실행하면 진짜 cross-validation 가능.
 
 <!-- final-verdict-start -->
-## Tier 3 판정: PASS
-사유: 외부 프로바이더 0개 — SKIP 통과 간주
+## Tier 3 판정: PASS [single-vendor]
+사유: 외부 프로바이더 0개 — SKIP 통과 간주 (single-vendor 모드 — 외부 시각 부재)
 <!-- final-verdict-end -->
 ```
 
