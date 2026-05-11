@@ -1,14 +1,51 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-11 KST — **Work-Item 병렬화 v3.1 구현 완료 v1.2.28 (commit 미완료 — push 대기). Tier3 SKIP (Codex 한도 2026-05-13 오후 1시 reset). P4b 데이터 축적 대기.**
+> 마지막 업데이트: 2026-05-11 KST — **🔥 다음 작업: Master_Blueprint.md 정합성 복구 옵션 결정 (사용자 결정 대기). Work-Item v1.2.28 ship 완료(commit `19ba4ab5`).**
+>
+> ## 🔥 다음 세션 — Master_Blueprint.md 정합성 복구 (사용자 결정 대기)
+>
+> ### 점검 결과 (2026-05-11)
+>
+> | 검증 항목 | 측정값 | 결함 |
+> |----------|--------|------|
+> | `last_updated` 마커 | `v1.2.25` 표기 | 실제 `v1.2.28` — 3버전 stale |
+> | §0 등록 core/ 파일 | 127개 | 실제 maxdepth=1 = **139개 → 12 미등록** |
+> | 재귀(서브디렉토리) | 127개 | 실제 = **212개 → 85 미등록 (~40%)** |
+> | hook 검증 | 파일 mtime만 | **내용 정합성 미검증** |
+>
+> ### 미등록 핵심 파일 (이번 작업 의존)
+> - `core/file_io.py` — work_item_generator의 `write_text` import 근원
+> - `core/file_lock.py` — work_item_telemetry의 `locked_file` 근원
+> - `core/utils.py`, `core/concurrency.py`, `core/plan_verifier.py`, `core/skill_retrieval_engine.py` 외 53개
+>
+> ### 결정해야 할 옵션 (사용자 결정 대기)
+> Blueprint 정합성 복구 방법 제안 — 다음 세션 시작 시 즉시 옵션 비교 제시 필요. 가능한 방향성:
+>
+> 1. **A안 — 1회성 일괄 보정**: 누락 85개를 §0 quick-ref에 일괄 추가 + last_updated 동기. 단점: 시간 ~2~3시간, 다음 drift도 재발 가능.
+> 2. **B안 — 자동 동기 hook 신규**: `.githooks/pre-commit`에 `scripts/blueprint_sync.py` 신설 — core/*.py 신규/삭제 감지 시 §0 행 자동 stub 생성/제거 + last_updated 자동 갱신. 단점: hook 구현 비용.
+> 3. **C안 — Blueprint 폐기 + 자동 색인 도입**: §0 quick-ref를 `scripts/index_core.py`로 매 commit hook에서 자동 생성한 `INDEX.md`로 대체. last_updated/누락 모두 자동 해결.
+> 4. **D안 — 현 상태 유지 + 운영 규율 강화**: WARN 보다는 부드러운 reminder hook만 — 사용자가 큐레이션 우선.
+> 5. **E안 — 혼합 (B + C)**: 자동 INDEX + 사람 작성 architecture narrative(§1~§12)를 분리.
+>
+> ### 점검 명령 재현
+> ```bash
+> grep -m 1 "last_updated" Master_Blueprint.md
+> cat version.py
+> # 등록 vs 실제 비교
+> comm -23 \
+>   <(find core -maxdepth 1 -name '*.py' | sed 's|.*/core/|core/|' | sort) \
+>   <(grep -oE 'core/[a-z_]+\.py' Master_Blueprint.md | sort -u)
+> ```
+>
+> ---
 >
 > ## ✅ Work-Item 병렬화 v3.1 구현 완료 (Sonnet 4.6, 2026-05-11) — v1.2.28
 >
+> - **commit**: `06661764` (구현) + `19ba4ab5` (리뷰 artifacts) — origin/main push 완료
 > - **구현 파일**: `core/work_item_generator.py`, `core/requirement_llm.py`, `core/work_item_telemetry.py`, `core/cli_session_cleanup.py`
 > - **3-tier 결과**: Tier1 24 PASS / Tier2 BLOCK→PASS(Google ThreadPoolExecutor 수정) / Tier3 SKIP(Codex 한도)
 > - **완료 항목**: F1(deadline+refine guard), F2(timeout_sec), F3/F4(_exec_stage1/_exec_stage3), F7(workspace_runtime_dir), F9(outline mismatch→""), R7(grace wait), R8(dir mtime)
-> - **push 결정**: main 브랜치 — 사용자 명시 요청 시
 > - **5월 13일 오후 1시 이후**: Codex cross-review 재시도 가능 (선택)
 >
 > ---
