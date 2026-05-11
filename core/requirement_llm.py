@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures as _cf
 import json
 import os
 import time
@@ -75,14 +76,19 @@ def _make_usage(prompt_t: int, completion_t: int) -> dict:
     return {"prompt": prompt_t, "completion": completion_t, "total": prompt_t + completion_t}
 
 
-def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
+def _call_google_api(model: str, prompt: str, *, timeout_sec: int = 120, return_usage: bool = False):
     api_key = get_engine_api_key("google") or get_configured_engine_api_key("google")
     if not api_key:
         raise RuntimeError("missing_google_api_key")
     from google import genai
 
     client = genai.Client(api_key=api_key)
-    response = generate_content_with_self_heal(client, normalize_model_name(model), prompt)
+    executor = _cf.ThreadPoolExecutor(max_workers=1)
+    fut = executor.submit(generate_content_with_self_heal, client, normalize_model_name(model), prompt)
+    try:
+        response = fut.result(timeout=float(timeout_sec))
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
     text = str(getattr(response, "text", "") or "").strip()
     if not return_usage:
         return text
@@ -95,14 +101,14 @@ def _call_google_api(model: str, prompt: str, *, return_usage: bool = False):
     return text, usage
 
 
-def _call_openai_api(model: str, prompt: str, *, return_usage: bool = False):
+def _call_openai_api(model: str, prompt: str, *, timeout_sec: int = 120, return_usage: bool = False):
     api_key = get_engine_api_key("openai") or get_configured_engine_api_key("openai")
     if not api_key:
         raise RuntimeError("missing_openai_api_key")
     if OpenAI is None:
         raise RuntimeError("openai_package_unavailable")
     client = OpenAI(api_key=api_key)
-    response = client.responses.create(model=model, input=prompt)
+    response = client.with_options(timeout=float(timeout_sec)).responses.create(model=model, input=prompt)
     text = _extract_openai_text(response)
     if not return_usage:
         return text
@@ -115,7 +121,7 @@ def _call_openai_api(model: str, prompt: str, *, return_usage: bool = False):
     return text, usage
 
 
-def _call_anthropic_api(model: str, prompt: str, *, return_usage: bool = False):
+def _call_anthropic_api(model: str, prompt: str, *, timeout_sec: int = 120, return_usage: bool = False):
     api_key = get_engine_api_key("anthropic") or get_configured_engine_api_key("anthropic")
     if not api_key:
         raise RuntimeError("missing_anthropic_api_key")
@@ -136,7 +142,7 @@ def _call_anthropic_api(model: str, prompt: str, *, return_usage: bool = False):
         },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
+    with urllib.request.urlopen(request, timeout=timeout_sec) as response:
         data = json.loads(response.read().decode("utf-8"))
     parts = []
     for item in data.get("content", []) or []:
@@ -234,11 +240,11 @@ def execute_document_prompt(
             else:
                 effective_prompt = f"{_DOCUMENT_SYSTEM_PROMPT}\n\n{str(prompt or '').strip()}".strip()
                 if candidate.provider_id == "anthropic_api":
-                    text, usage = _call_anthropic_api(candidate.model, effective_prompt, return_usage=True)
+                    text, usage = _call_anthropic_api(candidate.model, effective_prompt, timeout_sec=timeout_sec, return_usage=True)
                 elif candidate.provider_id == "openai_api":
-                    text, usage = _call_openai_api(candidate.model, effective_prompt, return_usage=True)
+                    text, usage = _call_openai_api(candidate.model, effective_prompt, timeout_sec=timeout_sec, return_usage=True)
                 else:
-                    text, usage = _call_google_api(candidate.model, effective_prompt, return_usage=True)
+                    text, usage = _call_google_api(candidate.model, effective_prompt, timeout_sec=timeout_sec, return_usage=True)
         except Exception as exc:
             errors.append(f"{candidate.provider_id}:{candidate.model}:{type(exc).__name__}:{exc}")
             continue

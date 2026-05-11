@@ -42,10 +42,13 @@ def cleanup_stale_sessions(workspace: str, days: int = 30) -> int:
             if entry.is_file() and entry.stat().st_mtime < cutoff:
                 entry.unlink()
                 deleted += 1
-            elif entry.is_dir() and entry.stat().st_mtime < cutoff:
-                import shutil
-                shutil.rmtree(entry, ignore_errors=True)
-                deleted += 1
+            elif entry.is_dir():
+                child_mtimes = [c.stat().st_mtime for c in entry.rglob("*") if c.is_file()]
+                dir_mtime = max(child_mtimes) if child_mtimes else entry.stat().st_mtime
+                if dir_mtime < cutoff:
+                    import shutil
+                    shutil.rmtree(entry, ignore_errors=True)
+                    deleted += 1
         except OSError as exc:
             _LOGGER.debug("cleanup skip %s: %s", entry, exc)
     return deleted

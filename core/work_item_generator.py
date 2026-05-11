@@ -24,6 +24,7 @@ from core.work_item_telemetry import write_initial_record
 
 _LOGGER = logging.getLogger(__name__)
 _PLACEHOLDER_REFINE_MAX = 2
+_GRACE_SEC = 5  # subprocess kill 보장 마진 (R7 race 방어)
 
 TOTAL_BUDGET = 600.0  # v1 300s → v2 600s
 STAGE_BUDGET: dict[int, float] = {
@@ -829,6 +830,7 @@ def _extract_section_outline(markdown: str, expected_count: int = 12) -> str:
         _LOGGER.warning(
             "spec_outline section count mismatch: got=%d expected=%d", section_idx, expected_count,
         )
+        return ""
     return "\n".join(lines)
 
 
@@ -869,21 +871,18 @@ def _exec_stage2(
 ) -> tuple[DocGenerationResult, DocGenerationResult]:
     """spec / design 병렬 생성. 절대 deadline까지 기다리고, 미완료는 fallback으로 채움."""
     remaining = max(1.0, deadline - time.monotonic())
-    llm_timeout = max(1, int(remaining) - 5)
 
     executor = cf.ThreadPoolExecutor(max_workers=2, thread_name_prefix="wi-stage2")
     try:
         fut_spec = executor.submit(
             _generate_and_refine, "spec", _generate_feature_spec,
             work_item_id, project_brief, role_plan, task_board,
-            prev_plan=plan_content, run_id=base_run_id,
-            timeout_sec=llm_timeout, workspace=workspace,
+            prev_plan=plan_content, deadline=deadline, run_id=base_run_id, workspace=workspace,
         )
         fut_design = executor.submit(
             _generate_and_refine, "design", _generate_implementation_design,
             work_item_id, project_brief, role_plan,
-            prev_plan=plan_content, run_id=base_run_id,
-            timeout_sec=llm_timeout, workspace=workspace,
+            prev_plan=plan_content, deadline=deadline, run_id=base_run_id, workspace=workspace,
         )
 
         done, _ = cf.wait(
@@ -904,6 +903,54 @@ def _exec_stage2(
         executor.shutdown(wait=False, cancel_futures=True)
 
     return spec_result, design_result
+
+
+def _exec_stage1(
+    deadline: float,
+    work_item_id: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    *,
+    base_run_id: str,
+    workspace: str,
+    episode_hints_section: str = "",
+) -> DocGenerationResult:
+    """plan 단독 생성 + Episode Hints 주입 (F3 + F4)."""
+    plan_result = _generate_and_refine(
+        "plan", _generate_feature_plan,
+        work_item_id, project_brief, role_plan,
+        deadline=deadline,
+        run_id=base_run_id,
+        workspace=workspace,
+    )
+    if episode_hints_section:
+        plan_result.content = f"{plan_result.content.rstrip()}\n\n{episode_hints_section}"
+    return plan_result
+
+
+def _exec_stage3(
+    deadline: float,
+    design_result: DocGenerationResult,
+    spec_result: DocGenerationResult,
+    work_item_id: str,
+    project_brief: dict[str, Any],
+    role_plan: dict[str, Any],
+    task_board: dict[str, Any],
+    *,
+    base_run_id: str,
+    workspace: str,
+) -> DocGenerationResult:
+    """tasks 단독 생성. spec_outline + design 전문을 prev로 전달 (F4 + F9)."""
+    spec_outline = _extract_section_outline(spec_result.content, expected_count=12)
+    return _generate_and_refine(
+        "tasks", _generate_implementation_tasks,
+        work_item_id, project_brief, role_plan, task_board,
+        prev_design=design_result.content,
+        prev_spec_outline=spec_outline,
+        deadline=deadline,
+        run_id=base_run_id,
+        workspace=workspace,
+    )
 
 
 def _build_episode_hints_section(project_brief: dict[str, Any], workspace: str) -> str:
@@ -1052,17 +1099,20 @@ def generate_work_items(
     files: dict[str, str] = {}
     work_item_id = slug
 
-    episode_hints_section = _build_episode_hints_section(project_brief, workspace)
+    episode_hints_section = _build_episode_hints_section(project_brief, workspace)  # Stage 예산 외
     t_total_start = time.monotonic()
 
     # --- Stage 1: plan (sequential) ---
-    llm_timeout_1 = max(1, int(STAGE_BUDGET[1]) - 5)
-    plan_result = _generate_and_refine(
-        "plan", _generate_feature_plan, work_item_id, project_brief, role_plan,
-        run_id=run_id, timeout_sec=llm_timeout_1, workspace=workspace,
+    deadline_1 = t_total_start + STAGE_BUDGET[1]
+    plan_result = _exec_stage1(
+        deadline=deadline_1,
+        work_item_id=work_item_id,
+        project_brief=project_brief,
+        role_plan=role_plan,
+        base_run_id=run_id,
+        workspace=workspace,
+        episode_hints_section=episode_hints_section,
     )
-    if episode_hints_section:
-        plan_result.content = plan_result.content + "\n" + episode_hints_section
     plan_content = plan_result.content
     plan_path = os.path.join(work_dir, "feature-plan.md")
     write_text(plan_path, plan_content)
@@ -1100,16 +1150,23 @@ def generate_work_items(
     elapsed_2 = time.monotonic() - t_stage2_start
     carry_over_2 = max(0.0, budget_2 - elapsed_2)
 
+    # R7: Stage 2 timeout 발생 시에만 grace wait — abandoned subprocess race 방어
+    if spec_result.timeout_fallback or design_result.timeout_fallback:
+        time.sleep(_GRACE_SEC)
+
     # --- Stage 3: tasks (sequential) ---
     budget_3 = STAGE_BUDGET[3] + carry_over_2
-    llm_timeout_3 = max(1, int(budget_3) - 5)
-    spec_outline = _extract_section_outline(spec_content)
-    tasks_result = _generate_and_refine(
-        "tasks", _generate_implementation_tasks, work_item_id, project_brief,
-        role_plan, task_board,
-        prev_design=design_content,
-        prev_spec_outline=spec_outline,
-        run_id=run_id, timeout_sec=llm_timeout_3, workspace=workspace,
+    deadline_3 = time.monotonic() + budget_3
+    tasks_result = _exec_stage3(
+        deadline=deadline_3,
+        design_result=design_result,
+        spec_result=spec_result,
+        work_item_id=work_item_id,
+        project_brief=project_brief,
+        role_plan=role_plan,
+        task_board=task_board,
+        base_run_id=run_id,
+        workspace=workspace,
     )
     tasks_content = tasks_result.content
     tasks_path = os.path.join(work_dir, "implementation-tasks.md")
@@ -1193,9 +1250,12 @@ def _generate_and_refine(
     prev_spec_outline: str = "",
     run_id: str = "",
     timeout_sec: int = 120,
+    deadline: float = 0.0,
     workspace: str = "",
 ) -> DocGenerationResult:
     """문서 생성 후 금지 토큰 스캔, 발견 시 LLM 보강 루프(최대 2회)를 수행한다."""
+    if deadline > 0.0:
+        timeout_sec = max(1, int(deadline - time.monotonic()) - _GRACE_SEC)
     placeholder_refine = os.environ.get("AF_PLACEHOLDER_REFINE", "1") != "0"
 
     # 설계 §3: 병렬 스레드 세션 파일 충돌 방지
@@ -1232,16 +1292,22 @@ def _generate_and_refine(
         found = scan_forbidden_tokens(content, exempt=exempt)
         if not found:
             break
+        if deadline > 0.0 and (deadline - time.monotonic()) <= _GRACE_SEC:
+            _LOGGER.warning(
+                "refine skipped: doc=%s attempt=%d deadline_exhausted", doc_type, attempt + 1,
+            )
+            break
         _LOGGER.info(
             "금지 토큰 발견 [%s] attempt=%d tokens=%s — LLM 보강 시도",
             doc_type, attempt, found,
         )
+        iter_timeout = max(1, int(deadline - time.monotonic()) - _GRACE_SEC) if deadline > 0.0 else timeout_sec
         feedback = (
             f"다음 금지 토큰을 제거하고 실제 내용으로 채워라: {found}. "
             f"project_brief의 {doc_type} 관련 필드를 참조해 구체적 내용을 생성하라. "
             "이미 채워진 섹션은 변경하지 마라."
         )
-        refined = _refine_document(content, feedback, project_brief)
+        refined = _refine_document(content, feedback, project_brief, timeout_sec=iter_timeout)
         if refined != content:
             content = refined
             result.placeholder_refine_attempts = attempt + 1
@@ -1264,6 +1330,7 @@ def _refine_document(
     original: str,
     feedback: str,
     project_brief: dict[str, Any] | None = None,
+    timeout_sec: int = 120,
 ) -> str:
     """
     교차검증 피드백을 반영하여 문서를 부분 수정한다.
@@ -1305,7 +1372,14 @@ def _refine_document(
 
     try:
         llm = ControlPlaneLLM()
-        refined = llm.generate(prompt).strip()
+        executor = cf.ThreadPoolExecutor(max_workers=1)
+        fut = executor.submit(llm.generate, prompt)
+        try:
+            refined = fut.result(timeout=float(timeout_sec)).strip()
+        except cf.TimeoutError:
+            return original
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
         if refined and len(refined) > 100:
             return refined
     except Exception:

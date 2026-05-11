@@ -1,24 +1,15 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: 2026-05-11 KST — **Work-Item 병렬화 v3.1 설계 PASS 간주 (cross-review 2라운드 SKIP — Codex 한도). 다음: Sonnet 본 구현 PR. (P4a v1.2.27 ship 완료, P4b는 measurement 데이터 축적 대기.)**
+> 마지막 업데이트: 2026-05-11 KST — **Work-Item 병렬화 v3.1 구현 완료 v1.2.28 (commit 미완료 — push 대기). Tier3 SKIP (Codex 한도 2026-05-13 오후 1시 reset). P4b 데이터 축적 대기.**
 >
-> ## ✅ Work-Item 병렬화 v3.1 (Opus 4.7, 2026-05-10~11) — 설계 PASS 간주
+> ## ✅ Work-Item 병렬화 v3.1 구현 완료 (Sonnet 4.6, 2026-05-11) — v1.2.28
 >
-> - **v3.1 문서**: `docs/2026-05-08-work-item-parallel-option-c-design-v3.md` (1481 lines, commit `da9338e4` + `97febfbf`)
-> - **v3 1라운드 cross-review** (`docs/reviews/2026-05-11-001451-...-v3-design-review.md`): BLOCK 11건 → v3.1이 모두 흡수
-> - **v3.1 cross-review 2라운드**: **SKIP (Codex 한도 도달 / copilot·gemini 미확인)** — CLAUDE.md "외부 provider 0개면 자동 SKIP(통과 간주)" 정책 적용. PASS 간주.
-> - **다음 단계**:
->   1. (선택) Codex 한도 reset 후 cross-review 2라운드 명시 spawn — 정합성 추가 보장 원하면
->   2. **Sonnet으로 본 구현 PR** — v3.1 §11 변경표의 (c) 항목 모두 진입:
->      - `core/work_item_generator.py:1184 _generate_and_refine` 시그니처에 `deadline` 추가 (F1)
->      - `core/requirement_llm.py:78/98/118 _call_*_api` 시그니처에 `timeout_sec` 추가 (F2, anthropic urllib)
->      - `core/work_item_telemetry.py:14, 45` path `workspace_runtime_dir(workspace) / "work_item_telemetry"` (F7)
->      - `_exec_stage1`/`_exec_stage3` 신설 + Episode Hints 주입 (F3/F4)
->      - `_extract_section_outline:813` mismatch 시 빈 문자열 반환 (F9)
->      - `cli_session_cleanup` 디렉토리 mtime 정책 자식 max 또는 60일 TTL (R8)
-> - **v2 → v3 흡수분 (참고)**: 5 High + 2 Medium + 2 Low (F1~F12) — §0a 표에 기록
+> - **구현 파일**: `core/work_item_generator.py`, `core/requirement_llm.py`, `core/work_item_telemetry.py`, `core/cli_session_cleanup.py`
+> - **3-tier 결과**: Tier1 24 PASS / Tier2 BLOCK→PASS(Google ThreadPoolExecutor 수정) / Tier3 SKIP(Codex 한도)
+> - **완료 항목**: F1(deadline+refine guard), F2(timeout_sec), F3/F4(_exec_stage1/_exec_stage3), F7(workspace_runtime_dir), F9(outline mismatch→""), R7(grace wait), R8(dir mtime)
 > - **push 결정**: main 브랜치 — 사용자 명시 요청 시
+> - **5월 13일 오후 1시 이후**: Codex cross-review 재시도 가능 (선택)
 >
 > ---
 >
