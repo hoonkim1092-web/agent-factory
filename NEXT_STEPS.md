@@ -97,6 +97,28 @@
 > - 도메인 게이트 v1 cross-review 재시도 (옵셔널)
 > - Tier 2 Phase 3 단계 1 설계 + 구현 cross-review (필수, BLOCK 흡수 시 v2)
 >
+> ---
+>
+> ## 🤖 ApprovalGate Auto-Approve 옵션 ✅ 완료 (2026-05-11 Opus, this sprint)
+>
+> ### Manus 방향 자율 모드 첫 단계 (opt-in)
+> - `core/approval_gate.py:approve()` 시그니처 확장 — `auto: bool = False` + `auto_reason: str = ""` 키워드, `AF_AUTO_APPROVE=1` 환경변수 감지
+> - default off 유지 (기존 호환 100%) — opt-in 시에만 활성
+> - 활성 시 approver 라벨 `"auto"` 또는 `"auto:{reason}"`, review_notes에 audit 흔적 prepend
+> - 12 회귀 테스트 PASS (`tests/test_approval_gate_auto_approve.py`)
+> - 기존 approval_gate 11 회귀 PASS (호환성 보장)
+>
+> ### 사용자 메모리 결정 변화 시작점
+> - 기존: "Manus 대체 아님" (`memory/project_saas_strategy_position.md`)
+> - 신규 추세: **"Manus 패턴 opt-in 흡수, default 게이트 강제 유지"**
+> - 다음 세션에서 메모리 갱신 권장 (사용자 결정 후)
+>
+> ### 후속 작업 (옵션, NEXT_STEPS에만 등록)
+> - **agent_runner tool input 우회** (위험 등급별 자동 허용, ~80 LOC) — 자율도 75%까지
+> - **headless 모드** (사용자 응답 대기 없이 진행, ~100 LOC) — 자율도 90%까지 (Manus 수준)
+> - **백그라운드 실행 + 결과 알림** (Slack/메일, ~200 LOC) — 자율도 그대로, UX 개선
+> - 위 3건은 자율도-품질 게이트 트레이드오프 누적 — 사용자 결정 필요
+>
 > ### 의사결정 근거
 > - Tier 2 외부화(옵션 2) 폐기 — Tier 3와 중복
 > - Tier 2 모델 사이즈 분리(옵션 1)는 효과 미미하지만 명시적 일관성 확보 차원에서 유지

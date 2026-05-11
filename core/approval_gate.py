@@ -112,27 +112,61 @@ class ApprovalGate:
         write_text(self.gate_path, content)
         _emit_approval_event("approval_requested", self, run_id)
 
-    def approve(self, approver: str = "user", run_id: str = "") -> bool:
+    def approve(
+        self,
+        approver: str = "user",
+        run_id: str = "",
+        *,
+        auto: bool = False,
+        auto_reason: str = "",
+    ) -> bool:
         """
         현재 문서 해시를 스냅샷에 저장하고 execution_open을 true로 설정.
         gate_path가 없으면 False 반환.
+
+        Auto-approve 옵션 (Manus 방향 자율 모드, opt-in):
+          - `auto=True` 명시 호출 또는 `AF_AUTO_APPROVE=1` 환경변수 설정 시
+            사용자 명시 호출 없이 게이트 통과
+          - approver 자동 라벨링: `auto_reason` 명시 시 "auto:{reason}", 없으면 "auto"
+          - 감사 추적: review_notes에 auto-approve 흔적 prepend
+          - 위험: silent BLOCK 통과 가능 — opt-in으로만 활성화, default off
         """
         if not os.path.exists(self.gate_path):
             return False
+
+        # Auto-approve 환경변수 감지 (opt-in)
+        env_auto = os.environ.get("AF_AUTO_APPROVE") == "1"
+        is_auto = bool(auto) or env_auto
+
         current = self._parse()
         snapshots = self.compute_snapshots()
         gate_statuses = {key: "approved" for key in _DOC_FILES}
+
+        # auto 모드면 approver 라벨 + review_notes에 흔적
+        effective_approver = approver
+        review_notes = _clean(current.get("review_notes"))
+        if is_auto:
+            effective_approver = (
+                f"auto:{auto_reason.strip()}" if auto_reason.strip() else "auto"
+            )
+            origin = "env=AF_AUTO_APPROVE=1" if env_auto and not auto else "explicit auto=True"
+            audit_line = (
+                f"[auto-approve] {now_iso()}: {origin}"
+                + (f" — reason: {auto_reason.strip()}" if auto_reason.strip() else "")
+            )
+            review_notes = (audit_line + "\n" + review_notes).strip() if review_notes else audit_line
+
         content = self._render(
             work_item=_clean(current.get("work_item") or self.slug),
-            approver=approver,
+            approver=effective_approver,
             status="approved",
             snapshots=snapshots,
             gate_statuses=gate_statuses,
             execution_open=True,
-            review_notes=_clean(current.get("review_notes")),
+            review_notes=review_notes,
         )
         write_text(self.gate_path, content)
-        _emit_approval_event("approval_granted", self, run_id, approver=approver)
+        _emit_approval_event("approval_granted", self, run_id, approver=effective_approver)
         return True
 
     def invalidate(self, reason: str = "") -> None:
