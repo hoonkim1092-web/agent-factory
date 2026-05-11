@@ -99,14 +99,21 @@
 >
 > ---
 >
-> ## 🤖 ApprovalGate Auto-Approve 옵션 ✅ 완료 (2026-05-11 Opus, this sprint)
+> ## 🤖 ApprovalGate Auto-Approve 옵션 ✅ 완료 + BLOCK 5건 흡수 v2 (2026-05-11 Opus)
 >
-> ### Manus 방향 자율 모드 첫 단계 (opt-in)
-> - `core/approval_gate.py:approve()` 시그니처 확장 — `auto: bool = False` + `auto_reason: str = ""` 키워드, `AF_AUTO_APPROVE=1` 환경변수 감지
+> ### Manus 방향 자율 모드 첫 단계 (opt-in) — v2 BLOCK 5건 흡수 완료
+> - `core/approval_gate.py:approve()` 시그니처 확장 — `auto: bool = False` + `auto_reason: str = ""` 키워드
 > - default off 유지 (기존 호환 100%) — opt-in 시에만 활성
-> - 활성 시 approver 라벨 `"auto"` 또는 `"auto:{reason}"`, review_notes에 audit 흔적 prepend
-> - 12 회귀 테스트 PASS (`tests/test_approval_gate_auto_approve.py`)
-> - 기존 approval_gate 11 회귀 PASS (호환성 보장)
+> - **v2 안전 가드 (cross-review BLOCK 5건 흡수, 2026-05-11 second commit)**:
+>   1. **#1 Critical** — auto 분기 직전 `status=="verification_blocked"` + `read_block_decision()` blocked 시 `return False` (system BLOCK silent 우회 차단)
+>   2. **#2 High** — `_sanitize_reason()` 헬퍼 — `\r\n#` 제거 + 120자 절단 (메타데이터 위조 차단)
+>   3. **#3 High** — `_auto_approve_env_active(slug)` — `AF_AUTO_APPROVE_SLUGS` 콤마/공백 화이트리스트 필수 (`*`/`all` 단독 시 전역; 동시 work-item 격리)
+>   4. **#4 Medium** — review_notes 멱등성 가드 (`apply_verification_verdict` L347-354 패턴 정합)
+>   5. **#5 Medium** — `from core.file_io import _env_flag` 컨벤션 통일 (`1/true/yes/on/y`)
+> - **#6 HOLD** (write_text non-atomic) — 별도 PR로 분리
+> - 24 회귀 테스트 PASS (`tests/test_approval_gate_auto_approve.py` — 12 신규: verification_blocked/decision/sanitize/whitelist/wildcard/env_flag/idempotency)
+> - 기존 approval_gate 10 회귀 PASS (호환성 보장)
+> - Codex cross-review 재시도 (5/13 01:00 KST+) 보류 — 사용자 한도 도달로 이번 세션 SKIP
 >
 > ### 사용자 메모리 결정 변화 시작점
 > - 기존: "Manus 대체 아님" (`memory/project_saas_strategy_position.md`)

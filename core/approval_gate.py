@@ -18,8 +18,37 @@ import os
 import re
 from typing import Any
 
-from core.file_io import write_text
+from core.file_io import _env_flag, write_text
 from core.utils import now_iso
+
+
+def _sanitize_reason(raw: str) -> str:
+    """auto_reason / approver 라벨 입력값을 한 줄·sanitized로 강제.
+
+    review_notes는 라인 단위 `- key: value` 정규식으로 파싱되므로 `\\n`/`#`/`\\r`이
+    들어오면 위조된 메타데이터 키가 주입될 수 있다 (H2 회귀). 120자 절단으로
+    오버플로우도 차단.
+    """
+    return re.sub(r"[\r\n#]+", " ", str(raw or "")).strip()[:120]
+
+
+def _auto_approve_env_active(slug: str) -> bool:
+    """AF_AUTO_APPROVE 환경변수가 *이 slug 에 대해* 활성화되어 있는지 판정.
+
+    - `AF_AUTO_APPROVE`(`_env_flag` 컨벤션): 1/true/yes/on/y truthy.
+    - `AF_AUTO_APPROVE_SLUGS`: 콤마/공백 구분 화이트리스트.
+      비어 있으면 env 모드 비활성 (전역 활성 금지 — H3 회귀 차단).
+      `*` 또는 `all` 단독 토큰만 명시적 전역 허용.
+    """
+    if not _env_flag("AF_AUTO_APPROVE"):
+        return False
+    raw = os.environ.get("AF_AUTO_APPROVE_SLUGS", "").strip()
+    if not raw:
+        return False
+    tokens = {tok.strip() for tok in re.split(r"[,\s]+", raw) if tok.strip()}
+    if "*" in tokens or "all" in tokens:
+        return True
+    return bool(slug) and slug in tokens
 
 
 def _emit_approval_event(event_type: str, gate: "ApprovalGate", run_id: str, approver: str = "") -> None:
@@ -125,34 +154,55 @@ class ApprovalGate:
         gate_path가 없으면 False 반환.
 
         Auto-approve 옵션 (Manus 방향 자율 모드, opt-in):
-          - `auto=True` 명시 호출 또는 `AF_AUTO_APPROVE=1` 환경변수 설정 시
-            사용자 명시 호출 없이 게이트 통과
-          - approver 자동 라벨링: `auto_reason` 명시 시 "auto:{reason}", 없으면 "auto"
-          - 감사 추적: review_notes에 auto-approve 흔적 prepend
-          - 위험: silent BLOCK 통과 가능 — opt-in으로만 활성화, default off
+          - `auto=True` 명시 호출 또는 `AF_AUTO_APPROVE=1` + `AF_AUTO_APPROVE_SLUGS`
+            화이트리스트 매칭 시 사용자 명시 호출 없이 게이트 통과
+          - approver 자동 라벨링: `auto_reason` 명시 시 "auto:{sanitized}", 없으면 "auto"
+          - 감사 추적: review_notes에 auto-approve 흔적 prepend (멱등성 가드 포함)
+          - 안전 가드 (auto 한정):
+              * status == "verification_blocked" 시 False (apply_verification_verdict 잠금 존중)
+              * read_block_decision() blocked 시 False (escalation _decision.json fail-closed)
         """
         if not os.path.exists(self.gate_path):
             return False
 
-        # Auto-approve 환경변수 감지 (opt-in)
-        env_auto = os.environ.get("AF_AUTO_APPROVE") == "1"
+        # Auto-approve 활성 감지 (opt-in) — env 모드는 슬러그 화이트리스트 매칭 필수
+        env_auto = _auto_approve_env_active(self.slug)
         is_auto = bool(auto) or env_auto
 
         current = self._parse()
+
+        # 안전 가드 — auto 모드일 때만 system BLOCK 우회 차단.
+        # 일반 사용자 명시 승인은 verification_blocked 상태를 명시적으로 덮어쓸 수 있음.
+        if is_auto:
+            if _clean(current.get("status")) == "verification_blocked":
+                return False
+            blocked, _decision = self.read_block_decision()
+            if blocked:
+                return False
+
+        review_notes_existing = _clean(current.get("review_notes"))
+        # 멱등성 가드 — 이미 auto-approve가 적용된 approved 상태에서 동일 호출 시 no-op.
+        # apply_verification_verdict의 동일 패턴(L347-354)과 정합.
+        if (
+            is_auto
+            and _clean(current.get("status")) == "approved"
+            and "[auto-approve]" in review_notes_existing
+        ):
+            return True
+
         snapshots = self.compute_snapshots()
         gate_statuses = {key: "approved" for key in _DOC_FILES}
 
         # auto 모드면 approver 라벨 + review_notes에 흔적
         effective_approver = approver
-        review_notes = _clean(current.get("review_notes"))
+        review_notes = review_notes_existing
         if is_auto:
-            effective_approver = (
-                f"auto:{auto_reason.strip()}" if auto_reason.strip() else "auto"
-            )
+            reason_clean = _sanitize_reason(auto_reason)
+            effective_approver = f"auto:{reason_clean}" if reason_clean else "auto"
             origin = "env=AF_AUTO_APPROVE=1" if env_auto and not auto else "explicit auto=True"
             audit_line = (
                 f"[auto-approve] {now_iso()}: {origin}"
-                + (f" — reason: {auto_reason.strip()}" if auto_reason.strip() else "")
+                + (f" - reason: {reason_clean}" if reason_clean else "")
             )
             review_notes = (audit_line + "\n" + review_notes).strip() if review_notes else audit_line
 
