@@ -76,6 +76,64 @@ class GitManager:
             print(f"[GitManager] Rollback failed: {e}")
             return False
 
+    def get_head_sha(self) -> str:
+        """현재 HEAD의 SHA를 반환한다. git repo가 아니면 빈 문자열."""
+        if not self._is_git_repo():
+            return ""
+        try:
+            r = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=self.directory,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return str(r.stdout or "").strip()
+        except Exception:
+            return ""
+
+    def diff_files_since(self, base_sha: str) -> list[str]:
+        """base_sha 이후 변경된 파일 목록을 반환한다.
+
+        - base_sha가 비어있거나 유효하지 않으면 working tree의 변경 파일 반환
+        - git repo가 아니면 빈 리스트 반환 (graceful fallback)
+        """
+        if not self._is_git_repo():
+            return []
+        try:
+            if base_sha:
+                # committed + staged + unstaged 모두 포함
+                r = subprocess.run(
+                    ["git", "diff", "--name-only", base_sha, "HEAD"],
+                    cwd=self.directory,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                committed = [f.strip() for f in (r.stdout or "").splitlines() if f.strip()]
+                # unstaged 변경도 포함
+                r2 = subprocess.run(
+                    ["git", "diff", "--name-only"],
+                    cwd=self.directory,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                unstaged = [f.strip() for f in (r2.stdout or "").splitlines() if f.strip()]
+                return list(dict.fromkeys(committed + unstaged))  # 중복 제거, 순서 유지
+            else:
+                # base_sha 없으면 현재 working tree 변경 파일만
+                r = subprocess.run(
+                    ["git", "diff", "--name-only"],
+                    cwd=self.directory,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                return [f.strip() for f in (r.stdout or "").splitlines() if f.strip()]
+        except Exception:
+            return []
+
     def push(self) -> bool:
         """Pushes current branch to origin."""
         try:

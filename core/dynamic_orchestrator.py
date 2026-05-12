@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from core.agent_runner import AgentRunner
+from core.git_manager import GitManager
 from core.ast_memory_hub import AstMemoryHub
 from core.continuity import OrchestratorManifestStore, workspace_runtime_file
 from core.evaluator import StrategyEvaluator
@@ -740,6 +741,10 @@ class DynamicOrchestrator:
             except Exception:
                 pass
 
+        # ASTEngine 수정②: 태스크 시작 시점 SHA 캡처 → 완료 후 diff로 실제 변경 파일 추적
+        _git = GitManager(target_workspace)
+        _pre_task_sha = _git.get_head_sha()
+
         try:
             update_project_board_task(target_workspace, role, subtask, "in_progress", task_id=task_id)
             assignment: Dict[str, Any] = {
@@ -779,11 +784,22 @@ class DynamicOrchestrator:
                 # T1-2: STEP_COMPLETED RunEvent
                 if _emit_run_event:
                     _emit_run_event(RunEventType.STEP_COMPLETED, {"role": role})
-                await self.memory_hub.update_ast_state(
-                    filepath=f"Project_Scope_{role}",
-                    author_role=role,
-                    changes_summary=f"Completed subtask: {subtask[:50]}",
-                )
+                # ASTEngine 수정②: 실제 변경 파일 경로로 AST 상태 갱신
+                _changed_files = _git.diff_files_since(_pre_task_sha)
+                if _changed_files:
+                    for _cf in _changed_files:
+                        await self.memory_hub.update_ast_state(
+                            filepath=_cf,
+                            author_role=role,
+                            changes_summary=f"[{role}] {subtask[:50]}",
+                        )
+                else:
+                    # 변경 파일 없으면 (non-git workspace 등) 기존 방식 폴백
+                    await self.memory_hub.update_ast_state(
+                        filepath=f"task_scope_{role}_{task_id or 'no_id'}",
+                        author_role=role,
+                        changes_summary=f"Completed subtask: {subtask[:50]}",
+                    )
                 print_agent_msg(role, "Task completed.", "")
                 if self._visualizer and not self.terminal_per_agent:
                     self._visualizer.mark_completed(role)
@@ -882,11 +898,21 @@ class DynamicOrchestrator:
                                 # T1-2: FSA 성공 경로에도 STEP_COMPLETED 방출
                                 if _emit_run_event:
                                     _emit_run_event(RunEventType.STEP_COMPLETED, {"role": role, "via": "fsa"})
-                                await self.memory_hub.update_ast_state(
-                                    filepath=f"Project_Scope_{role}",
-                                    author_role=role,
-                                    changes_summary=f"FSA recovered subtask: {subtask[:50]}",
-                                )
+                                # ASTEngine 수정②: FSA 복구 성공 시에도 실제 파일 경로 사용
+                                _fsa_changed = _git.diff_files_since(_pre_task_sha)
+                                if _fsa_changed:
+                                    for _cf in _fsa_changed:
+                                        await self.memory_hub.update_ast_state(
+                                            filepath=_cf,
+                                            author_role=role,
+                                            changes_summary=f"[{role}] FSA recovered: {subtask[:40]}",
+                                        )
+                                else:
+                                    await self.memory_hub.update_ast_state(
+                                        filepath=f"task_scope_{role}_{task_id or 'no_id'}",
+                                        author_role=role,
+                                        changes_summary=f"FSA recovered subtask: {subtask[:50]}",
+                                    )
                                 print_agent_msg(role, "FSA 복구 성공", "✅")
                                 await self._inject_review_tasks_if_needed(target_workspace, task_id, role)
                             else:
