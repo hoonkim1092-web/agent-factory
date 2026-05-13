@@ -100,6 +100,19 @@
   - 예: `2026-04-03-cross-cli-skill-discovery.md`
   - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
 
+### ADR 명명 규칙 (M2, 2026-05-13 추가)
+- **저장 위치**: `docs/decisions/`
+- **파일명**: `ADR-YYYYMMDD-HHMMSS-<slug>.md` (초 단위 — 야간 파이프라인 동시 생성 충돌 방지)
+  - 예: `ADR-20260513-225000-domain-gate-verdict-parser.md`
+- **Git workflow**: feature 브랜치에서 직접 commit. 별도 PR 불필요. ADR은 결정 기록이므로 동일 작업 커밋에 포함.
+- **Status 필드**: `Draft` → `Accepted` → `Superseded` / `Resolved` 순서로 갱신
+
+### 스킬 흡수 귀속 정책 (M4, 2026-05-13 추가)
+- **외부 소스 흡수 시**: SKILL.md 파일 상단 프론트매터에 `inspired_by:` 메타 필드 추가
+  - 형식: `inspired_by: <출처-패키지>/<스킬-ID>` (예: `superpowers/brainstorming`)
+  - MIT 라이선스 기반 흡수 시 본 메타로 attribution 의무 이행
+- **AF 자체 스킬**: `inspired_by:` 필드 없음 (생략)
+
 ### 교차검증 자동 실행
 - UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
 - UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-cross-review **1개만** 실행한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)

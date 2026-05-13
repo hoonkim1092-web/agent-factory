@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-13 22:50 KST (Sonnet 4.6)** — **✅ Phase A (Domain Gate) 구현 완료. 다음: ADR Medium/Low 잔여 handling 또는 Phase B 진입 여부 결정.**
+> 마지막 업데이트: **2026-05-13 23:00 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 완료. 다음: Phase B 진입 (사용자 명시 지시 필요).**
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 
@@ -22,20 +22,27 @@
 
 ---
 
-## 🔥 다음 세션 — ADR 잔여 Medium/Low 처리 또는 Phase B 결정
+## ✅ ADR M1~M5 완료 (2026-05-13 23:00 KST)
 
-### ADR 잔여 항목 (`docs/2026-05-13-domain-gate-residual-risks-adr.md`)
-Phase A에서 처리하지 않은 Medium/Low 항목들:
+| # | 결정 요약 |
+|---|-----------|
+| M1 | `approve()` → return False 유지 (BlockedExecutionError 없음) |
+| M2 | ADR 명명: `ADR-YYYYMMDD-HHMMSS-<slug>.md` / `docs/decisions/` 저장 → CLAUDE.md 추가 |
+| M3 | frozen build 경로 검증 완료 — workspace param 기반, 변경 불필요 |
+| M4 | `inspired_by:` 메타 정책 → CLAUDE.md §스킬흡수귀속정책 추가 |
+| M5 | Phase B 진입 기준 3개 + 결정자(사용자) 명시 → ADR §Phase B 진입 기준 |
 
-- **M1**: domain-review verdict 파서 예외 형태 명세 (`BlockedExecutionError` vs return False)
-- **M2**: ADR 번호 부여 규칙 `ADR-YYYYMMDD-HHMM-<slug>` + git workflow
-- **M3**: frozen build에서 `docs/decisions/` 경로 해석 검증
-- **M4**: MIT attribution — 흡수 SKILL.md `inspired_by:` 메타 정책
-- **M5**: 활성 단계 전환 지표 2~3개 + 결정자 명시
+## 🔥 다음 세션 — Phase B 진입 (사용자 지시 필요)
+
+### Phase B 개요
+- **목표**: 14개 Superpowers 스킬 비교 평가 매트릭스 실측 (§4 설계문서)
+- **주요 작업**: brainstorming / systematic-debugging / verification-before-completion 3개 후보 실측 평가 후 Phase C 범위 확정
+- **설계 문서**: `docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md` §4
 
 ### Phase B 진입 조건
-- Phase A가 실제 운영에서 1건 이상 domain gate 발동 확인 후
-- 또는 사용자가 명시적으로 Phase B 진입 지시
+- Phase A domain gate 발동 ≥ 1건 (실 운영) — 또는 —
+- 사용자 명시적 Phase B 진입 지시 (자동 전환 없음)
+- 상세 기준: `docs/2026-05-13-domain-gate-residual-risks-adr.md` §Phase B 진입 기준
 
 ### 진입 명령
 ```bash

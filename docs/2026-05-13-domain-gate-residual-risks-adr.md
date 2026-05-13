@@ -1,6 +1,6 @@
 # ADR: Domain Gate Design — Residual Risks Carried to Implementation
 
-> **Status**: Accepted (4차 freeze)
+> **Status**: Partially Resolved (Phase A 완료 + M1~M5 결정 완료, 2026-05-13 22:55 KST)
 > **Date**: 2026-05-13
 > **Source Design**: `docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md`
 > **Trigger**: 메모리 룰 `feedback_design_review_rounds_stop_rule` "3라운드 cap + 4차 freeze" 적용
@@ -86,6 +86,30 @@
 2. **Phase A 첫 PR**: F3, F4 결정 명시 + G1~G6 체크리스트 통과
 3. **본 ADR Status**: Phase A 완료 시 "Superseded by implementation" 또는 "Resolved" 갱신
 4. **cross-review provider 진단**: 17:25 codex stdin-read error 별도 추적 (`docs/codex_논의/` 진단). 본 ADR과 독립
+
+---
+
+## M1~M5 결정 기록 (2026-05-13 22:55 KST)
+
+Phase A 구현(commit `ef82acc4`) 완료 후 잔여 Medium 항목 결정:
+
+| # | 항목 | 결정 | 근거 |
+|---|------|------|------|
+| M1 | verdict 파서 예외 형태 | **return False 유지** (BlockedExecutionError 도입 안 함) | `approve()` 는 False + `last_block_reason` 패턴 일관성 유지. `agent_launcher.py:440`이 이미 이 패턴으로 소비 중 |
+| M2 | ADR 번호 부여 규칙 | **`ADR-YYYYMMDD-HHMMSS-<slug>.md`, 저장위치 `docs/decisions/`** | 초 단위로 야간 파이프라인 충돌 방지. CLAUDE.md §ADR명명규칙 추가 |
+| M3 | frozen build `docs/decisions/` 경로 | **검증 완료 — 변경 불필요** | `approval_gate.py` 경로는 `workspace` 파라미터 기반 (user project dir). `_MEIPASS` 독립. `docs/decisions/` 생성(`mkdir`) |
+| M4 | MIT attribution `inspired_by:` 정책 | **SKILL.md 프론트매터에 `inspired_by: <패키지>/<스킬-ID>` 추가** | Phase B 흡수 시 적용. CLAUDE.md §스킬흡수귀속정책 추가 |
+| M5 | Phase B 진입 지표 + 결정자 | **3개 지표 + 사용자 명시 승인** | 아래 §Phase B 진입 기준 참조 |
+
+### Phase B 진입 기준
+
+| 지표 | 기준값 | 측정 방법 |
+|------|--------|-----------|
+| 지표 1: Phase A domain gate 발동 | ≥ 1건 (실 운영) | `hook_events.log` 또는 approval-gate.md `blast_radius: system_wide` 확인 |
+| 지표 2: approval_gate 테스트 지속 PASS | ≥ 29건, 2주 이상 연속 | `pytest tests/test_approval_gate*.py` CI 기록 |
+| 지표 3: 사용자 명시적 Phase B 지시 | 필수 (자동 전환 없음) | 구두 또는 NEXT_STEPS.md 지시 |
+
+**결정자**: hoon.kim1092@gmail.com (사용자) 단독 결정. 지표 1~2는 참고 기준이며, 지표 3 없이 자동 전환하지 않는다.
 
 ---
 
