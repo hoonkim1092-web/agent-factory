@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-13 23:00 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 완료. 다음: Phase B 진입 (사용자 명시 지시 필요).**
+> 마지막 업데이트: **2026-05-13 23:20 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B 완료. 다음: Phase C 범위 결정 (Option A/B/C 중 선택) 후 구현 진입.**
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 
@@ -32,17 +32,32 @@
 | M4 | `inspired_by:` 메타 정책 → CLAUDE.md §스킬흡수귀속정책 추가 |
 | M5 | Phase B 진입 기준 3개 + 결정자(사용자) 명시 → ADR §Phase B 진입 기준 |
 
-## 🔥 다음 세션 — Phase B 진입 (사용자 지시 필요)
+## ✅ Phase B 완료 (2026-05-13 23:20 KST)
 
-### Phase B 개요
-- **목표**: 14개 Superpowers 스킬 비교 평가 매트릭스 실측 (§4 설계문서)
-- **주요 작업**: brainstorming / systematic-debugging / verification-before-completion 3개 후보 실측 평가 후 Phase C 범위 확정
-- **설계 문서**: `docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md` §4
+- **산출물**: `docs/2026-05-13-superpowers-vs-af-comparison-matrix.md`
+- **결과**: 즉시 흡수 2개(brainstorming, systematic-debugging) + 선택적 3개(verification-before-completion, finishing-branch, git-worktrees)
 
-### Phase B 진입 조건
-- Phase A domain gate 발동 ≥ 1건 (실 운영) — 또는 —
-- 사용자 명시적 Phase B 진입 지시 (자동 전환 없음)
-- 상세 기준: `docs/2026-05-13-domain-gate-residual-risks-adr.md` §Phase B 진입 기준
+## 🔥 다음 세션 — Phase C 범위 결정 + 구현
+
+### Phase C 범위 옵션 (사용자 결정 필요)
+
+| Option | 대상 | 예상 LOC | 권장 여부 |
+|--------|------|----------|-----------|
+| **A (최소)** | brainstorming + systematic-debugging | ~200 LOC | - |
+| **B (권장)** | A + verification-before-completion | ~250 LOC | ✅ |
+| **C (전체)** | B + finishing-branch + git-worktrees | ~390 LOC | - |
+
+### Phase C 구현 작업 (Option B 기준)
+1. `skills/systematic_debugging/SKILL.md` 신설 (~120 LOC, `inspired_by: superpowers/systematic-debugging`)
+2. `docs/work-items/_template/domain-review.md` Socratic 섹션 추가 (~80 LOC, `inspired_by: superpowers/brainstorming`)
+3. `skills/verification_before_completion/SKILL.md` 신설 (~50 LOC, `inspired_by: superpowers/verification-before-completion`)
+
+### 진입 명령
+```bash
+git pull --ff-only
+python start_db.py agent-factory
+# Phase C 범위 사용자에게 확인 후 진입
+```
 
 ### 진입 명령
 ```bash
