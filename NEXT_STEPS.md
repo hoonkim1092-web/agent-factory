@@ -1,50 +1,47 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-13 18:00 KST (Opus 4.7)** — **🔥 다음 작업: Phase A Step 1 진입 (Domain Gate 구현). 5/11 design doc 4차 freeze + ADR 이월 완료.**
->
-> ## 🔥 다음 세션 — Phase A Step 1 구현 진입 (Sonnet 4.6 권장)
->
-> ### 컨텍스트 — 2026-05-13 결과
-> - **5/11 design doc 상태**: **4차 freeze** (메모리 룰 `feedback_design_review_rounds_stop_rule` "3라운드 cap + 4차 freeze" 적용)
-> - **잔여 finding 이월**: `docs/2026-05-13-domain-gate-residual-risks-adr.md` (Critical 2 + High 3 + Medium 5 + gaps 6 = 16건)
-> - **review 누적**: 5/11 원안 → 5/13 1차/2차/3차 정정 모두 BLOCK. 마지막 review = `docs/reviews/2026-05-13-172527-...-design-review.md`
-> - **식별자 회귀 5회 누적**: `feature/feature_update`, `system/system_wide`, `local/isolated×2`. 메모리 룰 `feedback_design_doc_grep_before_write` 위반 패턴
-> - **2026-05-13 새 정책 시도 후 폐기**: `.claude/agents/af-design-critic.md` 생성 → vendor lock-in 판정으로 삭제 ✅ / CLAUDE.md 5/13 변경 롤백 ✅ / 메모리 5/13 갱신 롤백 ✅
->
-> ### Phase A Step 1 — 즉시 처리 (1순위)
-> ADR의 **Critical 2건**부터:
-> - **F1**: `core/approval_gate.py`에 `"local"`, `"system"`, `"feature"` 토큰 grep 결과 0건 회귀 테스트 추가. 유효 enum: `{"isolated","module","cross_module","system_wide"}` (`core/control/change_impact.py:16,35,243`)
-> - **F2**: `core/approval_gate.py:496-550` `_render()` 시그니처 확장 — `_render(work_kind="", blast_radius="")`. `approve/apply_verification_verdict/invalidate` 모두 `self._parse()` 결과를 `_render()`에 carry. `initialize(... work_kind="", blast_radius="")` 시그니처 확장. `work_item_generator` 호출 갱신
->
-> ### Phase A 첫 PR — High 3건 결정 강제
-> - **F3**: `domain-review.md` drift 정책 (a) snapshot 별도 키 `domain_review_version` / (b) immutable + 새 slug 재발급 → **둘 중 명시 선택**
-> - **F4**: verdict 파서 × 체크박스 충돌 (a) 체크박스 제거 / (b) 파서 양쪽 인식 / (c) sync 스크립트 → **셋 중 명시 선택**
-> - **F5**: Phase A 단독 정당화 — 결정 충돌 실측 N건 또는 PROJECT_CONTEXT rework 사례 제시. 없으면 Phase B와 순서 재고
->
-> ### 진입 명령
-> ```bash
-> git pull --ff-only
-> python start_db.py agent-factory
-> # /model → Sonnet 4.6 (구현)
-> # 1. ADR 읽기: docs/2026-05-13-domain-gate-residual-risks-adr.md
-> # 2. 최신 design doc: docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md (frozen)
-> # 3. F1 회귀 테스트 작성 (tests/test_approval_gate_identifiers.py 신설)
-> # 4. F2 _render() 시그니처 확장 (core/approval_gate.py + work_item_generator.py)
-> # 5. PR 작성 시 F3/F4/F5 결정 commit 메시지에 명시
-> ```
->
-> ### 사용자 수동 작업 (이번 세션 미완)
-> - `.claude/agents/af-design-critic.md` 삭제 ✅ (완료)
-> - `.af_review_queue/pending/design/7705d7f93353.json` 삭제 권장 — ADR이 design doc 패턴으로 review 큐에 enqueue됐음. ADR은 freeze 결정 문서라 review 의미 없음:
->   ```powershell
->   Remove-Item .\.af_review_queue\pending\design\7705d7f93353.json
->   ```
->
-> ### Commit 대기 변경
-> - **Modified**: `CLAUDE.md` (5/13 변경 롤백), `docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md` (3 라운드 정정 결과, frozen)
-> - **Untracked**: `docs/2026-05-13-domain-gate-residual-risks-adr.md` (4차 freeze ADR)
-> - **Memory**: `feedback_design_doc_grep_before_write.md`, `feedback_design_review_rounds_stop_rule.md` (신규 룰 2건)
+> 마지막 업데이트: **2026-05-13 22:50 KST (Sonnet 4.6)** — **✅ Phase A (Domain Gate) 구현 완료. 다음: ADR Medium/Low 잔여 handling 또는 Phase B 진입 여부 결정.**
+
+## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
+
+### 구현된 내용 (commit: `ef82acc4`)
+- `core/approval_gate.py`: `blast_radius=system_wide` 시 `domain-review.md` verdict 체크
+  - PASS/NEEDS_ADR → 통과, `domain_review_version` 해시 스냅샷 저장
+  - BLOCK/MULTIPLE/파일없음/verdict없음 → `last_block_reason` 설정 후 `approve()` False
+  - `check_validity()`: domain_review_version 변조 감지 추가
+  - `AF_SKIP_DOMAIN_REVIEW=1` 우회 지원
+- `core/work_item_generator.py`: `generate_work_items(work_kind, blast_radius)` 파라미터 추가, `domain-review.md` 템플릿 자동 복사
+- `core/project_pipeline.py`: `project_brief`에서 `work_kind`/`blast_radius` 추출해 전달 (배포 동등성)
+- `agent_launcher.py`: `last_block_reason` 기반 오류 메시지
+- `docs/work-items/_template/domain-review.md`: 템플릿 생성
+- 테스트 29건 PASS (3-tier review-gate 완주)
+
+### 새 정책 (commit: `0b6500f6`)
+- `CLAUDE.md`: **파이프라인 배포 동등성 규칙** 추가 — production caller까지 end-to-end 연결 필수
+
+---
+
+## 🔥 다음 세션 — ADR 잔여 Medium/Low 처리 또는 Phase B 결정
+
+### ADR 잔여 항목 (`docs/2026-05-13-domain-gate-residual-risks-adr.md`)
+Phase A에서 처리하지 않은 Medium/Low 항목들:
+
+- **M1**: domain-review verdict 파서 예외 형태 명세 (`BlockedExecutionError` vs return False)
+- **M2**: ADR 번호 부여 규칙 `ADR-YYYYMMDD-HHMM-<slug>` + git workflow
+- **M3**: frozen build에서 `docs/decisions/` 경로 해석 검증
+- **M4**: MIT attribution — 흡수 SKILL.md `inspired_by:` 메타 정책
+- **M5**: 활성 단계 전환 지표 2~3개 + 결정자 명시
+
+### Phase B 진입 조건
+- Phase A가 실제 운영에서 1건 이상 domain gate 발동 확인 후
+- 또는 사용자가 명시적으로 Phase B 진입 지시
+
+### 진입 명령
+```bash
+git pull --ff-only
+python start_db.py agent-factory
+```
 >
 > ---
 >

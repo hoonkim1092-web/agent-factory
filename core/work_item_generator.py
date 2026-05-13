@@ -1394,7 +1394,7 @@ def _refine_document(
 def _copy_extra_templates(template_dir: str, work_dir: str) -> None:
     if not os.path.isdir(template_dir):
         return
-    extra = {"verification-report.md", "change-request.md", "bug-fix-spec.md"}
+    extra = {"verification-report.md", "change-request.md", "bug-fix-spec.md", "domain-review.md"}
     for filename in extra:
         src = os.path.join(template_dir, filename)
         dst = os.path.join(work_dir, filename)

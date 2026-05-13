@@ -1511,6 +1511,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-13 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, NEXT_STEPS.md, PROJECT_LOG.md (+68) |
 | 2026-05-13 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md (+71) |
 | 2026-05-13 | v1.2.28 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, approval_gate.py, 2026-05-11-domain-gate-superpowers-pattern-absorption-design.md, 2026-05-13-domain-gate-residual-risks-adr.md, code-review.md (+13) |
 | 2026-05-12 | v1.2.28 | chore(core): code update — dynamic_orchestrator.py, git_manager.py, 2026-05-12-agent-factory-deep-analysis-and-competitor-comparison.md", 2026-05-12-121710-2026-05-12-graph-memory-evolution-discussion-design-review.md |
