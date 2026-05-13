@@ -47,7 +47,7 @@ def test_project_skill_override_priority(monkeypatch, tmp_path):
 
     py_path, _ = al.resolve_skill_paths(sid)
     assert py_path is not None
-    assert os.path.normpath(str(py_path)).endswith(os.path.normpath(f"skills\\{sid}\\skill.py"))
+    assert os.path.normpath(str(py_path)).endswith(os.path.normpath(os.path.join("skills", sid, "skill.py")))
     assert os.path.normpath(str(py_path)).startswith(os.path.normpath(str(tmp_path / "proj")))
 
 

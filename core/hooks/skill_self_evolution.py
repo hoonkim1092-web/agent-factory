@@ -100,9 +100,8 @@ class SkillSelfEvolutionHook:
             )
             self._notify_consolidation(skill_id)
         else:
-            # "manual"/"schedule"/"quality_check" 등 화이트리스트 외 trigger는 정상 경로
-            logger.debug(
-                "[SelfEvolution] 화이트리스트 외 trigger: %s (skill=%s)", trigger, skill_id,
+            logger.warning(
+                "[SelfEvolution] 알 수 없는 trigger: %s (skill=%s)", trigger, skill_id,
             )
         self._record_evolution_to_memory(skill_id, old_version, new_version, trigger, decision)
 

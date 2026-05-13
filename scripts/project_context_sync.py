@@ -134,17 +134,14 @@ def resolve_project_root(repo_root: Path, project_input: str) -> tuple[str, Path
             return _project_sync_id_for_path(repo_root, resolved), resolved
 
     # 2) Local projects/ first so a nested project can win over the repo-root name.
-    # Exception: if the input key matches the repo-root name, skip nested projects/
-    # with the same name so Step 4 (repo-root fallback) can match correctly.
-    repo_root_key = normalize_match_key(repo_root.name)
-    _skip_same_as_repo = (key == repo_root_key)
-
+    # When a nested project shares the repo name (e.g. projects/agent_factory vs repo agent-factory),
+    # the nested project wins; use @repo / repo alias to explicitly target the repo root.
     exact_dir = projects_root / raw
-    if raw and exact_dir.exists() and exact_dir.is_dir() and not _skip_same_as_repo:
+    if raw and exact_dir.exists() and exact_dir.is_dir():
         return _project_sync_id_for_path(repo_root, exact_dir), exact_dir
 
     safe_dir = projects_root / safe
-    if safe and safe_dir.exists() and safe_dir.is_dir() and not _skip_same_as_repo:
+    if safe and safe_dir.exists() and safe_dir.is_dir():
         return _project_sync_id_for_path(repo_root, safe_dir), safe_dir
 
     if key:
@@ -154,7 +151,7 @@ def resolve_project_root(repo_root: Path, project_input: str) -> tuple[str, Path
                 continue
             if normalize_match_key(p.name) == key:
                 matches.append(p)
-        if len(matches) == 1 and not _skip_same_as_repo:
+        if len(matches) == 1:
             return _project_sync_id_for_path(repo_root, matches[0]), matches[0]
 
     # 3) Sibling project directory support next (e.g. D:\logi-mind-v22).
