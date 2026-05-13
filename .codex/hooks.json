@@ -1,0 +1,124 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_code_review",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_design_review",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_agent_record",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_pending_review.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py check_design_pending.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
+          }
+        ]
+      }
+    ]
+  }
+}
