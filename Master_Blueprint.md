@@ -1522,6 +1522,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-14 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+69) |
+| 2026-05-14 | v1.2.28 | fix(utils): `resolve_knowledge_skill_path` 중복 탐색 제거 — `priority`를 `get_codex_skill_roots` extra_roots 선두로 전달해 `SKILLS_DIR`·`PROJECT_SKILLS_DIR` 2회 탐색 → 1회로 축소. 3-tier PASS. |
+| 2026-05-14 | v1.2.28 | chore(AGENTS): edit: core/utils.py — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md (+67) |
 | 2026-05-14 | v1.2.28 | feat(phase-c-option-c): Superpowers 패턴 흡수 Phase C Option C — `skills/finishing_branch/SKILL.md` 신설(6단계 브랜치 마무리 가이드, `inspired_by: superpowers/finishing-a-development-branch`). `skills/git_worktrees/SKILL.md` 신설(4단계 worktree 격리 가이드, `inspired_by: superpowers/using-git-worktrees`). SKILL.md only — no .py, review gate 자동 통과. 21 tests PASS (skill discovery). |
 | 2026-05-14 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md (+68) |
 | 2026-05-14 | v1.2.28 | chore(AGENTS): edit: core/utils.py — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md (+66) |

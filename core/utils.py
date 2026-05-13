@@ -322,8 +322,8 @@ def resolve_knowledge_skill_path(skill_id: str, extra_roots: list[str] | None = 
     settings = read_project_settings()
     pref = settings.get("skill_overrides", {}) if isinstance(settings.get("skill_overrides"), dict) else {}
     prefer_project = bool(pref.get("prefer_project_skills", True))
-    ordered_roots = [PROJECT_SKILLS_DIR, SKILLS_DIR] if prefer_project else [SKILLS_DIR, PROJECT_SKILLS_DIR]
-    ordered_roots.extend(get_codex_skill_roots(extra_roots))
+    priority = [PROJECT_SKILLS_DIR, SKILLS_DIR] if prefer_project else [SKILLS_DIR, PROJECT_SKILLS_DIR]
+    ordered_roots = get_codex_skill_roots(priority + (extra_roots or []))
     for root in ordered_roots:
         for filename in skill_markdown_filenames():
             candidate = os.path.join(root, sid, filename)

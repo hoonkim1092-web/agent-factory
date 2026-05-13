@@ -58,12 +58,16 @@
 
 **Superpowers 흡수 전체 완료**: systematic-debugging ✅, verification-before-completion ✅, brainstorming ✅, finishing-branch ✅, git-worktrees ✅
 
+## ✅ advisory 반영 완료 (2026-05-14 KST)
+
+- `core/utils.resolve_knowledge_skill_path()` 중복 탐색 제거: `priority`를 `get_codex_skill_roots` extra_roots 선두로 전달 → 내부 `seen` set dedup. 3-tier PASS.
+
 ## 🔥 다음 세션 후보
 
 | 작업 | 설명 |
 |------|------|
-| advisory 반영 | `resolve_knowledge_skill_path` 중복 탐색 제거 (af-cross-review WARN, 선택사항) |
 | 기타 백로그 | NEXT_STEPS.md 하단 보존 이력 참고 |
+| test_key_combos.py 3건 수정 | `model_utils.resolve_dynamic_model` tier 판정 불일치 — 기존 회귀 |
 
 >
 > ---
