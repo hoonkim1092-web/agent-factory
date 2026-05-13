@@ -40,6 +40,10 @@ def gate(tmp_path):
 
 def test_approve_preserves_metadata(gate):
     _seed_gate(gate.gate_path, work_kind="refactor", blast_radius="system_wide")
+    # system_wide requires domain-review.md with a passing verdict
+    domain_path = os.path.join(os.path.dirname(gate.gate_path), "domain-review.md")
+    with open(domain_path, "w", encoding="utf-8") as fh:
+        fh.write("- verdict: PASS\n")
 
     result = gate.approve(approver="user")
     assert result is True

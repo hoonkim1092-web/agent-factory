@@ -967,6 +967,8 @@ class ProjectPipeline:
             role_plan=role_plan,
             task_board=task_board,
             run_id=run_id,
+            work_kind=str(project_brief.get("work_kind") or ""),
+            blast_radius=str(project_brief.get("blast_radius") or ""),
         )
 
         # -- Plan-Critique-Verify --

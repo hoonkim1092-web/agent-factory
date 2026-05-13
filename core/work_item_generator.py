@@ -1076,6 +1076,9 @@ def generate_work_items(
     role_plan: dict[str, Any],
     task_board: dict[str, Any],
     run_id: str = "",
+    *,
+    work_kind: str = "",
+    blast_radius: str = "",
 ) -> dict[str, str]:
     # target_path가 있으면 프로젝트 디렉토리에 문서를 생성하고,
     # 없으면 기존처럼 workspace(agent-factory 내부)에 생성한다.
@@ -1232,7 +1235,7 @@ def generate_work_items(
         _LOGGER.warning("warning_registry summarize failed: %s", _sum_exc)
 
     gate = ApprovalGate(doc_root, slug, runtime_workspace=workspace)
-    gate.initialize(work_item_id, run_id=run_id)
+    gate.initialize(work_item_id, run_id=run_id, work_kind=work_kind, blast_radius=blast_radius)
     files["approval-gate.md"] = gate.gate_path
 
     return files

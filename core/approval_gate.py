@@ -86,6 +86,32 @@ _DOC_FILES = {
     "implementation_tasks": "implementation-tasks.md",
 }
 
+_DOMAIN_REVIEW_FILE = "domain-review.md"
+
+
+def _read_domain_review_verdict(path: str) -> str:
+    """domain-review.md에서 verdict 파싱.
+
+    F4-(b): `- verdict:` 줄 우선, 없으면 `- [x] CHECKBOX` 체크박스 fallback.
+    반환: "PASS" | "NEEDS_ADR" | "BLOCK" | "" (missing) | "MULTIPLE"
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return ""
+
+    explicit = re.findall(r"^- verdict:\s*(PASS|NEEDS_ADR|BLOCK)\s*$", text, re.M)
+    if explicit:
+        return explicit[0] if len(explicit) == 1 else "MULTIPLE"
+
+    checked = re.findall(r"^- \[x\]\s+(PASS|NEEDS_ADR|BLOCK)\b", text, re.M | re.I)
+    if not checked:
+        return ""
+    if len(checked) > 1:
+        return "MULTIPLE"
+    return checked[0].upper()
+
 
 def _sha256_file(path: str) -> str:
     h = hashlib.sha256()
@@ -121,12 +147,20 @@ class ApprovalGate:
             self.workspace, "docs", "work-items", slug
         )
         self.gate_path = os.path.join(self.work_item_dir, GATE_FILENAME)
+        self.last_block_reason: str = ""
 
     # ------------------------------------------------------------------
     # 공개 API
     # ------------------------------------------------------------------
 
-    def initialize(self, work_item_id: str = "", run_id: str = "") -> None:
+    def initialize(
+        self,
+        work_item_id: str = "",
+        run_id: str = "",
+        *,
+        work_kind: str = "",
+        blast_radius: str = "",
+    ) -> None:
         """approval-gate.md 최초 생성 (execution_open: false)."""
         os.makedirs(self.work_item_dir, exist_ok=True)
         content = self._render(
@@ -137,6 +171,8 @@ class ApprovalGate:
             gate_statuses={},
             execution_open=False,
             review_notes="",
+            work_kind=work_kind,
+            blast_radius=blast_radius,
         )
         write_text(self.gate_path, content)
         _emit_approval_event("approval_requested", self, run_id)
@@ -190,6 +226,30 @@ class ApprovalGate:
         ):
             return True
 
+        # Domain Gate — system_wide blast_radius 전용 (F3-a)
+        self.last_block_reason = ""
+        domain_review_version = ""
+        if (
+            _clean(current.get("blast_radius")) == "system_wide"
+            and os.environ.get("AF_SKIP_DOMAIN_REVIEW") != "1"
+        ):
+            domain_path = os.path.join(self.work_item_dir, _DOMAIN_REVIEW_FILE)
+            if not os.path.exists(domain_path):
+                self.last_block_reason = "missing_domain_frontmatter"
+                return False
+            verdict = _read_domain_review_verdict(domain_path)
+            if not verdict:
+                self.last_block_reason = "missing_verdict"
+                return False
+            if verdict == "MULTIPLE":
+                self.last_block_reason = "multiple_verdicts"
+                return False
+            if verdict == "BLOCK":
+                self.last_block_reason = "domain_review_blocked"
+                return False
+            # PASS or NEEDS_ADR → 진행, domain-review.md 해시 스냅샷 저장
+            domain_review_version = _sha256_file(domain_path)
+
         snapshots = self.compute_snapshots()
         gate_statuses = {key: "approved" for key in _DOC_FILES}
 
@@ -216,6 +276,7 @@ class ApprovalGate:
             review_notes=review_notes,
             work_kind=_clean(current.get("work_kind")),
             blast_radius=_clean(current.get("blast_radius")),
+            domain_review_version=domain_review_version,
         )
         write_text(self.gate_path, content)
         _emit_approval_event("approval_granted", self, run_id, approver=effective_approver)
@@ -377,6 +438,14 @@ class ApprovalGate:
                 continue
             if saved != now_hash:
                 changed.append(filename)
+
+        # domain_review_version 비교 (저장된 경우에만)
+        saved_dr = _clean(snapshots.get("domain_review"))
+        if saved_dr:
+            domain_path = os.path.join(self.work_item_dir, _DOMAIN_REVIEW_FILE)
+            if _sha256_file(domain_path) != saved_dr:
+                changed.append(_DOMAIN_REVIEW_FILE)
+
         return len(changed) == 0, changed
 
     def compute_snapshots(self) -> dict[str, str]:
@@ -510,11 +579,14 @@ class ApprovalGate:
         review_notes: str,
         work_kind: str = "",
         blast_radius: str = "",
+        domain_review_version: str = "",
     ) -> str:
         snap_lines = "\n".join(
             f"- {key}_version: {snapshots.get(key, '')}"
             for key in _DOC_FILES
         )
+        if domain_review_version:
+            snap_lines += f"\n- domain_review_version: {domain_review_version}"
         gate_lines = "\n".join(
             f"- {key}_status: {gate_statuses.get(key, 'review_pending')}"
             for key in _DOC_FILES

@@ -437,8 +437,9 @@ class AgentFactory:
             if choice in ("1", "approve", "a"):
                 approved = gate.approve(approver="user", run_id=prepared.run_id)
                 if not approved:
-                    print("  [오류] approval-gate.md 를 찾을 수 없습니다.")
-                    return {"ok": False, "reason": "gate_file_missing"}
+                    reason = gate.last_block_reason or "gate_file_missing"
+                    print(f"  [오류] 승인 실패: {reason}")
+                    return {"ok": False, "reason": reason}
                 print("\n  승인 완료. Phase 2: 에이전트 실행을 시작합니다...")
                 break
 
