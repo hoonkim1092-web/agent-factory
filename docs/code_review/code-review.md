@@ -4607,3 +4607,15 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (6)**: `NEXT_STEPS.md, core/approval_gate.py, docs/2026-05-11-domain-gate-superpowers-pattern-absorption-design.md, findings.md, progress.md, task_plan.md`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-13 19:06 — `main` (1cba5a1e)
+
+**Context**: Preserve domain gate metadata
+
+**Changed (3)**: `findings.md, progress.md, task_plan.md`
+
+### Findings
+
+You've hit your limit · resets 8:30pm (Asia/Seoul)
