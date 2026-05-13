@@ -218,7 +218,7 @@
 | `config_paths.py` | 101 | 모듈 레벨 상수. PROJECT_ROOT, AGENTS_DIR, RUNS_DIR 등 |
 | `engine_auth.py` | 182 | auto_configure_cli_provider() — 단일 provider 자동 선택 |
 | `concurrency.py` | 207 | BackgroundTaskManager, circuit breaker |
-| `utils.py` | 363 | 범용 유틸리티. `resolve_skill_paths()`:226 forge directory 구조 우선+flat fallback, `get_external_skill_roots()` (personal>project 순서, Claude 경로 포함), `get_codex_skill_roots` alias 유지 |
+| `utils.py` | 363 | 범용 유틸리티. `resolve_skill_paths()`:226 forge directory 구조 우선+flat fallback, `get_external_skill_roots()` (personal>project 순서, Tier 2에 `PROJECT_ROOT/skills/` 포함, Claude 경로 포함), `get_codex_skill_roots` alias 유지 |
 | `file_io.py` | 124 | 파일 I/O 헬퍼 |
 | `file_lock.py` | 92 | 크로스 프로세스 파일 락 |
 | `git_manager.py` | 94 | Git 조작 |
@@ -4619,3 +4619,43 @@ _Review skipped (--no-llm or LLM unavailable)_
 ### Findings
 
 You've hit your limit · resets 8:30pm (Asia/Seoul)
+
+---
+
+## 2026-05-13 21:28 — `main` (4adf104b)
+
+**Context**: edit: core/approval_gate.py
+
+**Changed (70)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+55)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-13 22:49 — `main` (0b6500f6)
+
+**Context**: edit: core/work_item_generator.py
+
+**Changed (71)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+56)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-13 23:03 — `main` (ad1acca2)
+
+**Context**: test
+
+**Changed (70)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+55)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-13 23:59 — `main` (f048a468)
+
+**Context**: edit: core/utils.py
+
+**Changed (72)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+57)`
+
+_Review skipped (--no-llm or LLM unavailable)_
