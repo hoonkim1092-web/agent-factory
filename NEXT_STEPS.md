@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B + Phase C Option B 완료. 다음: NEXT_STEPS 하단 참고.**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B + Phase C Option B+C 완료. Superpowers 흡수 완료. 다음: 백로그 또는 신규 작업.**
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 
@@ -49,12 +49,20 @@
 ### Advisory (af-cross-review WARN)
 `PROJECT_ROOT` 미설정 시 `projects/default`로 해석 → 추가 경로는 `projects/default/skills`(빈 폴더). 레포 루트 `skills/` 40개는 이미 `SKILLS_DIR`로 별도 로드됨. 기능 오류 없음.
 
+## ✅ Phase C Option C 완료 (2026-05-14 KST)
+
+### 구현된 내용
+- `skills/finishing_branch/SKILL.md` 신설 (6단계 브랜치 마무리 가이드, `inspired_by: superpowers/finishing-a-development-branch`)
+- `skills/git_worktrees/SKILL.md` 신설 (4단계 워크스페이스 격리 가이드, `inspired_by: superpowers/using-git-worktrees`)
+- SKILL.md only — 회귀 없음 (21 skill discovery tests PASS)
+
+**Superpowers 흡수 전체 완료**: systematic-debugging ✅, verification-before-completion ✅, brainstorming ✅, finishing-branch ✅, git-worktrees ✅
+
 ## 🔥 다음 세션 후보
 
 | 작업 | 설명 |
 |------|------|
-| Phase C Option C 선택적 흡수 | `finishing_branch/SKILL.md` + `git_worktrees/SKILL.md` (각 ~80/~60 LOC) — 사용자 결정 필요 |
-| advisory 반영 | `get_external_skill_roots()` docstring 갱신 + `resolve_knowledge_skill_path` 중복 탐색 제거 |
+| advisory 반영 | `resolve_knowledge_skill_path` 중복 탐색 제거 (af-cross-review WARN, 선택사항) |
 | 기타 백로그 | NEXT_STEPS.md 하단 보존 이력 참고 |
 
 >
