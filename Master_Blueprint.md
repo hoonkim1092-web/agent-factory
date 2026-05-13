@@ -47,7 +47,7 @@
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점 | `main()` |
-| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2) |
+| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` (Phase A) |
 | `core/escalation_evaluator.py` | P2 에스컬레이션 규칙 평가 | `RunDecision`, `EscalationDecision`, `evaluate()`, `compute_run_decision()`, `load_policy()` |
 | `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
 | `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
@@ -734,6 +734,15 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 
 **ApprovalGate 변경**: `__init__(workspace, slug, *, runtime_workspace=None)` — P2에서 `read_block_decision()` 추가.
 
+**Domain Gate (Phase A, 2026-05-13)**: `approve()` 내 `blast_radius == "system_wide"` 시 `domain-review.md` verdict 체크.
+- `_DOMAIN_REVIEW_FILE = "domain-review.md"` 상수
+- `_read_domain_review_verdict(path)`: `- verdict: PASS|NEEDS_ADR|BLOCK` 파싱, fallback으로 `- [x] CHECKBOX` 인식. 반환: `"PASS"` | `"NEEDS_ADR"` | `"BLOCK"` | `""` (missing) | `"MULTIPLE"`
+- `self.last_block_reason: str` — approve() 실패 시 세부 사유: `"missing_domain_frontmatter"` | `"missing_verdict"` | `"multiple_verdicts"` | `"domain_review_blocked"` | `""`
+- `domain_review_version` — approve() 성공 시 `## Approved Snapshot`에 저장. `check_validity()`가 파일 변조 감지
+- `initialize(work_kind="", blast_radius="")` — gate 파일 `## Metadata`에 저장. `generate_work_items()` + `project_pipeline.py` → `project_brief.get("work_kind/blast_radius")` 경유 전달
+- 우회: `AF_SKIP_DOMAIN_REVIEW=1`
+- blast_radius 유효 토큰: `{"isolated", "module", "cross_module", "system_wide"}` (`core/control/change_impact.py:16,35,243`)
+
 **project_pipeline 변경**: `execute()` 내 `is_execution_open()` 직후 `gate.read_block_decision()` → blocked 시 `{"ok": False, "reason": "escalation_block", ...}` 반환.
 
 **P3 measurement phase 표** (`runtime/warnings/_index.json` schema v2):
@@ -1144,13 +1153,15 @@ Layer 5: 인간 승인 게이트
 `approved`는 `status` 필드 값이며 `execution_open` 별칭이 아님.
 
 ```
-initialize() → execution_open: false, status: "pending"
+initialize(work_kind, blast_radius) → execution_open: false, status: "review_pending"
      ↓
 [사용자 검토]
      ↓
-approve() → SHA256 스냅샷 저장, execution_open: true, status: "approved"
+approve() → [blast_radius=system_wide] domain-review.md verdict 체크
+            → PASS/NEEDS_ADR: SHA256 스냅샷 저장(+domain_review_version), execution_open: true, status: "approved"
+            → BLOCK/missing: last_block_reason 설정, return False
      ↓
-[문서 수정 감지]
+[문서 수정 감지 — _DOC_FILES + domain_review_version]
      ↓
 invalidate() → execution_open: false (재승인 필요)
 ```
