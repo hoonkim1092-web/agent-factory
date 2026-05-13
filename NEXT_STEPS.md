@@ -67,7 +67,7 @@
 | 작업 | 설명 |
 |------|------|
 | 기타 백로그 | NEXT_STEPS.md 하단 보존 이력 참고 |
-| test_key_combos.py 3건 수정 | `model_utils.resolve_dynamic_model` tier 판정 불일치 — 기존 회귀 |
+| 기타 백로그 | NEXT_STEPS.md 하단 보존 이력 참고 |
 
 >
 > ---

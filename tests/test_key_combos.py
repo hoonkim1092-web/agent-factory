@@ -46,7 +46,8 @@ def test_engine_selection_per_key_combination(monkeypatch, env, expected_tiers):
         monkeypatch.setenv(key, value)
     monkeypatch.delenv("AGENT_FORCE_MODEL", raising=False)
     monkeypatch.delenv("AGENT_CHAT_PROVIDER", raising=False)
-    monkeypatch.delenv("AGENT_DISABLE_ENGINE_API_KEYS", raising=False)
+    # CLI auto-detect(claude/codex 설치 여부)가 API 키 라우팅 테스트에 개입하지 않도록 명시적으로 비활성화
+    monkeypatch.setenv("AGENT_DISABLE_ENGINE_API_KEYS", "0")
 
     import model_utils
 
