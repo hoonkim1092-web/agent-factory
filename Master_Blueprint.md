@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-12 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-13 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1511,6 +1511,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-13 | v1.2.28 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, approval_gate.py, 2026-05-11-domain-gate-superpowers-pattern-absorption-design.md, 2026-05-13-domain-gate-residual-risks-adr.md, code-review.md (+13) |
 | 2026-05-12 | v1.2.28 | chore(core): code update — dynamic_orchestrator.py, git_manager.py, 2026-05-12-agent-factory-deep-analysis-and-competitor-comparison.md", 2026-05-12-121710-2026-05-12-graph-memory-evolution-discussion-design-review.md |
 | 2026-05-11 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md (+70) |
 | 2026-05-11 | v1.2.28 | fix(portable-paths): PC별 절대경로 박힘 근본 해결 — `core/utils.to_portable_path()`가 파일 존재 검증 의존 제거(eval/promotion JSON은 직렬화 시점에 파일 미작성 상태라 기존 동작이 abs를 fallback으로 리턴해 PC 식별자 leak). BASE_DIR commonpath 기반 강제 상대화로 전환, 외부 경로는 abs POSIX fallback 유지. `core/skill_eval_harness.SkillEvalReport.to_dict()` `skill_path/evals_path/report_path` 3필드 portable 직렬화. `core/skill_promotion.PromotionDecision.to_dict()` `promotion_path` portable 직렬화 + `_record_feedback()` payload `report_path/promotion_path` portable 처리(`data/skill-usage.jsonl`까지 전파). `scripts/hook_runner._portable_fp()` 신규 — Claude Code stdin abs file_path를 root 기준 상대 POSIX로 변환해 `--context "edit: <fp>"`에 사용(`code-review.md`/blueprint sync 양쪽). 회귀 54 PASS(`test_skill_eval_harness`/`test_skill_feedback`/`test_skill_procurer_reuse_gate`/`test_hook_runner*`/`test_utils_cache`). 영향: `data/skill-usage.jsonl`, `skill-eval-report.json`, `skills/new_skill/skill-eval-report.json`, `skills/new_skill/skill-promotion.json`, `skills/registry.yaml`, `docs/code_review/code-review.md` — 다음 파이프라인 실행 시 portable로 자동 덮어씀. |

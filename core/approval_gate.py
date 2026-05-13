@@ -214,6 +214,8 @@ class ApprovalGate:
             gate_statuses=gate_statuses,
             execution_open=True,
             review_notes=review_notes,
+            work_kind=_clean(current.get("work_kind")),
+            blast_radius=_clean(current.get("blast_radius")),
         )
         write_text(self.gate_path, content)
         _emit_approval_event("approval_granted", self, run_id, approver=effective_approver)
@@ -236,6 +238,8 @@ class ApprovalGate:
             gate_statuses=gate_statuses,
             execution_open=False,
             review_notes=note,
+            work_kind=_clean(current.get("work_kind")),
+            blast_radius=_clean(current.get("blast_radius")),
         )
         write_text(self.gate_path, content)
 
@@ -412,6 +416,8 @@ class ApprovalGate:
             gate_statuses=gate_statuses,
             execution_open=False,
             review_notes=note,
+            work_kind=_clean(current.get("work_kind")),
+            blast_radius=_clean(current.get("blast_radius")),
         )
         write_text(self.gate_path, content)
 
@@ -502,6 +508,8 @@ class ApprovalGate:
         gate_statuses: dict[str, str],
         execution_open: bool,
         review_notes: str,
+        work_kind: str = "",
+        blast_radius: str = "",
     ) -> str:
         snap_lines = "\n".join(
             f"- {key}_version: {snapshots.get(key, '')}"
@@ -520,6 +528,11 @@ class ApprovalGate:
             if review_notes.strip()
             else decision_report_line
         )
+        extra_meta = ""
+        if work_kind:
+            extra_meta += f"- work_kind: {work_kind}\n"
+        if blast_radius:
+            extra_meta += f"- blast_radius: {blast_radius}\n"
         return (
             "# Approval Gate\n"
             "\n"
@@ -529,6 +542,7 @@ class ApprovalGate:
             f"- approver: {approver}\n"
             f"- status: {status}\n"
             f"- last_updated: {now_iso()}\n"
+            f"{extra_meta}"
             "\n"
             f"{_SEC_SNAPSHOT}\n"
             "\n"

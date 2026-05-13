@@ -93,25 +93,120 @@ AF는 다음을 이미 갖추고 있다:
 
 | 수정 파일 | 변경 내용 | 예상 LOC |
 |---|---|---|
-| `core/approval_gate.py` | `requires_domain_review: bool` 정책 추가, work-item kind 분기, `domain-review.md` verdict 검사 (verdict ∈ {`PASS`, `NEEDS_ADR`, `BLOCK`}) | ~30 |
+| `core/approval_gate.py` | `requires_domain_review` 정책, `blast_radius=="system_wide"` 트리거 분기, `approval-gate.md ## Metadata`에서 `work_kind`/`blast_radius` read, `_DOMAIN_REVIEW_FILE` 별도 상수 + verdict 1줄 파서, `last_block_reason` 노출 (`__init__`에 초기화), `AF_SKIP_DOMAIN_REVIEW=1` bypass | ~80 |
+| `core/work_item_generator.py` | `generate_work_items()` 시그니처에 `work_kind: str = ""`, `blast_radius: str = ""` 키워드 추가. `approval-gate.md ## Metadata`에 두 필드 기재. `_copy_extra_templates()` `extra`에 `domain-review.md` 추가 | ~40 |
+| `core/project_pipeline.py` | (a) `prepare_documents()`에 `ControlPlaneIntake().normalize(...)` 호출 추가 + `PreparedBrief/PreparedProject`에 `normalized` 필드 carry (b) `generate_work_items(..., work_kind=prepared.normalized.work_kind, blast_radius=prepared.normalized.change_impact.get("blast_radius", ""))` 호출부 갱신 (`project_pipeline.py:963` 부근) | ~25 |
+| `agent_launcher.py` | `gate.approve()` False 처리 분기 갱신 (현재 L437-441에서 무조건 `"approval-gate.md 를 찾을 수 없습니다" + reason="gate_file_missing"`). `gate.last_block_reason`으로 분기: `"gate_file_missing"` / `"missing_domain_frontmatter"` / `"domain_review_blocked"` / `"missing_verdict"` / `"multiple_verdicts"` 별 메시지 분리 | ~20 |
+| `tests/test_approval_gate_*.py` | 기존 approve() 호환성 회귀 — `last_block_reason==""` default 검증 + 새 분기 처리 fixture | ~30 |
+
+**ApprovalGate ↔ work_kind 통합 경로** (5/13 review Critical #2/High #3,#4 해소, 5/13 3차 정정 — `ControlPlaneIntake.normalize()` 호출자 0건 회귀 차단):
+
+> ⚠️ **"호출부 회귀 0" 주장 철회**: 사전 grep 결과 (`Grep "ControlPlaneIntake\(\)" core/`) — `core/project_pipeline.py:710`은 `ControlPlaneIntake()._recall_from_memory()`만 호출. `ControlPlaneIntake.normalize()` **호출자 0건**. 따라서 데이터 흐름은 **신규 통합 작업**이며 다음 코드 변경이 Phase A에 필수:
+>
+> 1. `core/project_pipeline.py` `prepare_documents()` (또는 `prepare_brief()`)에서 `ControlPlaneIntake().normalize(task_input, target_workspace, project_brief["route"], board=task_board)` 호출 추가
+> 2. 반환된 `NormalizedRequest`를 `PreparedBrief` 또는 `PreparedProject` dataclass의 새 필드 `normalized: NormalizedRequest | None = None`로 carry
+> 3. `generate_work_items()` 호출부 (`project_pipeline.py:963` 부근)에서 `prepared.normalized.work_kind`, `prepared.normalized.change_impact.get("blast_radius", "")` 전달
+> 4. `generate_work_items()` 시그니처에 `work_kind: str = ""`, `blast_radius: str = ""` 키워드 추가
+
+- **통합 방식**: `work_item_generator.generate_work_items(..., work_kind, blast_radius)` 시그니처 확장 + work-item 디렉토리의 `approval-gate.md` 파일 **`## Metadata` 섹션**에 두 필드 기록 (옵션 iii 유지하되 데이터 흐름 명시)
+- **frontmatter 위치 결정**: **`approval-gate.md ## Metadata` 섹션 확장** (YAML frontmatter 별도 도입 ❌)
+  - 사유: `ApprovalGate._parse()` (`core/approval_gate.py:437-490`)가 이미 해당 형식을 파싱. 신규 파서 도입 비용 0
+  - 기록 포맷 (machine-readable 1줄씩):
+    ```markdown
+    ## Metadata
+    - work_kind: refactor
+    - blast_radius: system_wide
+    - verdict: PASS    # domain-review.md에 동일 형식, 별도 파일
+    ```
+- **`_DOMAIN_REVIEW_FILE` 별도 상수** (5/13 review Critical #2 해소):
+  - `_DOC_FILES`에 `domain-review.md` **추가하지 않음** (기존 work-item 일괄 무효화 회피)
+  - `_DOMAIN_REVIEW_FILE = "domain-review.md"` 단독 상수 신설
+  - `require_domain_review()` 발화 시에만 별도 read, snapshot 비교 로직과 분리
+- **base path** (5/13 review Medium #5 해소): `ApprovalGate.work_item_dir = doc_root/docs/work-items/<slug>` (사전 grep으로 확인 `core/work_item_generator.py:1083-1088`)
+  - `doc_root` = `target_path`가 절대경로면 `target_path`, 아니면 `workspace`
+  - 즉 `workspace/docs/...` 가 아닌 **effective doc_root** 기준
+  - multi-PC / 외부 target_path 환경에서 중요: `ApprovalGate(workspace=doc_root, slug=slug, runtime_workspace=workspace)` 패턴 유지
+- **read 시점**: `ApprovalGate.approve()` 진입 직후
+- **에러 반환 정책** (5/13 review High #6 해소, 5/13 3차 정정 — 호출자 호환성 보강):
+  - **`BlockedExecutionError` 신설 ❌** — 기존 `approve()` bool 반환 시그니처 (`core/approval_gate.py:144`) 유지
+  - 차단 시: `approve()` False 반환 + `self.last_block_reason` 속성에 사유 기록
+  - `ApprovalGate.__init__`에 `self.last_block_reason: str = ""` 초기화 명시 (default empty)
+  - 사유 enum (Literal): `""` (정상) | `"gate_file_missing"` (기존 행동, 회귀 방지) | `"missing_domain_frontmatter"` | `"domain_review_blocked"` | `"missing_verdict"` | `"multiple_verdicts"`
+  - **caller 갱신 필수** (사전 grep `Grep "approve\(" core/`):
+    - `agent_launcher.py:437-441` — False 시 무차별 `"gate_file_missing"` 메시지를 `last_block_reason` 분기 처리로 갱신
+    - `core/project_pipeline.py:1516` — auto approve 경로, `approver="auto"`. False면 자동 실행 흐름 중단 + reason 로깅
+    - `tests/test_approval_gate_*.py` — 기존 테스트는 `last_block_reason==""` default 검증으로 회귀 0 보장
+- **verdict 파서** (5/13 review High #5 해소):
+  - `domain-review.md`에 1줄 machine-readable line 의무: `- verdict: PASS|NEEDS_ADR|BLOCK`
+  - `_read_domain_review_verdict(path) -> Literal["PASS", "NEEDS_ADR", "BLOCK", ""]` 구현
+  - 누락/무효/다중 verdict는 fail-closed (`""` 반환 + distinct `last_block_reason`)
+- **bypass 메커니즘** (5/13 review Medium #9 해소):
+  - `AF_SKIP_DOMAIN_REVIEW=1` 환경변수 (CLAUDE.md `AF_SKIP_REVIEW_GATE` 패턴 선례 정합)
+  - 자동 면제(`risk_level=="critical"` 등) 후보는 **폐기** (보안 함의 모호)
+  - bypass 발동 시 `.af_runtime/hook_events.log`에 기록 의무
+- `runtime_workspace`는 본 경로에 **사용하지 않음** (escalation/decision 경로 전용, `core/approval_gate.py:270-274`)
+
+**work_kind 호출 스택** (사전 grep으로 실측, Phase A에 신규 통합 필요):
+```
+user_request
+ → RequestRouter.route()                       # 1차 분류: intent
+ → [Phase A 신규] ControlPlaneIntake().normalize(task_input, target_workspace,
+                                                 project_brief["route"], board=task_board)
+     # ↑ 현재 호출자 0건 — Phase A에서 prepare_documents()에 호출 추가 필수
+     # 위치: core/project_pipeline.py prepare_documents() 또는 prepare_brief()
+     → WorkKindClassifier.classify()           # core/control/work_kind.py:60
+         → returns (work_kind, issue_kind)
+         → work_kind ∈ {"new_project","maintenance","bugfix","feature_update","refactor"}
+     → ChangeImpactProfiler.profile()          # core/control/change_impact.py:35
+         → blast_radius ∈ {"isolated","module","cross_module","system_wide"}
+         # ↑ 사전 grep: core/control/change_impact.py:16,35,223,231,240,243 실측
+     → NormalizedRequest{work_kind, change_impact, ...}
+ → [Phase A 신규] PreparedBrief/PreparedProject 에 normalized: NormalizedRequest carry
+ → core/project_pipeline.py:963 호출부 갱신
+     → generate_work_items(workspace, slug, ...,
+                           work_kind=prepared.normalized.work_kind,
+                           blast_radius=prepared.normalized.change_impact.get("blast_radius", ""))
+         → work_dir = doc_root/docs/work-items/<slug>  # doc_root = target_path 또는 workspace
+         → approval-gate.md ## Metadata 에 work_kind/blast_radius 기록
+ → ApprovalGate(workspace=doc_root, slug=slug, runtime_workspace=workspace)
+     → approve() 진입 시 _parse() 통해 metadata read
+         → require_domain_review(blast_radius) 호출
+         → True 면 _read_domain_review_verdict() 실행
+         → verdict != PASS 면 False 반환 + last_block_reason 세팅
+ → caller 분기 (agent_launcher.py:437-441 / project_pipeline.py:1516)
+     → last_block_reason 별 메시지/처리 분리
+```
 
 ### §3.3 정책 분기 정의
 
 ```python
 # core/approval_gate.py 신설 메서드 시그니처 (개념)
-def require_domain_review(work_item_kind: str) -> bool:
-    """non-trivial work-item에서만 domain-review 요구. 점진적 활성화."""
-    NON_TRIVIAL_KINDS = {"feature", "refactor", "architecture-change"}
-    return work_item_kind in NON_TRIVIAL_KINDS
+import os
+
+def require_domain_review(blast_radius: str) -> bool:
+    """blast_radius가 system_wide면 domain-review 요구. work_kind 무관 (보수적 트리거)."""
+    if os.environ.get("AF_SKIP_DOMAIN_REVIEW") == "1":
+        return False  # bypass 발동 시 hook_events.log 기록
+    return blast_radius == "system_wide"
 ```
+
+**식별자 정정** (5/13 review Critical #1 해소):
+- 본 문서 이전 리비전이 `"system"` 토큰 사용 → 실제 `core/control/change_impact.py:35, 211-243` 산출값은 `"system_wide"` (Critic+Cross 양쪽 확인)
+- `change_impact.blast_radius` enum (5/13 3차 정정, 사전 grep `core/control/change_impact.py:16,35,223-243`): `{"isolated", "module", "cross_module", "system_wide"}` — `"local"`도 `"system"`도 존재하지 않음
+- 5/11 review의 `feature` → `feature_update` 정정과 동일 부류 회귀. 식별자는 항상 `grep`으로 코드 실측 후 기록
+
+**트리거 결정** (2026-05-13 합의):
+- 신설 `architecture-change` work_kind는 **도입하지 않음** — 분류 임계값이 데이터 기반 미정 (Karpathy 2 Simplicity First)
+- **`change_impact.blast_radius == "system_wide"`** 단독 트리거 — work_kind 무관, false negative 최소화
+- 잡히는 케이스: `refactor + system_wide` / `feature_update + system_wide` / `maintenance + system_wide` / `bugfix + system_wide` 모두 ✅
+- false positive 완화: 긴급 hotfix 차단 위험 → **`AF_SKIP_DOMAIN_REVIEW=1` 환경변수**로 우회 (CLAUDE.md `AF_SKIP_REVIEW_GATE` 패턴 선례 정합). 자동 면제 후보는 폐기
 
 **기본값 정책 (점진 활성화)**:
 - 단계 1: `requires_domain_review = False` (전 work-item) — 정책 인프라만 배치, 게이트 발화 X
-- 단계 2: `requires_domain_review = True` for `feature` only — 신규 기능부터 적용
-- 단계 3: `requires_domain_review = True` for `{feature, refactor}` — 점진 확대
-- 단계 4: 회귀 측정 후 `architecture-change` 추가 또는 정책 동결
+- 단계 2: `requires_domain_review = True` for `blast_radius == "system_wide"` — 시스템급 변경부터 적용
+- 단계 3: 회귀 측정 (`last_block_reason` 분포, verdict 분포) 후 트리거 확대 또는 동결
 
-### §3.4 domain-review.md 템플릿 구조 (제안)
+### §3.4 domain-review.md 템플릿 구조
 
 ```markdown
 # Domain Review — <work-item-slug>
@@ -128,14 +223,36 @@ def require_domain_review(work_item_kind: str) -> bool:
 ## 3. 새 ADR 후보 (있다면)
 - 결정 요약 / Context / Consequences
 
-## 4. Verdict
+## 4. Verdict (machine-readable, 5/13 review High #5)
+
+machine-readable 1줄 의무. 체크박스는 사람이 읽는 보조 표기, 게이트는 1줄만 파싱.
+
+```text
+- verdict: PASS
+```
+
+허용값: `PASS` | `NEEDS_ADR` | `BLOCK`
 - [ ] PASS — 기존 도메인/결정과 합치
 - [ ] NEEDS_ADR — 새 ADR 작성 후 진입 필요
 - [ ] BLOCK — 도메인 충돌, 재설계 요구
 
+파서 규칙 (`_read_domain_review_verdict`):
+- 정규식 `^- verdict:\s*(PASS|NEEDS_ADR|BLOCK)\s*$` 매칭 1줄만 채택
+- 0건 또는 2건 이상 → fail-closed, `last_block_reason="missing_verdict"` 또는 `"multiple_verdicts"`
+- 대소문자 strict (`pass` 같은 소문자는 무효)
+
 ## 5. Reviewer
 - 이름 / 일자 / 모델
 ```
+
+**ADR 번호 부여 규칙** (5/11 review Medium #6 해소):
+- 단일 시퀀스 번호(`ADR-0001`)는 멀티 PC 환경에서 race condition 위험 → 폐기
+- 새 형식: `ADR-<YYYYMMDD>-<HHMM>-<kebab-slug>.md` (예: `ADR-20260513-1640-domain-gate-trigger.md`)
+- 충돌 처리: 동일 분 내 2건 생성 시 `git merge` 시점에 사용자 수동 정정 (드문 케이스)
+
+**PROJECT_CONTEXT stale 감지** (5/11 review High #5 해소, Phase A 진입 조건):
+- `domain-review.md` 작성 시 `PROJECT_CONTEXT.md`의 git `last_updated` 30일 초과면 cross-review 단계에서 advisory warning
+- 또는 cross-review 체크리스트에 "PROJECT_CONTEXT 용어 vs 코드 식별자 sample diff 1건" 항목 추가 (둘 중 하나 Phase A 포함)
 
 ### §3.5 검증 기준 (Phase A)
 
@@ -143,10 +260,16 @@ def require_domain_review(work_item_kind: str) -> bool:
 |---|---|---|---|
 | 1 | `PROJECT_CONTEXT.md` 신설 | Read 검증 | 파일 존재 + 핵심 섹션 4개 (Glossary, Boundaries, Conventions, Source of Truth) |
 | 2 | `ADR-0001` 첫 결정 기록 | Read 검증 | 5필드 모두 채워짐 |
-| 3 | `domain-review.md` 템플릿 적용 | 더미 work-item 1개 작성 | 4섹션 + verdict 포함 |
-| 4 | `approval_gate` 게이트 동작 | 회귀 테스트 (`tests/test_approval_gate_domain_review.py` 신설) | non-trivial work-item에서 domain-review 누락 시 `BlockedExecutionError` |
-| 5 | 정책 점진 활성 | `requires_domain_review` 기본값 False 배포 | 기존 work-item은 자동 통과 |
-| 6 | Master_Blueprint.md 동기 | §3 approval_gate 섹션 갱신 + §12 이력 | 같은 commit에 포함 |
+| 3 | `domain-review.md` 템플릿 적용 | 더미 work-item 1개 작성 | 4섹션 + `- verdict: PASS\|NEEDS_ADR\|BLOCK` 1줄 포함 |
+| 4 | `approval_gate` 게이트 동작 (False 분기) | 회귀 테스트 (`tests/test_approval_gate_domain_review.py` 신설) | `requires_domain_review=False` 시 모든 work-item 통과 (기존 work-item 회귀 0) |
+| 5 | **게이트 True 분기 production 검증** (5/13 review Medium #11) | `requires_domain_review=True` 강제 fixture로 dummy work-item end-to-end | `blast_radius=="system_wide"` work-item이 `domain-review.md` 누락 시 `approve()=False` + `last_block_reason=="missing_domain_frontmatter"` |
+| 6 | **게이트 false negative 회귀** (5/13 review Critical #1 + Medium #4 회귀 차단) | 식별자 mismatch 시뮬레이션 — 잘못된 토큰 `"system"` / `"local"` 사용 검출 | 정적 grep: `core/approval_gate.py`에 `"system"` / `"local"` 등 비유효 blast_radius 토큰 0건. 유효 토큰은 `{"isolated","module","cross_module","system_wide"}` |
+| 7 | **`_DOMAIN_REVIEW_FILE` 격리** (5/13 review Critical #2 회귀 차단) | 기존 work-item 마이그레이션 시뮬레이션 — `domain-review.md` 없는 옛 work-item 일괄 로드 | `compute_snapshots()` 결과에 `domain_review` 키 미등장 → `check_validity()` 영향 0 |
+| 8 | frontmatter read 동작 | work-item 생성 → `ApprovalGate.approve()` 호출 | `approval-gate.md ## Metadata`에서 `work_kind`/`blast_radius` 정상 read |
+| 9 | bypass 메커니즘 | `AF_SKIP_DOMAIN_REVIEW=1 pytest ...` | bypass 발동 + `.af_runtime/hook_events.log`에 기록 |
+| 10 | 정책 점진 활성 | `requires_domain_review` 기본값 False 배포 | 기존 work-item은 자동 통과 |
+| 11 | Master_Blueprint.md 동기 | §3 approval_gate 섹션 갱신 + §12 이력 | 같은 commit에 포함 |
+| 12 | `af.spec` hiddenimports | `af.spec` grep | (Phase C 시 `core.brainstorm_prompts`가 신설되는 경우) hiddenimports 등재 + `version.py` bump |
 
 ---
 
@@ -167,15 +290,18 @@ def require_domain_review(work_item_kind: str) -> bool:
 | **C. Superpowers 패턴의 차별 가치** | AF가 가지지 못한 고유 메커니즘 (예: Socratic 대화 형식, 4-phase 디버깅 절차) | 0–10 |
 | **D. 흡수 비용** | 자체 구현 시 예상 LOC + 통합 난이도 | Low / Medium / High |
 
-### §4.3 흡수 우선순위 결정 매트릭스
+### §4.3 흡수 우선순위 결정 (정성 판단)
 
-```
-흡수 우선순위 = (C - B) × (10 / D 난이도 가중치)
+> ⚠️ **공식 폐기** (5/13 review High #7 해소): 본 문서 이전 리비전의 `우선순위 = (C - B) × (10 / D)` 산술 공식은 §4.4 표 값과 일관되게 성립하지 않음 (Medium=10이면 brainstorming (9-0)=9, verification (7-5)=2 — 표의 3과 불일치). 산술 공식 도입 시 D 가중치 + 4종 모두 1줄 계산 첨부가 필요했으나, Phase B 정성 평가 본질과 충돌.
 
-- 우선순위 ≥ 5: 즉시 흡수 (Phase C 1순위)
-- 우선순위 2~4: 선택적 흡수 (Phase C 2순위)
-- 우선순위 < 2: 흡수 보류 (AF 자체 구현이 충분)
-```
+**대체 규칙** (정성 + 명시적 trigger):
+- **즉시 흡수** (Phase C 1순위): C ≥ 7 AND B ≤ 2 AND D ∈ {Low, Medium}
+  → AF가 거의 못 갖춘 패턴 + 흡수 비용 낮음
+- **선택적 흡수** (Phase C 2순위): C ≥ 5 AND B ≤ 5 AND D ∈ {Low, Medium}
+  → AF가 부분 구현 + 외부 패턴이 명백히 우수
+- **보류**: 그 외 모두 (특히 B ≥ 8 — AF 자체 구현이 우수한 경우)
+
+Phase C 후보는 §4.4 표를 이 3개 규칙으로 분류한 결과로 확정. 각 행에 분류 사유 1줄 첨부 (Phase B 작업).
 
 ### §4.4 14개 잠정 평가 (Phase B 진행 전 사전 추정)
 
@@ -233,8 +359,11 @@ def require_domain_review(work_item_kind: str) -> bool:
 |---|---|---|---|
 | 1 | 외부 import 0건 | grep `from superpowers`, `obra/superpowers` | 0건 |
 | 2 | 흡수 패턴 동작 검증 | 회귀 테스트 (`tests/test_systematic_debugging.py` 등) | 핵심 시나리오 PASS |
-| 3 | AF 자체 스킬 등록 | `core/skill_loader.py` 자동 발견 | `skills/systematic_debugging/`이 12-cap 라우팅에 등장 |
+| 3 | AF 자체 스킬 등록 (5/13 review Medium #10 해소) | `core/skill_loader.py` 자동 발견 + `data/skill-usage.jsonl` 호출 기록 | `skills/systematic_debugging/SKILL.md` 로드 성공 + `skill-usage.jsonl`에 최소 1회 호출 ledger 기록 |
 | 4 | domain-review.md 강화 | brainstorming 패턴 통합 후 Socratic 섹션 동작 | 더미 work-item에서 Socratic 질문 출력 |
+| 5 | MIT attribution (5/11 review #9) | 흡수 SKILL.md 헤더 grep | `inspired_by: obra/superpowers/<skill_id>` 메타 존재 |
+
+> "12-cap 라우팅" 표현은 정의되지 않은 모호한 게이트였으므로 측정 가능 신호(`skill_loader` 자동 발견 + `skill-usage.jsonl` 호출 기록)로 교체.
 
 ---
 
@@ -246,7 +375,10 @@ def require_domain_review(work_item_kind: str) -> bool:
 
 - **폐기 이유**: `core/skill_pack_bootstrapper.py` 48 LOC가 이미 dead code (프로덕션 호출자 0건). 어댑터 3종 추가(~450 LOC)는 외부 위임 전략의 가치 < 비용.
 - **대체 방향**: 사용자가 필요 시 `claude /plugins install gstack` 같은 수동 명령으로 설치. AF는 무관.
-- **dead code 처분**: 별도 결정. (옵션 A) 본 설계 commit과 함께 제거 / (옵션 B) 남겨두되 `# DEPRECATED` 주석 추가. 본 설계는 옵션 B를 잠정 권장 (영향 범위 최소).
+- **dead code 처분**: **옵션 A — 즉시 제거** (5/11 review High #3 + 5/13 review Medium #12 ACCEPT)
+  - 본 설계 채택 commit과 함께 4파일 동기 정정 (§7.3 참조)
+  - 옵션 B(DEPRECATED 주석 유지)는 §1.2 GStack 폐기 결정과 정면 충돌 → 폐기
+  - "영향 범위 큼" 주장은 실측 4파일로 반박됨
 
 ### §6.2 Superpowers 패키지 직접 import
 
@@ -285,25 +417,41 @@ def require_domain_review(work_item_kind: str) -> bool:
 
 | 경로 | Phase | 변경 내용 | 예상 LOC |
 |---|---|---|---|
-| `core/approval_gate.py` | A | `requires_domain_review` 정책 + verdict 검사 | ~30 |
+| `core/approval_gate.py` | A | `requires_domain_review` 정책 + frontmatter read + `_DOC_FILES` 확장 + verdict 검사 | ~60 |
+| `core/work_item_generator.py` | A | 4개 work-item 문서 frontmatter에 `work_kind` / `blast_radius` 출력 | ~20 |
 | `scripts/review_gate.py` 또는 `core/approval_gate.py` | C | verification-before-completion verdict 강화 | ~50 |
 | `Master_Blueprint.md` | A, C | §3 approval_gate / §0 빠른 참조 / §12 이력 갱신 | ~40 |
 | `docs/work-items/_template/feature-plan.md` (옵션) | C | brainstorming Socratic 섹션 통합 | ~30 |
 
-### §7.3 제거/폐기 후보
+### §7.3 제거/폐기 (옵션 A — 즉시 제거, 5/11 review High #3 해소)
+
+본 설계 채택 commit과 동일 PR에서 4파일 동기 변경:
 
 | 경로 | 처분 | 사유 |
 |---|---|---|
-| `core/skill_pack_bootstrapper.py` | DEPRECATED 주석 (잠정) 또는 제거 | 프로덕션 호출자 0건, dead code |
-| `tests/test_compact_step2.py` 내 `TestSkillPackBootstrapper` | (위 처분에 따라) skip 또는 제거 | 위와 동기 |
-| `af.spec` line 122 `core.skill_pack_bootstrapper` | 위 결정에 따라 hiddenimports에서 제거 | 위와 동기 |
+| `core/skill_pack_bootstrapper.py` | **파일 삭제** | 프로덕션 호출자 0건, §1.2 GStack 폐기 결정 정합 |
+| `tests/test_compact_step2.py` 내 `TestSkillPackBootstrapper` | 클래스 삭제 | 위와 동기 |
+| `af.spec` line 122 `core.skill_pack_bootstrapper` | hiddenimports에서 제거 | 위와 동기 |
+| `Master_Blueprint.md` §3.8.4 + §0 빠른 참조 테이블 | `SkillPackBootstrapper` 행 제거, §12 이력 추가 | CLAUDE.md "코드 수정 + Blueprint 업데이트는 같은 커밋" 의무 |
 
-### §7.4 LOC 총합 추정
+### §7.4 af.spec hiddenimports 갱신 (5/13 review Medium #8 해소)
 
-- Phase A: 신규 markdown ~190 + Python ~110 = **~300 LOC**
+Phase C에서 신설 `.py` 파일이 있는 경우(잠정 후보 `core/brainstorm_prompts.py`) `af.spec`의 `hiddenimports` 리스트에 등재 의무. CLAUDE.md "새 `core/*.py` 파일은 `af.spec` `hiddenimports`에 반드시 추가" 규칙 정합.
+
+배포 체크리스트:
+- [ ] 신설 `core/*.py` 모두 `af.spec` hiddenimports 등재
+- [ ] `version.py` `__version__` bump
+- [ ] `install-af.ps1` 버전 문자열 3곳 동시 수정
+- [ ] `python build_exe.py` → `dist/af-{version}.zip` 생성 확인
+
+### §7.5 LOC 총합 추정
+
+> ⚠️ **±50% Phase B 측정 후 확정** (5/11 review High #4 해소): D 차원이 §4.2에서 "Phase B 측정 변수"로 정의되었으나 본 절은 LOC를 고정 표기 → 자가모순. Phase B에서 Superpowers 3개 스킬(brainstorming/systematic-debugging/verification-before-completion) 실제 LOC 측정 후 본 절 갱신.
+
+- Phase A: 신규 markdown ~190 + Python ~140 = **~330 LOC** (work_item_generator 시그니처 확장 +20, approval_gate verdict 파서 +20 포함)
 - Phase B: markdown ~200 = **~200 LOC**
 - Phase C: 신규 markdown ~150 + Python ~180 + 수정 ~80 = **~410 LOC** (잠정, Phase B 후 확정)
-- **총합 ~910 LOC** (외부 import 0)
+- **총합 ~940 LOC** (외부 import 0, ±50% Phase B 후 확정)
 
 ---
 
@@ -347,14 +495,23 @@ def require_domain_review(work_item_kind: str) -> bool:
 | 단계 | 시점 | 정책 | 기준 |
 |---|---|---|---|
 | 1 | Phase A 완료 직후 | False (전 work-item) | 인프라 검증만 |
-| 2 | Phase A 완료 + 1주 | True (`feature` only) | 신규 기능부터 적용 |
-| 3 | 단계 2 + 2주 | True (`{feature, refactor}`) | 회귀 측정 후 확대 |
-| 4 | 단계 3 + 1개월 | True (`architecture-change` 추가) 또는 동결 | 데이터 기반 결정 |
+| 2 | Phase A 완료 + 1주 | True for `blast_radius == "system_wide"` | 시스템급 변경부터 적용 (보수적 트리거) |
+| 3 | 단계 2 + 2주 | 측정 후 트리거 확대 또는 동결 | `last_block_reason` 분포, verdict 분포, false positive 사례 검토 |
+| 4 | 단계 3 + 1개월 | 데이터 기반 트리거 재정의 | 필요 시 `cross_module` blast 포함, 또는 work_kind 보조 조건 추가 |
+
+> ⚠️ 2026-05-13 합의로 식별자 기반 단계 분리 (`feature` only → `{feature, refactor}` → `architecture-change`)는 폐기. `blast_radius` 신호 단독 트리거로 통합.
+
+**단계 전환 거버넌스** (5/11 review Medium #10 해소):
+- 측정 지표: `last_block_reason` 발생률 (≥ 5%), verdict 분포 (`PASS`/`NEEDS_ADR`/`BLOCK` 비율), false positive 보고 건수
+- 전환 결정자: 사용자 (메인터너) 수동 commit
+- 전환 commit 메시지에 측정 데이터 첨부 의무 (`data/skill-usage.jsonl` 또는 `.af_runtime/control/run_ledger.jsonl` 인용)
 
 ### §10.3 dead code (`SkillPackBootstrapper`) 처분
 
-- 본 설계 채택 시 별도 commit으로 처분 (옵션 B: DEPRECATED 주석)
-- 옵션 A (즉시 제거)는 본 설계 §7.3에서 제외 — `af.spec` / `tests/test_compact_step2.py` 동기 변경 필요해 영향 범위 큼
+**옵션 A 채택** (즉시 제거, 5/11 review High #3 + 5/13 review Medium #12 ACCEPT):
+- 본 설계 채택 commit과 **동일 PR**에서 4파일 동기 변경 (§7.3 참조)
+- 옵션 B(DEPRECATED 주석 유지)는 §1.2 GStack 폐기 결정과 정면 충돌 → 폐기
+- 영향 범위: 실측 4파일 (`core/skill_pack_bootstrapper.py`, `tests/test_compact_step2.py`, `af.spec:122`, `Master_Blueprint.md`)
 
 ---
 
@@ -379,7 +536,7 @@ def require_domain_review(work_item_kind: str) -> bool:
 | Q1 | `requires_domain_review` 기본값 False / True 중 어느 쪽으로 단계 1 출발? | False (점진 활성) | cross-review 검토 |
 | Q2 | ADR 작성을 강제(enforce)할지 권장(advisory)만 할지? | NEEDS_ADR verdict 시에만 강제 | cross-review 검토 |
 | Q3 | Phase B 비교 평가에 외부 의견(Codex/Gemini) 동원 여부? | 동원 권장 (객관성 확보) | cross-review 검토 |
-| Q4 | `core/skill_pack_bootstrapper.py` 처분: 옵션 A (즉시 제거) vs 옵션 B (DEPRECATED 주석)? | 옵션 B (영향 범위 최소) | 본 설계 + 별도 commit |
+| Q4 | ~~`core/skill_pack_bootstrapper.py` 처분~~ **CLOSED 2026-05-13** — 옵션 A (즉시 제거) 확정. §6.1 / §7.3 / §10.3 일관. 동기 변경 4파일: `core/skill_pack_bootstrapper.py`, `tests/test_compact_step2.py`, `af.spec:122`, `Master_Blueprint.md` §3.8.4+§0 | — | 본 설계 commit 동일 PR |
 | Q5 | Phase C `core/brainstorm_prompts.py` 신설 vs `domain-review.md` 텍스트 통합? | 후자 (LOC 절약) | Phase B 결과 반영 |
 | Q6 | `systematic_debugging` 흡수 형식: SKILL.md only vs SKILL.md + .py? | SKILL.md only (markdown 우선) | Phase B 결과 반영 |
 | Q7 | brainstorming 패턴이 LLM 호출을 발생시키는가? | NO (prompt 템플릿만) | §9 리스크 7 참조 |
@@ -388,19 +545,33 @@ def require_domain_review(work_item_kind: str) -> bool:
 
 ## §13 Cross-Review 체크리스트 (검토자용)
 
-본 설계 검토 시 다음을 확인:
+본 설계 검토 시 다음을 확인 (5/11 review #11 + 5/13 정정 반영):
 
-1. ✅ §1.2 외부 도구 검토 결과의 사실 정확성 (`core/skill_pack_bootstrapper.py` dead code 확인, Superpowers 14개 목록)
-2. ✅ §1.3 점수표의 차원 정의 명확성 (특히 외부 가치 흡수 vs 흡수 속도 분리)
-3. ✅ §2 결정 사항이 §1 배경과 일관
-4. ✅ §3 Phase A 산출물 4개가 5/6 Codex 권고와 매칭
-5. ✅ §4.4 사전 추정의 보수성 (Phase B 실측에서 크게 어긋나지 않을 만큼)
-6. ✅ §5.2 외부 코드 import 0건 원칙의 강제력
-7. ✅ §6 폐기 항목의 근거 명시
-8. ✅ §7 LOC 추정의 합리성
-9. ✅ §9 리스크 cover 완전성
-10. ✅ §10 마이그레이션의 안전성 (기존 work-item 영향 0)
-11. ✅ §12 Open Questions가 결정 가능한 형태로 제시됨
+- [ ] §1.2 외부 도구 검토 결과의 사실 정확성 (`core/skill_pack_bootstrapper.py` dead code 확인, Superpowers 14개 목록)
+- [ ] §1.3 점수표의 차원 정의 명확성 (특히 외부 가치 흡수 vs 흡수 속도 분리)
+- [ ] §2 결정 사항이 §1 배경과 일관
+- [ ] §3 Phase A 산출물 4개가 5/6 Codex 권고와 매칭
+- [ ] §3.2 ApprovalGate ↔ work_kind 통합 경로 — `approval-gate.md ## Metadata` 섹션 확장, base path = `workspace/docs/work-items/<slug>`, `_DOMAIN_REVIEW_FILE` 별도 상수 (5/13 review Critical #2 해소)
+- [ ] §3.3 게이트 트리거 식별자 — `blast_radius == "system_wide"` 단독 트리거, 실제 `change_impact.py:35, 211-243` 산출값과 일관 (5/13 review Critical #1 해소)
+- [ ] §3.2 `generate_work_items()` 시그니처 — `work_kind`, `blast_radius` 키워드 추가, `project_pipeline.py:963` 호출부 갱신 (5/13 review High #3 해소)
+- [ ] §3.2 에러 반환 정책 — `BlockedExecutionError` 신설 ❌, bool 반환 + `last_block_reason` (5/13 review High #6 해소)
+- [ ] §3.4 verdict 1줄 명세 — `- verdict: PASS|NEEDS_ADR|BLOCK` machine-readable (5/13 review High #5 해소)
+- [ ] §3.4 ADR 번호 형식 — `ADR-YYYYMMDD-HHMM-<slug>` (5/11 review Medium #6 해소)
+- [ ] §3.4 PROJECT_CONTEXT stale 감지 — Phase A 포함 (5/11 review High #5 해소)
+- [ ] §3.3 bypass — `AF_SKIP_DOMAIN_REVIEW=1` env 못박음 (5/13 review Medium #9 해소)
+- [ ] §4.3 우선순위 공식 폐기 — 정성 판단 규칙 3개로 대체 (5/13 review High #7 해소)
+- [ ] §4.4 사전 추정의 보수성 (Phase B 실측에서 크게 어긋나지 않을 만큼)
+- [ ] §5.2 외부 코드 import 0건 원칙의 강제력
+- [ ] §5.3 측정 신호 — `skill_loader` 자동 발견 + `skill-usage.jsonl` 호출 기록 (5/13 review Medium #10 해소)
+- [ ] §6 폐기 항목의 근거 명시
+- [ ] §6.1 / §10.3 dead code 옵션 A — 즉시 제거 (5/11 review High #3 + 5/13 review Medium #12 해소)
+- [ ] §7.3 dead code 4파일 동기 변경
+- [ ] §7.4 af.spec hiddenimports 갱신 (5/13 review Medium #8 해소)
+- [ ] §7.5 LOC 추정 — ±50% Phase B 후 확정 (5/11 review High #4 해소)
+- [ ] §9 리스크 cover 완전성
+- [ ] §10 마이그레이션의 안전성 (기존 work-item 영향 0, `_DOMAIN_REVIEW_FILE` 격리로 보장)
+- [ ] §10.2 단계 전환 거버넌스 — 측정 지표 + 결정자 명시 (5/11 review Medium #10 해소)
+- [ ] §12 Open Questions가 결정 가능한 형태로 제시됨
 
 ---
 
