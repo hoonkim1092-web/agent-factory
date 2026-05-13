@@ -1522,6 +1522,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-14 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md (+68) |
+| 2026-05-14 | v1.2.28 | chore(AGENTS): edit: core/utils.py — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md (+66) |
 | 2026-05-14 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+72) |
 | 2026-05-14 | v1.2.28 | feat(phase-c-option-b): Superpowers 패턴 흡수 Phase C Option B — `skills/systematic_debugging/SKILL.md` 신설(4단계 디버깅 프레임워크, `inspired_by: superpowers/systematic-debugging`). `skills/verification_before_completion/SKILL.md` 신설(Iron Law + 12개 합리화 차단, `inspired_by: superpowers/verification-before-completion`). `docs/work-items/_template/domain-review.md`에 Socratic 검증 섹션(6개 질문, `inspired_by: superpowers/brainstorming`) 추가. `core/utils.get_external_skill_roots()` Tier 2에 `PROJECT_ROOT/skills/` 추가. 테스트 2개 추가(`test_get_external_skill_roots_includes_project_skills`, `test_get_external_skill_roots_project_skills_before_dotdirs`). 35 tests PASS. 3-tier: af-critic PASS / af-cross-review WARN(Advisory Medium 1건: PROJECT_ROOT/skills=projects/default/skills, 40개 스킬은 이미 SKILLS_DIR로 로드됨) / af-test-runner PASS(35 tests). §0 utils.py 공개 API 갱신. |
 | 2026-05-13 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, NEXT_STEPS.md, PROJECT_LOG.md (+68) |

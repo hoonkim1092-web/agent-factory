@@ -264,7 +264,8 @@ def get_external_skill_roots(extra_roots: list[str] | None = None) -> list[str]:
 
     우선순위 (Claude 공식 precedence: personal > project):
       1. personal: ~/.claude/skills, ~/.codex/skills, ~/.agents/skills
-      2. project:  PROJECT_ROOT/.claude/skills, .codex/skills, .agents/skills
+      2. project:  SKILLS_DIR (BASE_DIR/skills), PROJECT_ROOT/skills,
+                   PROJECT_ROOT/.claude/skills, .codex/skills, .agents/skills
       3. runtime:  $CODEX_HOME/skills
       4. env:      AGENT_CODEX_SKILL_DIRS, AGENT_CLAUDE_SKILL_DIRS
       5. system:   /etc/codex/skills (Linux only; Windows는 env opt-in)
@@ -277,7 +278,8 @@ def get_external_skill_roots(extra_roots: list[str] | None = None) -> list[str]:
         os.path.join(home_dir, ".claude", "skills"),
         os.path.join(home_dir, ".codex", "skills"),
         os.path.join(home_dir, ".agents", "skills"),
-        # 2순위: project
+        # 2순위: project (SKILLS_DIR = BASE_DIR/skills, 레포 루트 직속 skills/)
+        SKILLS_DIR,
         os.path.join(PROJECT_ROOT, "skills"),
         os.path.join(PROJECT_ROOT, ".claude", "skills"),
         os.path.join(PROJECT_ROOT, ".codex", "skills"),

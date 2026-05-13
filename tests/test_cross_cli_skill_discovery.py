@@ -65,6 +65,25 @@ def test_get_external_skill_roots_env_override(monkeypatch, tmp_path):
     assert os.path.normpath(custom_dir).lower() in root_strs
 
 
+def test_get_external_skill_roots_includes_skills_dir():
+    """SKILLS_DIR(BASE_DIR/skills)가 반환 목록에 포함되어야 한다."""
+    from core.config_paths import SKILLS_DIR
+    roots = get_external_skill_roots()
+    root_strs = [r.lower() for r in roots]
+    assert os.path.normpath(SKILLS_DIR).lower() in root_strs
+
+
+def test_get_external_skill_roots_skills_dir_before_project_root_skills():
+    """SKILLS_DIR이 PROJECT_ROOT/skills보다 먼저 위치해야 한다."""
+    from core.config_paths import SKILLS_DIR, PROJECT_ROOT
+    roots = get_external_skill_roots()
+    root_strs = [r.lower() for r in roots]
+    skills_dir = os.path.normpath(SKILLS_DIR).lower()
+    project_skills = os.path.normpath(os.path.join(PROJECT_ROOT, "skills")).lower()
+    if skills_dir in root_strs and project_skills in root_strs:
+        assert root_strs.index(skills_dir) < root_strs.index(project_skills)
+
+
 def test_get_external_skill_roots_includes_project_skills():
     """PROJECT_ROOT/skills/가 반환 목록에 포함되어야 한다."""
     from core.config_paths import PROJECT_ROOT
