@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-13 23:20 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B 완료. 다음: Phase C 범위 결정 (Option A/B/C 중 선택) 후 구현 진입.**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B + Phase C Option B 완료. 다음: NEXT_STEPS 하단 참고.**
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 
@@ -37,33 +37,26 @@
 - **산출물**: `docs/2026-05-13-superpowers-vs-af-comparison-matrix.md`
 - **결과**: 즉시 흡수 2개(brainstorming, systematic-debugging) + 선택적 3개(verification-before-completion, finishing-branch, git-worktrees)
 
-## 🔥 다음 세션 — Phase C 범위 결정 + 구현
+## ✅ Phase C Option B 완료 (2026-05-14 KST)
 
-### Phase C 범위 옵션 (사용자 결정 필요)
+### 구현된 내용
+- `skills/systematic_debugging/SKILL.md` 신설 (4단계 디버깅 프레임워크, `inspired_by: superpowers/systematic-debugging`)
+- `skills/verification_before_completion/SKILL.md` 신설 (Iron Law + 12개 합리화 차단, `inspired_by: superpowers/verification-before-completion`)
+- `docs/work-items/_template/domain-review.md` Socratic 검증 섹션 추가 (6개 질문, `inspired_by: superpowers/brainstorming`)
+- `core/utils.get_external_skill_roots()` Tier 2에 `PROJECT_ROOT/skills/` 추가 + 테스트 2개
+- 3-tier gate: af-critic PASS / af-cross-review WARN(advisory) / af-test-runner PASS(35 tests)
 
-| Option | 대상 | 예상 LOC | 권장 여부 |
-|--------|------|----------|-----------|
-| **A (최소)** | brainstorming + systematic-debugging | ~200 LOC | - |
-| **B (권장)** | A + verification-before-completion | ~250 LOC | ✅ |
-| **C (전체)** | B + finishing-branch + git-worktrees | ~390 LOC | - |
+### Advisory (af-cross-review WARN)
+`PROJECT_ROOT` 미설정 시 `projects/default`로 해석 → 추가 경로는 `projects/default/skills`(빈 폴더). 레포 루트 `skills/` 40개는 이미 `SKILLS_DIR`로 별도 로드됨. 기능 오류 없음.
 
-### Phase C 구현 작업 (Option B 기준)
-1. `skills/systematic_debugging/SKILL.md` 신설 (~120 LOC, `inspired_by: superpowers/systematic-debugging`)
-2. `docs/work-items/_template/domain-review.md` Socratic 섹션 추가 (~80 LOC, `inspired_by: superpowers/brainstorming`)
-3. `skills/verification_before_completion/SKILL.md` 신설 (~50 LOC, `inspired_by: superpowers/verification-before-completion`)
+## 🔥 다음 세션 후보
 
-### 진입 명령
-```bash
-git pull --ff-only
-python start_db.py agent-factory
-# Phase C 범위 사용자에게 확인 후 진입
-```
+| 작업 | 설명 |
+|------|------|
+| Phase C Option C 선택적 흡수 | `finishing_branch/SKILL.md` + `git_worktrees/SKILL.md` (각 ~80/~60 LOC) — 사용자 결정 필요 |
+| advisory 반영 | `get_external_skill_roots()` docstring 갱신 + `resolve_knowledge_skill_path` 중복 탐색 제거 |
+| 기타 백로그 | NEXT_STEPS.md 하단 보존 이력 참고 |
 
-### 진입 명령
-```bash
-git pull --ff-only
-python start_db.py agent-factory
-```
 >
 > ---
 >

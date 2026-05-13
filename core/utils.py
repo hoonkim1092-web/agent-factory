@@ -278,6 +278,7 @@ def get_external_skill_roots(extra_roots: list[str] | None = None) -> list[str]:
         os.path.join(home_dir, ".codex", "skills"),
         os.path.join(home_dir, ".agents", "skills"),
         # 2순위: project
+        os.path.join(PROJECT_ROOT, "skills"),
         os.path.join(PROJECT_ROOT, ".claude", "skills"),
         os.path.join(PROJECT_ROOT, ".codex", "skills"),
         os.path.join(PROJECT_ROOT, ".agents", "skills"),

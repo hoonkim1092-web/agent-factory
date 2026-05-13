@@ -65,6 +65,26 @@ def test_get_external_skill_roots_env_override(monkeypatch, tmp_path):
     assert os.path.normpath(custom_dir).lower() in root_strs
 
 
+def test_get_external_skill_roots_includes_project_skills():
+    """PROJECT_ROOT/skills/가 반환 목록에 포함되어야 한다."""
+    from core.config_paths import PROJECT_ROOT
+    roots = get_external_skill_roots()
+    project_skills = os.path.normpath(os.path.join(PROJECT_ROOT, "skills")).lower()
+    root_strs = [r.lower() for r in roots]
+    assert project_skills in root_strs
+
+
+def test_get_external_skill_roots_project_skills_before_dotdirs():
+    """PROJECT_ROOT/skills/가 PROJECT_ROOT/.claude/skills 보다 먼저 위치해야 한다."""
+    from core.config_paths import PROJECT_ROOT
+    roots = get_external_skill_roots()
+    root_strs = [r.lower() for r in roots]
+    project_skills = os.path.normpath(os.path.join(PROJECT_ROOT, "skills")).lower()
+    project_claude = os.path.normpath(os.path.join(PROJECT_ROOT, ".claude", "skills")).lower()
+    if project_skills in root_strs and project_claude in root_strs:
+        assert root_strs.index(project_skills) < root_strs.index(project_claude)
+
+
 def test_get_external_skill_roots_no_windows_appdata():
     """Windows %APPDATA%\\Claude\\skills 경로가 기본값에 포함되지 않아야 한다."""
     roots = get_external_skill_roots()
