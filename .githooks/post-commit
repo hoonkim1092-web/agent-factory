@@ -29,9 +29,17 @@ if [ -n "$CODE_CHANGED" ]; then
 
     wait
 
-    # Blueprint가 변경되었으면 자동 amend
+    # Blueprint / code-review.md 변경 시 자동 amend
+    AMENDED=0
     if git diff --name-only 2>/dev/null | grep -q "Master_Blueprint.md"; then
         git add Master_Blueprint.md 2>/dev/null
+        AMENDED=1
+    fi
+    if git diff --name-only 2>/dev/null | grep -q "docs/code_review/code-review.md"; then
+        git add docs/code_review/code-review.md 2>/dev/null
+        AMENDED=1
+    fi
+    if [ "$AMENDED" = "1" ]; then
         git commit --amend --no-edit 2>/dev/null
     fi
 fi
