@@ -4793,3 +4793,345 @@ No critical or high issues found.
 - [Info] skill-eval-report.json:2,44 — 절대 경로 → 상대 경로 정규화. 포터블하게 개선된 변경.
 
 No functional or security issues found.
+
+---
+
+## 2026-05-14 18:35 — `main` (f625554c)
+
+**Context**: edit: tests/test_stage0_question_router.py
+
+**Changed (6)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml, tests/test_stage0_question_router.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-14 18:36 — `main` (51a47208)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (6)**: `data/skill-usage.jsonl, docs/code_review/code-review.md, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Info] data/skill-usage.jsonl:31 — 신규 항목만 상대 경로 사용; 이전 28~30번 항목은 여전히 절대 경로(`D:\\hoonProJect\\...`). 로그 일관성 깨짐.
+- [Low] data/skill-usage.jsonl:31 — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0` 전부 0인데 `recommended_stage: "candidate"` 승격. 승격 기준이 pass rate를 무시하는 로직이라면 의도적이어야 함.
+- [Low] data/skill-usage.jsonl:28-31 — `historical_score`가 4회 연속 52로 고정. 이벤트 누적(`feedback_total_events` 27→30)에도 점수 변화 없음 — 점수 계산 로직 미동작 가능성.
+- [Info] skill-eval-report.json:2 — `skill_path` 절대→상대 경로 정규화. 포터블 개선.
+- [Info] docs/code_review/code-review.md — "Review skipped" 항목이 커밋 컨텍스트(`feat(stage0-yaml)`)와 불일치 (`edit: tests/test_stage0_question_router.py`로 기록됨). 자동 생성 메타데이터 오기입.
+
+No security or critical issues found.
+
+---
+
+## 2026-05-14 18:37 — `main` (ad02fe64)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] data/skill-usage.jsonl:31 — `run_id: ""`, `agent_role: ""` 빈 문자열로 프로비넌스 누락. 이 promotion 이벤트가 어느 세션/역할에서 발생했는지 추적 불가.
+- [Medium] skills/new_skill/skill-eval-report.json — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0` 전부 0이지만 `candidate` 승격. 정량 근거 없이 `external_eval_passed` 하나로만 승격 결정 — 승격 기준 충족 여부 불분명.
+- [Low] skill-eval-report.json (루트) — `static_gate.ok: false`, `recommended_stage: draft`인 `agent_factory` 스킬 레포트가 루트에 방치. 실제 스킬이 아닌 플레이스홀더면 `.gitignore` 또는 `tests/_tmp/`로 이동 필요.
+- [Low] data/skill-usage.jsonl — `feedback_total_events: 27→30` 연속 4개 promotion 이벤트, 모두 `historical_score: 52` 동일. 동일 점수로 반복 재평가된 이유가 불분명 — 멱등성 보장 코드 확인 필요.
+- [Info] skill-eval-report.json, skills/new_skill/skill-eval-report.json — 절대 경로(`D:\hoonProJect\...`) → 상대 경로 정규화는 이식성 개선으로 올바른 방향.
+- [Info] 커밋 메시지 "P4+P2 question set YAML 추가"와 실제 변경 파일(JSON/JSONL 메타데이터) 불일치 — `skills/registry.yaml` diff가 제공되지 않아 YAML 추가 여부 검증 불가.
+
+---
+
+## 2026-05-14 18:38 — `main` (deda96f8)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] data/skill-usage.jsonl — 신규 항목만 상대 경로(`skills/new_skill/...`)를 사용하고, 이전 29개 항목은 절대 경로(`D:\\hoonProJect\\...`)를 유지. 경로를 읽는 코드가 두 포맷을 동시에 처리하지 않으면 이전 항목 참조 실패.
+- [Low] data/skill-usage.jsonl — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`인 상태에서 `recommended_stage: "candidate"` 승격. 평가 임계값이 실제로 적용되고 있는지 확인 필요.
+- [Info] skill-eval-report.json, skills/new_skill/skill-eval-report.json — `skill_path`·`report_path` 절대→상대 경로 전환은 이식성 개선. 단, 이 파일들을 읽는 코드가 CWD 기준으로 경로를 해석하는지 확인 필요.
+- [Info] 커밋 메시지("P4+P2 question set YAML 추가")와 실제 변경 파일(JSON/JSONL only)이 불일치. `skills/registry.yaml` diff가 누락됐거나 커밋 메시지가 잘못됨.
+
+---
+
+## 2026-05-14 18:38 — `main` (d3e0eba0)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Low] `data/skill-usage.jsonl` — 이전 29개 엔트리는 절대 경로(`D:\hoonProJect\...`), 새 엔트리만 상대 경로로 혼재. `report_path`/`promotion_path`를 코드에서 직접 열면 OS 이동 시 구 엔트리 모두 파일 접근 실패.
+- [Low] `data/skill-usage.jsonl:31` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0`, `shadow_cases: 0` 전부 0인데 `candidate`로 승격. `static_ok: true`와 `historical_score: 52`만으로 승격 조건이 충족된다면 평가 게이트 실효성 의문.
+- [Info] `skill-eval-report.json` — 루트에 위치한 `agent_factory` dummy 리포트가 커밋에 포함. 실제 평가 대상이 아닌 픽스처라면 `.gitignore` 처리 검토.
+- [Info] 커밋 메시지 "P4+P2 question set YAML 추가"와 실제 diff(경로 정규화 + 카운터 증가) 불일치. `skills/registry.yaml` diff가 잘려 확인 불가 — registry 변경 내용 별도 확인 필요.
+
+No Critical/High issues. 핵심은 경로 혼재(Low)와 0점 지표 승격(Low) 두 건.
+
+---
+
+## 2026-05-14 18:39 — `main` (a204c711)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] data/skill-usage.jsonl — 이벤트 27~30 모두 contract_pass_rate=0.0, hidden_pass_rate=0.0, runtime_total=0 임에도 candidate 승격. static_ok=true만으로 승격 허용하는 게이트 조건이 지나치게 약함.",
+    "- [Low] data/skill-usage.jsonl:28-31 — 동일 historical_score(52)·동일 evidence로 4회 연속 승격 이벤트 기록. 중복 평가 실행 시 idempotency 체크 없음 — 동일 상태라면 기존 이벤트를 갱신하거나 스킵해야 함.",
+    "- [Low] skill-eval-report.json:1 — 루트 레벨 report의 static_gate.ok=false, recommended_stage=draft. 자동화 파이프라인이 이 파일을 읽으면 agent_factory 스킬 상태를 잘못 판단할 수 있음. 파일 목적(더미/레거시 여부)을 명확히 표시하거나 제거 필요.",
+    "- [Info] 다수 파일 — 절대 Windows 경로 → 상대 경로 정규화는 이식성 개선으로 적절함. 단, 소비자(skill evaluator, promotion loader)가 모두 workspace root 기준으로 경로를 resolve하는지 확인 필요.",
+    "- [Info] 커밋 메시지와 diff 불일치 — 'P4+P2 question set YAML 추가'라고 명시됐으나 보이는 diff는 JSON 경로 정규화뿐. skills/registry.yaml 변경 내용이 diff에 없어 실제 YAML 추가 여부 검증 불가."
+  ]
+}
+```
+
+---
+
+## 2026-05-14 18:40 — `main` (c95ed6a4)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] data/skill-usage.jsonl:31 — 신규 항목의 `report_path`/`promotion_path`가 상대 경로(`skills/new_skill/...`)인 반면, 기존 28~30번 항목은 절대 Windows 경로(`D:\\hoonProJect\\...`)를 유지. 이 JSONL을 읽어 경로를 직접 사용하는 코드가 있다면 구 항목은 타 PC에서 깨지고, 신규 항목은 CWD 의존 — 전체 일괄 정규화 또는 소비자 코드의 경로 해석 방식 확인 필요.
+
+- [Low] skill-eval-report.json:3 — `skill_path: "dummy"` 는 실제 경로가 아닌 플레이스홀더. 이 파일을 로드해 `skill_path`를 stat/import하는 경로가 있다면 조용히 실패함. 의도된 stub이면 주석으로 명시 권장.
+
+- [Low] skill-eval-report.json (루트, EOF) — `\ No newline at end of file`. JSON 파서는 문제없지만 diff noise 발생 — 맞춤.
+
+- [Info] data/skill-usage.jsonl 전 항목 — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0` 인 채 `candidate` 승격. 평가 미실행 상태가 의도된 것이라면 무관, 아니라면 승격 로직의 패스율 조건 확인 필요.
+
+- [Info] 이번 커밋의 실질 변경은 **경로 절대→상대 정규화** 1건. YAML 추가(P4+P2 question set)는 diff에 포함되지 않아 `skills/registry.yaml` 변경 내용을 직접 검토하지 못함 — 해당 파일 diff 누락 여부 확인 권장.
+
+---
+
+## 2026-05-14 18:40 — `main` (16417a17)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl` — `contract_pass_rate`, `hidden_pass_rate`, `runtime_success_rate` 모두 0.0인 상태로 `"reason": "external_eval_passed"` 처리. 실질적 검증 없는 승격 근거.
+- [Medium] `data/skill-usage.jsonl` — 동일 스킬(`new_skill`)이 `draft→candidate` 승격 이벤트를 4회 반복(feedback_total_events 27→30). 승격이 누적 재실행되고 있어 멱등성 보장 여부 불명확.
+- [Low] `skill-eval-report.json` (루트) — `static_gate.ok: false`, `recommended_stage: "draft"`인 파일이 레포 루트에 상주. 임시 산출물인지 의도된 파일인지 불명확; 커밋 대상에서 제외 검토 필요.
+- [Low] 절대 경로 → 상대 경로 변환은 이식성 개선이나, 생성 코드(`skill_evaluator` 등)가 런타임에 절대 경로를 다시 쓰면 다음 실행에서 원복될 수 있음. 생성 로직 확인 필요.
+- [Info] 커밋 메시지에 "P4+P2 question set YAML 추가"라 명시됐으나 diff에 YAML 신규 파일이 없음. `skills/registry.yaml` 변경 내용이 diff에서 누락돼 리뷰 불완전.
+
+---
+
+## 2026-05-14 18:41 — `main` (c09fc633)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] data/skill-usage.jsonl — 동일 `skill_id: new_skill`에 대해 `feedback_total_events` 27→28→29→30 인 4개 promotion 이벤트가 연속 기록됨. `historical_score`, 모든 rate 값이 동일(52/0.0). promotion 로직이 중복 발화 중일 가능성 있음 — 트리거 조건 점검 필요.
+- [Medium] data/skill-usage.jsonl:31 — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0` 상태에서 `draft → candidate` 승격. `installable: false`로 설치는 막히나, 테스트 커버리지 0인 스킬이 candidate 단계에 머무는 것이 policy상 의도된 것인지 확인 필요.
+- [Low] skill-eval-report.json (루트) — `\ No newline at end of file`. JSON 파일 파싱 자체에는 무해하나 일관성 위반.
+- [Low] 커밋 메시지 — "P4+P2 question set YAML 추가"라고 명시되나 제공된 diff에 `skills/registry.yaml` 내용이 없음. 실제 YAML 추가 내용이 누락됐거나 diff가 잘린 것 — 변경 범위 불투명.
+- [Info] 절대경로 → 상대경로 변환(`D:\\hoonProJect\\...` 제거): 이식성 향상, 올바른 방향.
+
+---
+
+## 2026-05-14 18:42 — `main` (ec8b0d15)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] data/skill-usage.jsonl — 이전 29개 항목은 `D:\\hoonProJect\\...` 절대경로, 신규 항목만 `skills/new_skill/...` 상대경로. `report_path`/`promotion_path`를 파일 로드에 사용하는 코드가 있다면 구 항목들은 다른 머신에서 깨짐. 경로 정규화 로직이 없으면 런타임 버그.
+
+- [Medium] skills/new_skill/skill-eval-report.json — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0` 임에도 `recommended_stage: "candidate"` 승격. `historical_score: 52`만으로 gate를 통과하는 경로가 의도된 것인지 검증 필요. 0% 통과율 스킬이 candidate로 올라가면 downstream 사용자에게 노출될 위험.
+
+- [Medium] data/skill-usage.jsonl — `installable: false` + `to_stage: "candidate"` 조합이 30개 항목 전부에서 반복. candidate 단계에서 installable이 영구 false라면 스킬이 실제로 활성화될 수 없음. 정책 상 의도인지, 누락된 상태 전환인지 확인 필요.
+
+- [Low] skill-eval-report.json:46 — 파일 끝 개행 없음(`No newline at end of file`). JSONL/JSON 파서나 git diff 가독성 이슈.
+
+- [Info] 이번 커밋 제목(`P4+P2 question set YAML 추가`)과 실제 변경 파일(평가 리포트·JSONL·registry.yaml) 불일치. YAML 추가 본체가 diff에 없음 — 변경 파일 목록과 커밋 범위 재확인 권장.
+
+---
+
+## 2026-05-14 18:42 — `main` (0f1f8741)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl`:30 — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0` 모두 0인 상태에서 `external_eval_passed` 이유로 `candidate` 승격. `historical_score: 52` 단독 근거 — 승격 임계값 정책과 일치하는지 확인 필요.
+- [Low] `data/skill-usage.jsonl`:30 — 이전 3건은 절대경로(`D:\hoonProJect\...`), 신규 항목만 상대경로. 로그 레코드 간 경로 형식 불일치 — `report_path`/`promotion_path` 해석 코드가 두 형식 모두 처리하는지 확인 필요.
+- [Info] `skill-eval-report.json`, `skills/new_skill/skill-eval-report.json` — 절대경로 → 상대경로 정규화는 이식성 개선. 의도적 변경으로 보임.
+- [Info] `skill-eval-report.json` — `skill_path: "dummy"` 는 루트 레벨 평가 리포트가 실제 스킬이 아닌 플레이스홀더임을 시사. 프로덕션 평가 경로에서 참조되지 않는지 확인 필요.
+
+---
+
+## 2026-05-14 18:44 — `main` (78cb6664)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl` — 기존 3개 항목은 절대 경로(`D:\\hoonProJect\\...`), 신규 항목만 상대 경로로 불일치. 이력 로그의 경로 형식이 섞이면 경로 기반 집계/조회 스크립트가 오동작할 수 있다.
+
+- [Medium] `data/skill-usage.jsonl:new entry` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_success_rate: 0.0` 전부 0이지만 `to_stage: candidate`로 승격. `reason: external_eval_passed`이지만 증거 지표가 전부 0인 채로 승격이 허용되는 조건이 명확하지 않음. 평가 게이트가 `historical_score >= 50` 단일 조건으로 동작하는지 확인 필요.
+
+- [Low] `skill-eval-report.json` — 루트에 위치한 `skill-eval-report.json`의 `skill_path: "dummy"`는 실제 스킬 파일 없는 더미 항목. 평가 파이프라인이 이 파일을 실제 스킬로 오인하지 않는지 확인 필요.
+
+- [Info] 절대 경로 → 상대 경로 전환(`report_path`, `promotion_path`)은 이식성 향상으로 올바른 방향. 단, 기존 로그 항목은 소급 수정되지 않아 부분적 상태.
+
+---
+
+## 2026-05-14 18:44 — `main` (bb2bcf3f)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] data/skill-usage.jsonl:31 — `new_skill` promoted draft→candidate 4회 연속 (`feedback_total_events` 27→30), 매번 `from_stage: "draft"` 동일. 스테이지가 실제로 advance되지 않고 동일 전환이 반복 append되고 있음 — 프로모션 멱등성 결여 버그.
+- [High] skills/new_skill/skill-eval-report.json — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`, `runtime_total: 0` 전부 0이지만 `recommended_stage: "candidate"` 로 승격. `historical_score: 52` 단일 지표만으로 승격 허용 — 평가 게이트 우회에 해당.
+- [Medium] skill-eval-report.json — `recommended_stage: "draft"` 상태의 루트 레벨 평가 파일이 레포에 커밋됨. 어느 스킬에 귀속되는지 불명확하고 `skill_path: "dummy"` 는 실제 경로가 아님 — 더미 artifact가 production artifact로 오인될 수 있음.
+- [Medium] data/skill-usage.jsonl:31 — 이전 3개 이벤트(ts: 2026-05-11)는 절대경로(`D:\hoonProJect\...`) 사용, 새 이벤트만 상대경로 — 히스토리 내 경로 포맷 불일치. 경로 정규화가 소급 적용되지 않음.
+- [Low] skill-eval-report.json — 파일 끝 개행 없음(`No newline at end of file`).
+- [Info] 커밋 메시지 "P4+P2 question set YAML 추가"와 실제 변경 파일(skill eval/promotion artifacts)이 불일치 — `skills/registry.yaml` diff가 제공되지 않아 YAML 추가 내용 검증 불가.
+
+---
+
+## 2026-05-14 18:45 — `main` (69cd406b)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl:31` — 신규 항목만 상대 경로(`skills/new_skill/...`) 사용, 기존 3개 항목은 절대 경로(`D:\\hoonProJect\\...`). 경로를 파일시스템에서 직접 resolve하는 코드가 있다면 혼재로 인해 경로 미발견 오류 발생 가능.
+- [Medium] `data/skill-usage.jsonl:31` — `reason: "external_eval_passed"` 이지만 `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`. 실제 근거는 `historical_score: 52`인데 reason 문자열이 오해를 유발함. 프로모션 로직이 reason 필드를 조건 분기에 사용한다면 잘못된 경로로 처리될 수 있음.
+- [Low] `skill-eval-report.json` (root) — EOF 개행 없음(`No newline at end of file`). JSON 파싱에는 무해하나 일관성 위반.
+- [Low] `skills/new_skill/skill-eval-report.json` — diff가 중간에 잘림(`"D:\\h` 에서 截断). 변경 전체가 제공되지 않아 해당 파일의 나머지 수정 내용 검증 불가.
+- [Info] `skills/registry.yaml`, `skills/new_skill/skill-promotion.json` — diff에 포함되지 않음. 커밋 메시지가 "P4+P2 question set YAML 추가"를 주장하지만 실제 YAML 내용 변경은 확인 불가.
+
+**요약**: 절대/상대 경로 혼재(Medium)와 reason 필드 불일치(Medium)가 주요 사항. 나머지는 Low/Info 수준.
+
+---
+
+## 2026-05-14 18:46 — `main` (bb75b5cf)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`인 상태로 `candidate` 승격 반복. 실질 평가 없는 자동 승격이 정책상 허용되는지 확인 필요.
+- [Medium] `data/skill-usage.jsonl`:L31 — 동일 evidence(`historical_score: 52`, 모든 rate 0)로 승격 이벤트가 4회(events 27→30) 중복 발화. 승격 로직에 멱등성 가드 부재 의심.
+- [Low] `skill-eval-report.json`:L1 — 루트 레벨 `skill-eval-report.json`의 `recommended_stage`가 `"draft"`인데 `skills/new_skill/`은 `"candidate"` — 두 파일의 역할/소유자가 다름을 명확히 문서화 필요 (혼동 가능성).
+- [Info] 절대 경로(`D:\\hoonProJect\\worktrees\\...`) → 상대 경로 정규화는 이식성 향상으로 올바른 변경.
+- [Info] 커밋 메시지("P4+P2 question set YAML 추가")와 변경 파일 목록(eval-report, promotion, registry)이 일치하지 않음 — `skills/registry.yaml` diff가 잘려 있어 실제 YAML 추가 내용 미확인. 커밋 단위 분리 고려.
+
+---
+
+## 2026-05-14 18:46 — `main` (c42c9b47)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] data/skill-usage.jsonl:31 — 이전 3개 이벤트는 절대경로(`D:\\hoonProJect\\...`), 신규 이벤트만 상대경로(`skills/new_skill/...`). 경로 해석 코드가 두 형식을 동시에 지원하지 않으면 기존 항목 조회 실패.
+- [Medium] data/skill-usage.jsonl:31 — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`인 상태에서 `candidate` 승격. `historical_score: 52`만으로 승격 근거 충분한지 승격 기준 문서 확인 필요.
+- [Low] skill-eval-report.json (root) — `recommended_stage: "draft"`인 루트 레벨 report가 커밋에 포함됨. `agent_factory` skill_id가 draft인 채로 추적되는 의도인지 불명확.
+- [Info] 커밋 메시지 "P4+P2 question set YAML 추가"와 실제 변경 파일(JSON/JSONL)이 불일치. `skills/registry.yaml` diff가 제공되지 않아 실제 YAML 내용 검증 불가.
+- [Info] `skills/new_skill/skill-eval-report.json` diff가 잘려 있어 전체 경로 정규화 범위 확인 불가.
+
+**요약**: 절대경로 → 상대경로 정규화 방향은 올바르나, 기존 JSONL 항목과의 형식 혼재가 핵심 위험. 경로 읽기 코드가 두 형식을 모두 처리하는지 확인 필요.
+
+---
+
+## 2026-05-14 18:47 — `main` (94cd68d4)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [High] data/skill-usage.jsonl — 커밋 메시지("goal_clarification + brainstorming YAML 추가")와 실제 변경 파일(skill-eval-report.json, skill-promotion.json, skill-usage.jsonl) 불일치. 질문 세트 YAML이 diff에 없음. 스테이징 누락 가능성.
+- [Medium] data/skill-usage.jsonl:31 — 기존 항목 3건은 절대 경로(`D:\\hoonProJect\\...`), 신규 항목만 상대 경로 사용. 동일 파일 내 경로 형식 혼재 → 경로 파싱 소비자가 구버전 항목에서 실패 가능.
+- [Low] data/skill-usage.jsonl — `historical_score`가 27→30 이벤트 내내 52로 고정. 신규 피드백 이벤트에도 점수 재산정 안 됨 — 집계 로직 버그 or 의도된 설계인지 확인 필요.
+- [Low] skills/new_skill/skill-eval-report.json — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`인데 `reason: external_eval_passed`로 candidate 승격. 모든 평가 지표가 0일 때 승격 허용하는 게이트 기준 재검토 필요.
+- [Info] skills/registry.yaml — 변경됐다고 표시됐으나 diff에 미포함(잘려있음). registry 내용 일관성 별도 확인 필요.
+
+---
+
+## 2026-05-14 18:48 — `main` (06ee6b61)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] `data/skill-usage.jsonl`:all — 이전 29개 항목은 절대 경로(`D:\\hoonProJect\\...`) 유지, 신규 항목만 상대 경로로 작성. 경로 필드를 실제로 읽는 로직이 있다면 이전 항목에서 경로 해석 실패 가능. 마이그레이션 또는 읽기 시 경로 정규화 필요.
+- [Medium] `data/skill-usage.jsonl`:all — `new_skill`이 `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `shadow_cases: 0`인 상태에서 `candidate` 승격 반복 기록(30회). 테스트 데이터 없이 승격 기준을 통과하는 구조라면 평가 게이트 의미가 없음. `static_ok: true` 단독으로 승격 허용하는 로직 검토 필요.
+- [Low] `skill-eval-report.json`:47 — 파일 끝 개행 없음(`No newline at end of file`). 일부 도구에서 diff 오염 또는 파싱 오류 유발 가능.
+- [Low] `data/skill-usage.jsonl`:all — `run_id: ""`, `agent_role: ""`가 30개 이벤트 전체에서 비어 있음. 이벤트 추적/디버깅 시 출처 식별 불가. 의도된 빈 값이면 Info.
+- [Info] `skill-eval-report.json`, `skills/new_skill/skill-eval-report.json` — 절대 경로 → 상대 경로 변환은 이식성 개선. 올바른 방향.
+
+---
+
+## 2026-05-14 18:48 — `main` (ea1c8773)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] data/skill-usage.jsonl:31 — 이전 3개 엔트리는 절대경로(D:\\hoonProJect\\...), 신규 엔트리만 상대경로로 기록. 경로 해석 코드가 cwd 기준으로 resolve하면 이전 항목과 불일치 발생 가능.",
+    "- [Medium] skill-eval-report.json, skills/new_skill/skill-eval-report.json — skill_path·report_path를 상대경로로 일괄 변경. 이 JSON을 읽는 코드가 항상 프로젝트 루트 cwd를 보장하는지 확인 필요. 보장 안 되면 경로 파일 not found 런타임 오류.",
+    "- [Low] data/skill-usage.jsonl — contract_pass_rate/hidden_pass_rate/runtime_success_rate 전부 0.0, runtime_total 0인 상태에서 candidate 승격. external_eval_passed + historical_score 52만으로 승격되는 것이 의도된 기준인지 명시 없음.",
+    "- [Low] data/skill-usage.jsonl — feedback_total_events 27→28→29→30 증가하는데 historical_score 52로 고정. 피드백 누적이 점수에 반영되지 않는 계산 누락 가능성.",
+    "- [Info] 커밋 메시지('P4+P2 question set YAML 추가')와 diff 내용 불일치 — 표시된 diff에는 YAML 추가 없고 JSON 경로 정규화만 있음. skills/registry.yaml diff가 누락되었거나 커밋 메시지가 잘못 기재된 것으로 보임."
+  ]
+}
+```
+
+---
+
+## 2026-05-14 18:49 — `main` (0e948338)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Low] `data/skill-usage.jsonl:31` — 새 이벤트만 상대경로(`skills/new_skill/...`) 사용, 기존 29개 엔트리는 절대 Windows 경로 — 로그 파일 내 경로 포맷 불일치. 소비자가 경로를 직접 참조 시 역방향 호환 문제 발생 가능.
+- [Low] `skill-eval-report.json`, `skills/new_skill/skill-eval-report.json` — `skill_path` / `report_path`를 상대경로로 변경. CWD가 repo root가 아닌 경우 경로 해석 실패 위험. 소비 코드에서 절대경로 변환 여부 확인 필요.
+- [Medium] `data/skill-usage.jsonl:31` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`임에도 `draft → candidate` 승격 — 실질적 평가 없이 `external_eval_passed` reason으로 게이트 통과. 프로모션 임계값이 0이거나 로직이 bypass된 것으로 보임.
+- [Info] 커밋 메시지에 "P4+P2 question set YAML 추가"라 했으나, 제공된 diff에 `skills/registry.yaml` 실제 내용 변경이 포함되지 않음 — 리뷰 범위 불완전. YAML 추가분 별도 확인 필요.

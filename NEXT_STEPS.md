@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Question Router Stage 0 P1 구현 완료 (58 tests PASS). 다음: P2 Brainstorming QR YAML + P3 GoalClarification QR YAML.**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ P1+P2+P4 완료 (36 tests PASS). 다음: P5 DomainVerdict 매트릭스 (NEEDS_ADR × 4 blast_radius, 7 신규 테스트).**
 
 ## ✅ Question Router Stage 0 — P1 구현 완료 (2026-05-14)
 
@@ -17,12 +17,15 @@
 - `ADR-20260514-133054-question-router-stage0.md` ✅ Status → Accepted
 - `tests/test_stage0_question_router.py` ✅ (33개 신규 + 기존 25 회귀 없음)
 
-### 다음 단계 (P2, P4, P5)
+### 완료된 P2+P4 산출물
+- `core/control/questions/goal_clarification.yaml` ✅ (4 questions, schema_version=1, cross-yaml id unique)
+- `core/control/questions/brainstorming.yaml` ✅ (4 questions, domain_verdict/concerns/suggested_adrs/research_scope)
+- `tests/test_stage0_question_router.py` ✅ (3 신규 YAML 로드 테스트 포함, 총 36 PASS)
+
+### 다음 단계 (P5, P6a)
 | 우선순위 | 파일 | 내용 |
 |----------|------|------|
-| P4 | `core/control/questions/goal_clarification.yaml` | GoalClarification QR YAML 신규 |
-| P2 | `core/control/questions/brainstorming.yaml` | Brainstorming QR YAML 신규 |
-| P5 | `core/approval_gate.py` | DomainVerdict 매트릭스 적용 + NEEDS_ADR 테스트 7건 |
+| **P5** | `core/approval_gate.py` | DomainVerdict 매트릭스 + NEEDS_ADR × 4 blast_radius 테스트 7건 |
 | P6a | `core/control/run_ledger.py` 확장 | assumption/paused_hitl/schema_drift 이벤트 |
 
 > ADR Status: **Accepted** (2026-05-14)

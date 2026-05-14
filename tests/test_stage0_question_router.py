@@ -488,3 +488,53 @@ class TestStageRouterWorkKind:
         router = self._make_router(ws)
         result = router.run(work_dir=work_dir, work_kind="refactor", blast_radius="cross_module")
         assert "context_scan" in result
+
+
+# ===========================================================================
+# 실제 YAML 파일 로드 + cross-yaml uniqueness (P4/P2)
+# ===========================================================================
+
+class TestActiveYamlFiles:
+    """goal_clarification.yaml / brainstorming.yaml 실제 파일 검증."""
+
+    def test_goal_clarification_yaml_loads(self):
+        from pathlib import Path
+        from core.control.question_router import load_question_schema, parse_questions
+
+        yaml_path = Path(__file__).parent.parent / "core/control/questions/goal_clarification.yaml"
+        schema, sha = load_question_schema(str(yaml_path))
+        assert schema["schema_version"] == 1
+        assert schema["question_set_id"] == "goal_clarification"
+        questions = parse_questions(schema)
+        ids = {q.id for q in questions}
+        assert "goal_summary" in ids
+        assert "deployment_target" in ids
+        assert len(sha) == 64  # sha256 hex
+
+    def test_brainstorming_yaml_loads(self):
+        from pathlib import Path
+        from core.control.question_router import load_question_schema, parse_questions
+
+        yaml_path = Path(__file__).parent.parent / "core/control/questions/brainstorming.yaml"
+        schema, sha = load_question_schema(str(yaml_path))
+        assert schema["schema_version"] == 1
+        assert schema["question_set_id"] == "brainstorming"
+        questions = parse_questions(schema)
+        ids = {q.id for q in questions}
+        assert "domain_verdict" in ids
+        assert len(sha) == 64
+
+    def test_stage_router_loads_both_yaml_no_collision(self):
+        from core.control.run_ledger import RunLedger
+        from core.control.stage_router import StageRouter
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as ws:
+            router = StageRouter(workspace=ws, run_ledger=RunLedger(ws))
+            assert "goal_clarification" in router._active_schemas
+            assert "brainstorming" in router._active_schemas
+            all_ids = set()
+            for schema in router._active_schemas.values():
+                for q in schema["questions"]:
+                    assert q["id"] not in all_ids, f"collision: {q['id']}"
+                    all_ids.add(q["id"])

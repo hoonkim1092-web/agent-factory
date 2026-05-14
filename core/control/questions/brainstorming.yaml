@@ -1,0 +1,32 @@
+schema_version: 1
+question_set_id: brainstorming
+
+questions:
+  - id: domain_verdict
+    text: "이 변경/프로젝트의 도메인 위험도를 평가해 주세요. (pass / needs_adr / block)"
+    output_field: domain_verdict
+    required: true
+    fallback: "pass"
+    default_route: llm_delegate
+    block_category_if_missing: missing_required_input
+
+  - id: domain_concerns
+    text: "도메인 관점에서 주요 우려 사항이나 위험 요소는 무엇입니까?"
+    output_field: domain_concerns
+    required: false
+    fallback: null
+    default_route: llm_delegate
+
+  - id: suggested_adrs
+    text: "이 변경과 관련해 ADR 작성이 권장되는 결정 사항은 무엇입니까?"
+    output_field: suggested_adrs
+    required: false
+    fallback: null
+    default_route: llm_delegate
+
+  - id: research_scope
+    text: "Stage 1 진입 전 추가 조사가 필요한 영역은 무엇입니까?"
+    output_field: research_scope
+    required: false
+    fallback: null
+    default_route: llm_delegate
