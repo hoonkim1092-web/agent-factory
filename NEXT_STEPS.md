@@ -1,35 +1,31 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Opus 4.7)** — **✅ Question Router Stage 0 ADR + 상세설계 v4 freeze. 다음: ADR Accepted 확인 후 P1 StageRouter 구현.**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Question Router Stage 0 P1 구현 완료 (58 tests PASS). 다음: P2 Brainstorming QR YAML + P3 GoalClarification QR YAML.**
 
-## 🔥 Question Router Stage 0 — ADR + 설계문서 v4 freeze (2026-05-14)
+## ✅ Question Router Stage 0 — P1 구현 완료 (2026-05-14)
 
-### 산출물
-- `docs/decisions/ADR-20260514-133054-question-router-stage0.md` (304줄, Draft v2)
-- `docs/2026-05-14-question-router-detailed-design.md` (1272줄, v4)
-- `.claude/agents/af-cross-review.md`: 비양보 원칙 영구 삽입 (사용자 합의 2026-05-14)
-- `docs/reviews/2026-05-14-*.md`: Codex 설계 리뷰 5라운드 기록 (34개)
+### 완료된 P1 산출물
+- `core/control/verdicts.py` ✅ (QuestionRoute/DomainVerdict/BlockCause enum 단일 원천)
+- `core/control/stage_artifacts.py` ✅ (6개 dataclass)
+- `core/control/question_router.py` ✅ (QuestionRouter 순수 분류기 + YAML validation)
+- `core/control/context_scanner.py` ✅ (LightContextScanner LLM 0회)
+- `core/control/stage_router.py` ✅ (StageRouter 오케스트레이터 + cross-yaml uniqueness)
+- `core/approval_gate.py` ✅ (`initialize()` status/execution_open 파라미터 추가)
+- `core/work_item_generator.py` ✅ (Stage 0 삽입 _copy_extra_templates() 직후)
+- `af.spec` ✅ (hiddenimports 5모듈 추가)
+- `ADR-20260514-133054-question-router-stage0.md` ✅ Status → Accepted
+- `tests/test_stage0_question_router.py` ✅ (33개 신규 + 기존 25 회귀 없음)
 
-### 합의 결과 (18개 비양보 항목)
-- 3 enum 단일 원천: `QuestionRoute` ∈ {PASS,LLM_DELEGATE,HITL,BLOCK}, `DomainVerdict`, `BlockCause`
-- Stage 0 삽입점: `_copy_extra_templates()` 직후 (`:1094`)
-- HITL batch (즉시 pause 금지), Router side effect 금지
-- schema_hash SHA-256 필수, question.id immutable
-- Cross-YAML id uniqueness hard fail + question_set_id provenance
-
-### 다음 단계 (P1 구현)
+### 다음 단계 (P2, P4, P5)
 | 우선순위 | 파일 | 내용 |
 |----------|------|------|
-| P1 | `core/control/verdicts.py` | QuestionRoute/DomainVerdict/BlockCause enum 신규 |
-| P1 | `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass 신규 |
-| P1 | `core/control/question_router.py` | QuestionRouter 순수 분류기 신규 |
-| P1 | `core/control/stage_router.py` | StageRouter 오케스트레이터 신규 |
-| P1 | `core/control/context_scanner.py` | LightContextScanner 신규 |
-| P1 | `core/approval_gate.py` | initialize() status/execution_open 파라미터 추가 |
-| P1 | `core/work_item_generator.py` | Stage 0 삽입 (:1094) |
+| P4 | `core/control/questions/goal_clarification.yaml` | GoalClarification QR YAML 신규 |
+| P2 | `core/control/questions/brainstorming.yaml` | Brainstorming QR YAML 신규 |
+| P5 | `core/approval_gate.py` | DomainVerdict 매트릭스 적용 + NEEDS_ADR 테스트 7건 |
+| P6a | `core/control/run_ledger.py` 확장 | assumption/paused_hitl/schema_drift 이벤트 |
 
-> ADR Status: **Draft** → 구현 진입 전 **Accepted**로 갱신할 것
+> ADR Status: **Accepted** (2026-05-14)
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 

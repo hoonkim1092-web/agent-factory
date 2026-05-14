@@ -4778,3 +4778,18 @@ No security or critical issues found.
 - [Low] skill-eval-report.json:46 — 파일 끝 개행(EOF newline) 없음. 기존부터 존재하던 문제이나 JSON 파일 표준 관행상 `\n` 추가 권장.
 
 No critical or high issues found.
+
+---
+
+## 2026-05-14 17:30 — `main` (053efbe0)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (1)**: `skill-eval-report.json`
+
+### Findings
+
+- [Low] skill-eval-report.json:46 — 파일 끝 개행 없음 (`\ No newline at end of file`). 일부 도구에서 diff noise 유발.
+- [Info] skill-eval-report.json:2,44 — 절대 경로 → 상대 경로 정규화. 포터블하게 개선된 변경.
+
+No functional or security issues found.
