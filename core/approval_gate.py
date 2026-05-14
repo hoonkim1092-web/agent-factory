@@ -88,6 +88,9 @@ _DOC_FILES = {
 
 _DOMAIN_REVIEW_FILE = "domain-review.md"
 
+# NEEDS_ADR + high blast_radius → pause. low blast_radius → warning + proceed.
+_HIGH_BLAST_RADIUS = frozenset({"cross_module", "system_wide"})
+
 
 def _read_domain_review_verdict(path: str) -> str:
     """domain-review.md에서 verdict 파싱.
@@ -111,6 +114,40 @@ def _read_domain_review_verdict(path: str) -> str:
     if len(checked) > 1:
         return "MULTIPLE"
     return checked[0].upper()
+
+
+def _parse_domain_review(path: str) -> tuple[str, str]:
+    """domain-review.md를 단일 read로 verdict + block_cause 파싱.
+
+    반환: (verdict, block_cause)
+      verdict: "PASS" | "NEEDS_ADR" | "BLOCK" | "" | "MULTIPLE"
+      block_cause: "MISSING_REQUIRED_INPUT" | "DESIGN_CONFLICT" | "HIGH_RISK" | "POLICY_VIOLATION" | "SAFETY" | ""
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return ("", "")
+
+    explicit = re.findall(r"^- verdict:\s*(PASS|NEEDS_ADR|BLOCK)\s*$", text, re.M)
+    if explicit:
+        verdict = explicit[0] if len(explicit) == 1 else "MULTIPLE"
+    else:
+        checked = re.findall(r"^- \[x\]\s+(PASS|NEEDS_ADR|BLOCK)\b", text, re.M | re.I)
+        if not checked:
+            verdict = ""
+        elif len(checked) > 1:
+            verdict = "MULTIPLE"
+        else:
+            verdict = checked[0].upper()
+
+    causes = re.findall(
+        r"^- block_cause:\s*(MISSING_REQUIRED_INPUT|DESIGN_CONFLICT|HIGH_RISK|POLICY_VIOLATION|SAFETY)\s*$",
+        text, re.M | re.I,  # StageRouter가 소문자로 기록하므로 IGNORECASE
+    )
+    block_cause = causes[0].upper() if causes else ""
+
+    return (verdict, block_cause)
 
 
 def _sha256_file(path: str) -> str:
@@ -148,6 +185,7 @@ class ApprovalGate:
         )
         self.gate_path = os.path.join(self.work_item_dir, GATE_FILENAME)
         self.last_block_reason: str = ""
+        self.last_warning_reason: str = ""
 
     # ------------------------------------------------------------------
     # 공개 API
@@ -203,6 +241,10 @@ class ApprovalGate:
         if not os.path.exists(self.gate_path):
             return False
 
+        # 상태 필드 초기화 — 모든 early-return 이전에 reset하여 stale 방지
+        self.last_block_reason = ""
+        self.last_warning_reason = ""
+
         # Auto-approve 활성 감지 (opt-in) — env 모드는 슬러그 화이트리스트 매칭 필수
         env_auto = _auto_approve_env_active(self.slug)
         is_auto = bool(auto) or env_auto
@@ -228,29 +270,43 @@ class ApprovalGate:
         ):
             return True
 
-        # Domain Gate — system_wide blast_radius 전용 (F3-a)
-        self.last_block_reason = ""
+        # Domain Gate — DomainVerdict 매트릭스 (P5)
+        # PASS + any → 진행. NEEDS_ADR + high_blast → pause. NEEDS_ADR + low_blast → warning + 진행.
+        # BLOCK + any → 차단. high_blast: cross_module | system_wide.
         domain_review_version = ""
-        if (
-            _clean(current.get("blast_radius")) == "system_wide"
-            and os.environ.get("AF_SKIP_DOMAIN_REVIEW") != "1"
-        ):
+        br = _clean(current.get("blast_radius"))
+        high_blast = br in _HIGH_BLAST_RADIUS
+        if os.environ.get("AF_SKIP_DOMAIN_REVIEW") != "1":
             domain_path = os.path.join(self.work_item_dir, _DOMAIN_REVIEW_FILE)
-            if not os.path.exists(domain_path):
-                self.last_block_reason = "missing_domain_frontmatter"
+            if os.path.exists(domain_path):
+                verdict, block_cause = _parse_domain_review(domain_path)
+                if not verdict:
+                    if not high_blast:
+                        pass  # low_blast + 빈 템플릿 → optional, 진행 (#2 blank-template trap 방지)
+                    else:
+                        self.last_block_reason = "missing_verdict"
+                        return False
+                elif verdict == "MULTIPLE":
+                    self.last_block_reason = "multiple_verdicts"
+                    return False
+                elif verdict == "BLOCK":
+                    self.last_block_reason = (
+                        f"domain_review_blocked_{block_cause.lower()}"
+                        if block_cause else "domain_review_blocked"
+                    )
+                    return False
+                elif verdict == "NEEDS_ADR" and high_blast:
+                    self.last_block_reason = "needs_adr_paused"
+                    return False
+                elif verdict == "NEEDS_ADR":
+                    # low_blast: warning + 진행. last_block_reason는 "" 유지 (#1 false-positive 방지)
+                    self.last_warning_reason = "needs_adr_warning"
+                if verdict:  # 빈 템플릿(verdict=="")이면 version 저장 안 함
+                    domain_review_version = _sha256_file(domain_path)
+            elif high_blast:
+                # high blast_radius에서 domain-review.md 파일 자체 없음
+                self.last_block_reason = "missing_domain_review_file"
                 return False
-            verdict = _read_domain_review_verdict(domain_path)
-            if not verdict:
-                self.last_block_reason = "missing_verdict"
-                return False
-            if verdict == "MULTIPLE":
-                self.last_block_reason = "multiple_verdicts"
-                return False
-            if verdict == "BLOCK":
-                self.last_block_reason = "domain_review_blocked"
-                return False
-            # PASS or NEEDS_ADR → 진행, domain-review.md 해시 스냅샷 저장
-            domain_review_version = _sha256_file(domain_path)
 
         snapshots = self.compute_snapshots()
         gate_statuses = {key: "approved" for key in _DOC_FILES}

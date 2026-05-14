@@ -1,7 +1,27 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST (Sonnet 4.6)** — **✅ Round 1·2·3 dogfooding 완료. Round 3: writing_skills 흡수, 0 review-gate friction. selection bias 확인. 다음 결정: main 머지 / P5 DomainVerdict / 다른 작업.**
+> 마지막 업데이트: **2026-05-15 KST (Sonnet 4.6)** — **✅ P5 DomainVerdict 매트릭스 완료. `approval_gate.py` 34 tests PASS. 배포 동등성 fix (`project_pipeline.py` blast_radius 주입). 3-tier review 완주 후 commit 필요.**
+
+---
+
+## ✅ P5 DomainVerdict 매트릭스 완료 (2026-05-15)
+
+### 구현 내용
+- `core/approval_gate.py`: `_HIGH_BLAST_RADIUS`, `last_warning_reason`, `_parse_domain_review()` (단일 read + IGNORECASE), 전체 blast_radius × verdict 매트릭스
+- `core/project_pipeline.py`: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler` 호출 → `project_brief["blast_radius"]` 주입 (배포 동등성 BLOCK 해소)
+- `tests/test_approval_gate_domain_gate.py`: 26 → 34 tests (`gate_isolated`, `gate_cross_module` 픽스처, `TestDomainGateNeedsAdr`, `TestDomainGateBlockCause` 클래스 추가)
+
+### 리뷰 이력
+| Tier | 결과 | 조치 |
+|------|------|------|
+| af-critic (Tier 2) | WARN | `last_warning_reason` 도입, reset 위치 수정 |
+| af-cross-review (Tier 3) | BLOCK → 해소 | `blast_radius` 배포 동등성 fix |
+| af-test-runner (Tier 1) | PASS | 1551 tests |
+
+### 다음 세션 진입점
+- **commit** — 3-tier review 완주 확인 후 P5 전체 커밋
+- **main 머지 결정** — `af-on-af/round1-hook-fix` 브랜치 main 통합 여부 사용자 결정 필요
 
 ---
 

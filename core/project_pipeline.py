@@ -958,6 +958,16 @@ class ProjectPipeline:
                     f"missing={_cr.get('missing', [])}"
                 )
 
+        # Deployment parity: ensure blast_radius propagates to gate.initialize().
+        # project_brief rarely carries it from the LLM; derive from git-diff + board when absent.
+        if not project_brief.get("blast_radius"):
+            try:
+                from core.control.change_impact import ChangeImpactProfiler
+                _impact = ChangeImpactProfiler().profile(task_input, target_workspace, task_board)
+                project_brief["blast_radius"] = _impact.blast_radius
+            except Exception:
+                pass
+
         _raw_target = str(project_brief.get("target_path") or "").strip()
         doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace
         work_item_files = generate_work_items(

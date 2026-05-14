@@ -5161,3 +5161,13 @@ No Critical/High issues. 핵심은 경로 혼재(Low)와 0점 지표 승격(Low)
 **Changed (2)**: `Master_Blueprint.md, scripts/review_gate.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 01:10 — `af-on-af/round1-hook-fix` (777f0a28)
+
+**Context**: edit: core/approval_gate.py
+
+**Changed (2)**: `Master_Blueprint.md, core/approval_gate.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

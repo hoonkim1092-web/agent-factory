@@ -47,7 +47,7 @@
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점 | `main()` |
-| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` (Phase A), `initialize(status, execution_open)` (v4) |
+| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` + `_read_block_cause()` (P5), `initialize(status, execution_open)` (v4), DomainVerdict 매트릭스 `_HIGH_BLAST_RADIUS` (P5) |
 | `core/control/verdicts.py` | Stage 0 verdict/route/cause enum 단일 원천 | `QuestionRoute`, `DomainVerdict`, `BlockCause` |
 | `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass | `ContextScanArtifact`, `ProjectGoalArtifact`, `DomainReviewArtifact`, `AssumptionLedgerEntry`, `PausedHitlArtifact`, `PausedHitlQuestion` |
 | `core/control/question_router.py` | Stage 0 순수 분류기 (파일 쓰기 없음) | `QuestionRouter`, `Question`, `QuestionResult`, `QuestionBatchResult`, `load_question_schema()` |
@@ -100,7 +100,7 @@
 | `core/model_router.py` | CLI 프로바이더 선택 | `ModelRouter` |
 | `core/policy_runtime.py` | 정책 런타임 래퍼 | `PolicyRuntime` |
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
-| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함) | `ProjectPipeline`, `ResearchGateBlocked` |
+| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | `ProjectPipeline`, `ResearchGateBlocked` |
 | `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | `SpecGenerator`, `AdrGenerator`, `TraceabilityGenerator`, `_call_llm_raw`, `SPEC_FILENAMES` |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시 | `execute_cli_chat()`, `_progress_printer()` |
@@ -1531,6 +1531,21 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, approval_gate.py, project_pipeline.py, skill-usage.jsonl (+7) |
+| 2026-05-15 | v1.2.28 | fix(P5-blast-radius-parity): `core/project_pipeline.py` `prepare_documents()` — `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 추가. project_brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완. 배포 동등성 BLOCK 해소. `Master_Blueprint.md` §0+§12 업데이트. |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: core/project_pipeline.py — Master_Blueprint.md, approval_gate.py, project_pipeline.py, skill-usage.jsonl, code-review.md (+5) |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: core/approval_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: core/approval_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, registry.yaml (+1) |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: core/approval_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, skill-eval-report.json, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | feat(P5-domain-verdict): DomainVerdict 매트릭스 구현 — `core/approval_gate.py` `_HIGH_BLAST_RADIUS` 상수 + `_read_block_cause()` 신규, domain gate `system_wide`-only → 매트릭스 교체(NEEDS_ADR+low_blast→warning+proceed, NEEDS_ADR+high_blast→pause, BLOCK+cause→last_block_reason 세분). `tests/test_approval_gate_domain_gate.py` 8건 신규(isolated/module/cross_module 분기 + BlockCause 파싱) + F5 헤더 갱신. 31 domain-gate PASS + 76 회귀 PASS. |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_approval_gate_domain_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md, test_approval_gate_domain_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: core/approval_gate.py — Master_Blueprint.md, approval_gate.py, code-review.md |
+| 2026-05-15 | v1.2.28 | chore(core): edit: core/approval_gate.py — approval_gate.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: scripts/review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
