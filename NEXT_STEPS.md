@@ -1,7 +1,35 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B + Phase C Option B+C 완료. Superpowers 흡수 완료. 다음: 백로그 또는 신규 작업.**
+> 마지막 업데이트: **2026-05-14 KST (Opus 4.7)** — **✅ Question Router Stage 0 ADR + 상세설계 v4 freeze. 다음: ADR Accepted 확인 후 P1 StageRouter 구현.**
+
+## 🔥 Question Router Stage 0 — ADR + 설계문서 v4 freeze (2026-05-14)
+
+### 산출물
+- `docs/decisions/ADR-20260514-133054-question-router-stage0.md` (304줄, Draft v2)
+- `docs/2026-05-14-question-router-detailed-design.md` (1272줄, v4)
+- `.claude/agents/af-cross-review.md`: 비양보 원칙 영구 삽입 (사용자 합의 2026-05-14)
+- `docs/reviews/2026-05-14-*.md`: Codex 설계 리뷰 5라운드 기록 (34개)
+
+### 합의 결과 (18개 비양보 항목)
+- 3 enum 단일 원천: `QuestionRoute` ∈ {PASS,LLM_DELEGATE,HITL,BLOCK}, `DomainVerdict`, `BlockCause`
+- Stage 0 삽입점: `_copy_extra_templates()` 직후 (`:1094`)
+- HITL batch (즉시 pause 금지), Router side effect 금지
+- schema_hash SHA-256 필수, question.id immutable
+- Cross-YAML id uniqueness hard fail + question_set_id provenance
+
+### 다음 단계 (P1 구현)
+| 우선순위 | 파일 | 내용 |
+|----------|------|------|
+| P1 | `core/control/verdicts.py` | QuestionRoute/DomainVerdict/BlockCause enum 신규 |
+| P1 | `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass 신규 |
+| P1 | `core/control/question_router.py` | QuestionRouter 순수 분류기 신규 |
+| P1 | `core/control/stage_router.py` | StageRouter 오케스트레이터 신규 |
+| P1 | `core/control/context_scanner.py` | LightContextScanner 신규 |
+| P1 | `core/approval_gate.py` | initialize() status/execution_open 파라미터 추가 |
+| P1 | `core/work_item_generator.py` | Stage 0 삽입 (:1094) |
+
+> ADR Status: **Draft** → 구현 진입 전 **Accepted**로 갱신할 것
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 

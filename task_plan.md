@@ -1,56 +1,33 @@
-# Task Plan: Review LLM-Powered Document Generation Design
+# Task Plan
 
-## Goal
-Validate `docs/features/2026-04-07-llm-powered-document-generation.md` against the current Agent Factory codebase and produce a project-specific design review with severity, file:line references, and code quotes.
+Goal: Analyze the `codex_논의` folder documents, explain the reasoning steps, give a logical opinion, and describe likely effects clearly in Korean.
 
-## Current Phase
-Phase 1
+## Follow-up Goal 2026-05-13
+
+Analyze the Superpowers/GSD skill adoption discussion, including `docs/codex_논의/2026-05-13-superpowers-11-skills-quality-verification.md`, related Domain Gate/Superpowers design docs, reviews, Phase A gap analysis, and current AF code integration risks.
 
 ## Phases
-### Phase 1: Requirements & Discovery
-- [x] Understand user intent
-- [x] Identify constraints and requirements
-- [ ] Document findings in findings.md
-- **Status:** in_progress
 
-### Phase 2: Planning & Structure
-- [ ] Define technical review approach
-- [ ] Map design assumptions to concrete code paths
-- [ ] Document decisions with rationale
-- **Status:** pending
+| Phase | Status | Notes |
+| --- | --- | --- |
+| 1. Locate documents | complete | Found 6 files under `docs/codex_논의`. |
+| 2. Extract claims | complete | Read documents and identified the core proposal chain. |
+| 3. Judge logic | complete | Evaluated strengths, risks, assumptions, and current-code drift. |
+| 4. Explain effects | in_progress | Describe expected operational, technical, and organizational effects. |
+| 5. Final answer | pending | Provide structured Korean explanation. |
 
-### Phase 3: Evidence Collection
-- [ ] Read review and design docs
-- [ ] Read required core files with line numbers
-- [ ] Trace related call paths and data structures
-- **Status:** pending
+## Follow-up Phases
 
-### Phase 4: Analysis & Verification
-- [ ] Check design claims against actual function signatures and flow
-- [ ] Identify regressions, omissions, and new risks
-- [ ] Confirm evidence chain and clarification insertion feasibility
-- **Status:** pending
-
-### Phase 5: Delivery
-- [ ] Prepare findings ordered by severity
-- [ ] Include file references and code quotes
-- [ ] Deliver concise review to user
-- **Status:** pending
-
-## Key Questions
-1. Do the design document's proposed hook points and data structures match the current code?
-2. Are there missing modules, failure paths, or UI/FSA constraints that the design did not account for?
-
-## Decisions Made
-| Decision | Rationale |
-|----------|-----------|
-| Use file-based working notes for this review | Task requires many reads and cross-file comparisons |
+| Phase | Status | Notes |
+| --- | --- | --- |
+| F1. Read named skill workflows | complete | Read 10 referenced skill documents. |
+| F2. Locate Superpowers/GSD docs | complete | Found 2026-05-13 verification doc, design review, 5/11 design, 4/22 Phase A, 4/8 and 4/9 GSD/Superpowers docs. |
+| F3. Extract claims and required behavior | complete | Summarized proposed skill additions and workflow expectations. |
+| F4. Compare with existing AF code | complete | Checked overlaps with review gates, worktrees, FSA/ISE, task planning, and provider behavior. |
+| F5. Judge collisions/effects | in_progress | Provide Korean final analysis with explicit steps and recommendations. |
 
 ## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| `session-catchup.py` not found under `.claude` path | 1 | Re-ran with actual `.codex` skill path |
 
-## Notes
-- Review output must be codebase-specific only.
-- Findings need severity, file:line, and code quote.
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| PowerShell sandbox CreateProcessWithLogonW failed: 1326 | Initial shell access | Re-ran required commands with user-approved escalation. |

@@ -1,41 +1,30 @@
-# Findings & Decisions
+# Findings
 
-## Requirements
-- Read `docs/code_review/code-review.md`.
-- Read `docs/features/2026-04-07-llm-powered-document-generation.md`.
-- Read and verify the specified core files directly.
-- Judge whether the design worsens existing issues, adds new ones, or resolves prior issues correctly.
-- Validate concrete hook points, evidence propagation, clarification insertion, UI/FSA behavior, chained refinement risk, impact scope, and prompt/data-shape alignment.
-- Report only project-specific findings with severity, file:line references, and code quotes.
+## Document Set
 
-## Research Findings
-- `docs/code_review/code-review.md` 기준으로 planning 관련 핵심 파일은 `interactive_chat.py`, `researcher.py`, `project_pipeline.py`, `work_item_generator.py`, `bootstrap_roles.py`이며, `interactive_chat.py`에는 이미 자동 compaction 미연동 문제가 기록되어 있다.
-- 설계 문서는 현재 병목을 `work_item_generator.py`의 4개 f-string 문서 생성 함수로 규정하고, Evidence 원본 전파와 Clarification 단계 삽입을 `project_pipeline.py` 중심으로 해결하려 한다.
-- 설계 문서는 새 파일 `core/clarification.py`를 도입하고, `interactive_chat.py`가 Clarification 질문/응답 UI를 담당한다고 가정한다.
-- 설계 문서는 `generate_work_items(..., evidence=...)` 형태의 시그니처 변경과 chained refinement 기반의 4회 추가 LLM 호출을 제안한다.
-- 실제 `core/work_item_generator.py`는 Evidence를 별도 인자로 받지 않고, `project_brief` 안의 `evidence_summary`, `research_notes`, `notebook_summary`, `local_references`, `web_references`만 사용한다.
-- 실제 `core/project_pipeline.py`의 `prepare()`는 `research_evidence`를 수집/저장하지만 `research_project_brief()` 호출 이후 `generate_work_items()`에 전달하지 않는다. 중간에 사용자 상호작용을 반환하거나 재개할 수 있는 인터럽트 구조도 없다.
-- 실제 `core/interactive_chat.py`의 project 모드는 `factory.run(...)` 결과를 받아 `_format_project_result()`로 문자열만 렌더링한다. `PreparedProject` 또는 추가 질의 요청 객체를 해석하는 코드 경로는 아직 없다.
+- Target folder: `docs/codex_논의`
+- Files analyzed: 6 markdown documents dated 2026-05-11 to 2026-05-13.
+- Main arc: pipeline/AST review -> AST revival -> graph/memory evolution -> Graphify diagnosis -> market/competitor synthesis -> provider-neutral knowledge layer.
 
-## Technical Decisions
-| Decision | Rationale |
-|----------|-----------|
-| Focus on actual call/data flow rather than design intent alone | User asked for validation against current implementation |
+## Verified Observations
 
-## Issues Encountered
-| Issue | Resolution |
-|-------|------------|
-| Skill script default path mismatched local environment | Used actual skill installation path under `.codex` |
+- `core/ast_engine.py` is only used through `core/review_bundle.py` in the searched code paths. It is not exposed as a normal agent execution tool.
+- `core/ast_memory_hub.py` has `subscribe()` and `publish()`, but searched production calls show no `AstMemoryHub.subscribe(...)` consumer. Generic `.subscribe()` hits include unrelated message broker code.
+- `dynamic_orchestrator.py` currently does update AST state with real changed file paths via `_git.diff_files_since(_pre_task_sha)` on normal success and FSA success. This means the older "fake filepath only" diagnosis has been partially fixed in the current code.
+- `update_ast_state()` still defaults to `parsed_ast_data or "AST_TREE_MOCK"`, and current calls do not pass parsed AST data.
+- Graphify wrapper exists, but metadata still marks `last_test_ok: false` and requires Python `<3.14`; docs also describe graphify as needing Python 3.13 isolation.
+- Provider session bridge has provider configs for codex, claude, and gemini sessions, but the provider-neutral canonical memory layer described in the latest design is still a design target rather than a completed layer.
 
-## Resources
-- `docs/code_review/code-review.md`
-- `docs/features/2026-04-07-llm-powered-document-generation.md`
-- `core/work_item_generator.py`
-- `core/project_pipeline.py`
-- `core/interactive_chat.py`
-- `core/researcher.py`
-- `core/requirement_llm.py`
-- `core/bootstrap_roles.py`
+## Judgment
 
-## Visual/Browser Findings
-- None.
+- The document set's diagnosis is directionally strong: AF has many advanced subsystems, but several are not wired into decision-time context.
+- The biggest practical leverage is not adding more tools; it is closing loops: observe -> score -> consolidate -> retrieve.
+- The latest provider-neutral Knowledge Operating Layer is the right north-star, but it is too broad to implement as one feature. It should be cut into narrow, measurable phases.
+
+## Superpowers / GSD Follow-up
+
+- Read 10 named workflow skills: brainstorming, systematic-debugging, verification-before-completion, writing-plans, test-driven-development, requesting-code-review, receiving-code-review, using-git-worktrees, finishing-a-development-branch, dispatching-parallel-agents, subagent-driven-development.
+- `docs/codex_논의/2026-05-13-superpowers-11-skills-quality-verification.md` is useful but currently BLOCKed by its own design review. Major issues: wrong file references (`core/project_planning_director.py` absent; `ProjectPlanningDirector` is in `core/bootstrap_roles.py`), wrong AgentSpecializer cap claim (8, not 12), stale memory wire-up claim, and missing contracts for `domain-review.md` and verification wiring.
+- Current AF has many GSD/Superpowers primitives already: `context_fork.py`, `semantic_embedder.py`, `skill_eval_harness.py`, `skill_preflight.py`, `mcp_adapter.py`, `parallel_critique.py`, `approval_gate.py`, `review_gate.py`, `AgentSpecializer`.
+- The real GSD gap is not primitives; it is explicit workflow contract: PlanChecker, Goal-backward Verifier, UAT.md, and gap-replan loop.
+- Recommended absorption split: implement/strengthen brainstorming, systematic-debugging, verification-before-completion, TDD-red checks, worktree isolation policy; do not import Superpowers directly. Keep AF-native review/orchestration, but expose them as named phases.
