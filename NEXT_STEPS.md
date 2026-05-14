@@ -1,52 +1,44 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Opus 4.7)** — **🚀 Round 1 dogfooding 시작 상태. 브랜치 `af-on-af/round1-hook-fix`. 아래 §"Round 1 진행 상태" 먼저 읽을 것.**
+> 마지막 업데이트: **2026-05-15 KST (Opus 4.7)** — **✅ Round 1 dogfooding 종료. 브랜치 `af-on-af/round1-hook-fix`. 다음 결정: main 머지 / Round 2 진행 / 다른 작업 전환.**
 
 ---
 
-## 🚀 Round 1 진행 상태 (2026-05-14, 시작 직후 세션 종료)
+## ✅ Round 1 종료 (2026-05-15)
 
-### 현재 브랜치
-`af-on-af/round1-hook-fix` (main에서 분기, 아직 첫 commit 전)
+### 종료 조건 3개 모두 충족
+1. ✅ **hook fix 동작** — `.githooks/post-commit`에 `review_gate.py --clear --files <committed>` 호출 추가 (commit `04ddc207`).
+2. ✅ **후속 commit false positive 0** — `04ddc207` pre-commit gate PASS (`no-py-files`). 종료 commit도 `[gate-cleared] committed=6 remaining=0`.
+3. ✅ **friction 4분류 완료** — round1-friction.md 7건 모두 `review-gate` 도메인 (selection bias 명시 — dogfooding 첫 작업 자체가 hook 버그 fix였음).
 
-### 완료된 셋업
-- `docs/2026-05-14-dev-workflow-paradigm-shift.md` — 개발방식 전환 상세 문서 (배경/채택4/거절3/부채/실행순서)
-- `docs/dogfooding/round1-friction.md` — 마찰 실시간 로그 (현재 4건 기록)
-- `.codex/agents/*.toml` 4개 — staging됨 (보존 결정, 858줄 작업물)
-- NEXT_STEPS.md — 본 갱신
+### 확정된 진짜 원인
+- `hook_runner.py:496-514`에 `_post_commit_clear` 함수 존재하나 **호출 경로 없음**.
+- `.claude/settings.json` PostToolUse hook: `Write|Edit`·`Agent`만 등록 — **`Bash` matcher 누락**.
+- `.githooks/post-commit` shell hook: Blueprint/code-review만 처리, 큐 클리어 안 함.
+- 결과: 큐 영구 누적 → 다음 commit에서 `new-files-added` false positive BLOCK.
 
-### 미커밋 untracked (삭제 보류 — 다음 세션 시작 시 결정)
-- `docs/reviews/2026-05-14-072428-skill_self_evolution-code-review.md` (이전 세션 hook 부산물)
-- `docs/reviews/2026-05-14-072707-project_context_sync-code-review.md` (이전 세션 hook 부산물)
-- `docs/reviews/2026-05-14-220501-2026-05-14-dev-workflow-paradigm-shift-design-review.md` (이번 세션 hook 부산물)
-- `docs/work-items/implement-a-browser-poker-game/design.md` (이전 work-item 산물)
+### Fix 내용 (commit `04ddc207`)
+```sh
+# .githooks/post-commit에 추가
+if [ -n "$CHANGED" ]; then
+    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+    [ -x "$VENV_PYTHON" ] && CLEAR_PY="$VENV_PYTHON" || CLEAR_PY="python3"
+    COMMITTED=$(echo "$CHANGED" | tr '\n' ',' | sed 's/,$//')
+    "$CLEAR_PY" "${REPO_ROOT}/scripts/review_gate.py" --clear --files "$COMMITTED" >/dev/null 2>&1 || true
+fi
+```
 
-### 🔴 다음 세션 진입점 — **중요한 진단 수정**
-**paradigm-shift.md의 가정이 부정확함**:
-- 가정: "review-gate가 docs/reviews/*.md를 new-files-added로 잘못 감지"
-- 실제: `scripts/review_gate.py` line 191은 `.py`만 필터링 (`py_files = [f for f in state.get("files", []) if f.endswith(".py")]`). `.md` 부산물은 직접 BLOCK 원인 아님.
-- **진짜 원인 추적 후보**:
-  1. `scripts/check_design_pending.py` (단일 설계문서 큐 자동 발화)
-  2. `scripts/check_pending_review.py`
-  3. `.githooks/pre-commit` 자체 로직
-  4. `scripts/hook_runner.py`
+### 남은 edge case (Round 2 후보)
+- `committed_set`에 포함되지 않는 stale 큐 항목은 여전히 영구 잔존 (예: 큐에 .py A가 있는 상태에서 .py B만 commit).
+- **해소안 후보**: `clear_committed_files`에 "`last_round_summary.has_block=false` AND `round_count>0`" 조건 → 큐 통째 reset 옵션 추가.
+- Round 2 진행 여부는 다음 세션에서 결정.
 
-### 다음 세션 작업 순서 (Round 1)
-1. **첫 commit** (보류 중) — `.codex/agents/` + paradigm-shift.md + dogfooding/ + NEXT_STEPS.md 묶어서. 문서만이라 review-gate 자동 통과.
-2. **untracked 4개 처리 결정** — `docs/reviews/` 3개 삭제 / `work-items/implement-a-browser-poker-game/design.md` 검토
-3. **hook BLOCK 진짜 원인 추적** — 위 4 후보 중 BLOCK 출력 코드 찾기. grep `"new-files-added"`, `"BLOCK"`, `pre-commit` reject 로직.
-4. **fix 코드 작업** — 진짜 원인 발견 후 hook 부산물 예외 처리 추가
-5. **회귀 테스트** — fix 검증
-6. **Master_Blueprint.md 갱신** — 영향받는 §섹션 + §12 변경 이력
-7. **friction.md 추가 기록** — 작업 중 마찰 실시간 append
-8. **Round 1 종료 조건**: (a) fix 동작 (b) 후속 commit 시 false positive 0 (c) friction.md를 4분류로 분류 완료
-
-### 마찰 기록 (round1-friction.md 4건)
-- design-review hook이 paradigm-shift.md 생성 직후 자동 발화 → 부산물 생성 (실시간 재현)
-- 이전 세션 hook 부산물 4개 cleanup 비용
-- LLM `rm` 권한 3회 거부 → 사용자 `!` 직접 실행 필요
-- review_gate.py 진단 수정 (.py만 검사함 발견)
+### 다음 세션 진입점 옵션
+- **A. Round 2** — 위 edge case 해소 + 비-hook 작업으로 다른 도메인 마찰 측정 (selection bias 해소).
+- **B. main 머지** — Round 1 fix를 main으로 통합 (사용자 결정 필요).
+- **C. 다른 작업** — `P5 (approval_gate DomainVerdict 매트릭스)` 등 보류 중인 본 작업으로 전환.
 
 ---
 
