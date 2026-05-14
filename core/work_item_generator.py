@@ -1093,13 +1093,36 @@ def generate_work_items(
     template_dir = os.path.join(os.path.abspath(workspace), TEMPLATE_DIR_REL)
     _copy_extra_templates(template_dir, work_dir)
 
+    # --- Stage 0: Question Router (work_kind 기반 분기) ---
+    stage0_files: dict[str, str] = {}
+    try:
+        from core.control.run_ledger import RunLedger
+        from core.control.stage_router import StageRouter
+        _stage_router = StageRouter(workspace=workspace, run_ledger=RunLedger(workspace))
+        stage0_files = _stage_router.run(
+            work_dir=work_dir,
+            work_kind=work_kind,
+            blast_radius=blast_radius,
+            run_id=run_id,
+            doc_root=doc_root,
+            slug=slug,
+        )
+        if stage0_files.get("paused_hitl"):
+            # paused_hitl 분기: Stage 1~3 skip, file-path map 반환
+            stage0_files["approval-gate.md"] = stage0_files.get(
+                "approval_gate", os.path.join(work_dir, "approval-gate.md")
+            )
+            return stage0_files
+    except Exception as _s0_exc:
+        _LOGGER.warning("Stage 0 skip (error): %s", _s0_exc)
+
     try:
         from core.cli_session_cleanup import cleanup_stale_sessions
         cleanup_stale_sessions(workspace, days=30)
     except Exception as _ce:
         _LOGGER.debug("cleanup_stale_sessions skip: %s", _ce)
 
-    files: dict[str, str] = {}
+    files: dict[str, str] = dict(stage0_files)
     work_item_id = slug
 
     episode_hints_section = _build_episode_hints_section(project_brief, workspace)  # Stage 예산 외

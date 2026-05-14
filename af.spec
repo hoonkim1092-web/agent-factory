@@ -80,6 +80,12 @@ a = Analysis(
         'core.file_io',
         'core.file_lock',
         'core.cli_session_cleanup',
+        # ── core.control Stage 0 Question Router (Question Router Stage 0) ──
+        'core.control.verdicts',
+        'core.control.stage_artifacts',
+        'core.control.question_router',
+        'core.control.stage_router',
+        'core.control.context_scanner',
         'core.work_item_telemetry',
         'core.fsa_loop',
         'core.lineage_ledger',

@@ -1,7 +1,58 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ Phase A + ADR M1~M5 + Phase B + Phase C Option B+C 완료. Superpowers 흡수 완료. 다음: 백로그 또는 신규 작업.**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6 → Opus 4.7)** — **✅ P1+P2+P4 완료 (36 tests PASS). 다음 작업: P5 DomainVerdict 매트릭스 (NEEDS_ADR × 4 blast_radius, 7 신규 테스트).**
+
+## 🏠 집에서 재개 절차
+1. `git pull` (commit `1247f89c` 포함 확인)
+2. `python start_db.py agent-factory` (메모리 Supabase pull)
+3. 본 파일 §"다음 단계 (P5)" 항목 확인
+4. 메모리 새 항목 2건 자동 로드: [[project-question-router-adr]] + [[feedback-lsp-ast-escalation-non-negotiables]]
+5. **P5 시작 진입점**: `core/approval_gate.py` `approve()` 메서드 — DomainVerdict 파싱 매트릭스 추가
+
+### P5 진입 시 읽을 문서
+- `docs/2026-05-14-question-router-detailed-design.md` §14 P5 (라인 ~1146-1173)
+- `tests/test_approval_gate_domain_gate.py` (기존 NEEDS_ADR 처리 분기 위치)
+- 신규 7개 테스트 명세 (P5 acceptance):
+  - `test_needs_adr_isolated_proceeds_with_warning`
+  - `test_needs_adr_module_proceeds_with_warning`
+  - `test_needs_adr_cross_module_pauses`
+  - `test_needs_adr_system_wide_pauses`
+  - `test_block_cause_parsed_from_domain_review_md`
+  - `test_initialize_with_paused_hitl_status` (이미 PASS — §8.3)
+  - `test_initialize_default_status_backward_compatible` (이미 PASS)
+
+### oh-my-openagent / LSP·AST 논의 (보류)
+이번 세션 중 사용자가 oh-my-openagent 비교에서 "LSP/AST as escalation tools" 합의안 제시.
+→ 5건 양보 불가 항목 도출 후 메모리에 기록: [[feedback-lsp-ast-escalation-non-negotiables]]
+→ **본 논의는 Stage 0 P5/P6a + Request Harness ADR 완료 전 재개 금지**.
+
+## ✅ Question Router Stage 0 — P1 구현 완료 (2026-05-14)
+
+### 완료된 P1 산출물
+- `core/control/verdicts.py` ✅ (QuestionRoute/DomainVerdict/BlockCause enum 단일 원천)
+- `core/control/stage_artifacts.py` ✅ (6개 dataclass)
+- `core/control/question_router.py` ✅ (QuestionRouter 순수 분류기 + YAML validation)
+- `core/control/context_scanner.py` ✅ (LightContextScanner LLM 0회)
+- `core/control/stage_router.py` ✅ (StageRouter 오케스트레이터 + cross-yaml uniqueness)
+- `core/approval_gate.py` ✅ (`initialize()` status/execution_open 파라미터 추가)
+- `core/work_item_generator.py` ✅ (Stage 0 삽입 _copy_extra_templates() 직후)
+- `af.spec` ✅ (hiddenimports 5모듈 추가)
+- `ADR-20260514-133054-question-router-stage0.md` ✅ Status → Accepted
+- `tests/test_stage0_question_router.py` ✅ (33개 신규 + 기존 25 회귀 없음)
+
+### 완료된 P2+P4 산출물
+- `core/control/questions/goal_clarification.yaml` ✅ (4 questions, schema_version=1, cross-yaml id unique)
+- `core/control/questions/brainstorming.yaml` ✅ (4 questions, domain_verdict/concerns/suggested_adrs/research_scope)
+- `tests/test_stage0_question_router.py` ✅ (3 신규 YAML 로드 테스트 포함, 총 36 PASS)
+
+### 다음 단계 (P5, P6a)
+| 우선순위 | 파일 | 내용 |
+|----------|------|------|
+| **P5** | `core/approval_gate.py` | DomainVerdict 매트릭스 + NEEDS_ADR × 4 blast_radius 테스트 7건 |
+| P6a | `core/control/run_ledger.py` 확장 | assumption/paused_hitl/schema_drift 이벤트 |
+
+> ADR Status: **Accepted** (2026-05-14)
 
 ## ✅ Phase A (Domain Gate) — 완료 (2026-05-13)
 

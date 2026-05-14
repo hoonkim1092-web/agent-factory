@@ -1,6 +1,6 @@
 {
   "skill_id": "agent_factory",
-  "skill_path": "D:\\hoonProJect\\worktrees\\agent-factory\\dummy",
+  "skill_path": "dummy",
   "evals_path": "",
   "static_gate": {
     "ok": false,
@@ -41,6 +41,6 @@
     "details": []
   },
   "recommended_stage": "draft",
-  "report_path": "D:\\hoonProJect\\worktrees\\agent-factory\\skill-eval-report.json",
-  "written_at": "2026-05-11T11:28:44"
+  "report_path": "skill-eval-report.json",
+  "written_at": "2026-05-14T17:21:05"
 }

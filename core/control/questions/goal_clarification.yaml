@@ -1,0 +1,33 @@
+schema_version: 1
+question_set_id: goal_clarification
+
+questions:
+  - id: goal_summary
+    text: "이 프로젝트가 해결하려는 핵심 문제 또는 목표는 무엇입니까?"
+    output_field: goal_summary
+    required: true
+    fallback: null
+    default_route: llm_delegate
+    block_category_if_missing: missing_required_input
+
+  - id: deployment_target
+    text: "배포 대상 환경은 무엇입니까? (예: local, development, staging, production)"
+    output_field: deployment_target
+    required: true
+    fallback: "development"
+    default_route: llm_delegate
+    block_category_if_missing: missing_required_input
+
+  - id: success_criteria
+    text: "이 프로젝트의 성공 기준은 무엇입니까?"
+    output_field: success_criteria
+    required: false
+    fallback: null
+    default_route: llm_delegate
+
+  - id: out_of_scope
+    text: "이 프로젝트에서 명시적으로 제외할 범위는 무엇입니까?"
+    output_field: out_of_scope
+    required: false
+    fallback: null
+    default_route: llm_delegate
