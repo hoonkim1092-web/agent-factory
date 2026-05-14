@@ -1,7 +1,84 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6 → Opus 4.7)** — **✅ P1+P2+P4 완료 (36 tests PASS). 다음 작업: P5 DomainVerdict 매트릭스 (NEEDS_ADR × 4 blast_radius, 7 신규 테스트).**
+> 마지막 업데이트: **2026-05-14 KST (Opus 4.7)** — **🚀 Round 1 dogfooding 시작 상태. 브랜치 `af-on-af/round1-hook-fix`. 아래 §"Round 1 진행 상태" 먼저 읽을 것.**
+
+---
+
+## 🚀 Round 1 진행 상태 (2026-05-14, 시작 직후 세션 종료)
+
+### 현재 브랜치
+`af-on-af/round1-hook-fix` (main에서 분기, 아직 첫 commit 전)
+
+### 완료된 셋업
+- `docs/2026-05-14-dev-workflow-paradigm-shift.md` — 개발방식 전환 상세 문서 (배경/채택4/거절3/부채/실행순서)
+- `docs/dogfooding/round1-friction.md` — 마찰 실시간 로그 (현재 4건 기록)
+- `.codex/agents/*.toml` 4개 — staging됨 (보존 결정, 858줄 작업물)
+- NEXT_STEPS.md — 본 갱신
+
+### 미커밋 untracked (삭제 보류 — 다음 세션 시작 시 결정)
+- `docs/reviews/2026-05-14-072428-skill_self_evolution-code-review.md` (이전 세션 hook 부산물)
+- `docs/reviews/2026-05-14-072707-project_context_sync-code-review.md` (이전 세션 hook 부산물)
+- `docs/reviews/2026-05-14-220501-2026-05-14-dev-workflow-paradigm-shift-design-review.md` (이번 세션 hook 부산물)
+- `docs/work-items/implement-a-browser-poker-game/design.md` (이전 work-item 산물)
+
+### 🔴 다음 세션 진입점 — **중요한 진단 수정**
+**paradigm-shift.md의 가정이 부정확함**:
+- 가정: "review-gate가 docs/reviews/*.md를 new-files-added로 잘못 감지"
+- 실제: `scripts/review_gate.py` line 191은 `.py`만 필터링 (`py_files = [f for f in state.get("files", []) if f.endswith(".py")]`). `.md` 부산물은 직접 BLOCK 원인 아님.
+- **진짜 원인 추적 후보**:
+  1. `scripts/check_design_pending.py` (단일 설계문서 큐 자동 발화)
+  2. `scripts/check_pending_review.py`
+  3. `.githooks/pre-commit` 자체 로직
+  4. `scripts/hook_runner.py`
+
+### 다음 세션 작업 순서 (Round 1)
+1. **첫 commit** (보류 중) — `.codex/agents/` + paradigm-shift.md + dogfooding/ + NEXT_STEPS.md 묶어서. 문서만이라 review-gate 자동 통과.
+2. **untracked 4개 처리 결정** — `docs/reviews/` 3개 삭제 / `work-items/implement-a-browser-poker-game/design.md` 검토
+3. **hook BLOCK 진짜 원인 추적** — 위 4 후보 중 BLOCK 출력 코드 찾기. grep `"new-files-added"`, `"BLOCK"`, `pre-commit` reject 로직.
+4. **fix 코드 작업** — 진짜 원인 발견 후 hook 부산물 예외 처리 추가
+5. **회귀 테스트** — fix 검증
+6. **Master_Blueprint.md 갱신** — 영향받는 §섹션 + §12 변경 이력
+7. **friction.md 추가 기록** — 작업 중 마찰 실시간 append
+8. **Round 1 종료 조건**: (a) fix 동작 (b) 후속 commit 시 false positive 0 (c) friction.md를 4분류로 분류 완료
+
+### 마찰 기록 (round1-friction.md 4건)
+- design-review hook이 paradigm-shift.md 생성 직후 자동 발화 → 부산물 생성 (실시간 재현)
+- 이전 세션 hook 부산물 4개 cleanup 비용
+- LLM `rm` 권한 3회 거부 → 사용자 `!` 직접 실행 필요
+- review_gate.py 진단 수정 (.py만 검사함 발견)
+
+---
+
+## 🔥 개발방식 전환 결정 (2026-05-14, Round 1 시작 — 위 §"Round 1 진행 상태" 참고)
+
+### 배경
+사용자: "개발이 느리고 토큰 소모 큼. Harness / Hermes / Oh My OpenAgent 같은 외부 도구 쓸까?" → 외부 도구 도입 ROI 음수 결론. **AF 메타-재귀 함정** (AF가 AF 못 만들고 사람 1명+Claude Code 1세션이 손으로 만들어 governance만 증가) 진단.
+
+### 채택 (우선순위 순)
+1. **Hook 부산물이 review-gate 깨는 버그 fix** — 가장 시급. 이번 세션에서 직접 발생: 내가 3파일만 수정했는데 `[review-gate] BLOCK: new-files-added` 차단 → `docs/reviews/2026-05-14-*.md`를 hook이 commit 도중 자동 생성하면서 "new file"로 잘못 감지. 결과: `AF_SKIP_REVIEW_GATE=1` 우회 강제 → 안전장치 무효화 패턴.
+2. **A. Worktree 병렬 개발** — `skills/git_worktrees/` 이미 흡수됨. 2~3개 worktree 동시 진행.
+3. **B. AF dogfooding** — `project_pipeline.py`를 AF 자신에게 dry-run. 실패/마찰 지점 기록만, 큰 변경 X.
+4. **af-critic HIGH+ → cross-review 자동 승격** — Codex 제안 중 유일하게 새로운 알맹이.
+
+### 거절 (over-engineering)
+- "특화 에이전트 6명 (Core Architect, Hook Engineer, Skill Engineer, Memory Engineer, QA Engineer, Docs Maintainer)" — 최근 10개 커밋 중 5~6개가 cross-cutting (multi-domain). specialist split hand-off 비용 > 효과. 데이터 근거: `053efbe0` 7파일, `4851c305`/`a6c08d56`/`f69ff076` 각각 4도메인.
+- "Phase D specialist team" — 위와 동일 이유.
+- 외부 도구 마이그레이션 (Harness/Hermes/Oh My OpenAgent) — 동일 모델 호출이라 토큰 절약 X. AF governance 우회되어 안전성 잃음. 시범 정도는 가능하나 본격 도입 ROI 음수.
+
+### 팩트 근거
+- AF가 이미 갖고 있는 것 (Codex 제안의 80%가 중복):
+  - `scripts/blast_radius.py`: Tier 1/2/3 분류 (`.githooks/`, `.codex/hooks.json`, `subprocess`, `shell=True` 자동 Tier 3)
+  - CLAUDE.md L126-127: Tier 1=af-test-runner만 / Tier 2~3=3-tier
+  - WARN-only no-fire (L131), max_rounds=5 (L129), AF_SKIP_REVIEW_GATE 우회 (L132)
+- NEXT_STEPS.md = 123KB / 1648줄 → 매 세션 ~30k 토큰 비용. **이 파일 slim down도 후순위 작업.**
+
+### 다음 세션 진입점
+1. 위 §1 hook 부산물 버그 먼저 fix (이게 우선)
+2. worktree 셋업 → wt-fast-cleanup, wt-dogfood 두 개 분리
+3. 각 worktree에서 독립 Claude Code 세션 운영
+
+---
 
 ## 🏠 집에서 재개 절차
 1. `git pull` (commit `1247f89c` 포함 확인)
