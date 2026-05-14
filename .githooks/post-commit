@@ -7,6 +7,17 @@ fi
 # ── 문서 자동 업데이트 (Blueprint + code-review) ──
 # 코드 파일 변경이 있을 때만 실행, 항상 exit 0
 CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
+
+# ── review-gate 큐 클리어 (commit 성공 후) ──
+# Round 1 dogfooding fix: PostToolUse Bash hook 미등록으로 큐가 stale 누적되던 버그 해소.
+# .py 0건 커밋도 호출하지만 clear_committed_files가 committed_set로 필터링하므로 무해.
+if [ -n "$CHANGED" ]; then
+    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+    [ -x "$VENV_PYTHON" ] && CLEAR_PY="$VENV_PYTHON" || CLEAR_PY="python3"
+    COMMITTED=$(echo "$CHANGED" | tr '\n' ',' | sed 's/,$//')
+    "$CLEAR_PY" "${REPO_ROOT}/scripts/review_gate.py" --clear --files "$COMMITTED" >/dev/null 2>&1 || true
+fi
 CODE_CHANGED=$(echo "$CHANGED" | grep -E "^(core/|scripts/|skills/|run_factory_cli\.py|model_utils\.py|version\.py|af\.spec)" | head -1)
 
 if [ -n "$CODE_CHANGED" ]; then
