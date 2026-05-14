@@ -47,7 +47,12 @@
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점 | `main()` |
-| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` (Phase A) |
+| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` (Phase A), `initialize(status, execution_open)` (v4) |
+| `core/control/verdicts.py` | Stage 0 verdict/route/cause enum 단일 원천 | `QuestionRoute`, `DomainVerdict`, `BlockCause` |
+| `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass | `ContextScanArtifact`, `ProjectGoalArtifact`, `DomainReviewArtifact`, `AssumptionLedgerEntry`, `PausedHitlArtifact`, `PausedHitlQuestion` |
+| `core/control/question_router.py` | Stage 0 순수 분류기 (파일 쓰기 없음) | `QuestionRouter`, `Question`, `QuestionResult`, `QuestionBatchResult`, `load_question_schema()` |
+| `core/control/stage_router.py` | Stage 0 오케스트레이터 | `StageRouter.run()` (work_kind 분기·artifact 렌더링·paused_hitl 방출) |
+| `core/control/context_scanner.py` | LightContextScanner (LLM 0회) | `LightContextScanner.scan()` → `ContextScanArtifact` |
 | `core/escalation_evaluator.py` | P2 에스컬레이션 규칙 평가 | `RunDecision`, `EscalationDecision`, `evaluate()`, `compute_run_decision()`, `load_policy()` |
 | `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
 | `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
@@ -273,8 +278,12 @@ run_factory_cli.py:main()
   │   │   └─ generate_task_board()      → project_board_state.json
   │   ├─ ingestion_pipeline.run()       → document_index (RAG)
   │   ├─ work_item_generator.generate_work_items()
-  │   │   → docs/work-items/{slug}/*.md
-  │   └─ approval_gate.initialize()     → execution_open: false
+  │   │   ├─ Stage 0: StageRouter.run()  [NEW — Question Router]
+  │   │   │   ├─ new_project → GoalClarificationQR → BrainstormingQR
+  │   │   │   ├─ maintenance/* → LightContextScanner → BrainstormingQR
+  │   │   │   └─ paused_hitl → paused-hitl.md + approval-gate.md (Stage 1~3 skip)
+  │   │   └─ Stage 1~3 → docs/work-items/{slug}/*.md
+  │   └─ approval_gate.initialize(status, execution_open)  → execution_open: false
   │
   ├─ [사용자 검토·편집]
   │
@@ -739,7 +748,7 @@ Phase 4: 자가진화 트리거 (failure_patterns → evolve_skill)
 - `_read_domain_review_verdict(path)`: `- verdict: PASS|NEEDS_ADR|BLOCK` 파싱, fallback으로 `- [x] CHECKBOX` 인식. 반환: `"PASS"` | `"NEEDS_ADR"` | `"BLOCK"` | `""` (missing) | `"MULTIPLE"`
 - `self.last_block_reason: str` — approve() 실패 시 세부 사유: `"missing_domain_frontmatter"` | `"missing_verdict"` | `"multiple_verdicts"` | `"domain_review_blocked"` | `""`
 - `domain_review_version` — approve() 성공 시 `## Approved Snapshot`에 저장. `check_validity()`가 파일 변조 감지
-- `initialize(work_kind="", blast_radius="")` — gate 파일 `## Metadata`에 저장. `generate_work_items()` + `project_pipeline.py` → `project_brief.get("work_kind/blast_radius")` 경유 전달
+- `initialize(work_kind="", blast_radius="", status="review_pending", execution_open=False)` — v4 신규: `status`/`execution_open` 파라미터 추가 (backward-compatible). paused_hitl 분기는 `status="paused_hitl"` 전달. gate 파일 `## Metadata`에 저장. `generate_work_items()` + `project_pipeline.py` → `project_brief.get("work_kind/blast_radius")` 경유 전달
 - 우회: `AF_SKIP_DOMAIN_REVIEW=1`
 - blast_radius 유효 토큰: `{"isolated", "module", "cross_module", "system_wide"}` (`core/control/change_impact.py:16,35,243`)
 
@@ -1522,6 +1531,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-14 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, approval_gate.py, context_scanner.py, question_router.py (+8) |
+| 2026-05-14 | v1.2.28 | feat(stage0-question-router): Question Router Stage 0 P1 구현 — `core/control/verdicts.py` 신규(QuestionRoute/DomainVerdict/BlockCause enum 단일 원천). `core/control/stage_artifacts.py` 신규(6개 dataclass: ContextScanArtifact/ProjectGoalArtifact/DomainReviewArtifact/AssumptionLedgerEntry/PausedHitlArtifact/PausedHitlQuestion). `core/control/question_router.py` 신규(QuestionRouter 순수 분류기 + YAML validation + QuestionRouterLLMCaller adapter). `core/control/context_scanner.py` 신규(LightContextScanner LLM 0회 정적 분석). `core/control/stage_router.py` 신규(StageRouter 오케스트레이터 — work_kind 분기·cross-yaml id uniqueness·atomic write·paused_hitl 방출). `core/approval_gate.py:initialize()` status/execution_open 파라미터 추가(backward-compatible). `core/work_item_generator.py` Stage 0 삽입(_copy_extra_templates() 직후). `af.spec` hiddenimports 5모듈 추가. `docs/decisions/ADR-20260514-133054-question-router-stage0.md` Status → Accepted. 신규 테스트 33건 PASS + 기존 25건 회귀 없음. §0 빠른참조 6행 추가. |
 | 2026-05-14 | v1.2.28 | fix(test): test_key_combos CLI auto-detect 격리 — `monkeypatch.delenv("AGENT_DISABLE_ENGINE_API_KEYS")` → `setenv(..., "0")`. 개발 머신에 claude CLI 설치 시 `engine_api_keys_disabled()`=True 되어 API 키 라우팅 테스트 3건 실패하는 문제 수정. 25 tests PASS. |
 | 2026-05-14 | v1.2.28 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+69) |
 | 2026-05-14 | v1.2.28 | fix(utils): `resolve_knowledge_skill_path` 중복 탐색 제거 — `priority`를 `get_codex_skill_roots` extra_roots 선두로 전달해 `SKILLS_DIR`·`PROJECT_SKILLS_DIR` 2회 탐색 → 1회로 축소. 3-tier PASS. |

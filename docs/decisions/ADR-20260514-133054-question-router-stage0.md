@@ -1,7 +1,7 @@
 ---
 id: ADR-20260514-133054-question-router-stage0
 title: Question Router 기반 Stage 0 도입
-status: Draft
+status: Accepted
 date: 2026-05-14
 authors: hoonkim (Opus 4.7) + codex (cross-vendor consensus)
 related: M2 (ADR 명명 규칙), Phase A Domain Gate, [[project_saas_strategy_position]]

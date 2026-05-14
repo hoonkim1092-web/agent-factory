@@ -4693,3 +4693,88 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (72)**: `AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md, SPEC_skill_evolution.md, SYNC_GUIDE.md, agents/BuiltanAIAgentThatBecomesSmarter.md, agents/backend-architect-agent/profile.md, agents/backend-dev-agent/profile.md, agents/calculus-tutor-agent/profile.md, agents/chef-agent/profile.md, agents/deadbyte.yaml, agents/general-assistant-agent/profile.md ... (+57)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-14 17:05 — `main` (f69ff076)
+
+**Context**: edit: core/control/verdicts.py
+
+**Changed (1)**: `docs/decisions/ADR-20260514-133054-question-router-stage0.md`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-14 17:28 — `main` (c6acf5fd)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (2)**: `docs/code_review/code-review.md, skill-eval-report.json`
+
+### Findings
+
+- [Low] skill-eval-report.json:last-line — 파일 끝 개행 없음(`No newline at end of file`). JSON 파일은 trailing newline을 갖는 것이 표준.
+- [Info] skill-eval-report.json — 절대 경로 → 상대 경로 변환은 이식성 개선으로 적절한 변경.
+- [Info] docs/code_review/code-review.md — 리뷰 엔트리의 `Context` 필드가 `edit: core/control/verdicts.py`인데 실제 변경 파일은 `docs/decisions/ADR-*.md`로 불일치. 메타데이터 정확도 문제(기능 버그는 아님).
+
+No security or critical issues found.
+
+---
+
+## 2026-05-14 17:29 — `main` (4c26980c)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (1)**: `skill-eval-report.json`
+
+### Findings
+
+- [Low] skill-eval-report.json:46 — 파일 끝 개행 없음(`No newline at end of file`). 변경 전부터 존재하던 문제이나 이번 커밋에서 정리 가능.
+
+절대 경로 → 상대 경로 전환은 이식성 개선으로 올바른 방향. 나머지 필드 이상 없음.
+
+---
+
+## 2026-05-14 17:29 — `main` (883dd103)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (1)**: `skill-eval-report.json`
+
+### Findings
+
+- [Medium] skill-eval-report.json — 자동 생성 파일(written_at 타임스탬프 포함)이 소스 컨트롤에 커밋됨. 실행 시마다 경로·타임스탬프가 바뀌어 불필요한 diff가 쌓임. `.gitignore`에 추가 권장.
+- [Low] skill-eval-report.json — 상대 경로로 변환 후 소비자(reader)가 어느 CWD 기준으로 해석하는지 미검증. 스크립트가 다른 디렉터리에서 이 파일을 로드하면 경로 해석 실패 가능.
+- [Low] skill-eval-report.json:44 — 파일 끝 개행 없음(`No newline at end of file`). 일부 JSON 파서 및 diff 도구에서 경고 발생.
+- [Info] skill-eval-report.json — `static_gate.ok: false`, `recommended_stage: "draft"` 상태로 커밋됨. 의도적 스냅샷이라면 무시, 아니라면 평가 통과 후 커밋이 적절.
+
+---
+
+## 2026-05-14 17:29 — `main` (73ea112a)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (1)**: `skill-eval-report.json`
+
+### Findings
+
+- [Low] skill-eval-report.json:44 — 파일 끝 개행 없음 (`\ No newline at end of file`). POSIX 표준 위반이며 일부 diff 도구에서 노이즈 발생.
+
+나머지 변경 (절대경로 → 상대경로, 타임스탬프 갱신)은 의도된 정상 수정.
+
+---
+
+## 2026-05-14 17:30 — `main` (b3dd9a03)
+
+**Context**: feat(stage0-question-router): Question Router Stage 0 P1 구현
+
+**Changed (1)**: `skill-eval-report.json`
+
+### Findings
+
+- [Info] skill-eval-report.json:2 — `skill_path`를 절대경로 → 상대경로로 변환. 이식성 개선, 정상 변경.
+- [Info] skill-eval-report.json:44 — `report_path`도 동일하게 절대경로 → 상대경로. 일관성 있음.
+- [Low] skill-eval-report.json:46 — 파일 끝 개행(EOF newline) 없음. 기존부터 존재하던 문제이나 JSON 파일 표준 관행상 `\n` 추가 권장.
+
+No critical or high issues found.

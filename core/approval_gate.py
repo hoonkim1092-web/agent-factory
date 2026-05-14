@@ -160,16 +160,18 @@ class ApprovalGate:
         *,
         work_kind: str = "",
         blast_radius: str = "",
+        status: str = "review_pending",
+        execution_open: bool = False,
     ) -> None:
-        """approval-gate.md 최초 생성 (execution_open: false)."""
+        """approval-gate.md 최초 생성. paused_hitl 분기는 status='paused_hitl' 전달."""
         os.makedirs(self.work_item_dir, exist_ok=True)
         content = self._render(
             work_item=work_item_id or self.slug,
             approver="",
-            status="review_pending",
+            status=status,
             snapshots={},
             gate_statuses={},
-            execution_open=False,
+            execution_open=execution_open,
             review_notes="",
             work_kind=work_kind,
             blast_radius=blast_radius,
