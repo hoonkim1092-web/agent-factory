@@ -1,7 +1,31 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6)** — **✅ P1+P2+P4 완료 (36 tests PASS). 다음: P5 DomainVerdict 매트릭스 (NEEDS_ADR × 4 blast_radius, 7 신규 테스트).**
+> 마지막 업데이트: **2026-05-14 KST (Sonnet 4.6 → Opus 4.7)** — **✅ P1+P2+P4 완료 (36 tests PASS). 다음 작업: P5 DomainVerdict 매트릭스 (NEEDS_ADR × 4 blast_radius, 7 신규 테스트).**
+
+## 🏠 집에서 재개 절차
+1. `git pull` (commit `1247f89c` 포함 확인)
+2. `python start_db.py agent-factory` (메모리 Supabase pull)
+3. 본 파일 §"다음 단계 (P5)" 항목 확인
+4. 메모리 새 항목 2건 자동 로드: [[project-question-router-adr]] + [[feedback-lsp-ast-escalation-non-negotiables]]
+5. **P5 시작 진입점**: `core/approval_gate.py` `approve()` 메서드 — DomainVerdict 파싱 매트릭스 추가
+
+### P5 진입 시 읽을 문서
+- `docs/2026-05-14-question-router-detailed-design.md` §14 P5 (라인 ~1146-1173)
+- `tests/test_approval_gate_domain_gate.py` (기존 NEEDS_ADR 처리 분기 위치)
+- 신규 7개 테스트 명세 (P5 acceptance):
+  - `test_needs_adr_isolated_proceeds_with_warning`
+  - `test_needs_adr_module_proceeds_with_warning`
+  - `test_needs_adr_cross_module_pauses`
+  - `test_needs_adr_system_wide_pauses`
+  - `test_block_cause_parsed_from_domain_review_md`
+  - `test_initialize_with_paused_hitl_status` (이미 PASS — §8.3)
+  - `test_initialize_default_status_backward_compatible` (이미 PASS)
+
+### oh-my-openagent / LSP·AST 논의 (보류)
+이번 세션 중 사용자가 oh-my-openagent 비교에서 "LSP/AST as escalation tools" 합의안 제시.
+→ 5건 양보 불가 항목 도출 후 메모리에 기록: [[feedback-lsp-ast-escalation-non-negotiables]]
+→ **본 논의는 Stage 0 P5/P6a + Request Harness ADR 완료 전 재개 금지**.
 
 ## ✅ Question Router Stage 0 — P1 구현 완료 (2026-05-14)
 
