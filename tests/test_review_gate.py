@@ -262,6 +262,152 @@ def test_no_py_files_pass(ws):
     assert reason == "no-py-files"
 
 
+# ── Round 2 (2026-05-15): stale 누적 시나리오 ────────────────────────────────
+
+def test_clear_stale_reset_when_round_passed_and_idle(ws):
+    """이전 라운드 PASS 종료 + idle 상태에서 committed_set 미포함 stale .py 잔존
+    → 큐 통째 reset. 새 .py 작업이 stale 큐에 막히지 않음.
+    """
+    now = time.time()
+    _write_state(ws, {
+        "files": ["core/stale_a.py", "core/stale_b.py"],
+        "created_at": now - 100,
+        "updated_at": now - 50,
+        "reviews": _full_reviews(["core/stale_a.py", "core/stale_b.py"], now - 40),
+        "round_count": 3,
+        "last_round_summary": {
+            "round": 3,
+            "verdicts": {"af-test-runner": "pass", "af-critic": "pass", "af-cross-review": "pass"},
+            "has_block": False,
+            "completed_at": now - 30,
+            "round_started_at": now - 60,
+        },
+        "round_started_at": None,
+        "blast_tier": 3,
+    })
+
+    clear_committed_files(ws, ["docs/unrelated.md"])
+
+    state = _load_state(ws)
+    assert state["files"] == []
+    assert state.get("reviews") == {}
+    assert "round_count" not in state
+    assert "last_round_summary" not in state
+    assert "blast_tier" not in state
+
+
+def test_clear_no_stale_reset_when_round_in_flight(ws):
+    """round_started_at != None (= 새 라운드 진행 중) 이면 stale reset 차단.
+    in-flight 작업이 commit 직후 잘못 reset되어 enqueue 되돌리는 일 방지.
+    """
+    now = time.time()
+    _write_state(ws, {
+        "files": ["core/in_flight.py"],
+        "created_at": now - 100,
+        "updated_at": now - 5,
+        "reviews": _full_reviews(["core/old_pass.py"], now - 40),
+        "round_count": 3,
+        "last_round_summary": {
+            "round": 3,
+            "verdicts": {"af-test-runner": "pass", "af-critic": "pass", "af-cross-review": "pass"},
+            "has_block": False,
+            "completed_at": now - 30,
+            "round_started_at": now - 60,
+        },
+        "round_started_at": now - 3,
+        "blast_tier": 3,
+    })
+
+    clear_committed_files(ws, ["core/old_pass.py"])
+
+    state = _load_state(ws)
+    assert state["files"] == ["core/in_flight.py"]
+    assert state.get("round_count") == 3
+    assert state.get("round_started_at") is not None
+
+
+def test_clear_stale_reset_at_round_count_one(ws):
+    """round_count=1 (첫 라운드 직후 idle)도 stale reset 트리거 — boundary."""
+    now = time.time()
+    _write_state(ws, {
+        "files": ["core/stale_first_round.py"],
+        "created_at": now - 100,
+        "updated_at": now - 50,
+        "reviews": _full_reviews(["core/stale_first_round.py"], now - 40),
+        "round_count": 1,
+        "last_round_summary": {
+            "round": 1,
+            "verdicts": {"af-test-runner": "pass", "af-critic": "pass", "af-cross-review": "pass"},
+            "has_block": False,
+            "completed_at": now - 30,
+            "round_started_at": now - 60,
+        },
+        "round_started_at": None,
+        "blast_tier": 3,
+    })
+
+    clear_committed_files(ws, ["docs/x.md"])
+
+    state = _load_state(ws)
+    assert state["files"] == []
+    assert "round_count" not in state
+
+
+def test_clear_no_stale_reset_when_round_count_corrupt(ws):
+    """round_count=null/None 등 corrupt 값에서 TypeError 없이 안전 통과 — null-safe."""
+    now = time.time()
+    _write_state(ws, {
+        "files": ["core/corrupt.py"],
+        "created_at": now - 100,
+        "updated_at": now - 50,
+        "reviews": _full_reviews(["core/corrupt.py"], now - 40),
+        "round_count": None,
+        "last_round_summary": {
+            "round": 1,
+            "verdicts": {"af-test-runner": "pass", "af-critic": "pass", "af-cross-review": "pass"},
+            "has_block": False,
+            "completed_at": now - 30,
+            "round_started_at": now - 60,
+        },
+        "round_started_at": None,
+        "blast_tier": 3,
+    })
+
+    clear_committed_files(ws, ["docs/y.md"])
+
+    state = _load_state(ws)
+    assert state["files"] == ["core/corrupt.py"]
+
+
+def test_clear_no_stale_reset_when_last_round_had_block(ws):
+    """has_block=True (BLOCK 라운드)면 stale reset 차단. 사용자가 fix 작업 중일 수
+    있으므로 자동 reset이 작업 흐름을 끊지 않도록.
+    """
+    now = time.time()
+    _write_state(ws, {
+        "files": ["core/block_residue.py"],
+        "created_at": now - 100,
+        "updated_at": now - 50,
+        "reviews": _full_reviews(["core/block_residue.py"], now - 40, tier3_verdict="block"),
+        "round_count": 2,
+        "last_round_summary": {
+            "round": 2,
+            "verdicts": {"af-test-runner": "pass", "af-critic": "pass", "af-cross-review": "block"},
+            "has_block": True,
+            "completed_at": now - 30,
+            "round_started_at": now - 60,
+        },
+        "round_started_at": None,
+        "blast_tier": 3,
+    })
+
+    clear_committed_files(ws, ["docs/other.md"])
+
+    state = _load_state(ws)
+    assert state["files"] == ["core/block_residue.py"]
+    assert state.get("round_count") == 2
+
+
 # ── Phase 2 v7 §7.2: `_extract_verdict_from_content` collision 회귀 (C1~C7) ─
 
 from scripts.review_gate import _extract_verdict_from_content  # noqa: E402

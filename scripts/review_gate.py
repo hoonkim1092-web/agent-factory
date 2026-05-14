@@ -343,7 +343,15 @@ def clear_committed_files(workspace: str, committed_files: list[str]) -> None:
     파일 락으로 record_review_done()과의 경쟁 조건 방지.
 
     Phase 0: files가 모두 비면 라운드 메타데이터(round_count, last_round_summary,
-    round_started_at, fired_at)도 함께 리셋 → 다음 작업 사이클이 깨끗하게 시작.
+    round_started_at, fired_at, blast_tier)도 함께 리셋 → 다음 작업 사이클이
+    깨끗하게 시작.
+
+    Round 2 (2026-05-15): committed_set 미포함 stale .py가 큐에 남아있고 마지막
+    라운드가 PASS로 종료(has_block=False, round_count>0)됐으며 진행 중 라운드가
+    없으면(round_started_at is None) → 동일한 메타셋 통째 reset. enqueue가 새
+    라운드 시작 시 round_started_at을 set하므로(scripts/enqueue_agent_review.py:113)
+    in-flight 작업은 가드로 보호. stale-reset 발생 시 reset 직전 파일 목록·라운드
+    번호를 hook_events.log에 보존(forensic).
     """
     try:
         committed_set = set(committed_files)
@@ -357,6 +365,8 @@ def clear_committed_files(workspace: str, committed_files: list[str]) -> None:
                 r["files_snapshot"] = [
                     f for f in (r.get("files_snapshot") or []) if f not in committed_set
                 ]
+
+            stale_reset_info: dict | None = None
             if not state["files"]:
                 # Phase 0: 사이클 종료 — 라운드 메타데이터 전체 리셋
                 state["reviews"] = {}
@@ -365,11 +375,40 @@ def clear_committed_files(workspace: str, committed_files: list[str]) -> None:
                 state.pop("round_started_at", None)
                 state.pop("fired_at", None)
                 state.pop("blast_tier", None)
+            else:
+                lrs = state.get("last_round_summary") or {}
+                if (
+                    lrs.get("has_block") is False
+                    and int(state.get("round_count") or 0) > 0
+                    and state.get("round_started_at") is None
+                ):
+                    stale_reset_info = {
+                        "count": len(state["files"]),
+                        "sample": list(state["files"][:5]),
+                        "round": lrs.get("round"),
+                    }
+                    state["files"] = []
+                    state["reviews"] = {}
+                    state.pop("round_count", None)
+                    state.pop("last_round_summary", None)
+                    state.pop("round_started_at", None)
+                    state.pop("fired_at", None)
+                    state.pop("blast_tier", None)
+
             _save_state(workspace, state)
-        _log_event(
-            workspace,
-            f"[gate-cleared] committed={len(committed_files)} remaining={len(state['files'])}",
-        )
+        if stale_reset_info is not None:
+            _log_event(
+                workspace,
+                f"[gate-cleared] committed={len(committed_files)} remaining=0 "
+                f"stale-reset reset_count={stale_reset_info['count']} "
+                f"reset_round={stale_reset_info['round']} "
+                f"reset_files_sample={','.join(stale_reset_info['sample'])}",
+            )
+        else:
+            _log_event(
+                workspace,
+                f"[gate-cleared] committed={len(committed_files)} remaining={len(state['files'])}",
+            )
     except Exception as exc:
         print(f"[review_gate] clear_committed_files 실패: {exc}", file=sys.stderr)
 

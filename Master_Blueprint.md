@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-14 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-15 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1531,6 +1531,11 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: scripts/review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_gate.py — Master_Blueprint.md, code-review.md, review_gate.py, test_review_gate.py |
+| 2026-05-15 | v1.2.28 | chore(scripts): edit: scripts/review_gate.py — review_gate.py |
+| 2026-05-15 | v1.2.28 | fix(review_gate): `clear_committed_files`에 stale-reset 분기 추가 — Round 2 dogfooding. `last_round_summary.has_block=False` AND `round_count>0` (null-safe) AND `round_started_at is None` → 큐 통째 reset. enqueue가 round_started_at set하므로 in-flight 라운드 가드. forensic 위해 reset 직전 size·sample·round를 hook_events.log에 보존. 회귀 테스트 5건 추가 (positive·in-flight·has_block·boundary round_count=1·null-safe). 47 tests PASS, 3-tier review BLOCK 0건 WARN 4건 흡수. |
 | 2026-05-14 | v1.2.28 | fix(hook): `.githooks/post-commit`에 `review_gate.py --clear --files` 호출 추가 — Round 1 dogfooding 발견 stale 큐 누적 버그 해소. PostToolUse Bash matcher 미등록으로 호출되지 않던 `_post_commit_clear` 경로를 shell hook으로 보완. 시스템 wide 동작 (Claude Code + 사용자 터미널). |
 | 2026-05-14 | v1.2.28 | chore(.claude): code update — af-cross-review.md, Master_Blueprint.md, NEXT_STEPS.md, af.spec, approval_gate.py (+64) |
 | 2026-05-14 | v1.2.28 | ``` |

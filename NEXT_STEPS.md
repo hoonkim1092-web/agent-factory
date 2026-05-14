@@ -1,11 +1,31 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST (Opus 4.7)** — **✅ Round 1 dogfooding 종료. 브랜치 `af-on-af/round1-hook-fix`. 다음 결정: main 머지 / Round 2 진행 / 다른 작업 전환.**
+> 마지막 업데이트: **2026-05-15 KST (Opus 4.7)** — **✅ Round 1·2 dogfooding 종료. 브랜치 `af-on-af/round1-hook-fix`. 다음 결정: main 머지 / Round 3 (비-hook 도메인 selection bias 해소) / 다른 작업 전환.**
 
 ---
 
-## ✅ Round 1 종료 (2026-05-15)
+## ✅ Round 2 종료 (2026-05-15)
+
+### 작업
+Round 1에서 남긴 edge case 해소 — `committed_set` 미포함 stale .py 영구 잔존 → `clear_committed_files`에 stale-reset 분기 추가 (3중 가드).
+
+### 분기 조건
+- `last_round_summary.has_block is False` (이전 PASS 라운드)
+- `int(round_count or 0) > 0` (null-safe, 최소 1라운드 완주)
+- `round_started_at is None` (in-flight 라운드 없음)
+
+### 3-tier review 결과
+- af-critic WARN 4건 / af-cross-review WARN 4건 (4-Round Codex deliberation, Codex 자체 PASS→WARN 자기 수정) / af-test-runner PASS
+- BLOCK 0건, advisory WARN 4건 surgical 흡수 (로깅 forensic + null-safe + docstring + boundary 테스트 2건)
+- 최종 47 tests PASS
+
+### Round 3 후보 (selection bias 해소)
+Round 1·2 마찰이 100% review-gate 도메인 → dogfooding 첫 작업이 hook 버그 fix였기 때문. 비-hook 도메인 마찰을 보려면 Round 3에서 skill 흡수·문서 작성·feature 구현 등으로 진행. 다음 세션에서 결정.
+
+---
+
+## ✅ Round 1 종료 (2026-05-14)
 
 ### 종료 조건 3개 모두 충족
 1. ✅ **hook fix 동작** — `.githooks/post-commit`에 `review_gate.py --clear --files <committed>` 호출 추가 (commit `04ddc207`).

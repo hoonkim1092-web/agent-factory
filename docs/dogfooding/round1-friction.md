@@ -40,3 +40,39 @@
 1. ✅ hook fix 코드 동작 — `.githooks/post-commit` review_gate --clear 호출, commit `04ddc207` 검증
 2. ✅ 후속 commit에서 false positive 0 — `04ddc207` commit pre-commit gate PASS (`no-py-files`)
 3. ✅ friction.md 4분류 완료 — 위 표
+
+---
+
+## Round 2 (2026-05-15) — stale 누적 edge case 해소
+
+### 작업 요약
+Round 1에서 남긴 edge case: `committed_set` 미포함 stale .py 영구 잔존. `clear_committed_files`에 stale-reset 분기 추가로 해소.
+
+### 분기 조건 (race-safe 3중 가드)
+- `last_round_summary.has_block is False` — 이전 라운드가 PASS 종료
+- `round_count > 0` (null-safe `or 0`) — 최소 1라운드 완주
+- `round_started_at is None` — 진행 중 라운드 없음 (enqueue가 set하는 토큰)
+
+### 3-tier review 결과 (4라운드 Codex deliberation 포함)
+- **af-critic**: WARN 4건 (advisory — enqueue ImportError fallback / 의도적 stale 보유 / 로깅 / round_count 경계)
+- **af-cross-review**: WARN 4건 (4-Round Codex deliberation, Codex 자체 PASS→WARN 자기 수정)
+- **af-test-runner**: PASS 45 tests
+- **BLOCK 0건**. Phase 0 정책: WARN advisory.
+
+### Round 2 자기 흡수 (advisory surgical 4건)
+1. `state["files"][:5]` reset 직전 sample + `reset_count` + `reset_round`를 hook_events.log에 보존 (forensic)
+2. `int(state.get("round_count") or 0)` null-safe pattern — record_review_done과 일관
+3. docstring `blast_tier` 추가 (Phase 0 reset 메타셋 명시)
+4. 회귀 테스트 boundary 2건 추가 — round_count=1 positive / round_count=None null-safe
+   → 최종 47 tests PASS
+
+### Round 2 마찰 (역시 review-gate 도메인)
+- [2026-05-15 00:12] [review-gate] **메타-재귀 관찰**: review-gate fix를 review-gate가 막는 상황 — scripts/review_gate.py가 큐에 enqueue → blast_tier=3 자동 분류 → 3-tier review 발화. dogfooding이 의도대로 동작. critic+cross-review 4건 WARN advisory 흡수로 코드 품질 향상.
+- [2026-05-15 00:24] [review-gate] **Codex 4-Round deliberation 비용**: cross-review 1회에 477s + 77k tokens. 비양보 원칙으로 Codex가 자기 verdict PASS→WARN 수정한 사례. 한 번에 4건 잡힘. **Round 3 후보 결정 데이터**: cross-review 발화 1회당 비용은 명확. 비용 대비 가치는 BLOCK 0 / WARN 4 흡수.
+- [2026-05-15 00:30] [review-gate] **WARN-only no-fire 정책 vs round_count 게이트 불일치**: CLAUDE.md L131에 "직전 라운드 WARN/PASS면 재편집해도 자동 재발화 안 함" 정책 있으나, `review_gate.py:214`의 stale-review 체크는 `round_count < 2`일 때만 우회. round_count=1 상태에서 WARN 흡수 surgical edit이 stale-review BLOCK 유발 → `AF_SKIP_REVIEW_GATE=1` 우회 필요. **정책-코드 정합성 갭** — 다음 fix 후보: WARN-only 라운드에서는 `round_count < 1`도 우회 허용 또는 last_round_summary.has_block=False 체크 추가.
+
+### Round 2 종료 조건
+1. ✅ stale-reset 분기 추가 + 가드 3중 보호
+2. ✅ 47 tests PASS (신규 5건 포함)
+3. ✅ 3-tier review BLOCK 0건, WARN 4건 surgical 흡수
+4. ✅ Master_Blueprint §12 + Round 2 결과 friction.md 기록

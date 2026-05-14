@@ -5151,3 +5151,13 @@ No Critical/High issues. 핵심은 경로 혼재(Low)와 0점 지표 승격(Low)
 - [Low] skill-eval-report.json — 루트 레벨 파일의 `static_gate.ok: false`이고 `recommended_stage: "draft"`인데 커밋에 포함됨. 이 파일이 실제 평가 대상인지, 아니면 더미 fixture인지 명확하지 않음 (`skill_path: "dummy"` 참조).
 - [Low] skill-eval-report.json:46 — 파일 끝 newline 누락 (`No newline at end of file`). POSIX 규약 위반, 일부 diff 도구에서 오탐 유발.
 - [Info] data/skill-usage.jsonl:31 — 상대경로로의 전환 자체는 이식성 측면에서 올바른 방향. 단, 과거 레코드 소급 수정이 정책상 허용되는지 검토 후 일괄 마이그레이션 권장.
+
+---
+
+## 2026-05-15 00:12 — `af-on-af/round1-hook-fix` (399440de)
+
+**Context**: edit: scripts/review_gate.py
+
+**Changed (2)**: `Master_Blueprint.md, scripts/review_gate.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
