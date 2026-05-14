@@ -1,7 +1,33 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST (Opus 4.7)** — **✅ Round 1·2 dogfooding 종료. 브랜치 `af-on-af/round1-hook-fix`. 다음 결정: main 머지 / Round 3 (비-hook 도메인 selection bias 해소) / 다른 작업 전환.**
+> 마지막 업데이트: **2026-05-15 KST (Sonnet 4.6)** — **✅ Round 1·2·3 dogfooding 완료. Round 3: writing_skills 흡수, 0 review-gate friction. selection bias 확인. 다음 결정: main 머지 / P5 DomainVerdict / 다른 작업.**
+
+---
+
+## ✅ Round 3 종료 (2026-05-15)
+
+### 작업
+비-hook 도메인 마찰 측정 — `superpowers/writing-skills` → `skills/writing_skills/SKILL.md` (knowledge skill 흡수).
+
+### 산출물
+- `skills/writing_skills/SKILL.md` — SKILL.md 작성 4단계 가이드 (`inspired_by: superpowers/writing-skills`)
+- `docs/dogfooding/round3-skill-absorption.md` — 마찰 로그 F1~F4
+
+### 검증
+- 36 tests PASS (`test_skill_metadata_adapter`, `test_cross_cli_skill_discovery`, `test_external_skill_candidate_importer`)
+- `resolve_knowledge_skill_path('writing_skills')` → `skills/writing_skills/skill.md`
+
+### 마찰 요약 (4건)
+| 도메인 | 건수 | 내용 |
+|--------|:---:|-----|
+| review-gate | 0 | Tier 1 auto-pass |
+| Codex 오작동 | 1 | 무단 Round 3 수행 → revert + 재시작 |
+| context | 1 | NEXT_STEPS.md 56k token |
+| expertise | 1 | action-type SKILL.md 예시 부재 |
+| tooling | 1 | Write false-success (이전 세션) |
+
+**결론**: Round 1·2 selection bias 확인 — Tier 1 작업에서 review-gate 마찰 0건.
 
 ---
 
