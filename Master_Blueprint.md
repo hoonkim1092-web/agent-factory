@@ -1531,6 +1531,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-14 | v1.2.28 | ``` |
 | 2026-05-14 | v1.2.28 | fix(skill-eval): skill eval·promotion 파일 경로를 절대경로→상대경로로 수정 — skill-eval-report.json skill_path 상대화, report_path 상대화, skills/new_skill/skill-eval-report.json 동일 적용, skill-usage.jsonl 이벤트 #30 추가(feedback_total_events: 30) |
 | 2026-05-14 | v1.2.28 | chore(skill-eval): 평가 보고서 경로 절대→상대 경로 정규화 — skill-eval-report.json 2건 skill_path/report_path 절대경로→상대경로 전환, skill-usage.jsonl 프로모션 이벤트 신규 추가(feedback_total_events 30), promotion_path 상대경로 반영 |
 | 2026-05-14 | v1.2.28 | chore(skill-eval): 평가 보고서 경로를 절대경로 → 상대경로로 정규화 — skill-eval-report.json skill_path/report_path 상대경로 변환, skills/new_skill/skill-eval-report.json 동일 정규화, skills/new_skill/skill-promotion.json report_path/promotion_path 상대경로 변환, data/skill-usage.jsonl 누적 이벤트 30회차 기록 추가(feedback_total_events: 30) |

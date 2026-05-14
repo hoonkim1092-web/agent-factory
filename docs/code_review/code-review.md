@@ -5135,3 +5135,19 @@ No Critical/High issues. 핵심은 경로 혼재(Low)와 0점 지표 승격(Low)
 - [Low] `skill-eval-report.json`, `skills/new_skill/skill-eval-report.json` — `skill_path` / `report_path`를 상대경로로 변경. CWD가 repo root가 아닌 경우 경로 해석 실패 위험. 소비 코드에서 절대경로 변환 여부 확인 필요.
 - [Medium] `data/skill-usage.jsonl:31` — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`임에도 `draft → candidate` 승격 — 실질적 평가 없이 `external_eval_passed` reason으로 게이트 통과. 프로모션 임계값이 0이거나 로직이 bypass된 것으로 보임.
 - [Info] 커밋 메시지에 "P4+P2 question set YAML 추가"라 했으나, 제공된 diff에 `skills/registry.yaml` 실제 내용 변경이 포함되지 않음 — 리뷰 범위 불완전. YAML 추가분 별도 확인 필요.
+
+---
+
+## 2026-05-14 18:50 — `main` (4851c305)
+
+**Context**: feat(stage0-yaml): P4+P2 question set YAML 추가 (goal_clarification + brainstorming)
+
+**Changed (5)**: `data/skill-usage.jsonl, skill-eval-report.json, skills/new_skill/skill-eval-report.json, skills/new_skill/skill-promotion.json, skills/registry.yaml`
+
+### Findings
+
+- [Medium] data/skill-usage.jsonl:31 — 신규 항목의 `report_path`/`promotion_path`가 상대경로(`skills/new_skill/...`)로 바뀌었으나 이전 29개 항목은 절대 Windows 경로(`D:\\hoonProJect\\...`) 유지. append-only 로그 내 경로 포맷 불일치 — 경로 기반 파일 조회 코드가 혼합 포맷을 처리하지 못하면 구버전 레코드에서 FileNotFoundError 발생 가능.
+- [Medium] skills/new_skill/skill-eval-report.json — `contract_pass_rate: 0.0`, `hidden_pass_rate: 0.0`, `runtime_total: 0`, `runtime_success_rate: 0.0`인 상태에서 `recommended_stage: "candidate"` 승격. 유일한 근거는 `historical_score: 52`. 승격 임계값 로직이 런타임/계약 검증 없이도 통과하는지 의도적 설계인지 확인 필요.
+- [Low] skill-eval-report.json — 루트 레벨 파일의 `static_gate.ok: false`이고 `recommended_stage: "draft"`인데 커밋에 포함됨. 이 파일이 실제 평가 대상인지, 아니면 더미 fixture인지 명확하지 않음 (`skill_path: "dummy"` 참조).
+- [Low] skill-eval-report.json:46 — 파일 끝 newline 누락 (`No newline at end of file`). POSIX 규약 위반, 일부 diff 도구에서 오탐 유발.
+- [Info] data/skill-usage.jsonl:31 — 상대경로로의 전환 자체는 이식성 측면에서 올바른 방향. 단, 과거 레코드 소급 수정이 정책상 허용되는지 검토 후 일괄 마이그레이션 권장.
