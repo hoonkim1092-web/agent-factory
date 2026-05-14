@@ -1531,6 +1531,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-14 | v1.2.28 | fix(hook): `.githooks/post-commit`에 `review_gate.py --clear --files` 호출 추가 — Round 1 dogfooding 발견 stale 큐 누적 버그 해소. PostToolUse Bash matcher 미등록으로 호출되지 않던 `_post_commit_clear` 경로를 shell hook으로 보완. 시스템 wide 동작 (Claude Code + 사용자 터미널). |
 | 2026-05-14 | v1.2.28 | chore(.claude): code update — af-cross-review.md, Master_Blueprint.md, NEXT_STEPS.md, af.spec, approval_gate.py (+64) |
 | 2026-05-14 | v1.2.28 | ``` |
 | 2026-05-14 | v1.2.28 | fix(skill-eval): skill eval·promotion 파일 경로를 절대경로→상대경로로 수정 — skill-eval-report.json skill_path 상대화, report_path 상대화, skills/new_skill/skill-eval-report.json 동일 적용, skill-usage.jsonl 이벤트 #30 추가(feedback_total_events: 30) |
