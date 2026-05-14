@@ -1,37 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST (Sonnet 4.6)** — **✅ Round 3 dogfooding 완료 (2 흡수). 비-hook skill absorption으로 selection bias 해소 확인. 다음 결정: main 머지 / P5 DomainVerdict / P6a RunLedger.**
-
----
-
-## ✅ Round 3 종료 (2026-05-15)
-
-### 작업
-비-hook 도메인 마찰 측정용 Tier 1 작업 — 스킬 흡수 2건:
-1. `superpowers/writing-skills` → `skills/writing_skills/SKILL.md` (knowledge)
-2. AF-native `research_assistant` → `skills/research_assistant/SKILL.md` (action, 최초 action-type SKILL.md)
-
-### 산출물
-- `skills/writing_skills/SKILL.md` — knowledge skill authoring guide (`inspired_by: superpowers/writing-skills`)
-- `skills/research_assistant/SKILL.md` — action skill 명세 (NotebookLM 리서치 보고서 생성)
-- `docs/dogfooding/round3-skill-absorption.md` — Tier 1 friction measurement (F1~F6)
-
-### 검증
-- 36 tests PASS (`test_skill_metadata_adapter`, `test_cross_cli_skill_discovery`, `test_external_skill_candidate_importer`)
-- `resolve_knowledge_skill_path('writing_skills')` → `skills/writing_skills/skill.md`
-- `resolve_knowledge_skill_path('research_assistant')` → `skills/research_assistant/skill.md`
-
-### 마찰 요약 (6건)
-| 도메인 | 수 | 내용 |
-|--------|---|----|
-| review-gate | 0 | 없음 — Tier 1 auto-pass |
-| context | 1 | NEXT_STEPS.md 대용량 스캔 비용 |
-| expertise | 2 | writing-skills 보류 결정 해석, action-type SKILL.md 템플릿 부재 |
-| doc-sync | 1 | 측정 artifact 직접 작성 필요 |
-| tooling | 2 | Write 툴 false-success (touch+재시도 필요), linter 훅 자동 수정 |
-
-**결론**: Round 1·2 100% review-gate → Round 3 0% review-gate. selection bias 가설 확인.
+> 마지막 업데이트: **2026-05-15 KST (Opus 4.7)** — **✅ Round 1·2 dogfooding 종료. 브랜치 `af-on-af/round1-hook-fix`. 다음 결정: main 머지 / Round 3 (비-hook 도메인 selection bias 해소) / 다른 작업 전환.**
 
 ---
 
