@@ -5611,3 +5611,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 ### Findings
 
 No issues found.
+
+---
+
+## 2026-05-15 15:50 — `af-on-af/round1-hook-fix` (b2d35578)
+
+**Context**: edit: tests/conftest.py
+
+**Changed (3)**: `core/skills/registry.yaml, skills/registry.yaml, tests/conftest.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

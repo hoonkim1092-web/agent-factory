@@ -1,16 +1,5 @@
 install_candidates: {}
 skills:
-  abc:
-    capabilities:
-    - abc
-    id: abc
-    last_test_ok: true
-    meta_path: tests/_tmp/af-test-9648c834/skills/abc/meta.yaml
-    name: abc
-    path: tests/_tmp/af-test-9648c834/skills/abc/skill.py
-    status: active
-    updated_at: '2026-05-15T01:55:59'
-    version: 0.1.0
   accept_changes:
     capabilities:
     - accept_changes

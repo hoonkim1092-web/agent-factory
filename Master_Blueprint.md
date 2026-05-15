@@ -1538,6 +1538,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(core): code update — registry.yaml, code-review.md, registry.yaml, conftest.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, agent_runner.py, code-review.md, round4-af-cli-friction.md (+1) |
 | 2026-05-15 | v1.2.28 | chore(skills/registry): abc 스킬 임시 경로 갱신 — meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at을 2026-05-15T14:17:47로 갱신 |
 | 2026-05-15 | v1.2.28 | chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path 갱신, abc 스킬 path 갱신, updated_at 타임스탬프 갱신(2026-05-15T14:17:47) |
