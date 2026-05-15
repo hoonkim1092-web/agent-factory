@@ -277,6 +277,33 @@ Round 4c는 **leak verification 차원에서 PASS**. F12 architectural fix가 �
 
 (F6 tempdir accumulation 잔재 확인됨 — 3+ self-run 디렉터리 누적. 후속 hygiene 작업 backlog.)
 
+## Round 4c 사후 정정 — Reviewer challenge 응답
+
+cross-review가 `skills/registry.yaml`을 보고 "Round 4c PASS 주장이 잘못, F12 fix가 unfixed"라고 challenge함 (2 High + Medium + Low). 사실 검증 후 다음과 같이 정정:
+
+| Reviewer claim | 사실 | 평가 |
+|----------------|------|------|
+| HEAD의 `skills/registry.yaml`에 `tests/_tmp/af-test-9648c834/...` 경로 committed | **정확함** — `git show HEAD:skills/registry.yaml` 확인 | ✅ pre-existing 결함 (F12 외 backlog) |
+| "F12 fix가 unfixed, test run이 여전히 mutating" | F12 fix는 작동 (재-smoke diff 0 검증). dirty state(`14:17:47`)는 **F12 fix Part B 적용 전** 의 잔재 | ⚠️ reviewer 인과 attribution 오류 |
+| 제 "Round 4c PASS" 주장 | "F12 fix가 NEW write를 막는다"는 맞음. "skills/registry.yaml is clean"으로 해석되면 틀림 | ⚠️ 좁은 의미만 정확 |
+
+## F16 신규 — Test isolation gap (별도 backlog)
+
+`tests/test_project_scope.py:32-47`이 `RegistryManager`를 통해 real `skills/registry.yaml`에 write (test fixture `abc` skill 등록). F12 fix(`AF_DISABLE_REGISTRY_WRITE` env flag)는 agent_launcher CLI 진입에서만 set되므로 **pytest run은 차단 못 함**.
+
+**증거**:
+- `grep -rn "abc" tests/test_project_scope.py` 결과: 라인 32-47에서 test fixture `abc` skill 정의 → `skills/registry.yaml`에 영구 commit됨
+- HEAD의 registry.yaml에 test paths 잔존 (older runs로부터)
+- 이번 세션 중에도 어느 시점에 누군가가 14:17:47에 mutate (정확한 호출자 미식별, 가장 가능성 큰 후보: 제 pytest 실행)
+
+**해결 옵션** (F16):
+- (A) `tests/test_project_scope.py`에 pytest fixture로 `monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")` 추가
+- (B) `RegistryManager`가 호출자 stack에서 `pytest` 모듈 감지 시 auto-skip
+- (C) `pytest.ini` 또는 `conftest.py`에 글로벌 env set
+- (D) HEAD에서 `abc` test fixture entry 정리 commit (one-shot cleanup)
+
+**우선순위**: 별도 sprint. 이번 F12 closure scope 외. 다음 cross-review 가 동일 challenge하지 않게 friction log에 명문화.
+
 
 ## 결과
 
