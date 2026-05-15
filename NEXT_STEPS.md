@@ -28,6 +28,7 @@ git status -sb
 - ✅ **main 머지** — ff-only `056096be`, Round 1~4 전체 포함
 - ✅ **F6** tempdir cleanup — `atexit.register(shutil.rmtree, isolated, True)` in `_maybe_isolate_project_root_for_self_run()`. Codex PASS.
 - ✅ **P4.5b** Agent Model Selection runtime — `select_model()` + `_detect_escalation_triggers()` + `check_model_escalation.py` hook + 65 tests PASS. 3-tier PASS (WARN-only)
+  - 🟢 **첫 실동작 확인**: UserPromptSubmit hook이 `packaging_or_frozen_build` 트리거 감지 → `af-test-runner: model='sonnet'` 권장 출력 성공
 
 ### 나머지 backlog (우선순위 순)
 - **F15** workspace↔internal-state 분리 — provider_cwd 별도 param (M, 옵션 D)
