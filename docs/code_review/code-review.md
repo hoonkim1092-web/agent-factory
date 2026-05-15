@@ -5562,3 +5562,20 @@ No security/error-handling issues in this diff.
 - [Low] skills/registry.yaml:8 — Test artifact path (`tests/_tmp/af-test-*`) committed to production registry; transient test sandbox paths leaking into source control will break resolution on other machines once the tmp dir is cleaned.
 - [Low] skills/registry.yaml:12 — `updated_at` churn on every test run creates noisy diffs; consider gitignoring or having the test harness restore the registry post-run.
 - [Info] commit message — Diff scope (registry.yaml path/timestamp bump) doesn't match commit subject ("F12 hardening — env_flag convention + dual-source + diagnostic"); the substantive code changes appear missing from this changeset.
+
+---
+
+## 2026-05-15 14:35 — `af-on-af/round1-hook-fix` (2211cea8)
+
+**Context**: docs(dogfooding): Round 4c — F12 fix leak verification PASS + F15 finding
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+{"findings":[
+"- [High] skills/registry.yaml:8,10 — Test sandbox path leaked into committed registry (tests/_tmp/af-test-6b8efeb8/...). The 'abc' skill entry points to an ephemeral pytest tmpdir that won't exist at runtime, breaking skill resolution in production/deployed builds.",
+"- [High] skills/registry.yaml:1-12 — Root cause appears unfixed: a test run is still mutating the real skills/registry.yaml instead of an isolated registry. Round 4c is labeled 'F12 fix leak verification PASS' but this diff is itself evidence of the leak (only the tmp hash + timestamp changed). Re-verify the isolation guard before claiming PASS.",
+"- [Medium] skills/registry.yaml:12 — updated_at churn on every test run produces noisy commits and merge conflicts; registry writes from tests should be redirected to a per-run fixture path, not committed.",
+"- [Low] skills/registry.yaml — Consider adding the 'abc' test-fixture skill entry to .gitignore-style filtering or pre-commit guard so stray test artifacts cannot reach main."
+]}

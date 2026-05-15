@@ -223,6 +223,60 @@ F3 fix 덕에 `agent_launcher.py "task..."` 형태가 정상 작동 (P4.5x 이�
 | **F10 root** | system-level (메모) | F10(NEXT_STEPS staleness)의 진짜 원인은 **AF가 self-run 시 `git log`/`git status` 미인지**. 이번 turn에서 NEXT_STEPS 수동 정정으로 1회성 해결했으나, **다음 self-run에서 동일 stale 출력 재발 예상**. 시스템 fix 후보: (a) AF agent prompt에 git context preamble 자동 주입, (b) ad-hoc CLI에 `--with-git-context` 플래그. 본 turn 외 backlog |
 | **잠재 NameError** | 별도 (구현 X, 기록만) | `agent_launcher.py:775` `prompt_mission_template("Agent Factory")` 호출 — `agent_launcher.py` 상단에 import 없음. `from core.utils import *`에도 없음 (`grep -n "prompt_mission_template" core/utils.py` 결과 없음). 발화 조건: `python agent_launcher.py` (empty argv) → `_detect_mode()` ad_hoc → `args.task=[]` → `task_input=""` → 이 호출. **NameError 발생**. P4.5x가 잡지 못함. 별도 tiny fix (1줄 `from core.template_input import prompt_mission_template`) 필요 |
 
+---
+
+# Round 4c — F12 architectural fix 후 재검증 (2026-05-15)
+
+**전제**: P4.5x F3/F8 fix + commit `78e6a4be` (F12 architectural isolation) + commit `253224e3`/`18d3d546` (F12 hardening: env_flag canonical + dual-source + diagnostic + Blueprint 반영) 적용.
+
+**Task**: friction log에 1-줄 추가 (작은 doc-only 작업, leak 재발 여부 검증 목적).
+
+## 실측 결과
+
+| 차원 | 결과 |
+|------|------|
+| `projects/default/*` leak | **0건** ✅ |
+| `skills/registry.yaml` leak | **0건** ✅ |
+| 실행 path | ✅ AF 정상 부팅 + 작업 종료 (~15초 claude_cli) |
+| baseline 대비 git diff | **0** (`docs/dogfooding/round4-af-cli-friction.md` 본 추가까지의 baseline) |
+| **사용자 명시 목표** (leak 재발 여부 확인) | **PASS** ✅ |
+
+## F15 신규 발견 — Workspace 격리 부작용
+
+F12 fix가 PROJECT_ROOT 격리만 의도했으나, AF 내부에서 PROJECT_ROOT를 workspace로도 fallback 사용 → ad-hoc CLI에서 AF가 `<tempdir>/af_self_run_*/docs/dogfooding/round4-af-cli-friction.md`에 쓰고, **real repo 파일은 미수정**.
+
+실측 증거:
+```
+$ find $TEMP -name "round4-af-cli-friction.md"
+.../af_self_run_1778820746_72056/docs/dogfooding/round4-af-cli-friction.md
+.../af_self_run_1778823153_123556/docs/dogfooding/round4-af-cli-friction.md  ← Round 4c
+```
+
+**비교**:
+| Round | PROJECT_ROOT | workspace | real repo 편집 |
+|-------|--------------|-----------|:--:|
+| 4b (F12 fix 이전) | `projects/default/` | (default → PROJECT_ROOT) | ✅ NEXT_STEPS.md 분리 성공 |
+| 4c (F12 fix 이후) | isolated tempdir | (default → isolated) | ❌ 작성은 tempdir에만 |
+
+**해석**:
+- **Leak 차단 성공** (사용자 목표 달성).
+- **부작용**: dogfooding 사용 케이스의 "AF가 real repo 작업"이 불가능해짐. self-run의 활용 범위 축소.
+
+**가능한 후속 조치 (별도 sprint)**:
+- (A) `agent_launcher.py:if __name__` ad_hoc 분기에서 `AgentFactory().run(..., workspace=os.getcwd())` 명시 전달. PROJECT_ROOT는 isolated tempdir 유지, workspace는 real cwd → 이중 격리 분리.
+- (B) PROJECT_ROOT 격리 정책 자체 재검토. ad-hoc CLI 진입은 격리 X, write-path별 가드로 회귀 (write-level M fix).
+- (C) `--workspace <path>` 명시 플래그 도입 (F12 격리 + 사용자 선택 workspace).
+
+이 결정은 사용자 의사에 달림. 본 friction log엔 새 finding으로 기록만.
+
+## 결론
+
+Round 4c는 **leak verification 차원에서 PASS**. F12 architectural fix가 의도된 동작 (default-project + global registry leak 차단)을 수행함.
+
+**부작용 F15**는 별도 design 결정 필요. 본 sprint scope 외.
+
+(F6 tempdir accumulation 잔재 확인됨 — 3+ self-run 디렉터리 누적. 후속 hygiene 작업 backlog.)
+
 
 ## 결과
 
