@@ -304,6 +304,66 @@ cross-review가 `skills/registry.yaml`을 보고 "Round 4c PASS 주장이 잘못
 
 **우선순위**: 별도 sprint. 이번 F12 closure scope 외. 다음 cross-review 가 동일 challenge하지 않게 friction log에 명문화.
 
+---
+
+# F15 Scope Investigation (2026-05-15)
+
+**조사 정책**: timebox 30분, 80줄 cap, S/M/L per fix option. 사용자 명시 5개 질문 답변.
+
+## Q1: `AgentFactory.run(workspace=...)` 전달 경로
+
+`agent_launcher.py:553` `target_workspace = workspace or PROJECT_ROOT` — workspace 미전달 시 PROJECT_ROOT fallback. Round 4c에서 workspace=None → target_workspace = isolated tempdir → AF가 tempdir에 작업한 원인.
+
+## Q2: 실제 파일 write path 결정
+
+`core/providers/cli.py:282,312,442,487,739,766` — provider subprocess (claude_cli/codex_cli/gemini_cli) `subprocess.Popen(..., cwd=str(request.workspace))`. **provider cwd = workspace**. provider 내부에서 Edit/Write tool은 cwd-relative path resolution. 즉 workspace가 user file 편집 경로를 결정.
+
+내부 상수와는 분리됨:
+- `core/config_paths.py:67-78`: `AGENTS_DIR`, `DASHBOARD_PATH`, `.todo.md` 등 일부는 PROJECT_ROOT 기반
+- `core/documentation_policy.py:324`: `.todo.md`는 workspace 기반 (`os.path.join(workspace, ".todo.md")`)
+- 일관성은 부분적 — `.todo.md`는 workspace, agents/dashboard.json은 PROJECT_ROOT.
+
+## Q3: Round 4b 메커니즘 — NEXT_STEPS.md 실제 수정
+
+Round 4b 시: workspace=None → target_workspace = PROJECT_ROOT = projects/default/. provider cwd = projects/default/. 그러나 NEXT_STEPS.md는 repo root에 존재.
+
+**가설**: claude_cli provider가 "git toplevel auto-resolve" 또는 LLM 자체가 path를 .. 로 올라가 해결. 정확한 메커니즘은 provider 내부 (out of AF scope). **확정 사실**: F12 fix 이전엔 provider cwd = projects/default/ 였고, real repo 수정이 일어남. F12 fix 후엔 provider cwd = isolated tempdir → real repo 수정 안 됨.
+
+→ F15 fix 핵심: provider cwd를 real repo로 설정. workspace를 cwd로 전달하면 provider cwd도 cwd 됨.
+
+## Q4: user-work vs internal-state 경계
+
+존재함 (부분적):
+- **user-work** (workspace 기반): provider cwd, `.todo.md`, ensure_documentation_files
+- **internal-state** (PROJECT_ROOT 기반): agents/, dashboard.json, .system_generated/, runs/, skills/registry.yaml (글로벌은 SKILLS_DIR)
+
+F12 fix가 두 가지 모두 isolation tempdir로 보낸 게 문제. workspace만 cwd로 분리하면 됨.
+
+## Q5: Fix 옵션 S/M/L 분류
+
+| 옵션 | 구현 | Size |
+|------|------|:--:|
+| **(A) `workspace=os.getcwd()` 명시 전달** — `agent_launcher.py:__main__` ad_hoc 분기에서 `AgentFactory().run(..., workspace=os.getcwd())` 추가 (~1줄) | 1 파일, 1 줄 | **S** |
+| (B) `--workspace <path>` CLI 플래그 도입 + default=os.getcwd() | 1 파일, ~5 줄 + argparse | S+ |
+| (C) env `AF_WORKSPACE` override + 자동 격리 정책 | 1~2 파일, ~10 줄 | S++ |
+
+**최종 라벨**: **S** (옵션 A 채택 시)
+
+## Fix 시 회귀 위험 + 추가 success criteria
+
+**위험**: provider가 cwd=real repo로 실행되면, LLM이 의도 외 파일 수정 가능. F12 시절 발견된 scope-leak과 유사 패턴. 따라서 Round 4d 성공 기준에 사용자 명시 #4 (사용자 명시 외 파일 변경 0) 필수.
+
+**Round 4d 성공 기준 (사용자 확정 5건)**:
+1. real repo의 의도된 문서 파일 실제 수정 ✅
+2. `projects/default/*` 변경 0
+3. `skills/registry.yaml` 변경 0
+4. **사용자 명시 외 파일 변경 0** (회귀 가드)
+5. tempdir에는 runtime/session/state만 존재
+
+## 결론
+
+F15 fix는 **S** (옵션 A, 1줄). Round 4d 검증 후 S 확정. 사용자 plan대로 진행 가능 — F15 fix → Round 4d → tiny → push.
+
 
 ## 결과
 
