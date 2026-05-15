@@ -845,6 +845,10 @@ if __name__ == "__main__":
         execution_mode = "approval"
 
     if not task_input:
+        # Lazy import: prompt_mission_template 이 inquirer 의존이라 모듈 top
+        # eager import 하면 inquirer 미설치 환경에서 모든 agent_launcher import 실패.
+        # empty argv 경로에서만 호출되므로 함수 안에서 import.
+        from core.template_input import prompt_mission_template
         task_input = prompt_mission_template("Agent Factory")
 
     AgentFactory().run(

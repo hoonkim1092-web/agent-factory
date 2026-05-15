@@ -172,3 +172,25 @@ class TestEnvFlagConvention:
         from core.file_io import _env_flag
         monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
         assert _env_flag("AF_DISABLE_REGISTRY_WRITE") is False
+
+
+class TestPromptMissionTemplateImport:
+    """잠재 NameError 회귀 — agent_launcher.py 가 empty argv 진입 시
+    `prompt_mission_template` 함수를 호출하지만 P4.5x 까지 import 누락.
+    별도 tiny fix 로 lazy import (함수 호출 직전) 추가.
+    본 테스트는 회귀 방지: lazy import 라인이 누락되지 않았는지 source 에서 확인.
+    """
+
+    def test_prompt_mission_template_lazy_import_present(self):
+        """empty argv path 에 lazy import 라인이 존재하는지 검증.
+
+        eager import 는 inquirer 의존 때문에 불가 (core/template_input.py:1
+        `import inquirer`). 따라서 모듈 top import 가 아니라 함수 안 lazy
+        import 로 처리. 본 테스트는 그 lazy import 가 사라지지 않게 보장.
+        """
+        from pathlib import Path
+        launcher_src = (Path(__file__).resolve().parents[1] / "agent_launcher.py").read_text(encoding="utf-8")
+        assert "from core.template_input import prompt_mission_template" in launcher_src, (
+            "prompt_mission_template lazy import missing — empty argv "
+            "path (`if not task_input:`) 에서 NameError 발생할 위험."
+        )
