@@ -719,50 +719,80 @@ class AgentFactory:
         )
     
 # =============================================================================
+# CLI dispatch helpers (P4.5x — F3 fix)
+# =============================================================================
+# argparse subparsers greedily consume the first positional arg as a subcommand
+# choice, which made `agent_launcher.py "free-form task text"` unreachable
+# (Round 4 dogfooding F3). We pre-dispatch on argv[0] so both invocation styles
+# work: `agent_launcher.py project sync-todo …` and `agent_launcher.py "task …"`.
+
+_KNOWN_SUBCOMMANDS = {"project"}
+
+
+def _detect_mode(argv):
+    """Return 'subcommand' if argv[0] is a known subcommand, else 'ad_hoc'."""
+    if not argv:
+        return "ad_hoc"
+    if argv[0] in _KNOWN_SUBCOMMANDS:
+        return "subcommand"
+    return "ad_hoc"
+
+
+def _build_arg_parser(ad_hoc_mode):
+    """Build argparse parser for either subcommand or ad-hoc task mode."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Agent Factory CLI")
+    if ad_hoc_mode:
+        parser.add_argument("task", nargs="*", help="Task description (자연어)")
+        parser.add_argument("--mode", choices=["approval", "fsa", "ise"], default="approval", help="Execution mode")
+        parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
+        parser.add_argument("--role", default="General", help="Agent role")
+        parser.add_argument("--build", action="store_true", help="Enable skill building")
+    else:
+        subparsers = parser.add_subparsers(dest="subcommand", required=True)
+        sync_todo_parser = subparsers.add_parser("project", help="프로젝트 관리 명령")
+        sync_todo_sub = sync_todo_parser.add_subparsers(dest="project_cmd", required=True)
+        sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
+        sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
+        sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+    return parser
+
+
+# =============================================================================
 # Example Entry Point
 # =============================================================================
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Agent Factory CLI")
-    subparsers = parser.add_subparsers(dest="subcommand")
-
-    sync_todo_parser = subparsers.add_parser("project", help="프로젝트 관리 명령")
-    sync_todo_sub = sync_todo_parser.add_subparsers(dest="project_cmd")
-    sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
-    sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
-    sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
-
-    parser.add_argument("task", nargs="*", help="Task description")
-    parser.add_argument("--mode", choices=["approval", "fsa", "ise"], default="approval", help="Execution mode")
-    parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
-    parser.add_argument("--role", default="General", help="Agent role")
-    parser.add_argument("--build", action="store_true", help="Enable skill building")
-
+    _cli_mode = _detect_mode(sys.argv[1:])
+    parser = _build_arg_parser(ad_hoc_mode=(_cli_mode == "ad_hoc"))
     args = parser.parse_args()
 
-    if args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
-        from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
-        from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map
-        import os
-        project_dir = os.path.abspath(args.project_dir)
-        if args.dry_run:
-            board = load_project_board(project_dir)
-            if not board or not board.get("tasks"):
-                print("[sync] board가 비어있거나 없음 — 변경 없음")
+    if _cli_mode == "subcommand":
+        if args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
+            from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
+            from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map
+            import os
+            project_dir = os.path.abspath(args.project_dir)
+            if args.dry_run:
+                board = load_project_board(project_dir)
+                if not board or not board.get("tasks"):
+                    print("[sync] board가 비어있거나 없음 — 변경 없음")
+                else:
+                    status_map = _instruction_status_map(board)
+                    items = normalize_project_todo_items(board_todo_items(board))
+                    print(f"[sync] dry-run: {len(items)} items")
+                    for item in items:
+                        mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
+                        print(f"  - [{mark}] {item}")
             else:
-                status_map = _instruction_status_map(board)
-                items = normalize_project_todo_items(board_todo_items(board))
-                print(f"[sync] dry-run: {len(items)} items")
-                for item in items:
-                    mark = _mark_for_status(status_map.get(_normalize_instruction(item)))
-                    print(f"  - [{mark}] {item}")
+                ok, msg = sync_todo_from_board(project_dir)
+                prefix = "[sync]" if ok else "[sync] ERROR:"
+                print(f"{prefix} {msg}")
+            sys.exit(0)
         else:
-            ok, msg = sync_todo_from_board(project_dir)
-            prefix = "[sync]" if ok else "[sync] ERROR:"
-            print(f"{prefix} {msg}")
-        import sys
-        sys.exit(0)
+            parser.print_help()
+            sys.exit(1)
 
+    # Ad-hoc task mode
     task_input = " ".join(args.task).strip()
     if args.fsa or args.mode == "fsa":
         execution_mode = "fsa"

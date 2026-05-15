@@ -2,4 +2,3 @@ required_keys:
 - agent
 - data_dir
 - artifacts_dir
-- missing_key
