@@ -10,6 +10,7 @@ P4.5x fix: argv[0] 기반 사전 dispatch로 ad-hoc task 입력 경로 복원.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -19,7 +20,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from agent_launcher import _detect_mode, _build_arg_parser  # noqa: E402
+from agent_launcher import (
+    _detect_mode,
+    _build_arg_parser,
+    _maybe_isolate_project_root_for_self_run,
+)  # noqa: E402
 
 
 class TestDetectMode:
@@ -80,3 +85,57 @@ class TestBuildArgParserSubcommand:
         parser = _build_arg_parser(ad_hoc_mode=False)
         with pytest.raises(SystemExit):
             parser.parse_args([])
+
+
+class TestIsolateProjectRootForSelfRun:
+    """F12 architectural fix — ad-hoc self-run 격리 회귀 테스트.
+
+    Round 4/4b dogfooding 에서 발견된 projects/default/* + skills/registry.yaml
+    leak (F9/F12) 차단. agent_launcher.py 의 isolation 함수가 (a) ad-hoc 모드만
+    격리하고 (b) 사용자 명시 env 는 존중하는지 검증한다.
+    """
+
+    def test_skips_when_argv_empty(self, monkeypatch):
+        monkeypatch.delenv("AGENT_PROJECT_ROOT", raising=False)
+        monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        monkeypatch.setattr(sys, "argv", ["agent_launcher.py"])
+        _maybe_isolate_project_root_for_self_run()
+        assert "AGENT_PROJECT_ROOT" not in os.environ
+        assert "AF_DISABLE_REGISTRY_WRITE" not in os.environ
+
+    def test_skips_for_subcommand(self, monkeypatch):
+        monkeypatch.delenv("AGENT_PROJECT_ROOT", raising=False)
+        monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        monkeypatch.setattr(sys, "argv", ["agent_launcher.py", "project", "sync-todo", "/x"])
+        _maybe_isolate_project_root_for_self_run()
+        assert "AGENT_PROJECT_ROOT" not in os.environ
+        assert "AF_DISABLE_REGISTRY_WRITE" not in os.environ
+
+    def test_isolates_ad_hoc_text(self, monkeypatch):
+        import tempfile
+
+        monkeypatch.delenv("AGENT_PROJECT_ROOT", raising=False)
+        monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        monkeypatch.setattr(sys, "argv", ["agent_launcher.py", "free-form task"])
+        _maybe_isolate_project_root_for_self_run()
+        assert "AGENT_PROJECT_ROOT" in os.environ
+        # tempdir 하위 + af_self_run prefix
+        proj_root = os.environ["AGENT_PROJECT_ROOT"]
+        assert proj_root.startswith(tempfile.gettempdir())
+        assert "af_self_run_" in os.path.basename(proj_root)
+        assert os.environ.get("AF_DISABLE_REGISTRY_WRITE") == "1"
+
+    def test_respects_explicit_project_root(self, monkeypatch):
+        """사용자가 AGENT_PROJECT_ROOT 명시 설정한 경우 격리 함수가 무위.
+
+        production 사용 케이스: 사용자가 자기 프로젝트 dir 을 지정한 상태에서
+        AF self-run 하면 그 dir 을 그대로 써야 함.
+        """
+        monkeypatch.setenv("AGENT_PROJECT_ROOT", "/explicit/user/path")
+        monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        monkeypatch.setattr(sys, "argv", ["agent_launcher.py", "free-form task"])
+        _maybe_isolate_project_root_for_self_run()
+        # 사용자 설정 그대로 유지
+        assert os.environ["AGENT_PROJECT_ROOT"] == "/explicit/user/path"
+        # 격리 미수행 → AF_DISABLE_REGISTRY_WRITE 도 set 안 됨
+        assert "AF_DISABLE_REGISTRY_WRITE" not in os.environ

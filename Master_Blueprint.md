@@ -1531,6 +1531,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(agent_launcher): code update — agent_launcher.py, registry_manager.py, skill_preflight.py, code-review.md, 2026-05-15-135547-skill_preflight-code-review.md (+1) |
 | 2026-05-15 | v1.2.28 | chore(agent_launcher): code update — agent_launcher.py, context_schema.yaml, code-review.md, context_schema.yaml, test_agent_launcher_cli_dispatch.py (+1) |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, approval_gate.py, project_pipeline.py, skill-usage.jsonl (+7) |
 | 2026-05-15 | v1.2.28 | fix(P5-blast-radius-parity): `core/project_pipeline.py` `prepare_documents()` — `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 추가. project_brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완. 배포 동등성 BLOCK 해소. `Master_Blueprint.md` §0+§12 업데이트. |

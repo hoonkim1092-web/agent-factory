@@ -43,6 +43,11 @@ class RegistryManager:
         return reg
 
     def _write_registry(self, reg: dict):
+        # F12 architectural fix: AF_DISABLE_REGISTRY_WRITE set (ad-hoc self-run) 시
+        # 글로벌 registry write skip. agent_launcher.py _maybe_isolate_project_root_
+        # for_self_run 과 짝. _normalize_registry_paths 가 init마다 부르는 경로 포함.
+        if os.environ.get("AF_DISABLE_REGISTRY_WRITE"):
+            return
         if self._read_only:
             raise PermissionError(REGISTRY_PATH)
         reg = reg if isinstance(reg, dict) else {}

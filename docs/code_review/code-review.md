@@ -5181,3 +5181,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `agent_launcher.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 13:51 — `af-on-af/round1-hook-fix` (b1ac6fe4)
+
+**Context**: edit: agent_launcher.py
+
+**Changed (1)**: `agent_launcher.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

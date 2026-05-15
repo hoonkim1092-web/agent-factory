@@ -14,6 +14,44 @@ import functools
 import shutil
 from datetime import datetime
 import getpass
+
+# =============================================================================
+# F12 architectural fix — ad-hoc self-run 격리 (Round 4 + 4b 발견)
+# =============================================================================
+# core.config_paths 가 import 시점에 AGENT_PROJECT_ROOT 를 읽어 PROJECT_ROOT 및
+# 모든 derived path 상수(DASHBOARD_PATH, AGENTS_DIR, ...)를 frozen 한다. 따라서
+# ad-hoc CLI 진입(자연어 task 입력)에서 default fallback(`projects/default/`)으로
+# 떨어지지 않게 하려면 모든 core.* import 이전에 env 를 set 해야 한다.
+# 동시에 skills/registry.yaml (SKILLS_DIR=BASE_DIR/skills 기반, PROJECT_ROOT 무관)
+# 글로벌 write 도 차단 flag 로 막는다. 짝 코드: core/skill_preflight.py.
+
+def _maybe_isolate_project_root_for_self_run():
+    """ad-hoc CLI 진입 시 isolated PROJECT_ROOT + 글로벌 registry write 차단 flag set.
+
+    Skip 조건:
+      - 사용자가 AGENT_PROJECT_ROOT 를 명시 설정 → 그대로 존중
+      - argv 가 비어 있음 → interactive TUI 경로 (default fallback OK)
+      - argv[0] in {"project"} → subcommand 일반 작업
+    """
+    if "AGENT_PROJECT_ROOT" in os.environ:
+        return
+    argv = sys.argv[1:]
+    if not argv:
+        return
+    if argv[0] in {"project"}:
+        return
+    import tempfile
+    isolated = os.path.join(
+        tempfile.gettempdir(),
+        f"af_self_run_{int(time.time())}_{os.getpid()}",
+    )
+    os.environ["AGENT_PROJECT_ROOT"] = isolated
+    os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
+
+
+if __name__ == "__main__":
+    _maybe_isolate_project_root_for_self_run()
+
 from config.schema import factory_config
 
 # Core utilities are now imported from core.utils

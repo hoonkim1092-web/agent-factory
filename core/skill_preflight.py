@@ -250,7 +250,13 @@ class PreflightEvaluator:
 
         글로벌(SKILLS_DIR)과 프로젝트 로컬(PROJECT_SKILLS_DIR) 양쪽 레지스트리를
         탐색하여 스킬 ID가 매칭되는 곳을 업데이트한다.
+
+        F12 architectural fix: AF_DISABLE_REGISTRY_WRITE 가 set 되어 있으면 (ad-hoc
+        self-run 모드) 글로벌 registry write 를 skip 한다. agent_launcher.py 의
+        _maybe_isolate_project_root_for_self_run 과 짝.
         """
+        if os.environ.get("AF_DISABLE_REGISTRY_WRITE"):
+            return
         try:
             from core.config_paths import SKILLS_DIR, PROJECT_SKILLS_DIR
 
