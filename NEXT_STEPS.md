@@ -43,7 +43,6 @@ cat docs/decisions/ADR-20260515-114000-agent-model-routing-defaults-escalation.m
 **범위**: `Model Routing`(provider routing)과 책임 경계 먼저 grep + rename 권장.
 
 ### 나머지 backlog (우선순위 순)
-- ~~**P4.5b**~~ → 다음 진입점으로 승격 (위 참조)
 - **F15** workspace↔internal-state 분리 — provider_cwd 별도 param (M, 옵션 D)
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - 전체 `pytest` fastapi 미설치 환경 이슈 (별개)
