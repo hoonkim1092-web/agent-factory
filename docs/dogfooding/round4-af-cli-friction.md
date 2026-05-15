@@ -170,6 +170,59 @@ F3 fix 덕에 `agent_launcher.py "task..."` 형태가 정상 작동 (P4.5x 이�
 
 **남은 비-차단성 마찰**: F9/F12 (validation/실행 무관 매번 발생하는 default-project scope leak) + F11 (gemini_cli race overhead) + F10 (context staleness — git 미참조). 모두 본 작업 외.
 
+> **표현 정정 (사후)**: "Round 4b 성공"이라는 단일 라벨은 도식적이다. 정확히는 **"execution-path success, output requires human correction"** — AF 실행 경로는 검증됐지만 산출물(NEXT_STEPS)은 stale해서 사람이 정정해야 함. 이후 Round 4c+에서는 이 표현을 사용한다.
+
+---
+
+# F12 Scope Investigation (Round 4 + 4b 통합 분석, 2026-05-15)
+
+**조사 정책**: timebox 30분, 80줄 cap, per-path S/M/L 표 (S ≤ 3 파일/50줄, M ≤ 10 파일/200줄, L 초과/인터페이스 변경).
+
+## 각 write path의 entry point
+
+| Path | Entry point | Trigger 조건 | Size (write-level) |
+|------|-------------|-------------|:--:|
+| `projects/default/.todo.md` | `core/documentation_policy.py:325` (`write_text`) | `project_pipeline._write_todo()` — 모든 프로젝트 run마다 | **S** |
+| `projects/default/.claude/settings.local.json` | `core/providers/session_adapter.py:287` (`_write_claude_settings`) | provider/session bootstrap 시 hook 등록 | **S** |
+| `projects/default/agents/<role>.yaml` | `core/manager.py:84,103` (`write_yaml`) — `_agent_path:36`이 `os.makedirs` | `manager.get_or_create()` — 신규 role 처음 요청 시 | **S** |
+| `projects/default/.system_generated/` | **다중 writer**: `agent_runner.py:1043`, `hooks/langsmith_tracing.py:134`, `hooks/memory_consolidation.py:79`, `memory_system/adapters/ast_hub.py:25`, `memory_system/adapters/knowledge_graph.py:29`, `memory_system/adapters/trace_log.py:29` | 트레이스 로그·캐시·메모리 스냅샷 | **M** (5+ 파일 분산) |
+| `projects/default/dashboard.json` | `core/dashboard.py:57` (`append_dashboard_run`) | 매 run 완료/오류 시 dashboard 기록 | **S** |
+| `skills/registry.yaml` | `core/skill_preflight.py:261`, `external_skill_candidate_importer.py:355` | skill preflight 평가 후 metadata 갱신 | **S** |
+
+**최종 라벨 = M** (`.system_generated/` 다중 writer 때문).
+
+## 핵심 인사이트 — write-level fix vs architectural fix
+
+위 표는 **write-level** 분류. 그러나 **architectural fix**가 더 효율적일 수 있음:
+
+- **현 원인**: `AGENT_PROJECT_ROOT` env 없을 때 `config_paths.py:53`이 `PROJECT_ID="default"` → `PROJECT_ROOT=projects/default`로 fallback. 모든 위 writer가 이 fallback path에 씀.
+- **단일점 fix (가능)**: ad-hoc CLI 호출 시 `PROJECT_ROOT`를 isolated dir(`projects/_self_run_<runid>/`)로 자동 set, 또는 명시적 `--project-root` 강제. 한 곳(`agent_launcher.py` ad-hoc 분기 또는 `config_paths`)만 손대면 6개 write path 전부 격리됨.
+- **이 architectural fix는 S** (1~2 파일, ≤30줄): `agent_launcher.py`에서 `os.environ.setdefault("AGENT_PROJECT_ROOT", ...)` + cleanup hook.
+
+## 분류 결과 + 권장
+
+| 차원 | 라벨 |
+|------|------|
+| write-level (각 writer를 가드한다면) | **M** |
+| architectural (단일 fallback 차단) | **S** |
+
+**권장 fix 경로**: architectural (S). write-level은 매 writer마다 분기 추가 → 회귀 위험 + 다른 사용 경로(production user)에 영향 가능. architectural fix는 ad-hoc CLI invocation 한정 환경 격리 → side-effect zero.
+
+**user 정책 (all-or-nothing)에 따른 결정**: architectural 단일점 fix는 모든 path 일관 해결 → all-or-nothing 만족. **S 분류**.
+
+→ **이번 turn에서 fix는 하지 않음** (조사만이 사용자 지시). 다음 turn에서 architectural S fix 진행 가능.
+
+---
+
+# 추가 친화 기록 (F13~)
+
+| # | 분류 | 내용 |
+|---|------|-----|
+| **F13** | cost / wasted-discovery | AF가 매 ad-hoc run에서 task에 맞는 skill 후보 (예: `markdown_split`, `session_log_archival`)를 LLM intent gate에서 식별. `--build` 미사용 시 즉시 폐기되지만, **식별 자체의 토큰 비용은 매 run 발생** (관찰이 아니라 비용 누수) |
+| **F14** | nondeterministic leak surface | F12 leak 항목 집합이 deterministic하지 않음. Round 4(F9)는 5건 (`.claude`, `agents`, `.todo.md`, `dashboard.json`, `registry.yaml`), Round 4b는 6건 (`.system_generated/` 추가). 입력 task의 skill 매칭 결과에 따라 leak 표면 변동 → 단순 cleanup list 자동화 어려움. F12 architectural fix가 이 nondeterminism도 해결 |
+| **F10 root** | system-level (메모) | F10(NEXT_STEPS staleness)의 진짜 원인은 **AF가 self-run 시 `git log`/`git status` 미인지**. 이번 turn에서 NEXT_STEPS 수동 정정으로 1회성 해결했으나, **다음 self-run에서 동일 stale 출력 재발 예상**. 시스템 fix 후보: (a) AF agent prompt에 git context preamble 자동 주입, (b) ad-hoc CLI에 `--with-git-context` 플래그. 본 turn 외 backlog |
+| **잠재 NameError** | 별도 (구현 X, 기록만) | `agent_launcher.py:775` `prompt_mission_template("Agent Factory")` 호출 — `agent_launcher.py` 상단에 import 없음. `from core.utils import *`에도 없음 (`grep -n "prompt_mission_template" core/utils.py` 결과 없음). 발화 조건: `python agent_launcher.py` (empty argv) → `_detect_mode()` ad_hoc → `args.task=[]` → `task_input=""` → 이 호출. **NameError 발생**. P4.5x가 잡지 못함. 별도 tiny fix (1줄 `from core.template_input import prompt_mission_template`) 필요 |
+
 
 ## 결과
 
