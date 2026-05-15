@@ -62,6 +62,8 @@
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
 | `core/review_bundle.py` | 리뷰 번들 생성 thin wrapper (Phase 2-prep D) | `build()`, `save()`, `load()` |
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) | `run(workspace)` |
+| `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | `select_model()`, `log_routing()`, `store_pending_escalation()`, `get_pending_escalation()`, `clear_pending_escalation()` |
+| `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1538,6 +1540,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | feat(P4.5b): Agent Model Selection runtime escalation — `scripts/agent_model_selector.py` 신규(select_model()/log_routing()/pending state CRUD, escalation matrix: af-test-runner→sonnet/af-critic→opus/af-doc-qa→haiku↓). `scripts/check_model_escalation.py` 신규(UserPromptSubmit one-shot hook, sys.frozen 가드). `scripts/hook_runner.py` `_detect_escalation_triggers()` 신규 + `_post_agent_record` escalation 감지 블록 추가. `.claude/settings.json` check_model_escalation.py hook 등록. `tests/test_agent_model_selector.py` 신규 23케이스. `tests/test_hook_runner_builtins.py` _detect_triggers 15케이스 추가. `tests/test_check_model_escalation.py` 신규 5케이스. 총 65 PASS. 3-tier: af-critic WARN / af-cross-review WARN / af-test-runner PASS. §0 2행 추가. |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, code-review.md, test_cli_providers.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, code-review.md, test_cli_providers.py |
 | 2026-05-15 | v1.2.28 | feat(F10): cli.py에 _collect_git_context() 추가 — 3개 provider _compose_prompt에 [Git State] 섹션 주입, HEAD/branch 포맷 버그 수정, 테스트 5개 추가 |

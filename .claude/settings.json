@@ -94,6 +94,14 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 scripts/run.py check_model_escalation.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]

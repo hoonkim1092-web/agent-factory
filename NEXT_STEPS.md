@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST** — F6 tempdir cleanup 완료. 다음 진입점 = **P4.5b Agent Model Selection runtime**.
+> 마지막 업데이트: **2026-05-15 KST** — P4.5b Agent Model Selection runtime 완료. 다음 진입점 = **backlog (F15 또는 cross-review WARN)**.
 
 ---
 
@@ -18,7 +18,7 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — P4.5b Agent Model Selection runtime
+## 🔥 다음 진입점 — backlog
 
 **브랜치**: `main`
 
@@ -27,20 +27,7 @@ git status -sb
 - ✅ **E2E smoke** — claude_cli 실제 실행 → `BRANCH=af-on-af/round1-hook-fix COMMIT=056096b` 정확 출력
 - ✅ **main 머지** — ff-only `056096be`, Round 1~4 전체 포함
 - ✅ **F6** tempdir cleanup — `atexit.register(shutil.rmtree, isolated, True)` in `_maybe_isolate_project_root_for_self_run()`. Codex PASS.
-
-### P4.5b — Agent Model Selection runtime (Size M)
-
-**배경**: P4.5a에서 frontmatter `model:` 기본값만 적용됨. runtime escalation 미구현.
-
-**Fix 방향**: `select_model()` 헬퍼 + review_gate/hook 연결 + 테스트.
-
-**진입 전 확인**:
-```bash
-grep -rn "select_model\|model_routing\|escalat" core/ scripts/ | grep -v ".pyc"
-cat docs/decisions/ADR-20260515-114000-agent-model-routing-defaults-escalation.md
-```
-
-**범위**: `Model Routing`(provider routing)과 책임 경계 먼저 grep + rename 권장.
+- ✅ **P4.5b** Agent Model Selection runtime — `select_model()` + `_detect_escalation_triggers()` + `check_model_escalation.py` hook + 65 tests PASS. 3-tier PASS (WARN-only)
 
 ### 나머지 backlog (우선순위 순)
 - **F15** workspace↔internal-state 분리 — provider_cwd 별도 param (M, 옵션 D)

@@ -337,3 +337,103 @@ def test_apply_test_gap_verdict_does_not_modify_blast_tier_on_fail(monkeypatch, 
 
     state = json.loads(pending.read_text(encoding="utf-8"))
     assert state["blast_tier"] == 3  # Phase 1: blast_tier must be unchanged
+
+
+# ── _detect_escalation_triggers (P4.5b) ──────────────────────────────────────
+
+def test_detect_triggers_test_failure_on_block_verdict():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("block", "", "af-test-runner")
+    assert "test_failure" in triggers
+
+
+def test_detect_triggers_test_failure_on_fail_verdict():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("fail", "", "af-test-runner")
+    assert "test_failure" in triggers
+
+
+def test_detect_triggers_pass_verdict_no_test_failure():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("pass", "", "af-test-runner")
+    assert "test_failure" not in triggers
+
+
+def test_detect_triggers_flaky_keyword_in_content():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("pass", "test flaky intermittent failure", "af-test-runner")
+    assert "flaky_or_timeout" in triggers
+
+
+def test_detect_triggers_timeout_keyword():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("pass", "operation timeout exceeded", "af-test-runner")
+    assert "flaky_or_timeout" in triggers
+
+
+def test_detect_triggers_importerror_keyword():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("fail", "ImportError: no module named core.foo", "af-test-runner")
+    assert "import_path_issue" in triggers
+
+
+def test_detect_triggers_subprocess_keyword():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("fail", "subprocess call failed on win32", "af-test-runner")
+    assert "subprocess_or_os_branching" in triggers
+
+
+def test_detect_triggers_packaging_keyword():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("fail", "pyinstaller frozen build error in dist/", "af-test-runner")
+    assert "packaging_or_frozen_build" in triggers
+
+
+def test_detect_triggers_security_for_critic():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("warn", "security risk: shell=true usage detected", "af-critic")
+    assert "security_or_destructive_action" in triggers
+
+
+def test_detect_triggers_policy_for_critic():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("warn", "approval_gate policy change detected", "af-critic")
+    assert "core_policy_change" in triggers
+
+
+def test_detect_triggers_cross_platform_for_critic():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("warn", "win32/darwin platform branching found", "af-critic")
+    assert "cross_platform_subprocess" in triggers
+
+
+def test_detect_triggers_unknown_agent_returns_empty():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("block", "test failure timeout importerror", "af-unknown")
+    assert triggers == []
+
+
+def test_detect_triggers_multiple_matches():
+    m = _runner()
+    triggers = m._detect_escalation_triggers("block", "timeout flaky importerror", "af-test-runner")
+    assert "test_failure" in triggers
+    assert "flaky_or_timeout" in triggers
+    assert "import_path_issue" in triggers
+
+
+def test_detect_triggers_windows_quoted_path_in_content():
+    """Cross-platform: Windows quoted path ("C:\\Program Files\\...\\tool.cmd" --flag) in content."""
+    m = _runner()
+    # subprocess call with Windows quoted path — triggers subprocess_or_os_branching
+    content = r'subprocess.run("C:\Program Files\af\af.exe" --flag) on win32 platform'
+    triggers = m._detect_escalation_triggers("pass", content, "af-test-runner")
+    assert "subprocess_or_os_branching" in triggers
+
+
+def test_detect_triggers_posix_quoted_path_in_content():
+    """Cross-platform: POSIX quoted path ("/Applications/af tool/af" --flag) in content."""
+    m = _runner()
+    # subprocess call with POSIX quoted path that contains a space — coverage for macOS paths
+    content = 'subprocess call failed: "/Applications/Agent Factory/af" --help on darwin platform'
+    triggers = m._detect_escalation_triggers("pass", content, "af-test-runner")
+    assert "subprocess_or_os_branching" in triggers

@@ -330,6 +330,32 @@ def _pre_bash_review_gate(payload: dict) -> int:
     return 0
 
 
+def _detect_escalation_triggers(verdict: str, content: str, agent_name: str) -> list[str]:
+    """Infer escalation trigger labels from agent verdict + response content."""
+    triggers: list[str] = []
+    v = verdict.lower()
+    c = content.lower()
+    if agent_name == "af-test-runner":
+        if v in ("block", "fail"):
+            triggers.append("test_failure")
+        if any(kw in c for kw in ("timeout", "flaky", "intermittent")):
+            triggers.append("flaky_or_timeout")
+        if any(kw in c for kw in ("importerror", "modulenotfounderror", "import_path")):
+            triggers.append("import_path_issue")
+        if any(kw in c for kw in ("subprocess", "os.system", "platform.system", "win32", "darwin")):
+            triggers.append("subprocess_or_os_branching")
+        if any(kw in c for kw in ("pyinstaller", "frozen", "dist/", "build_exe")):
+            triggers.append("packaging_or_frozen_build")
+    elif agent_name == "af-critic":
+        if any(kw in c for kw in ("policy", "approval_gate", "escalation_policy")):
+            triggers.append("core_policy_change")
+        if any(kw in c for kw in ("security", "destructive", "rm -rf", "shell=true")):
+            triggers.append("security_or_destructive_action")
+        if any(kw in c for kw in ("subprocess", "platform", "win32", "darwin")):
+            triggers.append("cross_platform_subprocess")
+    return triggers
+
+
 def _post_agent_record(payload: dict) -> int:
     """PostToolUse(Task/Agent): af-* 에이전트 완료 시 tier 기록 + Phase 3.5 메트릭 수집."""
     ti = payload.get("tool_input") or {}
@@ -380,6 +406,27 @@ def _post_agent_record(payload: dict) -> int:
         _log_hook_event("post_agent_record", subagent_type, 0)
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
+
+    # P4.5b: model escalation detection (best-effort)
+    try:
+        from scripts.agent_model_selector import (  # type: ignore[import]
+            select_model, log_routing, store_pending_escalation,
+        )
+        triggers = _detect_escalation_triggers(verdict, content, subagent_type)
+        selected = select_model(subagent_type, triggers)
+        log_routing(workspace, subagent_type, selected, triggers)
+        if triggers:
+            store_pending_escalation(workspace, subagent_type, selected, triggers)
+            _defaults = {"af-test-runner": "haiku", "af-critic": "sonnet", "af-doc-qa": "sonnet"}
+            if selected != _defaults.get(subagent_type, "sonnet"):
+                print(
+                    f"\n⚠️  [model-escalation] {subagent_type} → {selected}"
+                    f"  (triggers: {', '.join(triggers)})"
+                    f"\n   → 다음 {subagent_type} 호출 시 model='{selected}' override 권장",
+                    file=sys.stderr,
+                )
+    except Exception:
+        pass
 
     # Phase 3.5: 메트릭 수집 (best-effort — 실패해도 review flow 미영향)
     try:
