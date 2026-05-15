@@ -7,7 +7,7 @@
 
 ## 🔥 현재 진행 중 — F12 scope 조사 + dogfooding 보강
 
-**브랜치**: `af-on-af/round1-hook-fix` (origin 동기화됨). Round 4b까지 commit/push 완료. P5/P4.5a/P4.5x/Round4b는 모두 **이미 커밋됨** — pending 작업 없음.
+**브랜치**: `af-on-af/round1-hook-fix`. P5/P4.5a/P4.5x/Round4b/handoff정정/F12조사는 모두 **이미 커밋됨**. origin sync 상태는 휘발성이므로 `git status -sb`로 확인할 것 (이 파일에 sync 여부 기재 금지 — F10 메타 함정).
 
 ### 최근 commit (origin 반영됨)
 | Hash | 의도 |
@@ -18,10 +18,10 @@
 | `06a58d5c` | P4.5a — agent default model 명시 + escalation 정책 |
 
 ### 즉시 다음 작업
-1. **F12 scope 조사** (30분 timebox, 80줄 cap, per-path S/M/L 표) — `docs/dogfooding/round4-af-cli-friction.md` 내부 새 섹션.
-2. **friction log 보강** — F13 cost / F14 nondeterministic leak / F10 root 메모 / `prompt_mission_template` missing import 기록.
-3. **분류 결과에 따라 분기**: 전부 S면 F12 fix 후보 제안, M/L 포함되면 issue/ADR로 이월 + P4.5b로.
-4. (이번 turn 외) P4.5b — runtime model selection. 단 기존 `[Model Routing]`(provider routing)과 책임 경계 5분 grep 선행.
+1. **F12 architectural S fix** — `agent_launcher.py` top에 ad-hoc 진입 시 `AGENT_PROJECT_ROOT` isolation (tempdir) + `AF_DISABLE_REGISTRY_WRITE` env flag. `core/skill_preflight.py:_update_registry_status`에서 flag 체크. 성공 기준: smoke run 후 `projects/default/*` + `skills/registry.yaml` diff 0.
+2. **Round 4c 재검증** — fix 적용 후 NEXT_STEPS 분리와 동등 부담 task를 AF self-run으로 재실행. F12 잔류 없음 확인.
+3. **(별도 tiny fix, F12와 분리 commit)** — `agent_launcher.py:775` `prompt_mission_template` import 누락 (empty argv → NameError). 1줄 `from core.template_input import prompt_mission_template` 추가.
+4. **(이번 sprint 외) P4.5b** — runtime model selection. 진입 전 기존 `[Model Routing]`(provider routing) 책임 경계 5분 grep + 이름 충돌 정리 (P4.5b → "Agent Model Selection" rename 권장).
 
 ### 진입 명령
 ```bash
