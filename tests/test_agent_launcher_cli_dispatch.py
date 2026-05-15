@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -21,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from agent_launcher import (
+    AgentFactory,
     _detect_mode,
     _build_arg_parser,
     _maybe_isolate_project_root_for_self_run,
@@ -194,3 +196,84 @@ class TestPromptMissionTemplateImport:
             "prompt_mission_template lazy import missing — empty argv "
             "path (`if not task_input:`) 에서 NameError 발생할 위험."
         )
+
+
+class TestSelfRunWorkspaceSplit:
+    """F15/F17: user file workspace 와 runtime/internal-state workspace 분리."""
+
+    def test_invoke_runner_forwards_runtime_workspace(self, tmp_path):
+        calls = {}
+
+        class Runner:
+            def run(self, agent, task_input, run_id=None, auto_approve=False, workspace=None, runtime_workspace=None):
+                calls.update(
+                    {
+                        "workspace": workspace,
+                        "runtime_workspace": runtime_workspace,
+                        "run_id": run_id,
+                        "auto_approve": auto_approve,
+                    }
+                )
+                return {"ok": True}
+
+        factory = object.__new__(AgentFactory)
+        factory.runner = Runner()
+
+        user_ws = str(tmp_path / "repo")
+        runtime_ws = str(tmp_path / "runtime")
+        result = factory._invoke_runner(
+            {"name": "agent"},
+            "task",
+            run_id="run_x",
+            auto_approve=False,
+            workspace=user_ws,
+            runtime_workspace=runtime_ws,
+        )
+
+        assert result == {"ok": True}
+        assert calls["workspace"] == user_ws
+        assert calls["runtime_workspace"] == runtime_ws
+        assert calls["run_id"] == "run_x"
+
+    def test_agent_factory_run_splits_user_and_state_workspace(self, tmp_path, monkeypatch):
+        factory = object.__new__(AgentFactory)
+        factory.request_router = SimpleNamespace(route=lambda **_kwargs: {"pipeline": "single"})
+
+        calls = {"agents": [], "reqs": [], "todos": [], "runner": []}
+
+        def _get_agent(role_spec, workspace=None):
+            calls["agents"].append(workspace)
+            return {"name": "agent_general", "role": role_spec, "skills": []}
+
+        def _analyze_requirements(_agent, _task_input, workspace=None):
+            calls["reqs"].append(workspace)
+            return {"missing_skills": [], "risk_level": "normal", "intent": "trivial"}
+
+        def _ensure_single_run_todo(**kwargs):
+            calls["todos"].append(kwargs["workspace"])
+            return ""
+
+        def _invoke_runner(_agent, _task_input, run_id, auto_approve, workspace=None, runtime_workspace=None):
+            calls["runner"].append((workspace, runtime_workspace))
+            return {"ok": True}
+
+        factory._get_agent = _get_agent
+        factory._analyze_requirements = _analyze_requirements
+        factory._ensure_single_run_todo = _ensure_single_run_todo
+        factory._missing_local_skill_files = lambda _agent: []
+        factory._invoke_runner = _invoke_runner
+        monkeypatch.setattr("agent_launcher.append_dashboard_run", lambda _payload: None)
+
+        user_ws = str(tmp_path / "repo")
+        runtime_ws = str(tmp_path / "runtime")
+        factory.run(
+            task_input="doc-only task",
+            role_spec="General",
+            workspace=user_ws,
+            runtime_workspace=runtime_ws,
+        )
+
+        assert calls["agents"] == [runtime_ws]
+        assert calls["reqs"] == [user_ws]
+        assert calls["todos"] == [user_ws]
+        assert calls["runner"] == [(user_ws, runtime_ws)]

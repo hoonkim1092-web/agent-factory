@@ -837,15 +837,26 @@ class AgentRunner:
         registry = wrapper.build_registry(module_list, ctx, policy, is_allowed_fn=self._is_tool_allowed)
         return self._mount_builtin_tools(registry, ctx)
 
-    def run(self, agent: dict, task_input: str, run_id: str | None = None, auto_approve: bool = False, workspace: str | None = None, task_id: str = ""):
+    def run(
+        self,
+        agent: dict,
+        task_input: str,
+        run_id: str | None = None,
+        auto_approve: bool = False,
+        workspace: str | None = None,
+        task_id: str = "",
+        runtime_workspace: str | None = None,
+    ):
         print(f"\n🚀 [Runner] 에이전트 실행 시작: {agent.get('name')}")
         started = time.time()
         run_id = run_id or f"run_{int(started)}"
         target_workspace = os.path.abspath(workspace) if workspace else PROJECT_ROOT
+        state_workspace = os.path.abspath(runtime_workspace) if runtime_workspace else target_workspace
         project_id = safe_id(os.path.basename(target_workspace)) if workspace else PROJECT_ID
-        runs_dir = os.path.join(target_workspace, "runs") if workspace else RUNS_DIR
-        data_dir = os.path.join(target_workspace, "data") if workspace else DATA_DIR
-        artifacts_dir = os.path.join(target_workspace, "artifacts") if workspace else ARTIFACTS_DIR
+        runtime_project_id = safe_id(os.path.basename(state_workspace)) if runtime_workspace else project_id
+        runs_dir = os.path.join(state_workspace, "runs") if runtime_workspace or workspace else RUNS_DIR
+        data_dir = os.path.join(state_workspace, "data") if runtime_workspace or workspace else DATA_DIR
+        artifacts_dir = os.path.join(state_workspace, "artifacts") if runtime_workspace or workspace else ARTIFACTS_DIR
         os.makedirs(runs_dir, exist_ok=True)
         os.makedirs(data_dir, exist_ok=True)
         os.makedirs(artifacts_dir, exist_ok=True)
@@ -856,7 +867,7 @@ class AgentRunner:
         loaded_skill_ids_runtime: list[str] = []
         used_skill_ids_runtime: set[str] = set()
         runtime_feedback_written = False
-        feedback_loop = SkillFeedbackLoop.for_workspace(target_workspace, project_id=project_id)
+        feedback_loop = SkillFeedbackLoop.for_workspace(state_workspace, project_id=runtime_project_id)
 
         def _append_trace(kind: str, payload: dict):
             transcript.append({
@@ -890,6 +901,7 @@ class AgentRunner:
                             "approval_rejects": int(result.get("approval_rejects") or 0),
                             "loaded_skill_ids": list(target_skill_ids),
                             "workspace": target_workspace,
+                            "runtime_workspace": state_workspace,
                         },
                     )
                 except Exception as exc:
@@ -929,11 +941,13 @@ class AgentRunner:
                 pass
             data = {
                 "run_id": run_id,
-                "project_id": project_id,
+                "project_id": runtime_project_id,
                 "agent_name": str(agent.get("name", "")),
                 "agent_role": str(agent.get("role", "")),
                 "task": str(task_input or ""),
                 "task_id": safe_id(task_id),
+                "workspace": target_workspace,
+                "runtime_workspace": state_workspace,
                 "transcript": transcript,
                 "result": result,
                 "updated_at": now_iso(),
@@ -948,6 +962,7 @@ class AgentRunner:
             "artifacts_dir": artifacts_dir,
             "workspace": target_workspace,
             "project_id": project_id,
+            "runtime_workspace": state_workspace,
             "task_input": task_input,
             "task_id": safe_id(task_id),
         }
@@ -1018,29 +1033,29 @@ class AgentRunner:
             register_active_hook(_mem_mc_hook)  # Stage 1: _notify_consolidation 글로벌 경로 연결
 
             _agent_name = str(agent.get("name", ""))
-            _pid = str(project_id or "agent_factory")
+            _pid = str(runtime_project_id or project_id or "agent_factory")
             _mem_facade = UnifiedMemoryFacade(project_id=_pid)
 
             # ── 항상 등록 (외부 의존성 없음) ─────────────────────
-            _mem_graph_adapter = KnowledgeGraphAdapter(workspace=str(target_workspace))
+            _mem_graph_adapter = KnowledgeGraphAdapter(workspace=str(state_workspace))
             _mem_facade.register_adapter(CoreMemoryAdapter(agent_id=_agent_name or None))
             _mem_facade.register_adapter(_mem_graph_adapter)
 
             try:
                 from core.memory_system.adapters.ast_hub import AstHubAdapter
-                _mem_facade.register_adapter(AstHubAdapter(workspace=str(target_workspace)))
+                _mem_facade.register_adapter(AstHubAdapter(workspace=str(state_workspace)))
             except Exception as _e:
                 _safe_print(f"[Memory] AstHubAdapter skipped: {_e}")
 
             try:
                 from core.memory_system.adapters.continuity import ContinuityAdapter
-                _mem_facade.register_adapter(ContinuityAdapter(workspace=str(target_workspace)))
+                _mem_facade.register_adapter(ContinuityAdapter(workspace=str(state_workspace)))
             except Exception as _e:
                 _safe_print(f"[Memory] ContinuityAdapter skipped: {_e}")
 
             try:
                 from core.memory_system.adapters.trace_log import TraceLogAdapter
-                _trace_logs = os.path.join(str(target_workspace), ".system_generated", "logs")
+                _trace_logs = os.path.join(str(state_workspace), ".system_generated", "logs")
                 _mem_facade.register_adapter(TraceLogAdapter(logs_dir=_trace_logs))
             except Exception as _e:
                 _safe_print(f"[Memory] TraceLogAdapter skipped: {_e}")
@@ -1054,7 +1069,7 @@ class AgentRunner:
 
             try:
                 from core.memory_system.adapters.sync_compyne import SyncCompyneAdapter
-                _mem_facade.register_adapter(SyncCompyneAdapter(project_path=str(target_workspace)))
+                _mem_facade.register_adapter(SyncCompyneAdapter(project_path=str(state_workspace)))
             except Exception as _e:
                 _safe_print(f"[Memory] SyncCompyneAdapter skipped: {_e}")
 
@@ -1524,9 +1539,6 @@ class AgentRunner:
 # =============================================================================
 # 7) Factory
 # =============================================================================
-
-
-
 
 
 

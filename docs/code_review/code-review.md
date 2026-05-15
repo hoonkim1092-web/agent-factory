@@ -5589,3 +5589,25 @@ No security/error-handling issues in this diff.
 **Changed (1)**: `agent_launcher.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 15:15 — `af-on-af/round1-hook-fix` (8ad6ea4b)
+
+**Context**: edit: agent_launcher.py
+
+**Changed (1)**: `agent_launcher.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 15:43 — `af-on-af/round1-hook-fix` (225232fc)
+
+**Context**: fix(self-run): split user workspace from runtime state
+
+**Changed (1)**: `docs/code_review/code-review.md`
+
+### Findings
+
+No issues found.

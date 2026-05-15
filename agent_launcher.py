@@ -274,7 +274,15 @@ class AgentFactory:
         data["updated_at"] = now_iso()
         _safe_write_json(state_path, data)
 
-    def _invoke_runner(self, agent: dict, task_input: str, run_id: str, auto_approve: bool, workspace: str | None = None):
+    def _invoke_runner(
+        self,
+        agent: dict,
+        task_input: str,
+        run_id: str,
+        auto_approve: bool,
+        workspace: str | None = None,
+        runtime_workspace: str | None = None,
+    ):
         params = inspect.signature(self.runner.run).parameters
         kwargs = {}
         if "run_id" in params:
@@ -283,6 +291,8 @@ class AgentFactory:
             kwargs["auto_approve"] = auto_approve
         if "workspace" in params:
             kwargs["workspace"] = workspace
+        if "runtime_workspace" in params:
+            kwargs["runtime_workspace"] = runtime_workspace
         return self.runner.run(agent, task_input, **kwargs) or {}
 
     def _ensure_single_run_todo(
@@ -540,6 +550,7 @@ class AgentFactory:
         enable_build: bool = False,
         execution_mode: str = "approval",
         workspace: str | None = None,
+        runtime_workspace: str | None = None,
         pipeline_mode: str = "auto",
     ):
         run_id = f"run_{int(time.time())}"
@@ -570,12 +581,15 @@ class AgentFactory:
                 route=route,
             )
 
-        agent = self._get_agent(role_spec, workspace=workspace)
-        reqs = self._analyze_requirements(agent, task_input, workspace=workspace or PROJECT_ROOT)
+        user_workspace = workspace or PROJECT_ROOT
+        state_workspace = runtime_workspace or workspace or PROJECT_ROOT
+
+        agent = self._get_agent(role_spec, workspace=state_workspace)
+        reqs = self._analyze_requirements(agent, task_input, workspace=user_workspace)
         self._ensure_single_run_todo(
             task_input=task_input,
             role_spec=role_spec,
-            workspace=workspace or PROJECT_ROOT,
+            workspace=user_workspace,
             route=route,
             reqs=reqs,
         )
@@ -600,25 +614,33 @@ class AgentFactory:
                 run_id=run_id,
                 execution_mode=execution_mode,
                 approval_gate=approval_gate,
-                workspace=workspace,
+                workspace=state_workspace,
             )
             if installed:
-                agent = self._get_agent(role_spec, workspace=workspace)
+                agent = self._get_agent(role_spec, workspace=state_workspace)
 
         if execution_mode == "fsa":
             ultra_params = inspect.signature(self.ultra.run_mission).parameters
             ultra_kwargs = {"run_id": run_id}
             if "workspace" in ultra_params:
-                ultra_kwargs["workspace"] = workspace
+                ultra_kwargs["workspace"] = user_workspace
             run_metrics = self.ultra.run_mission(agent, task_input, **ultra_kwargs) or {}
         elif execution_mode == "ise":
             ise_params = inspect.signature(self.ise.run_mission).parameters
             ise_kwargs = {"run_id": run_id}
             if "workspace" in ise_params:
-                ise_kwargs["workspace"] = workspace
+                ise_kwargs["workspace"] = user_workspace
             run_metrics = self.ise.run_mission(agent, task_input, **ise_kwargs) or {}
         else:
-            run_metrics = self._invoke_runner(agent, task_input, run_id=run_id, auto_approve=False, workspace=workspace)
+            invoke_params = inspect.signature(self._invoke_runner).parameters
+            invoke_kwargs = {
+                "run_id": run_id,
+                "auto_approve": False,
+                "workspace": user_workspace,
+            }
+            if "runtime_workspace" in invoke_params:
+                invoke_kwargs["runtime_workspace"] = state_workspace
+            run_metrics = self._invoke_runner(agent, task_input, **invoke_kwargs)
 
         append_dashboard_run(
             {
@@ -855,9 +877,10 @@ if __name__ == "__main__":
         task_input=task_input,
         role_spec=args.role,
         enable_build=args.build,
-        execution_mode=execution_mode
+        execution_mode=execution_mode,
+        workspace=os.getcwd(),
+        runtime_workspace=PROJECT_ROOT,
     )
-
 
 
 

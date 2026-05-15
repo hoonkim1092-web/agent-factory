@@ -520,6 +520,8 @@ else:                         → "completed"
 **클래스:** `AgentRunner`
 
 **역할 기반 프로바이더 라우팅 (`line 958-969`):**
+**Workspace split (F17, 2026-05-15):** `run(..., workspace=None, runtime_workspace=None)` supports separated user-work and internal-state roots. Provider cwd, tool context, and user file edits use `workspace`; runs/data/artifacts, runtime feedback, memory adapters, and trace logs use `runtime_workspace` when supplied. Ad-hoc self-run passes `workspace=os.getcwd()` and `runtime_workspace=PROJECT_ROOT`.
+
 ```python
 preferred = self.mr.pick_provider(agent_config=agent)
 cli_providers = [preferred] + [fallbacks...]
@@ -614,6 +616,7 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 **Self-run isolation env flags (P4.5x/F12, 2026-05-15):**
 - `AGENT_PROJECT_ROOT` (system): ad-hoc CLI 진입(`python agent_launcher.py "task..."`) 시 `agent_launcher._maybe_isolate_project_root_for_self_run()` 가 `tempfile.gettempdir()/af_self_run_<ts>_<pid>/` 로 자동 set. `core.config_paths` 가 import-time 에 frozen 하므로 **모든 core.* import 이전** 에 set 됨. 사용자 명시 설정은 존중.
 - `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `PreflightEvaluator._update_registry_status` 양쪽 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set.
+- `workspace` vs `runtime_workspace` (F17, 2026-05-15): ad-hoc self-run 에서 `workspace=os.getcwd()` 는 provider cwd/user file edit 대상, `runtime_workspace=PROJECT_ROOT` 는 runs/data/artifacts/agent state 대상. `AgentFactory._invoke_runner()` 와 `AgentRunner.run()` 이 `runtime_workspace` 를 optional로 전달/수용한다. Round 4e strict smoke 기준: real repo 문서 1건만 변경, `projects/default/*`, `skills/registry.yaml`, `data/skill-usage.jsonl`, `agents/general.yaml` 추가 변경 0.
 
 ---
 
@@ -1535,6 +1538,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, agent_runner.py, code-review.md, round4-af-cli-friction.md (+1) |
 | 2026-05-15 | v1.2.28 | chore(skills/registry): abc 스킬 임시 경로 갱신 — meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at을 2026-05-15T14:17:47로 갱신 |
 | 2026-05-15 | v1.2.28 | chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path 갱신, abc 스킬 path 갱신, updated_at 타임스탬프 갱신(2026-05-15T14:17:47) |
 | 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 임시 디렉터리 ID 변경(9648c834→6b8efeb8), updated_at 타임스탬프 갱신(01:55:59→14:17:47)"} |

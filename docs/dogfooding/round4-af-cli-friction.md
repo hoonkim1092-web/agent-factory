@@ -416,3 +416,21 @@ F15 옵션 A (workspace=cwd 단일 전달) 는 provider cwd 만 해결하고 나
 ## 사용자 plan 다음 단계 (strict 해석 확정)
 
 F15 fix 보류 → `prompt_mission_template` tiny fix → push.
+
+## Round 4e Marker — F17 split verification (2026-05-15)
+
+## Round 4e — F17 split verification PASS (2026-05-15)
+
+**전제**: `AgentFactory.run()` / `AgentRunner.run()`에 `runtime_workspace`를 추가해 user file workspace와 internal-state workspace를 분리.
+
+**Task**: 이 파일 끝에 `Round 4e Marker` 한 줄만 추가하는 작은 doc-only self-run.
+
+| Criteria | 결과 | 비고 |
+|----------|:--:|------|
+| 1. real repo 의도된 문서 파일 실제 수정 | ✅ | `docs/dogfooding/round4-af-cli-friction.md` diff 발생 |
+| 2. `projects/default/*` 변경 0 | ✅ | baseline 대비 추가 변경 없음 |
+| 3. `skills/registry.yaml` 변경 0 | ✅ | baseline 대비 추가 변경 없음 |
+| 4. 사용자 명시 외 파일 변경 0 | ✅ | baseline 대비 추가 변경은 본 파일 1건뿐 |
+| 5. runtime/session/state 격리 | ✅ | `data/skill-usage.jsonl`, `agents/general.yaml` 신규/수정 없음 |
+
+**결론**: F15/F17의 product contract를 충족하는 최소 경로 확인. Provider cwd는 real repo(`workspace`), agent/runtime state는 isolated `runtime_workspace`로 분리됨.
