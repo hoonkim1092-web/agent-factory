@@ -139,3 +139,36 @@ class TestIsolateProjectRootForSelfRun:
         assert os.environ["AGENT_PROJECT_ROOT"] == "/explicit/user/path"
         # 격리 미수행 → AF_DISABLE_REGISTRY_WRITE 도 set 안 됨
         assert "AF_DISABLE_REGISTRY_WRITE" not in os.environ
+
+
+class TestEnvFlagConvention:
+    """High finding #1 회귀 — AF_DISABLE_REGISTRY_WRITE truthy semantics.
+
+    cross-review (Round 4b commit 78e6a4be) 에서 발견: 이전 코드
+    `os.environ.get("AF_DISABLE_REGISTRY_WRITE")` 는 "0"/"false"/"no" 도
+    truthy 로 해석 → AF canonical convention (`core/file_io._env_flag`) 와
+    정반대. 본 테스트는 AF 컨벤션 일치를 검증한다.
+    """
+
+    @pytest.mark.parametrize("truthy_val", ["1", "true", "yes", "on", "y", "True", "YES"])
+    def test_env_flag_truthy_skips_write(self, truthy_val):
+        from core.file_io import _env_flag
+        os.environ["AF_DISABLE_REGISTRY_WRITE"] = truthy_val
+        try:
+            assert _env_flag("AF_DISABLE_REGISTRY_WRITE") is True
+        finally:
+            os.environ.pop("AF_DISABLE_REGISTRY_WRITE", None)
+
+    @pytest.mark.parametrize("falsy_val", ["0", "false", "no", "off", "n", ""])
+    def test_env_flag_falsy_allows_write(self, falsy_val):
+        from core.file_io import _env_flag
+        os.environ["AF_DISABLE_REGISTRY_WRITE"] = falsy_val
+        try:
+            assert _env_flag("AF_DISABLE_REGISTRY_WRITE") is False
+        finally:
+            os.environ.pop("AF_DISABLE_REGISTRY_WRITE", None)
+
+    def test_env_flag_unset_allows_write(self, monkeypatch):
+        from core.file_io import _env_flag
+        monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        assert _env_flag("AF_DISABLE_REGISTRY_WRITE") is False

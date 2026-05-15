@@ -12,6 +12,7 @@ from core.config_paths import (
     REGISTRY_PATH, SKILLS_DIR, WORKFLOW_PATH
 )
 from core.external_skill_sources import ExternalSkillResolver
+from core.file_io import _env_flag
 from core.policy import resolve_quality_gate_policy
 
 logger = logging.getLogger(__name__)
@@ -43,10 +44,12 @@ class RegistryManager:
         return reg
 
     def _write_registry(self, reg: dict):
-        # F12 architectural fix: AF_DISABLE_REGISTRY_WRITE set (ad-hoc self-run) 시
-        # 글로벌 registry write skip. agent_launcher.py _maybe_isolate_project_root_
-        # for_self_run 과 짝. _normalize_registry_paths 가 init마다 부르는 경로 포함.
-        if os.environ.get("AF_DISABLE_REGISTRY_WRITE"):
+        # F12 architectural fix: AF_DISABLE_REGISTRY_WRITE (truthy: 1/true/yes/on/y) 시
+        # 모든 registry write skip. ad-hoc self-run 격리의 second line of defense.
+        # agent_launcher.py _maybe_isolate_project_root_for_self_run 과 짝.
+        # _normalize_registry_paths 가 RegistryManager.__init__ 마다 부르는 경로 포함.
+        if _env_flag("AF_DISABLE_REGISTRY_WRITE"):
+            logger.debug("registry write skipped (AF_DISABLE_REGISTRY_WRITE set)")
             return
         if self._read_only:
             raise PermissionError(REGISTRY_PATH)

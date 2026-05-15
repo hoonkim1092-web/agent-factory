@@ -5191,3 +5191,374 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `agent_launcher.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 14:16 — `af-on-af/round1-hook-fix` (78e6a4be)
+
+**Context**: edit: core/registry_manager.py
+
+**Changed (1)**: `core/registry_manager.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 14:23 — `af-on-af/round1-hook-fix` (1169151b)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+{"findings":"- [Medium] skills/registry.yaml:8,10 — Test-generated tmp paths (`tests/_tmp/af-test-6b8efeb8/...`) committed to a versioned registry. Each test run rewrites these entries, polluting git history and breaking lookups in any environment where that ephemeral tmp dir does not exist.\n- [Low] skills/registry.yaml:12 — `updated_at` churn from test fixtures creates noisy diffs; commit description mentions F12 hardening but this file only shows a fixture artifact, suggesting an unintended staged change.\n- [Info] commit scope mismatch — diff does not contain the env_flag/dual-source/diagnostic logic referenced in the commit message; verify the intended source changes were staged."}
+
+---
+
+## 2026-05-15 14:24 — `af-on-af/round1-hook-fix` (ab50d39a)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [High] skills/registry.yaml:8,10,12 — diff is exactly the F12 bleed the commit claims to harden against: test temp paths (`tests/_tmp/af-test-6b8efeb8/...`) and a fresh `updated_at` were written into the *committed* registry. If the new `_env_flag` gate engaged, this entry should be unchanged; either the gate didn't fire, the test ran without the self-run env flag, or this row was captured before the fix and not reverted.
+- [High] skills/registry.yaml:8,10 — `meta_path` / `path` point at ephemeral `tests/_tmp/af-test-*` directories that get cleaned up; any consumer that loads this `abc` entry and resolves the path will hit `FileNotFoundError` at runtime. Stale rows should be pruned, not refreshed with a newer temp hash.
+- [Medium] skills/registry.yaml (commit scope) — commit message advertises code-level changes ("env_flag convention + dual-source + diagnostic"), but the only file in this diff is registry data churn. The actual hardening code is either missing from this commit or the registry mutation slipped in unrelated to the claimed scope — both cases warrant splitting/reverting before merge.
+- [Medium] skills/registry.yaml — per the prior review thread, `core/registry_manager.py:407 workflow_apply()` still writes `WORKFLOW_PATH` without the `_env_flag` guard; if `skill_procurer` ran during this test, that path likely produced this diff. Until `workflow_apply()` is gated too, F12 hardening cannot prevent registry rewrites end-to-end.
+- [Info] No new code in the diff means no unit-test coverage of the env_flag convention is visible here; verify hardening tests live in a separate commit on this branch.
+
+---
+
+## 2026-05-15 14:24 — `af-on-af/round1-hook-fix` (f71ed6b9)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8-12 — 테스트 임시 디렉터리(`tests/_tmp/af-test-*`)의 절대 상대 경로가 production 레지스트리에 커밋됨. 테스트 실행 시마다 hash가 바뀌어 무의미한 diff/머지 충돌 유발.
+- [Medium] skills/registry.yaml:8,10 — `meta_path`/`path`가 곧 사라질 임시 경로를 가리켜, 다른 환경에서 레지스트리 로드 시 FileNotFoundError 가능 (last_test_ok=true와 모순).
+- [Low] skills/registry.yaml — 테스트가 production registry를 직접 쓰고 있음을 시사. 테스트 격리(별도 fixture registry) 또는 `.gitignore`/post-test cleanup으로 분리 필요.
+- [Info] 커밋 메시지("F12 hardening — env_flag convention + dual-source + diagnostic")와 실제 diff(레지스트리 타임스탬프/경로 갱신만) 불일치 — 실제 hardening 변경이 누락됐거나 잘못된 파일이 staged.
+
+---
+
+## 2026-05-15 14:25 — `af-on-af/round1-hook-fix` (75adb845)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [High] skills/registry.yaml:8-12 — 테스트 임시 경로(`tests/_tmp/af-test-6b8efeb8/...`)가 production registry에 쓰여 있음. F12 가드(`AF_DISABLE_REGISTRY_WRITE`)가 실제 테스트 실행 경로에서 동작하지 않았다는 증거 — 커밋 메시지("F12 hardening")와 모순.
+- [High] skills/registry.yaml:8,10 — `meta_path`/`path`가 절대 경로 성격의 휘발성 tmp 디렉터리를 가리킴. 다음 테스트 라운드에서 즉시 dangling 참조가 되어 registry 무결성 깨짐. 정상이라면 이 항목은 커밋되지 않거나(`abc`가 fixture라면 .gitignore/픽스처 분리), 안정 경로로 정규화돼야 함.
+- [Medium] skills/registry.yaml:12 — `updated_at` timestamp만 갱신되는 churn 패턴. 코드 변경 없이 registry diff가 매 self-run마다 발생하면 git 이력 노이즈 + cross-review baseline 오염. F12가 의도대로 동작했다면 이 줄 자체가 안 나와야 함.
+- [Info] commit metadata — 커밋 제목은 `fix(self-run): F12 hardening … dual-source + diagnostic`이지만 diff에 실제 가드/진단 코드 변경이 없음. 코드 변경 커밋(75adb845, 78e6a4be)이 별도라면 본 커밋은 "registry 결과물 갱신"으로 분리/재명명 권장.
+
+검증 권고: `git log -p -- core/registry_manager.py core/skill_procurer.py` 로 F12 실제 가드 변경 확인 후, `AF_DISABLE_REGISTRY_WRITE=1`을 self-run 진입 지점(테스트 runner/pytest fixture)에서 export 했는지 재현 — 누락됐다면 본 diff는 F12 미적용의 증상.
+
+---
+
+## 2026-05-15 14:25 — `af-on-af/round1-hook-fix` (eb92f7de)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [High] skills/registry.yaml:8,10 — `tests/_tmp/af-test-*` 경로가 추적 파일에 커밋됨. 테스트 격리 실패 — 테스트가 production registry를 덮어쓰고 있다는 신호 (테스트는 임시 디렉터리에서 분리된 registry를 써야 함).
+- [High] skills/registry.yaml — 커밋 메시지("F12 hardening — env_flag convention + dual-source + diagnostic")와 diff 내용 불일치. 실제 F12 hardening 코드 변경은 누락되었고, 테스트 부산물만 staged됨.
+- [Medium] skills/registry.yaml:12 — `updated_at` 타임스탬프가 매 테스트 실행마다 churn 발생. 이 파일이 tracked라면 noise 커밋이 반복됨 → `.gitignore` 또는 테스트용 별도 registry 경로 분리 필요.
+- [Low] skills/registry.yaml — `af-test-6b8efeb8` 해시 디렉터리는 테스트 종료 후 cleanup되었을 가능성이 높음 → registry의 `meta_path`/`path`는 dangling reference로, lookup 시 FileNotFoundError 위험.
+
+요약: 이 변경은 commit 메시지의 의도(F12 hardening)와 무관한 테스트 누수 부산물로 보입니다. 실제 hardening 패치를 누락한 채 test residue만 stage된 것으로 추정되므로, 1) 진짜 변경을 추가하든가 2) 본 hunk를 unstage하고 테스트가 production registry를 쓰지 않도록 격리하는 fix가 선행되어야 합니다.
+
+---
+
+## 2026-05-15 14:26 — `af-on-af/round1-hook-fix` (617446af)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Low] skills/registry.yaml:8,10 — 테스트 임시 디렉터리(`tests/_tmp/af-test-*`) 경로가 registry에 커밋됨. 테스트 실행마다 경로 hash가 바뀌어 매번 diff 발생, 정작 production skill 경로가 아님. 테스트가 registry.yaml을 직접 쓰지 않도록 격리하거나 `tests/_tmp/` 항목을 커밋 제외해야 함.
+- [Info] skills/registry.yaml:12 — `updated_at` 타임스탬프만 갱신되는 noise 커밋. 위 격리가 적용되면 자연 해소.
+
+No security/error-handling issues in this diff.
+
+---
+
+## 2026-05-15 14:26 — `af-on-af/round1-hook-fix` (73fb944d)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [High] skills/registry.yaml:8-12 — Ephemeral test artifact (`tests/_tmp/af-test-6b8efeb8/...`) committed to a tracked registry file. The `meta_path`/`path` point under `tests/_tmp/`, which is a temp scratch dir that won't exist on other checkouts or in the frozen build, breaking any consumer that resolves these paths.
+- [High] skills/registry.yaml:1-12 — Test runs are mutating a checked-in registry; each test invocation rewrites `path`/`meta_path`/`updated_at`, producing churn commits and racing with concurrent tests. Tests should write to an isolated registry (tmp dir or fixture copy), not the repo's `skills/registry.yaml`.
+- [Medium] skills/registry.yaml — Diff is unrelated to the stated commit subject ("F12 hardening — env_flag convention + dual-source + diagnostic"). Either the wrong file was staged or the real F12 changes are missing from this commit; verify intent before merging.
+- [Info] skills/registry.yaml:12 — `updated_at` uses a naive local timestamp (`2026-05-15T14:17:47`, no TZ). Prefer ISO‑8601 UTC with `Z` for reproducibility across machines.
+
+---
+
+## 2026-05-15 14:27 — `af-on-af/round1-hook-fix` (07c062b1)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] skills/registry.yaml:8-12 — 테스트 임시 디렉터리 경로(`tests/_tmp/af-test-<hash>/...`)가 production registry에 커밋되어 있음. 테스트 격리 누수로, 다른 PC/CI 환경에서 경로 stale → 스킬 로드 실패 가능. 테스트는 자체 임시 registry를 써야 하며, 루트 registry.yaml은 건드리지 말아야 함.",
+    "- [Low] skills/registry.yaml:12 — `updated_at` 타임존 부재(naive datetime). registry 다중 PC 동기화 시 비교 모호. ISO 8601 + 'Z' 또는 offset 권장.",
+    "- [Info] 커밋 메시지(F12 hardening — env_flag/dual-source/diagnostic)와 실제 diff(테스트 부산물 경로 교체) 불일치. 의도된 변경분이 누락됐거나 본 파일은 커밋에서 제외했어야 함."
+  ]
+}
+```
+
+---
+
+## 2026-05-15 14:27 — `af-on-af/round1-hook-fix` (e719fba2)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8-12 — 테스트 임시 경로(`tests/_tmp/af-test-*`)가 production registry에 커밋됨. 테스트 실행 중 실제 registry.yaml이 오염되었으며, 다음 실행 시 존재하지 않는 경로를 참조해 skill 로딩 실패 가능. 테스트는 격리된 registry 사본을 사용해야 함.
+- [Low] skills/registry.yaml:1 — 커밋 메시지("F12 hardening — env_flag convention + dual-source + diagnostic")와 실제 diff(테스트 artifact 경로 갱신)가 불일치. 의도된 변경이 아닌 테스트 leak으로 보임.
+
+---
+
+## 2026-05-15 14:28 — `af-on-af/round1-hook-fix` (08fbf36f)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+{"review": "- [Medium] skills/registry.yaml:8-12 — Commit message claims 'F12 hardening — env_flag convention + dual-source + diagnostic' but diff only updates a test temp path (af-test-9648c834 → af-test-6b8efeb8) and timestamp; no env_flag/dual-source/diagnostic code visible here. Either the wrong file is staged or the test artifact leaked into the registry commit.\n- [Medium] skills/registry.yaml:8,10 — `tests/_tmp/af-test-*` paths persisted in production registry. Test tmp dirs are ephemeral; on next run the path becomes a dangling reference. Tests should write to an isolated registry (env-overridden path) rather than mutating the canonical `skills/registry.yaml`.\n- [Low] skills/registry.yaml:12 — `updated_at` bumped without semantic change to the skill (same id/name/version/status). Churn-only diff inflates blame history."}
+
+---
+
+## 2026-05-15 14:28 — `af-on-af/round1-hook-fix` (e796b7fe)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8-12 — Test artifact (`tests/_tmp/af-test-*` paths) committed to production registry; ephemeral test skill `abc` should not be persisted in `skills/registry.yaml`. Add tmpdir cleanup or registry isolation for tests.
+- [Low] skills/registry.yaml:8,10 — `meta_path`/`path` reference a temp directory (`af-test-6b8efeb8`) that won't exist outside the test run, so any consumer resolving this entry will fail with FileNotFoundError.
+- [Info] skills/registry.yaml:12 — Timestamp churn on every test invocation will create noisy diffs; consider writing test registries to a separate fixture path.
+
+---
+
+## 2026-05-15 14:29 — `af-on-af/round1-hook-fix` (e50fe176)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [High] skills/registry.yaml:8-12 — Test fixture pollution: `tests/_tmp/af-test-6b8efeb8/...` paths committed to production registry. These temp dirs are deleted post-test, leaving a broken skill entry whose `path`/`meta_path` resolve to non-existent files at runtime.",
+    "- [Medium] skills/registry.yaml:8-12 — Diff scope mismatch with commit message: commit claims `env_flag convention + dual-source + diagnostic` hardening, but the only change is a transient timestamp/hash bump on the `abc` test skill. Either the real hardening code is missing from this commit, or this is unintended leakage from a test run.",
+    "- [Low] skills/registry.yaml:5-13 — The `abc` entry appears to be a test-only skill that should never have been persisted to `skills/registry.yaml`; consider registry-write guard for `tests/_tmp/` paths or a separate test registry."
+  ]
+}
+```
+
+---
+
+## 2026-05-15 14:29 — `af-on-af/round1-hook-fix` (34f57246)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+{"review": "No issues found.", "details": "Diff only updates auto-generated test fixture paths (tests/_tmp/af-test-*) and timestamp for the `abc` skill entry in the registry. No code logic, security surface, or error handling changes. The commit message references env_flag convention and diagnostic hardening, but those changes are not present in this file — only registry churn from a test run."}
+
+---
+
+## 2026-05-15 14:30 — `af-on-af/round1-hook-fix` (565aa67d)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8-12 — 테스트 임시 경로(`tests/_tmp/af-test-*`)가 운영 레지스트리에 커밋됨. 해당 디렉터리는 테스트 종료 시 사라지므로 production 로드 시 `FileNotFoundError` 발생 가능. 테스트가 registry를 격리 없이 직접 수정하는 것이 근본 원인 — 테스트 전용 fixture/임시 registry로 분리하거나 teardown에서 원복 필요.
+- [Low] skills/registry.yaml:12 — `updated_at` 타임스탬프가 매 테스트 실행마다 바뀌어 의미 없는 diff noise를 생성. CI/리뷰 시그널 저하.
+- [Info] 커밋 메시지 "F12 hardening"과 실제 변경(테스트 잔재) 불일치 — 의도된 변경이 아니라면 stash/restore 후 재커밋 권장.
+
+---
+
+## 2026-05-15 14:30 — `af-on-af/round1-hook-fix` (c9afe6fd)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8-12 — 테스트 임시 경로(`tests/_tmp/af-test-*`)와 타임스탬프가 커밋됨. 테스트 격리 누수로 보임 — `.gitignore` 또는 테스트 정리 훅으로 제외 필요.
+- [Low] skills/registry.yaml:8,10 — 휘발성 디렉터리(`af-test-9648c834` → `af-test-6b8efeb8`) 경로가 registry에 영구 저장되면 다음 테스트 실행 시 stale 경로로 깨질 가능성.
+- [Info] 커밋 메시지("F12 hardening — env_flag convention + dual-source + diagnostic")와 실제 diff(경로/타임스탬프 갱신만)가 불일치. 본 변경은 실제 hardening이 아닌 테스트 부산물.
+
+---
+
+## 2026-05-15 14:31 — `af-on-af/round1-hook-fix` (b7623224)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Medium] skills/registry.yaml:8 — Test artifact paths (tests/_tmp/af-test-*) being persisted to the production skill registry. These ephemeral test directories will be invalid after test cleanup, leaving the `abc` skill entry pointing to non-existent paths.",
+    "- [Low] skills/registry.yaml:5 — The `abc` skill appears to be a test fixture leaking into the committed registry; consider whether test runs should use an isolated registry file rather than mutating the canonical one.",
+    "- [Info] skills/registry.yaml:12 — Only the hash suffix and timestamp changed; commit message references 'F12 hardening — env_flag convention + dual-source + diagnostic' but no code changes are visible in this file. Verify the intended hardening changes (env_flag, dual-source, diagnostic) are committed in the corresponding core/*.py files."
+  ]
+}
+```
+
+---
+
+## 2026-05-15 14:31 — `af-on-af/round1-hook-fix` (253224e3)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+{"review": "- [High] skills/registry.yaml:5-12 — 테스트 임시 경로(`tests/_tmp/af-test-*/`)가 추적되는 registry.yaml에 커밋됨. 테스트 실행마다 hash가 바뀌어 diff churn 발생하고, 다른 환경에서는 존재하지 않는 경로 참조로 skill 로딩 실패 가능.\n- [High] skills/registry.yaml:1 — `abc` 엔트리는 테스트 fixture로 보임. production registry에 테스트 skill이 영구 등록되면 실제 사용자 환경에 노출됨.\n- [Medium] skills/registry.yaml — 커밋 메시지(`F12 hardening — env_flag convention + dual-source + diagnostic`)와 실제 변경(테스트 경로 갱신만)이 불일치. F12 hardening 관련 실질 코드 변경이 누락되었거나 잘못된 파일이 staged됨.\n- [Info] 권장: `tests/_tmp/` 경로는 `.gitignore` 또는 registry write 시 필터링하고, 테스트는 격리된 registry 사본(`AF_TEST_REGISTRY=...`)을 사용하도록 분리."}
+
+---
+
+## 2026-05-15 14:32 — `af-on-af/round1-hook-fix` (18d3d546)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:5-12 — Test artifact `abc` skill with `tests/_tmp/af-test-*` paths is being persisted in the production registry; this is test pollution that should be cleaned up (registry entry references an ephemeral tmp directory that won't exist post-test).
+- [Low] skills/registry.yaml:8,10 — `meta_path`/`path` point to `tests/_tmp/af-test-6b8efeb8/...` which is non-deterministic across runs, causing churn-only diffs every test execution (commit noise, no semantic change).
+- [Info] commit scope mismatch — Commit message claims "F12 hardening — env_flag convention + dual-source + diagnostic" but the only changed file is a test-generated registry entry update; the substantive code changes appear missing from this diff.
+
+---
+
+## 2026-05-15 14:32 — `af-on-af/round1-hook-fix` (72363dae)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Medium] skills/registry.yaml:8,10 — Test artifact paths (`tests/_tmp/af-test-*`) committed to production registry; ephemeral test fixture leaking into versioned config will produce broken references after temp dir cleanup.
+- [Low] skills/registry.yaml:12 — `updated_at` churn from test runs creates noisy diffs; consider gitignoring or excluding test-generated skill entries from registry.yaml.
+- [Info] — Commit message references "F12 hardening — env_flag convention + dual-source + diagnostic" but diff only shows test path/timestamp updates; actual hardening changes appear to be in other commits or missing from this changeset.
+
+---
+
+## 2026-05-15 14:33 — `af-on-af/round1-hook-fix` (2c4d389d)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Low] skills/registry.yaml:8,10,12 — Test artifact paths (tests/_tmp/af-test-*) committed to registry; transient temp directory references will dangle once the tmp dir is cleaned, leaving broken `meta_path`/`path` entries. Consider excluding the `abc` test skill from the tracked registry or resetting it before commit.
+
+---
+
+## 2026-05-15 14:33 — `af-on-af/round1-hook-fix` (5390b170)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+```json
+{"review": "- [Medium] skills/registry.yaml:8-12 — 테스트 임시 경로(`tests/_tmp/af-test-*`)가 registry에 영속화됨. 테스트 종료 후 cleanup 누락 또는 registry write가 테스트 격리 외부로 누수. 실제 배포 환경에서는 dead path로 남아 skill 조회 실패 위험.\n- [Low] skills/registry.yaml:12 — `updated_at` 타임스탬프만 갱신되고 본질적 내용 변경 없음. 커밋 노이즈 — `.gitignore` 또는 테스트가 registry.yaml을 건드리지 않도록 격리 필요.\n- [Info] 커밋 메시지(`fix(self-run): F12 hardening`)와 실제 diff(테스트 부산물)가 불일치. F12 hardening 본 변경이 누락되었는지 확인 필요."}
+```
+
+---
+
+## 2026-05-15 14:34 — `af-on-af/round1-hook-fix` (2e19ca8c)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [High] skills/registry.yaml:8-12 — 테스트 임시 디렉터리 경로(`tests/_tmp/af-test-*`)가 레지스트리에 커밋됨. 매 테스트 실행마다 hash가 바뀌어 diff churn 발생, 실제 production 스킬 등록과 충돌 가능.
+- [High] skills/registry.yaml:1-15 — `abc` 스킬 자체가 테스트 fixture로 보임. 영구 레지스트리에 테스트 산출물이 등록된 상태이므로 등록 로직이 test isolation을 깨고 있을 가능성. F12 hardening 범위에서 registry write path가 tmp 경로를 거부하도록 가드 필요.
+- [Medium] skills/registry.yaml:12 — `updated_at` 갱신만으로 의미 있는 변경 없음. 커밋 메시지("F12 hardening")와 실제 diff(경로/타임스탬프 노이즈)가 불일치 — 의도치 않은 부산물이 커밋에 섞여 있는지 확인 필요.
+- [Info] 본 diff에는 F12 hardening 관련 실제 코드 변경이 없음. 커밋 본문이 별도 파일에 있는지, 아니면 이 파일만 stage된 누락 커밋인지 검증 권장.
+
+---
+
+## 2026-05-15 14:34 — `af-on-af/round1-hook-fix` (ccfea1f4)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+```json
+{
+  "review": [
+    "- [Info] skills/registry.yaml:8-12 — Test fixture artifact: temp directory path (af-test-9648c834 → af-test-6b8efeb8) and updated_at timestamp churn from test run. Not related to the stated commit message (F12 env_flag/dual-source/diagnostic hardening).",
+    "- [Low] skills/registry.yaml:8,10 — `tests/_tmp/af-test-*` paths committed to registry indicate test runs are mutating the tracked registry.yaml. Consider gitignoring test-generated registry entries or using an isolated registry path under AF_TEST_REGISTRY to prevent commit noise.",
+    "- [Info] commit-scope mismatch — Diff contains zero F12 hardening changes (no env_flag helper, no dual-source read, no diagnostic). Commit message and payload diverge; the actual F12 code must live in a prior commit or is missing from this changeset."
+  ]
+}
+```
+
+---
+
+## 2026-05-15 14:35 — `af-on-af/round1-hook-fix` (906cfc4a)
+
+**Context**: fix(self-run): F12 hardening — env_flag convention + dual-source + diagnostic
+
+**Changed (1)**: `skills/registry.yaml`
+
+### Findings
+
+- [Low] skills/registry.yaml:8 — Test artifact path (`tests/_tmp/af-test-*`) committed to production registry; transient test sandbox paths leaking into source control will break resolution on other machines once the tmp dir is cleaned.
+- [Low] skills/registry.yaml:12 — `updated_at` churn on every test run creates noisy diffs; consider gitignoring or having the test harness restore the registry post-run.
+- [Info] commit message — Diff scope (registry.yaml path/timestamp bump) doesn't match commit subject ("F12 hardening — env_flag convention + dual-source + diagnostic"); the substantive code changes appear missing from this changeset.

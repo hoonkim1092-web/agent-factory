@@ -20,10 +20,15 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import logging
 import os
 import sys
 import time
 from dataclasses import dataclass, field, asdict
+
+from core.file_io import _env_flag
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -251,11 +256,14 @@ class PreflightEvaluator:
         글로벌(SKILLS_DIR)과 프로젝트 로컬(PROJECT_SKILLS_DIR) 양쪽 레지스트리를
         탐색하여 스킬 ID가 매칭되는 곳을 업데이트한다.
 
-        F12 architectural fix: AF_DISABLE_REGISTRY_WRITE 가 set 되어 있으면 (ad-hoc
-        self-run 모드) 글로벌 registry write 를 skip 한다. agent_launcher.py 의
+        F12 architectural fix: AF_DISABLE_REGISTRY_WRITE (truthy: 1/true/yes/on/y) 시
+        ad-hoc self-run 격리의 second line of defense로 **모든** registry write 를 skip
+        한다 (글로벌 + 프로젝트 로컬 양쪽). early return 위치상 candidates loop 진입
+        자체가 차단되므로 양쪽이 모두 영향을 받는다. agent_launcher.py 의
         _maybe_isolate_project_root_for_self_run 과 짝.
         """
-        if os.environ.get("AF_DISABLE_REGISTRY_WRITE"):
+        if _env_flag("AF_DISABLE_REGISTRY_WRITE"):
+            logger.debug("registry write skipped (AF_DISABLE_REGISTRY_WRITE set)")
             return
         try:
             from core.config_paths import SKILLS_DIR, PROJECT_SKILLS_DIR

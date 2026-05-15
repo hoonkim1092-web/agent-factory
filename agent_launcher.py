@@ -23,7 +23,12 @@ import getpass
 # ad-hoc CLI 진입(자연어 task 입력)에서 default fallback(`projects/default/`)으로
 # 떨어지지 않게 하려면 모든 core.* import 이전에 env 를 set 해야 한다.
 # 동시에 skills/registry.yaml (SKILLS_DIR=BASE_DIR/skills 기반, PROJECT_ROOT 무관)
-# 글로벌 write 도 차단 flag 로 막는다. 짝 코드: core/skill_preflight.py.
+# 글로벌 write 도 차단 flag 로 막는다. 짝 코드: core/skill_preflight.py,
+# core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
+
+# subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
+_KNOWN_SUBCOMMANDS = {"project"}
+
 
 def _maybe_isolate_project_root_for_self_run():
     """ad-hoc CLI 진입 시 isolated PROJECT_ROOT + 글로벌 registry write 차단 flag set.
@@ -31,14 +36,14 @@ def _maybe_isolate_project_root_for_self_run():
     Skip 조건:
       - 사용자가 AGENT_PROJECT_ROOT 를 명시 설정 → 그대로 존중
       - argv 가 비어 있음 → interactive TUI 경로 (default fallback OK)
-      - argv[0] in {"project"} → subcommand 일반 작업
+      - argv[0] in _KNOWN_SUBCOMMANDS → subcommand 일반 작업
     """
     if "AGENT_PROJECT_ROOT" in os.environ:
         return
     argv = sys.argv[1:]
     if not argv:
         return
-    if argv[0] in {"project"}:
+    if argv[0] in _KNOWN_SUBCOMMANDS:
         return
     import tempfile
     isolated = os.path.join(
@@ -763,8 +768,8 @@ class AgentFactory:
 # choice, which made `agent_launcher.py "free-form task text"` unreachable
 # (Round 4 dogfooding F3). We pre-dispatch on argv[0] so both invocation styles
 # work: `agent_launcher.py project sync-todo …` and `agent_launcher.py "task …"`.
-
-_KNOWN_SUBCOMMANDS = {"project"}
+# Note: _KNOWN_SUBCOMMANDS is defined near top of module (before heavy imports)
+# because the isolation guard at module load also needs it.
 
 
 def _detect_mode(argv):

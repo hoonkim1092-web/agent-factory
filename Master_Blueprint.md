@@ -611,6 +611,10 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
   - 설치는 `install-af.sh --with-<tool>` / `install-af.ps1 -With<Tool>` 옵션으로만
   - 외부 도구의 자체 인스톨러(`<tool> install` 등)는 **사용 금지** — CLAUDE.md/hooks 자동 주입으로 agent-factory 규칙과 충돌
 
+**Self-run isolation env flags (P4.5x/F12, 2026-05-15):**
+- `AGENT_PROJECT_ROOT` (system): ad-hoc CLI 진입(`python agent_launcher.py "task..."`) 시 `agent_launcher._maybe_isolate_project_root_for_self_run()` 가 `tempfile.gettempdir()/af_self_run_<ts>_<pid>/` 로 자동 set. `core.config_paths` 가 import-time 에 frozen 하므로 **모든 core.* import 이전** 에 set 됨. 사용자 명시 설정은 존중.
+- `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `PreflightEvaluator._update_registry_status` 양쪽 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set.
+
 ---
 
 ### §3.6 메모리 시스템 (`core/memory_system/`)
@@ -1531,6 +1535,31 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-15 | v1.2.28 | chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path 갱신, abc 스킬 path 갱신, updated_at 타임스탬프 갱신(2026-05-15T14:17:47) |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 임시 디렉터리 ID 변경(9648c834→6b8efeb8), updated_at 타임스탬프 갱신(01:55:59→14:17:47)"} |
+| 2026-05-15 | v1.2.28 | chore(skills): registry 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 업데이트, af-test-9648c834 → af-test-6b8efeb8 디렉터리 변경, updated_at 타임스탬프 갱신(2026-05-15T14:17:47) |
+| 2026-05-15 | v1.2.28 | chore(skills): registry.yaml abc 스킬 임시 경로 갱신 — meta_path/path tests/_tmp 디렉토리 해시 변경(9648c834→6b8efeb8), updated_at 타임스탬프 2026-05-15T14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): registry 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 임시 디렉터리 해시 변경, updated_at 타임스탬프 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): 테스트 임시 경로 갱신 — abc 스킬 meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at 타임스탬프 2026-05-15T14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): 테스트 임시 디렉터리 경로 갱신 — registry.yaml의 abc 스킬 meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at 타임스탬프 2026-05-15T14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): registry 테스트 임시 경로/타임스탬프 갱신 — abc 스킬 meta_path/path 6b8efeb8로 갱신, updated_at 2026-05-15T14:17:47 반영 |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry abc 스킬 메타 경로/타임스탬프 갱신 — meta_path 임시 디렉토리 af-test-9648c834→af-test-6b8efeb8 변경, path 동일 디렉토리 갱신, updated_at 2026-05-15T01:55:59→T14:17:47 갱신"} |
+| 2026-05-15 | v1.2.28 | chore(skills): registry abc 스킬 임시 경로 갱신 — meta_path tmp dir 변경, path tmp dir 변경, updated_at 14:17:47 갱신 |
+| 2026-05-15 | v1.2.28 | feat(F12-self-run-isolation): ad-hoc AF self-run 격리 — `agent_launcher.py` top 에 `_maybe_isolate_project_root_for_self_run()` 추가 (모든 `core.*` import 이전 `AGENT_PROJECT_ROOT=tempfile.gettempdir()/af_self_run_<ts>_<pid>/` set). `core/registry_manager.py::_write_registry`, `core/skill_preflight.py::_update_registry_status` 에 `_env_flag("AF_DISABLE_REGISTRY_WRITE")` 가드 (canonical AF skip-flag convention). cross-review WARN 4건 흡수 (#1 truthy semantics → `_env_flag` 사용, #4 docstring drift, #5 `_KNOWN_SUBCOMMANDS` dual-source 호이스트, #7 `logger.debug` 진단). Round 4/4b dogfooding F9/F12 6건 scope leak (`projects/default/*` + `skills/registry.yaml`) 차단. 회귀: 32 PASS (14 신규 env_flag convention). 후속: #2/#3 (registry_manager pre-existing) + #6 (tempdir cleanup) 별도. Commits: `78e6a4be` (architectural) + `75adb845` (hardening). |
+| 2026-05-15 | v1.2.28 | chore(skills): registry abc 스킬 임시 경로 갱신 — meta_path tmp 디렉토리 af-test-9648c834→af-test-6b8efeb8, path 동일 갱신, updated_at 2026-05-15T01:55:59→T14:17:47 |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 갱신, af-test-9648c834 → af-test-6b8efeb8, updated_at 14:17:47로 변경"} |
+| 2026-05-15 | v1.2.28 | chore(skills): registry.yaml abc 스킬 임시 경로/타임스탬프 갱신 — meta_path af-test-9648c834→af-test-6b8efeb8, path 동일 디렉터리 갱신, updated_at 2026-05-15T01:55:59→14:17:47 |
+| 2026-05-15 | v1.2.28 | chore(skills): registry.yaml 임시 테스트 경로 갱신 — abc 스킬 meta_path/path를 af-test-9648c834→af-test-6b8efeb8로 변경, updated_at 타임스탬프 2026-05-15T14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at 타임스탬프 2026-05-15T14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | chore(skills): registry abc 스킬 임시 경로 갱신 — meta_path/path를 af-test-6b8efeb8 디렉토리로 갱신, updated_at 14:17:47로 갱신 |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry.yaml 테스트 임시 경로 갱신 — abc 스킬 meta_path/path 임시 디렉터리 hash 변경(9648c834→6b8efeb8), updated_at 타임스탬프 갱신(01:55:59→14:17:47)"} |
+| 2026-05-15 | v1.2.28 | chore(skills): registry abc 스킬 임시 경로 갱신 — meta_path/path tmp 디렉터리 ID 교체(9648c834→6b8efeb8), updated_at 타임스탬프 갱신(01:55:59→14:17:47) |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at 타임스탬프 2026-05-15T14:17:47로 갱신"} |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 임시 테스트 경로 갱신 — abc 스킬 meta_path/path를 af-test-9648c834에서 af-test-6b8efeb8로 변경, updated_at을 2026-05-15T14:17:47로 갱신"} |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry.yaml 테스트 임시 경로 갱신 — af-test-9648c834→af-test-6b8efeb8 meta_path/path 재바인딩, updated_at 2026-05-15T14:17:47로 갱신, abc 스킬 엔트리만 영향"} |
+| 2026-05-15 | v1.2.28 | {"output":"chore(skills): registry 임시 테스트 경로·타임스탬프 갱신 — abc 스킬 meta_path/path를 af-test-9648c834→af-test-6b8efeb8로 재바인딩, updated_at 2026-05-15T14:17:47로 갱신"} |
+| 2026-05-15 | v1.2.28 | {"changelog": "chore(skills): registry 임시 테스트 경로 갱신 — af-test-9648c834 → af-test-6b8efeb8 meta_path/path 동기화, updated_at 2026-05-15T14:17:47 반영"} |
+| 2026-05-15 | v1.2.28 | chore(agent_launcher): code update — agent_launcher.py, registry_manager.py, skill_preflight.py, code-review.md, 2026-05-15-141953-registry_manager-code-review.md (+5) |
 | 2026-05-15 | v1.2.28 | chore(agent_launcher): code update — agent_launcher.py, registry_manager.py, skill_preflight.py, code-review.md, 2026-05-15-135547-skill_preflight-code-review.md (+1) |
 | 2026-05-15 | v1.2.28 | chore(agent_launcher): code update — agent_launcher.py, context_schema.yaml, code-review.md, context_schema.yaml, test_agent_launcher_cli_dispatch.py (+1) |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, approval_gate.py, project_pipeline.py, skill-usage.jsonl (+7) |
