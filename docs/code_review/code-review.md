@@ -5579,3 +5579,13 @@ No security/error-handling issues in this diff.
 "- [Medium] skills/registry.yaml:12 — updated_at churn on every test run produces noisy commits and merge conflicts; registry writes from tests should be redirected to a per-run fixture path, not committed.",
 "- [Low] skills/registry.yaml — Consider adding the 'abc' test-fixture skill entry to .gitignore-style filtering or pre-commit guard so stray test artifacts cannot reach main."
 ]}
+
+---
+
+## 2026-05-15 14:55 — `af-on-af/round1-hook-fix` (59e0650d)
+
+**Context**: edit: agent_launcher.py
+
+**Changed (1)**: `agent_launcher.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

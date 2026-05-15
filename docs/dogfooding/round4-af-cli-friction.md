@@ -364,7 +364,55 @@ F12 fix가 두 가지 모두 isolation tempdir로 보낸 게 문제. workspace�
 
 F15 fix는 **S** (옵션 A, 1줄). Round 4d 검증 후 S 확정. 사용자 plan대로 진행 가능 — F15 fix → Round 4d → tiny → push.
 
+---
 
-## 결과
+# Round 4d — F15 fix 검증 FAIL (2026-05-15, strict interpretation)
 
-(완료 후 append)
+**전제**: F15 옵션 A (`workspace=os.getcwd()` 명시 전달) 1줄 적용 후 smoke run.
+
+**Task**: `docs/dogfooding/round4-af-cli-friction.md` 끝에 1줄 추가 — 작은 doc-only.
+
+## 실측 결과
+
+| Criteria | 결과 | 비고 |
+|----------|:--:|------|
+| 1. real repo 의도된 문서 파일 실제 수정 | ✅ | md5 변경 확인 (`9e85eb28...` → `d324ecb2...`) |
+| 2. `projects/default/*` 변경 0 | ✅ | diff 0 |
+| 3. `skills/registry.yaml` 변경 0 | ✅ | diff 0 |
+| 4. **사용자 명시 외 파일 변경 0** | ❌ | `data/skill-usage.jsonl` M + `agents/general.yaml` 신규 |
+| 5. tempdir에 runtime/session/state만 | (부분 PASS) | criteria 2-3 으로 추정. 별도 ls 미수행 |
+
+**사용자 strict 해석 결정**: Round 4d **FAIL**. F15 옵션 A는 **incomplete** — internal state (agents/, data/) 까지 cwd 로 풀어 leak 유발.
+
+## F17 — workspace ↔ internal-state coupling (신규)
+
+`agent_launcher.py:553` `target_workspace = workspace or PROJECT_ROOT` 가 단일 변수로 두 책임을 묶음:
+- **Provider cwd** (user file 편집 대상 — cwd 여야 함)
+- **Agent storage base** (`manager.py:35` `os.path.join(workspace, "agents")` — isolated 여야 함)
+- **Skill usage telemetry** (`data/skill-usage.jsonl` — isolated 여야 함, 또는 정책 따라 결정)
+
+F15 옵션 A (workspace=cwd 단일 전달) 는 provider cwd 만 해결하고 나머지를 회귀시킴. 진짜 fix는 두 책임 분리 (separate params 또는 internal-state pin to PROJECT_ROOT).
+
+## F15 재분류 (S → M)
+
+| 옵션 (재평가) | 구현 | Size |
+|------|------|:--:|
+| (A) 단일 workspace=cwd | 1 줄 — 부족 (F17 회귀) | **incomplete** |
+| **(D) provider_cwd 분리 + workspace 유지** | `AgentFactory.run` 시그니처 + cli.py / manager.py 분기 | **M** |
+| (E) 환경 변수 분리 (`AF_PROVIDER_CWD` + `AF_PROJECT_ROOT`) | core/config_paths 확장 + 호출자 분기 | M+ |
+
+**채택 (strict 해석 기반)**: F15 fix는 본 sprint 외. 별도 sprint 에서 (D) 진행.
+
+## 정리 결과 (Round 4d FAIL)
+
+1. F15 옵션 A 적용 1줄 (`workspace=os.getcwd()`) — **revert 완료**
+2. Round 4d smoke 잔재 cleanup:
+   - `data/skill-usage.jsonl` — `git restore`
+   - `agents/general.yaml` — `os.remove`
+   - `docs/dogfooding/round4-af-cli-friction.md` — AF 가 추가한 line 은 본 commit 의 Round 4d FAIL 섹션 작성 으로 대체
+3. F15 → F17 으로 재분류. 별도 sprint backlog.
+4. AF self-run dogfooding 한계: 현재 contract 로는 "AF 가 real repo 수정" 미지원. 시뮬레이션 용도로만 사용 가능.
+
+## 사용자 plan 다음 단계 (strict 해석 확정)
+
+F15 fix 보류 → `prompt_mission_template` tiny fix → push.
