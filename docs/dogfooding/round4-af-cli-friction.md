@@ -109,6 +109,67 @@ AgentFactory().run(
 3. `NEXT_STEPS.md` — AF가 실제로 분리하지 못했으므로 손대지 않음
 4. 본 friction log만 commit. push/main merge 금지 (사용자 지시)
 
+---
+
+# Round 4b — F3/F8 fix 후 NEXT_STEPS 분리 재시도 (2026-05-15 KST)
+
+**전제**: P4.5x (commit `f62c52e2`)로 F3 (argparse dispatch) + F8 (schema sentinel cleanup) 수정 완료.
+**목표**: 동일 task를 fixed AF CLI로 재실행하여 self-run 경로 검증.
+
+## 사용 명령 (직접 cmdline — wrapper 불필요)
+
+```bash
+python agent_launcher.py "NEXT_STEPS.md 파일을 두 부분으로 분리한다. ..." \
+  --mode approval --role General </dev/null
+```
+
+F3 fix 덕에 `agent_launcher.py "task..."` 형태가 정상 작동 (P4.5x 이전엔 argparse invalid choice).
+
+## 실행 결과
+
+| 지표 | 값 |
+|------|-----|
+| AF 진입 | ✅ argparse 통과 → RUN 시작 |
+| LLM 호출 1차 (intent gate) | gemini_cli 2초 실패 → claude_cli 9초 성공 |
+| LLM 호출 2차 (실제 작업) | gemini_cli 2초 실패 → claude_cli **3분 15초** 성공 |
+| NEXT_STEPS.md 크기 | **45줄** (목표 ≤50 ✅) |
+| docs/session-log/2026-05-15-rounds-1-2-3.md | **1791줄** 생성 ✅ |
+| 의도 외 .py / .claude/agents/ / scripts/ 변경 | **없음** ✅ |
+| ContextSchema validation | **통과** ✅ (F8 fix 효과 확인) |
+| 작업 성공 | ✅ AF가 자기 self-task를 실제 완수 |
+
+## 신규 마찰 (Round 4 대비 추가)
+
+| # | 단계 | 도메인 | 내용 |
+|---|------|--------|------|
+| F10 | NEXT_STEPS 내용 | context-staleness | AF가 출력한 NEXT_STEPS.md가 "P5 commit 대기" / "워킹트리 일괄 커밋"이라고 적었으나 실제로는 이미 `d39b1327`(P5) / `06a58d5c`(P4.5a) / `f62c52e2`(P4.5x)로 commit 완료된 상태. AF는 git log를 읽지 않고 분리 대상 본문만 보고 요약함 → 시간성 정확도 낮음. handoff doc 용도에선 사용자 후수정 필요 |
+| F11 | provider race 재발 | first-success | 이번에도 gemini_cli가 매번 2초 실패하고 claude_cli로 fallback. 총 4초 낭비 × 2회 LLM 호출 = 8초. F6의 재현 |
+| F12 | scope-leak 재발 (확장) | F9 재현 + 추가 | `projects/default/` 부작용 5건 (`.claude`, `.system_generated` ←신규!, `agents`, `.todo.md`, `dashboard.json`) + `skills/registry.yaml` 1건. F9 fix가 안 됐으므로 예상된 동작. 작업 성공 여부와 무관하게 매번 발생 |
+
+## 정리 결과 (Round 4b)
+
+1. **NEXT_STEPS.md** — AF 출력 그대로 보존 (45줄). F10(staleness)는 dogfooding 측정 가치 위해 의도적으로 손대지 않음. 사용자가 후수정 가능.
+2. **docs/session-log/2026-05-15-rounds-1-2-3.md** — AF 출력 그대로 보존 (1791줄, 헤더에 "분리 시점 기록" 명시).
+3. **AF 부작용 6건** (F12) — baseline 기준으로 격리 / cleanup 완료:
+   - `git restore` × 2: `projects/default/dashboard.json`, `skills/registry.yaml`
+   - `os.remove` × 1: `projects/default/.todo.md`
+   - `shutil.rmtree` × 3: `projects/default/.claude/`, `projects/default/.system_generated/`, `projects/default/agents/`
+4. **최종 diff**: `M NEXT_STEPS.md` + `?? docs/session-log/2026-05-15-rounds-1-2-3.md` (의도된 2건만)
+
+## 결론
+
+| 항목 | Round 4 | Round 4b |
+|------|:------:|:------:|
+| AF 부팅 + 라우팅 | ✅ | ✅ |
+| ad-hoc cmdline 진입 | ❌ F3 | ✅ |
+| ContextSchema 통과 | ❌ F8 | ✅ |
+| 작업 실제 완수 | ❌ | ✅ |
+| 부작용 발생 | 5건 | 6건 (F9/F12 동일 패턴, `.system_generated` 1건 추가) |
+
+**P4.5x로 self-run 경로 차단성 마찰(F3+F8) 해소 확인**. AF는 이제 자기 자신을 cmdline에서 호출해 doc-level 작업을 완수할 수 있다.
+
+**남은 비-차단성 마찰**: F9/F12 (validation/실행 무관 매번 발생하는 default-project scope leak) + F11 (gemini_cli race overhead) + F10 (context staleness — git 미참조). 모두 본 작업 외.
+
 
 ## 결과
 
