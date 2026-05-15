@@ -1,28 +1,34 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST** — NEXT_STEPS.md 분리 직후. 본 파일은 현재 진행 중인 작업과 다음 진입점만 유지한다.
+> 마지막 업데이트: **2026-05-15 KST** — Round 4b 산출물 stale 부분 정정 (handoff doc 운영 복구).
 
 ---
 
-## 🔥 현재 진행 중 — P5 commit + main 머지 결정 대기
+## 🔥 현재 진행 중 — F12 scope 조사 + dogfooding 보강
 
-**상태**: P5 DomainVerdict 매트릭스, Round 1/2/3 dogfooding, P4.5a model routing defaults 모두 구현 완료. 3-tier review 완주 후 커밋·main 머지 결정만 남아 있다.
+**브랜치**: `af-on-af/round1-hook-fix` (origin 동기화됨). Round 4b까지 commit/push 완료. P5/P4.5a/P4.5x/Round4b는 모두 **이미 커밋됨** — pending 작업 없음.
+
+### 최근 commit (origin 반영됨)
+| Hash | 의도 |
+|------|------|
+| `66f80fb0` | Round 4b — AF self-run NEXT_STEPS 분리 SUCCEEDED (execution-path 성공, 산출물 stale은 후수정) |
+| `f62c52e2` | P4.5x — F3/F8 fix (agent_launcher argparse + context_schema sentinel cleanup) |
+| `a4cb42e9` | Round 4 — AF self-run failure 기록 (F3+F8 차단) |
+| `06a58d5c` | P4.5a — agent default model 명시 + escalation 정책 |
 
 ### 즉시 다음 작업
-1. **commit** — 워킹트리의 modified/untracked 변경 일괄 커밋
-   - 핵심: `core/approval_gate.py` (DomainVerdict 매트릭스), `core/project_pipeline.py` (blast_radius 배포 동등성), `tests/test_approval_gate_domain_gate.py` (34 tests)
-   - Round 1/2/3 산출물: `.githooks/post-commit` 큐 클리어, `skills/writing_skills/SKILL.md`
-   - P4.5a: 에이전트 frontmatter `model:` 기본값 명시 (CLAUDE.md "Agent Model Routing" 표 참고)
-2. **main 머지 결정** — `af-on-af/round1-hook-fix` 브랜치를 main으로 통합할지 사용자 결정 필요
-3. (옵션) P4.5b 진입 — runtime escalation 강제 (`select_model()` 헬퍼 + review_gate/hook 연결 + 테스트)
+1. **F12 scope 조사** (30분 timebox, 80줄 cap, per-path S/M/L 표) — `docs/dogfooding/round4-af-cli-friction.md` 내부 새 섹션.
+2. **friction log 보강** — F13 cost / F14 nondeterministic leak / F10 root 메모 / `prompt_mission_template` missing import 기록.
+3. **분류 결과에 따라 분기**: 전부 S면 F12 fix 후보 제안, M/L 포함되면 issue/ADR로 이월 + P4.5b로.
+4. (이번 turn 외) P4.5b — runtime model selection. 단 기존 `[Model Routing]`(provider routing)과 책임 경계 5분 grep 선행.
 
 ### 진입 명령
 ```bash
 cd D:\hoonProJect\worktrees\agent-factory
 git pull
 python start_db.py agent-factory
-git status   # 변경 검토
+git status   # baseline dirty 38건은 start_db sync 결과, touch 금지
 ```
 
 ---
