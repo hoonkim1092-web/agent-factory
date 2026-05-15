@@ -12,6 +12,7 @@ import importlib.util
 import inspect
 import functools
 import shutil
+import atexit
 from datetime import datetime
 import getpass
 
@@ -52,6 +53,7 @@ def _maybe_isolate_project_root_for_self_run():
     )
     os.environ["AGENT_PROJECT_ROOT"] = isolated
     os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
+    atexit.register(shutil.rmtree, isolated, True)
 
 
 if __name__ == "__main__":

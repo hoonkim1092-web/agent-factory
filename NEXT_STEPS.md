@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-15 KST** — F10 완료 + E2E smoke 통과 + main 머지 완료. 다음 진입점 = **F6 tempdir cleanup**.
+> 마지막 업데이트: **2026-05-15 KST** — F6 tempdir cleanup 완료. 다음 진입점 = **P4.5b Agent Model Selection runtime**.
 
 ---
 
@@ -18,29 +18,32 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — F6 tempdir cleanup
+## 🔥 다음 진입점 — P4.5b Agent Model Selection runtime
 
-**브랜치**: `main` (af-on-af/round1-hook-fix → main ff-merge 완료, 2026-05-15)
+**브랜치**: `main`
 
 ### 완료된 것들 (이번 세션)
 - ✅ **F10** git-context 주입 — `_collect_git_context()` + 3개 provider `[Git State]` 섹션
 - ✅ **E2E smoke** — claude_cli 실제 실행 → `BRANCH=af-on-af/round1-hook-fix COMMIT=056096b` 정확 출력
 - ✅ **main 머지** — ff-only `056096be`, Round 1~4 전체 포함
+- ✅ **F6** tempdir cleanup — `atexit.register(shutil.rmtree, isolated, True)` in `_maybe_isolate_project_root_for_self_run()`. Codex PASS.
 
-### F6 — tempdir cleanup (Size S)
+### P4.5b — Agent Model Selection runtime (Size M)
 
-**문제**: `af_self_run_*` 임시 디렉터리가 self-run마다 생성되지만 정리되지 않아 누적.
+**배경**: P4.5a에서 frontmatter `model:` 기본값만 적용됨. runtime escalation 미구현.
 
-**Fix 방향**: 생성 시 `atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)` 등록.
+**Fix 방향**: `select_model()` 헬퍼 + review_gate/hook 연결 + 테스트.
 
 **진입 전 확인**:
 ```bash
-ls /tmp/af_self_run_* 2>/dev/null | wc -l   # 누적 개수
-grep -rn "af_self_run\|mkdtemp\|TemporaryDirectory" core/ | grep -v ".pyc"
+grep -rn "select_model\|model_routing\|escalat" core/ scripts/ | grep -v ".pyc"
+cat docs/decisions/ADR-20260515-114000-agent-model-routing-defaults-escalation.md
 ```
 
+**범위**: `Model Routing`(provider routing)과 책임 경계 먼저 grep + rename 권장.
+
 ### 나머지 backlog (우선순위 순)
-- **P4.5b** Agent Model Selection — runtime model 선택. 진입 전 `[Model Routing]`(provider routing)과 책임 경계 grep + rename 권장
+- ~~**P4.5b**~~ → 다음 진입점으로 승격 (위 참조)
 - **F15** workspace↔internal-state 분리 — provider_cwd 별도 param (M, 옵션 D)
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - 전체 `pytest` fastapi 미설치 환경 이슈 (별개)
