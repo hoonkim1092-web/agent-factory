@@ -133,6 +133,30 @@
 - `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
 - 진단: `python3 scripts/review_gate.py --debug`
 
+### Agent Model Routing — Defaults + Escalation Triggers (P4.5a, 2026-05-15 추가)
+
+**Default model** (agent frontmatter `model:` 필드 기준):
+
+| Agent | Default | 역할 |
+|-------|---------|------|
+| af-test-runner | haiku | Tier 1 QA executor (Bash + 테스트 실행) |
+| af-critic | sonnet | Tier 2 코드 비평 (버그 검출) |
+| af-cross-review | sonnet | Tier 3 orchestrator (Codex 호출) |
+| af-doc-qa | sonnet | 문서 정합성 검증 |
+
+**Escalation triggers** (spawn 시점에 `model:` override로 강제):
+
+| Default | Escalate to | Trigger 조건 |
+|---------|-------------|-------------|
+| af-test-runner (haiku) | sonnet | test_failure / flaky_or_timeout / import_path_issue / subprocess_or_os_branching / packaging_or_frozen_build |
+| af-critic (sonnet) | opus | core_policy_change / approval_gate_change / security_or_destructive_action / cross_platform_subprocess |
+| af-doc-qa (sonnet) | haiku (down) | 단순 doc-lint 전용 (link/section/checklist) |
+| af-cross-review | (no escalation) | orchestrator 역할 — Sonnet 충분 |
+
+**현재 상태 (P4.5a)**: 정적 default만 frontmatter에 적용됨. **Runtime escalation 강제는 P4.5b에서 구현** (`select_model()` 헬퍼 + review_gate/hook 연결 + 테스트). 그 전까지 escalation은 spawn 주체가 `model:` 매개변수로 명시 override해야 함.
+
+**근거 ADR**: `docs/decisions/ADR-20260515-114000-agent-model-routing-defaults-escalation.md`
+
 ### 커밋 규칙
 - 코드 수정 + Blueprint 업데이트는 같은 커밋
 - 빌드 zip은 **GitHub Release로 배포**: `gh release create af-fsa_v{version} dist/af-{version}.zip --notes ...` (2026-04-14 정책 변경: LFS 미구성 환경에서 ~91MB zip이 GitHub 100MB 한계로 push 실패한 사례 이후. `dist/*.zip`은 `.gitignore` 처리)

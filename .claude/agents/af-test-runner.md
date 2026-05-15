@@ -1,7 +1,7 @@
 ---
 name: af-test-runner
 description: "편집된 core/*.py 파일의 관련 테스트를 실행하고, 테스트 갭을 분석해 최종 PASS/FAIL을 보고하는 QA 에이전트."
-model: sonnet
+model: haiku
 tools:
   - Read
   - Glob

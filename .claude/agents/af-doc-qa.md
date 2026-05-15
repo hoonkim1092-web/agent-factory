@@ -1,6 +1,7 @@
 ---
 name: af-doc-qa
 description: "Work-item 문서 세트의 품질 + 문서 간 정합성을 교차검증하는 QA 에이전트."
+model: sonnet
 tools:
   - Read
   - Glob

@@ -1,6 +1,7 @@
 ---
 name: af-cross-review
 description: "Codex에게 프로젝트를 자율 탐색시켜 코드 리뷰를 받고, 각 피드백을 근거 기반으로 수용/기각/보류 판정하는 교차 검증 에이전트."
+model: sonnet
 tools:
   - Read
   - Glob
