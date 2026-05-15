@@ -836,3 +836,111 @@ def test_agent_runner_writes_skill_runtime_feedback(monkeypatch, tmp_path):
     assert runtime_events[0]["skill_id"] == "runtime_skill"
     assert runtime_events[0]["status"] == "succeeded"
     assert runtime_events[0]["payload"]["reason"] == "codex_cli"
+
+
+def test_compose_prompt_includes_git_state_claude_cli(monkeypatch):
+    from core.providers.cli import _compose_prompt, CliChatRequest, CliProviderSpec
+    monkeypatch.setattr(
+        "core.providers.cli._collect_git_context",
+        lambda ws: "[Git State]\nHEAD: abc1234 on main\nRecent commits:\n  abc1234 feat: add git awareness"
+    )
+    request = CliChatRequest(
+        provider_id="claude_cli",
+        model="claude",
+        system_prompt="",
+        task_input="execute task",
+        workspace="/workspace"
+    )
+    spec = CliProviderSpec(
+        provider_id="claude_cli",
+        default_command=("claude",),
+        command_env="TEST",
+        combine_system_prompt=False
+    )
+    prompt = _compose_prompt(request, spec, "")
+    assert "[Git State]" in prompt
+    assert "HEAD: abc1234 on main" in prompt
+
+
+def test_compose_prompt_omits_git_state_when_empty(monkeypatch):
+    from core.providers.cli import _compose_prompt, CliChatRequest, CliProviderSpec
+    monkeypatch.setattr("core.providers.cli._collect_git_context", lambda ws: "")
+    request = CliChatRequest(
+        provider_id="claude_cli",
+        model="claude",
+        system_prompt="",
+        task_input="execute task",
+        workspace="/workspace"
+    )
+    spec = CliProviderSpec(
+        provider_id="claude_cli",
+        default_command=("claude",),
+        command_env="TEST",
+        combine_system_prompt=False
+    )
+    prompt = _compose_prompt(request, spec, "")
+    assert "[Git State]" not in prompt
+    assert "[Workspace]" in prompt
+    assert "[Task]" in prompt
+
+
+def test_gemini_cli_prompt_git_state_after_workspace(monkeypatch):
+    from core.providers.cli import _compose_prompt, CliChatRequest, CliProviderSpec
+    monkeypatch.setattr(
+        "core.providers.cli._collect_git_context",
+        lambda ws: "[Git State]\nHEAD: def5678 on feat/x"
+    )
+    request = CliChatRequest(
+        provider_id="gemini_cli",
+        model="gemini",
+        system_prompt="sys",
+        task_input="task",
+        workspace="/workspace"
+    )
+    spec = CliProviderSpec(
+        provider_id="gemini_cli",
+        default_command=("gemini",),
+        command_env="TEST",
+        combine_system_prompt=True
+    )
+    prompt = _compose_prompt(request, spec, "sys prompt")
+    assert "Workspace: /workspace" in prompt
+    assert "[Git State]" in prompt
+    assert prompt.index("[Git State]") > prompt.index("Workspace:")
+    assert prompt.index("[Git State]") < prompt.index("System instructions:")
+
+
+def test_codex_cli_prompt_git_state_between_workspace_and_system(monkeypatch):
+    from core.providers.cli import _compose_prompt, CliChatRequest, CliProviderSpec
+    monkeypatch.setattr(
+        "core.providers.cli._collect_git_context",
+        lambda ws: "[Git State]\nHEAD: 111aaaa on main"
+    )
+    request = CliChatRequest(
+        provider_id="codex_cli",
+        model="gpt4",
+        system_prompt="sys",
+        task_input="task",
+        workspace="/workspace"
+    )
+    spec = CliProviderSpec(
+        provider_id="codex_cli",
+        default_command=("codex",),
+        command_env="TEST",
+        combine_system_prompt=True
+    )
+    prompt = _compose_prompt(request, spec, "sys prompt")
+    assert "[Git State]" in prompt
+    assert "[Workspace]" in prompt
+    assert "[System Prompt]" in prompt
+    assert prompt.index("[Git State]") > prompt.index("[Workspace]")
+    assert prompt.index("[Git State]") < prompt.index("[System Prompt]")
+
+
+def test_collect_git_context_returns_empty_for_non_git_dir(tmp_path, monkeypatch):
+    from core.providers.cli import _collect_git_context
+    monkeypatch.setattr("core.providers.cli._detect_repo_root", lambda ws: "")
+    non_git_dir = tmp_path / "no_git"
+    non_git_dir.mkdir()
+    result = _collect_git_context(str(non_git_dir))
+    assert result == ""

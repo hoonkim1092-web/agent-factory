@@ -5621,3 +5621,13 @@ No issues found.
 **Changed (3)**: `core/skills/registry.yaml, skills/registry.yaml, tests/conftest.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-15 20:18 — `af-on-af/round1-hook-fix` (7be43d5a)
+
+**Context**: edit: core/providers/cli.py
+
+**Changed (2)**: `Master_Blueprint.md, core/providers/cli.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

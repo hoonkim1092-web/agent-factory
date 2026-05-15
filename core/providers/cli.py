@@ -549,6 +549,7 @@ def _compose_prompt(request: CliChatRequest, spec: CliProviderSpec, system_promp
     task_text = str(request.task_input or "").strip()
     workspace_text = str(request.workspace or "").strip()
     effective_system_prompt = str(system_prompt or "").strip()
+    git_context = _collect_git_context(workspace_text)
     if spec.provider_id == "gemini_cli":
         lines = [
             f"Task: {task_text}",
@@ -556,6 +557,8 @@ def _compose_prompt(request: CliChatRequest, spec: CliProviderSpec, system_promp
         ]
         if workspace_text:
             lines.extend(["", f"Workspace: {workspace_text}"])
+        if git_context:
+            lines.extend(["", git_context])
         if effective_system_prompt:
             lines.extend(["", "System instructions:", effective_system_prompt])
         return "\n".join(lines).strip()
@@ -568,9 +571,15 @@ def _compose_prompt(request: CliChatRequest, spec: CliProviderSpec, system_promp
         ]
         if workspace_text:
             lines.extend(["", "[Workspace]", workspace_text])
+        if git_context:
+            lines.extend(["", git_context])
         lines.extend(["", "[System Prompt]", effective_system_prompt])
         return "\n".join(lines).strip()
-    return f"[Workspace]\n{workspace_text}\n\n[Task]\n{task_text}".strip()
+    parts = [f"[Workspace]\n{workspace_text}"]
+    if git_context:
+        parts.append(git_context)
+    parts.append(f"[Task]\n{task_text}")
+    return "\n\n".join(parts).strip()
 
 
 def _detect_repo_root(workspace: str) -> str:
@@ -584,6 +593,48 @@ def _detect_repo_root(workspace: str) -> str:
         if (candidate / ".git").exists():
             return str(candidate)
     return ""
+
+
+def _collect_git_context(workspace: str) -> str:
+    """Extract git state (HEAD, recent commits, working tree status) for prompt injection."""
+    repo_root = _detect_repo_root(workspace)
+    if not repo_root:
+        return ""
+    lines = []
+    try:
+        h = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+        b = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+        head = h.stdout.strip() if h.returncode == 0 else ""
+        branch = b.stdout.strip() if b.returncode == 0 else ""
+        if head and branch:
+            lines.append(f"HEAD: {head} on {branch}")
+        elif head:
+            lines.append(f"HEAD: {head}")
+        elif branch:
+            lines.append(f"on {branch}")
+    except Exception:
+        pass
+    try:
+        r = subprocess.run(["git", "log", "-5", "--oneline"],
+                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+        if r.returncode == 0 and r.stdout.strip():
+            lines.append("Recent commits:")
+            for line in r.stdout.strip().splitlines():
+                lines.append(f"  {line}")
+    except Exception:
+        pass
+    try:
+        r = subprocess.run(["git", "status", "-sb"],
+                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+        if r.returncode == 0 and r.stdout.strip():
+            lines.append("Working tree:")
+            for line in r.stdout.strip().splitlines():
+                lines.append(f"  {line}")
+    except Exception:
+        pass
+    return ("[Git State]\n" + "\n".join(lines)) if lines else ""
 
 
 def _should_include_model(request: CliChatRequest, spec: CliProviderSpec) -> bool:
