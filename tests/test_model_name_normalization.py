@@ -32,7 +32,7 @@ class _FakeModels:
 
     def generate_content(self, model, contents, **kwargs):
         self.called.append(model)
-        if model != "models/gemini-2.0-flash":
+        if model != "models/gemini-2.5-flash":
             raise RuntimeError("404 NOT_FOUND")
         return type("Resp", (), {"text": "ok"})()
 
@@ -47,7 +47,7 @@ def test_generate_content_with_self_heal_retries_on_404():
     res = model_utils.generate_content_with_self_heal(client, "gemini-1.5-flash", "hello")
     assert res.text == "ok"
     assert client.models.called[0] == "models/gemini-1.5-flash"
-    assert "models/gemini-2.0-flash" in client.models.called
+    assert "models/gemini-2.5-flash" in client.models.called
 
 
 def test_resolve_preferred_model_uses_dynamic_routing_when_not_forced(monkeypatch):

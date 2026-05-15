@@ -33,6 +33,7 @@ def test_registry_manager_installs_codex_markdown_skill_directory(monkeypatch, t
     )
     (src_dir / "scripts" / "helper.py").write_text("print('ok')\n", encoding="utf-8")
 
+    monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
     mgr = mod.RegistryManager()
     ok, sid = mgr._install_skill_file("review_guide", str(src_dir), source_label="codex_official")
 
@@ -80,6 +81,7 @@ def test_registry_manager_iter_install_candidates_preserves_source_metadata(monk
     )
     monkeypatch.setattr(mod, "SKILLS_DIR", str(skills_dir))
     monkeypatch.setattr(mod, "REGISTRY_PATH", str(registry_path))
+    monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
 
     mgr = mod.RegistryManager()
 
