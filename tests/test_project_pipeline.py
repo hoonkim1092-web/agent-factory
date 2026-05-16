@@ -83,6 +83,18 @@ def test_factory_routes_project_pipeline_directly_in_fsa_mode(monkeypatch, tmp_p
 
 def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_path):
     monkeypatch.setenv("AF_SKIP_ESCALATION", "1")  # planning artifacts 검증이 목적 — escalation gate 우회
+
+    # PlanVerifier: 실제 LLM 호출 차단 (20분 → 즉시) + warning_registry 기록 방지
+    import core.plan_verifier as _pv_mod
+    from core.plan_verifier import PlanVerifyResult
+    class _DummyPlanVerifier:
+        def __init__(self, workspace=None): pass
+        def verify(self, task_input, work_items, project_brief=None):
+            return PlanVerifyResult(passed=True, score=1.0)
+        def refine(self, *args, **kwargs): return None
+        def gate(self, *args, **kwargs): return PlanVerifyResult(passed=True, score=1.0)
+    monkeypatch.setattr(_pv_mod, "PlanVerifier", _DummyPlanVerifier)
+
     al = _load_launcher(monkeypatch)
     factory = al.AgentFactory()
     pipeline = factory.project_pipeline
