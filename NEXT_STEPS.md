@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-16 KST** — Backlog #1 완료 (pytest.ini pythonpath + ci.yml 실제 게이트). 다음 진입점 = **Backlog #2 (runtime 산출물 gitignore)** 또는 **F15 workspace 분리**.
+> 마지막 업데이트: **2026-05-16 KST** — Backlog #1+#2 + 2 failing tests 모두 완료. 다음 진입점 = **F15 workspace↔internal-state 분리** (설계 단계 → Opus 전환 필요).
 
 ---
 
@@ -18,21 +18,28 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — CI pytest stub 수정
+## 🔥 다음 진입점 — F15 workspace↔internal-state 분리
 
 **브랜치**: `main`
 
-> 테스트 수트 분류 완료 (`ae786417`). 다음 우선순위는 CI/테스트 인프라 수정 2건.
+> Backlog #1+#2 + 2 failing tests 완료. CI baseline: **0 failed, 1637+ passed**.
 
-### ✅ Backlog #1 완료: CI pytest stub → 실제 테스트 게이트
+### ✅ 완료된 인프라 작업 (이번 세션)
 
-베이스라인: **2 failed, 1637 passed** (기존 실패, 회귀 아님).
-- `pytest.ini`에 `pythonpath = .` 추가 (bare `pytest` ModuleNotFoundError 해소)
-- `ci.yml` "Run Schema Tests" stub → `python -m pytest -m "not slow and not e2e" -q` 실제 게이트
+- **Backlog #1**: `pytest.ini pythonpath` + `ci.yml` 실제 게이트 (`a0961ebc`)
+- **Backlog #2**: runtime 산출물 gitignore (`a0a44928`) — 매 세션 dirty 해소
+- **test_orchestrator_manifest**: `.todo.md` 제거 → LLM 경로 강제 → dynamic_log.txt 생성 (`19f261c6`)
+- **test_project_pipeline**: `PlanVerifier` stub + `AF_SKIP_ESCALATION=1` → PASSED (`e4f1e0d0`)
 
-### Backlog #2: 런타임 산출물 git 오염
-`data/skill-usage.jsonl`, `skill-eval-report.json`, `skills/new_skill/*.json` — 매 세션 dirty.
-`git log --oneline -- skill-eval-report.json`으로 과거 커밋 여부 확인 후 `.gitignore` 선별 추가.
+### F15: workspace↔internal-state 분리 (다음)
+
+`provider_cwd`를 별도 param으로 분리. 현재 `workspace`가 AF 내부 상태 디렉토리와 혼용됨.
+- 설계 단계 → **Opus 전환 필요** (`/model claude-opus-4-7`)
+- 구현 단계 → Sonnet 복귀
+
+### 잔존 backlog (낮은 우선순위)
+- **cross-review WARN #2/#3** — registry_manager pre-existing 결함
+- **Master_Blueprint.md hook 잡음** — 비-코드 편집에도 §12 자동 entry 생성 (Step 3 in handoff doc)
 
 ### 완료된 것들 (이번 세션)
 - ✅ **F10** git-context 주입 — `_collect_git_context()` + 3개 provider `[Git State]` 섹션
