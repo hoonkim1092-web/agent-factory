@@ -100,7 +100,8 @@ def test_dynamic_orchestrator_writes_manifest_and_restores_interruptions(monkeyp
 
     workspace = tmp_path / "proj"
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / ".todo.md").write_text("- t1", encoding="utf-8")
+    # .todo.md 없음 → _dispatch_from_board가 [] 반환 → Cycle 1에서 LLM 경로 강제
+    # → _lilith_decide_next 실행 → dynamic_log.txt 생성 (테스트 목적)
 
     manifest = OrchestratorManifestStore(str(workspace))
     manifest.save_snapshot(

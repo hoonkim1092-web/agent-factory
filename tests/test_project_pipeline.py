@@ -82,6 +82,7 @@ def test_factory_routes_project_pipeline_directly_in_fsa_mode(monkeypatch, tmp_p
 
 
 def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_path):
+    monkeypatch.setenv("AF_SKIP_ESCALATION", "1")  # planning artifacts 검증이 목적 — escalation gate 우회
     al = _load_launcher(monkeypatch)
     factory = al.AgentFactory()
     pipeline = factory.project_pipeline
