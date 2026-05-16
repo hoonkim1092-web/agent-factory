@@ -80,6 +80,12 @@ projects/*/data/memory/
 candidates/
 data/evolution/
 
+# --- Skill Evaluation Runtime Artifacts (append-only per session, not source) ---
+/skill-eval-report.json
+/data/skill-usage.jsonl
+skills/**/skill-eval-report.json
+skills/**/skill-promotion.json
+
 # --- Runtime/Test Artifacts ---
 /runs/
 projects/default/runs/
