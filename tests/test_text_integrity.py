@@ -88,10 +88,16 @@ def test_check_script_returns_nonzero_for_new_mojibake(tmp_path: Path):
 
     target.write_text("# ?\ud55c\uae00\n", encoding="utf-8", newline="\n")
 
+    import os
     script = Path(__file__).resolve().parents[1] / "scripts" / "check_changed_text_integrity.py"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    existing_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(repo_root) + (os.pathsep + existing_pp if existing_pp else "")
     result = subprocess.run(
         [sys.executable, str(script), "--repo-root", str(repo), "--against", "HEAD", "--changed-only"],
         cwd=repo,
+        env=env,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

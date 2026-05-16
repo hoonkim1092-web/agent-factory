@@ -1,6 +1,9 @@
 import os
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 
 def _copy_wrapper_tree(repo_root: Path, sandbox_root: Path) -> None:
@@ -14,6 +17,7 @@ def _copy_wrapper_tree(repo_root: Path, sandbox_root: Path) -> None:
     (scripts_dir / "sync_easy.ps1").write_text("# test placeholder\n", encoding="utf-8")
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows .cmd wrappers only")
 def test_start_db_passes_repo_alias_to_powershell(tmp_path: Path):
     repo_root = Path(__file__).resolve().parents[1]
     sandbox_root = tmp_path / "wrapper"
@@ -52,6 +56,7 @@ def test_start_db_passes_repo_alias_to_powershell(tmp_path: Path):
     assert "-Target all" not in captured
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows .cmd wrappers only")
 def test_powershell_start_db_preserves_repo_alias_via_repo_keyword(tmp_path: Path):
     repo_root = Path(__file__).resolve().parents[1]
     sandbox_root = tmp_path / "wrapper_ps"
