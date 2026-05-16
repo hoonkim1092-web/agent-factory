@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-16 KST** — 테스트 수트 분류 완료 + `ae786417` 커밋. 다음 진입점 = **CI pytest stub 수정 (backlog #1)**.
+> 마지막 업데이트: **2026-05-16 KST** — Backlog #1 완료 (pytest.ini pythonpath + ci.yml 실제 게이트). 다음 진입점 = **Backlog #2 (runtime 산출물 gitignore)** 또는 **F15 workspace 분리**.
 
 ---
 
@@ -24,25 +24,11 @@ git status -sb
 
 > 테스트 수트 분류 완료 (`ae786417`). 다음 우선순위는 CI/테스트 인프라 수정 2건.
 
-### Backlog #1 (다음 세션 첫 액션): CI pytest stub → 실제 테스트 게이트
+### ✅ Backlog #1 완료: CI pytest stub → 실제 테스트 게이트
 
-`.github/workflows/ci.yml`이 pytest를 설치만 하고 실행하지 않음 ("Run Schema Tests" 스텝은 schema import 1줄짜리 stub). 2개 수정 필요:
-
-**수정 A** — `pytest.ini`에 한 줄 추가:
-```ini
-pythonpath = .
-```
-(bare `pytest`도 `ModuleNotFoundError: core` 없이 동작하게 — pytest 7.0+ `pythonpath` ini 옵션)
-
-**수정 B** — `ci.yml:43-46` schema stub → 실제 pytest 스텝:
-```yaml
-- name: Run Tests
-  run: |
-    python -m pytest -m "not slow and not e2e" -q
-```
-(`-m "not slow and not e2e"` 필수 — 5개 slow/e2e 마커 테스트가 외부 바이너리 호출)
-
-**주의**: 켜기 전에 `python -m pytest -m "not slow and not e2e" -q` 전체 수트를 로컬에서 1회 돌려 베이스라인 확인 필수. 처음 CI가 빨개지면 회귀 아니라 게이트가 드디어 작동하는 것.
+베이스라인: **2 failed, 1637 passed** (기존 실패, 회귀 아님).
+- `pytest.ini`에 `pythonpath = .` 추가 (bare `pytest` ModuleNotFoundError 해소)
+- `ci.yml` "Run Schema Tests" stub → `python -m pytest -m "not slow and not e2e" -q` 실제 게이트
 
 ### Backlog #2: 런타임 산출물 git 오염
 `data/skill-usage.jsonl`, `skill-eval-report.json`, `skills/new_skill/*.json` — 매 세션 dirty.

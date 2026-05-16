@@ -40,10 +40,9 @@ jobs:
         run: |
           mypy core/ config/ utils/ --ignore-missing-imports
           
-      - name: Run Schema Tests
+      - name: Run Tests
         run: |
-          # Test if the Pydantic schema can load fallback configs without crashing
-          python -c "from config.schema import factory_config; print('Schema Validation PASSED')"
+          python -m pytest -m "not slow and not e2e" -q
           
       - name: Prevent Master Commits
         if: github.event_name == 'pull_request' && github.base_ref == 'master'
