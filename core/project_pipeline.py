@@ -50,6 +50,7 @@ class PreparedBrief:
     workspace: str
     task_input: str
     project_brief: dict
+    runtime_workspace: str = ""
     research_evidence: dict = field(default_factory=dict)
     research_evidence_path: str = ""
     project_brief_path: str = ""
@@ -71,6 +72,7 @@ class PreparedProject:
     project_brief: dict
     role_plan: dict
     task_board: dict
+    runtime_workspace: str = ""
     planning_files: list[str] = field(default_factory=list)
     work_item_files: dict[str, str] = field(default_factory=dict)
     # 하위 호환: 개별 경로 필드
@@ -93,7 +95,7 @@ class PreparedProject:
 
     def gate(self) -> ApprovalGate:
         return ApprovalGate(self._effective_doc_root(), self.work_item_slug,
-                            runtime_workspace=self.workspace)
+                            runtime_workspace=self.runtime_workspace or self.workspace)
 
     def summary_lines(self) -> list[str]:
         roles = self.role_plan.get("roles") or []
@@ -677,6 +679,7 @@ class ProjectPipeline:
         self,
         task_input: str,
         workspace: str,
+        runtime_workspace: str | None = None,
         execution_mode: str = "approval",
         enable_build: bool = False,
         requested_role: str = "",
@@ -689,7 +692,9 @@ class ProjectPipeline:
         prepare_documents()에 전달하면 된다.
         """
         target_workspace = os.path.abspath(workspace)
+        state_workspace = os.path.abspath(runtime_workspace) if runtime_workspace else target_workspace
         os.makedirs(target_workspace, exist_ok=True)
+        os.makedirs(state_workspace, exist_ok=True)
         ensure_documentation_files(target_workspace)
         planning_dir = self._planning_dir(target_workspace)
         run_id = f"project_run_{int(time.time())}"
@@ -766,7 +771,7 @@ class ProjectPipeline:
                     try:
                         from core.warning_registry import WarningRegistry as _WR
                         _ev_slug = safe_id(task_input)[:40]
-                        _WR(workspace=target_workspace).record(
+                        _WR(workspace=state_workspace).record(
                             project_slug=_ev_slug,
                             rule_id="evidence_quality_warn",
                             affected_phase="scope",
@@ -786,7 +791,7 @@ class ProjectPipeline:
                     research_evidence = {"_stage_degraded": "evidence_acquisition", "_warnings": [str(exc)]}
         research_evidence_path = os.path.join(planning_dir, "research_evidence.json")
         self._write_json(research_evidence_path, research_evidence)
-        self._save_checkpoint(target_workspace, "evidence_acquisition", research_evidence)
+        self._save_checkpoint(state_workspace, "evidence_acquisition", research_evidence)
 
         # -- Brief --
         from core.pipeline_quality import PipelineStageGuard
@@ -820,7 +825,7 @@ class ProjectPipeline:
         project_brief["generated_at"] = now_iso()
         project_brief_path = os.path.join(planning_dir, "project_brief.json")
         self._write_json(project_brief_path, project_brief)
-        self._save_checkpoint(target_workspace, "draft_brief", project_brief)
+        self._save_checkpoint(state_workspace, "draft_brief", project_brief)
 
         # P0 A6: brief를 docs/research/<slug>-project-brief.json 에 저장 (Quality Gate 추적용)
         try:
@@ -834,6 +839,7 @@ class ProjectPipeline:
         return PreparedBrief(
             run_id=run_id,
             workspace=target_workspace,
+            runtime_workspace=state_workspace,
             task_input=task_input,
             project_brief=project_brief,
             research_evidence=research_evidence,
@@ -857,6 +863,7 @@ class ProjectPipeline:
         prepare_brief() 이후, Clarification 적용 완료 상태에서 호출.
         """
         target_workspace = prepared_brief.workspace
+        state_workspace = os.path.abspath(prepared_brief.runtime_workspace or target_workspace)
         task_input = prepared_brief.task_input
         project_brief = prepared_brief.project_brief
         memory_context = prepared_brief.memory_context
@@ -901,7 +908,7 @@ class ProjectPipeline:
         }
         role_plan_path = os.path.join(planning_dir, "role_plan.json")
         self._write_json(role_plan_path, role_plan)
-        self._save_checkpoint(target_workspace, "role_plan", role_plan)
+        self._save_checkpoint(state_workspace, "role_plan", role_plan)
 
         # -- Task Board --
         task_board = build_project_board(project_brief, role_plan)
@@ -1010,7 +1017,7 @@ class ProjectPipeline:
             if not _plan_result.passed:
                 try:
                     from core.warning_registry import WarningRegistry as _WR
-                    _WR(workspace=target_workspace).record(
+                    _WR(workspace=state_workspace).record(
                         project_slug=slug,
                         rule_id="plan_verifier_warn",
                         affected_phase="",
@@ -1148,6 +1155,7 @@ class ProjectPipeline:
         prepared = PreparedProject(
             run_id=run_id,
             workspace=target_workspace,
+            runtime_workspace=state_workspace,
             work_item_slug=slug,
             project_brief=project_brief,
             role_plan=role_plan,
@@ -1217,6 +1225,7 @@ class ProjectPipeline:
         self,
         task_input: str,
         workspace: str,
+        runtime_workspace: str | None = None,
         execution_mode: str = "approval",
         enable_build: bool = False,
         requested_role: str = "",
@@ -1229,6 +1238,7 @@ class ProjectPipeline:
         brief = self.prepare_brief(
             task_input=task_input,
             workspace=workspace,
+            runtime_workspace=runtime_workspace,
             execution_mode=execution_mode,
             enable_build=enable_build,
             requested_role=requested_role,
@@ -1245,6 +1255,7 @@ class ProjectPipeline:
         prepared: PreparedProject,
         enable_build: bool = False,
         execution_mode: str = "approval",
+        runtime_workspace: str | None = None,
     ) -> dict:
         """
         Phase 2: 승인된 프로젝트를 실행한다.
@@ -1258,6 +1269,7 @@ class ProjectPipeline:
           5. DynamicOrchestrator.run_project() 실행
         """
         workspace = prepared.workspace
+        state_workspace = os.path.abspath(runtime_workspace or prepared.runtime_workspace or workspace)
         gate = prepared.gate()
 
         # B2: canonical checkpoint guard — 이미 완료된 run은 재실행하지 않는다
@@ -1294,7 +1306,7 @@ class ProjectPipeline:
                 "reason": "escalation_block",
                 "blocking_rules": _bd.get("blocking_rules", []),
                 "decision_report": os.path.join(
-                    prepared.workspace, "runtime", "warnings",
+                    state_workspace, "runtime", "warnings",
                     prepared.work_item_slug, "_decision.md",
                 ),
                 "message": "escalation 차단. _decision.md 를 확인하고 e2e_command 보강 또는 warning-override 후 재실행하세요.",
@@ -1336,7 +1348,12 @@ class ProjectPipeline:
             broker=self._broker, visualizer=self._visualizer,
             run_id=prepared.run_id,
         )
-        run_board = orchestrator.run_project(task_input, roles, workspace)
+        run_board = orchestrator.run_project(
+            task_input,
+            roles,
+            workspace=workspace,
+            runtime_workspace=state_workspace,
+        )
         status = str(run_board.get("current_status", "unknown"))
 
         # ── strategy ledger: 모듈별 outcome 기록 (B2-6) ──────────────
@@ -1344,6 +1361,7 @@ class ProjectPipeline:
             status=status,
             role_plan=prepared.role_plan,
             workspace=workspace,
+            runtime_workspace=state_workspace,
             project_slug=prepared.work_item_slug,
         )
 
@@ -1400,6 +1418,7 @@ class ProjectPipeline:
         status: str,
         role_plan: dict,
         workspace: str,
+        runtime_workspace: str | None = None,
         project_slug: str = "",
     ) -> None:
         """프로젝트 실행 후 strategy ledger에 모듈별 outcome을 기록한다.
@@ -1431,7 +1450,8 @@ class ProjectPipeline:
 
         task_map, module_map = _build_board_maps(board)
 
-        ledger = get_strategy_ledger(workspace)
+        state_workspace = runtime_workspace or workspace
+        ledger = get_strategy_ledger(state_workspace)
         project_id = project_slug or os.path.basename(workspace)
 
         batch: list[tuple[str, str, str, bool]] = []
@@ -1464,7 +1484,7 @@ class ProjectPipeline:
                 )
                 try:
                     from core.warning_registry import WarningRegistry as _WR
-                    _WR(workspace=workspace).record(
+                    _WR(workspace=state_workspace).record(
                         project_slug=project_id,
                         rule_id="owner_role_mismatch",
                         count=len(mismatches),
@@ -1502,6 +1522,7 @@ class ProjectPipeline:
         self,
         task_input: str,
         workspace: str,
+        runtime_workspace: str | None = None,
         execution_mode: str = "approval",
         enable_build: bool = False,
         requested_role: str = "",
@@ -1516,6 +1537,7 @@ class ProjectPipeline:
         prepared = self.prepare(
             task_input=task_input,
             workspace=workspace,
+            runtime_workspace=runtime_workspace,
             execution_mode=execution_mode,
             enable_build=enable_build,
             requested_role=requested_role,
@@ -1531,4 +1553,5 @@ class ProjectPipeline:
             prepared=prepared,
             enable_build=enable_build,
             execution_mode=execution_mode,
+            runtime_workspace=runtime_workspace,
         )

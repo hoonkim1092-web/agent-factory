@@ -34,6 +34,7 @@ class ISELoop:
         task_input: str,
         run_id: str,
         workspace: str | None = None,
+        runtime_workspace: str | None = None,
         lineage_id: str | None = None,
         initial_failure_result: dict | None = None,
     ) -> dict:
@@ -43,6 +44,7 @@ class ISELoop:
             task_input=task_input,
             run_id=run_id,
             workspace=workspace,
+            runtime_workspace=runtime_workspace,
             lineage_id=lineage_id,
             initial_failure_result=initial_failure_result,
         )

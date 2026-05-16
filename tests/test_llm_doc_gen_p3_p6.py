@@ -120,6 +120,7 @@ class TestPreparedBrief:
         m_brief.assert_called_once_with(
             task_input="task",
             workspace=str(tmp_path),
+            runtime_workspace=None,
             execution_mode="approval",
             enable_build=False,
             requested_role="",

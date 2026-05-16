@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -75,6 +76,7 @@ class DynamicOrchestrator:
         self.memory_hub = AstMemoryHub()
         self.evaluator = StrategyEvaluator(model_name=engine_id)
         self._workspace: str | None = None
+        self._runtime_workspace: str | None = None
         self._manifest_store: OrchestratorManifestStore | None = None
         self._manifest_roles: List[str] = []
         self._manifest_project_desc = ""
@@ -94,7 +96,7 @@ class DynamicOrchestrator:
         return inst
 
     def _runtime_file(self, filename: str, workspace: str | None = None) -> Path:
-        target_workspace = workspace or self._workspace
+        target_workspace = self._runtime_workspace or workspace or self._workspace
         if target_workspace:
             return workspace_runtime_file(target_workspace, filename)
         return Path(filename)
@@ -110,8 +112,15 @@ class DynamicOrchestrator:
             force=force,
         )
 
-    def _prepare_resume_state(self, project_desc: str, roles: List[str], workspace: str | None) -> None:
+    def _prepare_resume_state(
+        self,
+        project_desc: str,
+        roles: List[str],
+        workspace: str | None,
+        runtime_workspace: str | None = None,
+    ) -> None:
         self._workspace = workspace or None
+        self._runtime_workspace = runtime_workspace or workspace or None
         self._manifest_roles = list(roles or [])
         self._manifest_project_desc = str(project_desc or "")
         self.active_assignments = {}
@@ -123,7 +132,7 @@ class DynamicOrchestrator:
             return
 
         reset_in_progress_tasks(self._workspace)
-        self._manifest_store = OrchestratorManifestStore(self._workspace)
+        self._manifest_store = OrchestratorManifestStore(self._runtime_workspace or self._workspace)
         loaded = self._manifest_store.load_resume_state()
         self.state_board = {
             "completed_subtasks": list(loaded.get("completed_subtasks", [])),
@@ -614,16 +623,26 @@ class DynamicOrchestrator:
         run_id: str,
         target_workspace: str,
         task_id: str,
+        runtime_workspace: str | None = None,
     ) -> Dict[str, Any]:
         """기존 방식: asyncio.to_thread로 같은 프로세스에서 실행."""
+        params = inspect.signature(self.runner.run).parameters
+        kwargs: Dict[str, Any] = {}
+        if "run_id" in params:
+            kwargs["run_id"] = run_id
+        if "auto_approve" in params:
+            kwargs["auto_approve"] = True
+        if "workspace" in params:
+            kwargs["workspace"] = target_workspace
+        if "task_id" in params:
+            kwargs["task_id"] = task_id
+        if "runtime_workspace" in params:
+            kwargs["runtime_workspace"] = runtime_workspace
         result = await asyncio.to_thread(
             self.runner.run,
             agent_data,
             subtask,
-            run_id,
-            True,
-            target_workspace,
-            task_id,
+            **kwargs,
         )
         return result or {}
 
@@ -635,9 +654,11 @@ class DynamicOrchestrator:
         run_id: str,
         target_workspace: str,
         task_id: str,
+        runtime_workspace: str | None = None,
     ) -> Dict[str, Any]:
         """터미널 모드: 새 콘솔 창에서 agent_worker.py를 실행하고 결과를 폴링한다."""
-        runs_dir = os.path.join(target_workspace, "runs", run_id)
+        state_workspace = runtime_workspace or target_workspace
+        runs_dir = os.path.join(state_workspace, "runs", run_id)
         os.makedirs(runs_dir, exist_ok=True)
         task_file = os.path.join(runs_dir, "task.json")
         result_file = os.path.join(runs_dir, "result.json")
@@ -649,6 +670,7 @@ class DynamicOrchestrator:
             "subtask": subtask,
             "run_id": run_id,
             "workspace": target_workspace,
+            "runtime_workspace": state_workspace,
             "task_id": task_id,
             "broker_address": self.broker.get_broker_address(),
         }
@@ -720,6 +742,7 @@ class DynamicOrchestrator:
 
         # target_workspace를 try 밖에서 초기화해야 except 블록에서도 참조 가능하다.
         target_workspace = workspace or os.getcwd()
+        state_workspace = self._runtime_workspace or target_workspace
 
         # T1-2: STEP_STARTED RunEvent
         _emit_run_event = None
@@ -766,11 +789,11 @@ class DynamicOrchestrator:
             # 실행 방식 선택: terminal_per_agent=True → 새 콘솔 창, False → 기존 스레드
             if self.terminal_per_agent:
                 result = await self._run_agent_in_terminal(
-                    agent_data, role, subtask, run_id, target_workspace, task_id
+                    agent_data, role, subtask, run_id, target_workspace, task_id, state_workspace
                 )
             else:
                 result = await self._run_agent_in_thread(
-                    agent_data, subtask, run_id, target_workspace, task_id
+                    agent_data, subtask, run_id, target_workspace, task_id, state_workspace
                 )
 
             if result and result.get("ok"):
@@ -849,7 +872,9 @@ class DynamicOrchestrator:
                         from core.lineage_ledger import get_lineage_ledger
 
                         _lineage_id = (task_meta or {}).get("lineage_id") or task_id or f"{role}:{subtask[:40]}"
-                        _ll = get_lineage_ledger(target_workspace)
+                        # F15: FSALoop이 lineage 원장을 state_workspace에 기록하므로
+                        # maxed 사전검사도 같은 루트를 읽어야 캡이 우회되지 않는다.
+                        _ll = get_lineage_ledger(state_workspace)
 
                         if _ll.is_maxed(_lineage_id):
                             print_agent_msg(role, f"lineage 상한 도달 → degrade: {_lineage_id}", "⚠️")
@@ -878,6 +903,7 @@ class DynamicOrchestrator:
                                 task_input=subtask,
                                 run_id=f"{run_id}_fsa",
                                 workspace=target_workspace,
+                                runtime_workspace=state_workspace,
                                 lineage_id=_lineage_id,
                                 initial_failure_result=result,
                             )
@@ -1188,9 +1214,15 @@ class DynamicOrchestrator:
         except Exception:
             pass
 
-    def run_project(self, project_desc: str, roles: List[str], workspace: str | None = None) -> Dict[str, Any]:
+    def run_project(
+        self,
+        project_desc: str,
+        roles: List[str],
+        workspace: str | None = None,
+        runtime_workspace: str | None = None,
+    ) -> Dict[str, Any]:
         print_agent_msg("System", "Initializing Dynamic LLM-Driven Orchestrator (V3)", "")
-        self._prepare_resume_state(project_desc, roles, workspace)
+        self._prepare_resume_state(project_desc, roles, workspace, runtime_workspace)
         try:
             asyncio.run(self._orchestration_loop(project_desc, roles, workspace))
         except Exception as exc:
@@ -1205,5 +1237,4 @@ class DynamicOrchestrator:
         else:
             self._sync_manifest(force=True)
         return self.state_board
-
 

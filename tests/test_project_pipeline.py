@@ -36,10 +36,17 @@ def test_factory_routes_complex_task_to_project_pipeline(monkeypatch, tmp_path):
         "reason": "completed",
     }
 
-    res = factory.run(task_input="build a poker game", role_spec="General", workspace=str(tmp_path))
+    runtime_ws = tmp_path / "runtime"
+    res = factory.run(
+        task_input="build a poker game",
+        role_spec="General",
+        workspace=str(tmp_path),
+        runtime_workspace=str(runtime_ws),
+    )
 
     assert res["pipeline"] == "project"
     assert routed and routed[0]["workspace"] == str(tmp_path)
+    assert routed[0]["runtime_workspace"] == str(runtime_ws)
     assert routed[0]["requested_role"] == "General"
 
 
@@ -70,11 +77,13 @@ def test_factory_routes_project_pipeline_directly_in_fsa_mode(monkeypatch, tmp_p
         task_input="build a poker game",
         role_spec="General",
         workspace=str(tmp_path),
+        runtime_workspace=str(tmp_path / "runtime"),
         execution_mode="fsa",
     )
 
     assert res["pipeline"] == "project"
     assert routed and routed[0]["workspace"] == str(tmp_path)
+    assert routed[0]["runtime_workspace"] == str(tmp_path / "runtime")
     assert routed[0]["requested_role"] == "General"
     assert routed[0]["execution_mode"] == "fsa"
     assert approvals == []
@@ -83,6 +92,7 @@ def test_factory_routes_project_pipeline_directly_in_fsa_mode(monkeypatch, tmp_p
 
 def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_path):
     monkeypatch.setenv("AF_SKIP_ESCALATION", "1")  # planning artifacts 검증이 목적 — escalation gate 우회
+    monkeypatch.setenv("AF_SKIP_DOMAIN_REVIEW", "1")
 
     # PlanVerifier: 실제 LLM 호출 차단 (20분 → 즉시) + warning_registry 기록 방지
     import core.plan_verifier as _pv_mod
@@ -179,8 +189,13 @@ def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_p
         def __init__(self, mr, max_concurrent=5, broker=None, visualizer=None, **kwargs):
             self.mr = mr
 
-        def run_project(self, project_desc, roles, workspace=None):
-            return {"current_status": "completed", "roles": roles, "workspace": workspace}
+        def run_project(self, project_desc, roles, workspace=None, runtime_workspace=None):
+            return {
+                "current_status": "completed",
+                "roles": roles,
+                "workspace": workspace,
+                "runtime_workspace": runtime_workspace,
+            }
 
     monkeypatch.setattr(pp, "DynamicOrchestrator", _DummyOrchestrator)
 
@@ -246,6 +261,57 @@ def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_p
         ("Frontend Dev", ["frontend_game_ui"], str(tmp_path)),
         ("QA Engineer", ["integration_test_guard"], str(tmp_path)),
     ]
+
+
+def test_project_pipeline_routes_runtime_workspace_to_orchestrator(monkeypatch, tmp_path):
+    monkeypatch.setenv("AF_SKIP_ESCALATION", "1")
+    monkeypatch.setenv("AF_SKIP_DOMAIN_REVIEW", "1")
+
+    al = _load_launcher(monkeypatch)
+    factory = al.AgentFactory()
+    pipeline = factory.project_pipeline
+    runtime_ws = tmp_path / "runtime"
+
+    pipeline.research.collect_project_evidence = lambda task_input, workspace=None: {"sources": []}
+    pipeline.research.research_project_brief = lambda agent, task_input, workspace=None, evidence_bundle=None: {
+        "goal": task_input,
+        "work_kind": "feature",
+    }
+    pipeline.planner.plan = lambda task_input, project_brief, memory_context=None: {
+        "roles": [{"id": "dev", "name": "Dev", "required_skills": []}],
+        "modules": [],
+        "todo_items": ["Dev: implement"],
+    }
+
+    import core.project_pipeline as pp
+
+    calls = {}
+
+    class _DummyOrchestrator:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run_project(self, project_desc, roles, workspace=None, runtime_workspace=None):
+            calls["workspace"] = workspace
+            calls["runtime_workspace"] = runtime_workspace
+            return {"current_status": "completed", "roles": roles}
+
+    monkeypatch.setattr(pp, "DynamicOrchestrator", _DummyOrchestrator)
+    monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})
+
+    res = pipeline.run(
+        task_input="build a small feature",
+        workspace=str(tmp_path),
+        runtime_workspace=str(runtime_ws),
+        execution_mode="approval",
+    )
+
+    assert res["ok"] is True
+    assert calls == {"workspace": str(tmp_path), "runtime_workspace": str(runtime_ws)}
+    assert (runtime_ws / ".checkpoint" / "evidence_acquisition.json").exists()
+    assert (runtime_ws / ".checkpoint" / "draft_brief.json").exists()
+    assert (runtime_ws / ".checkpoint" / "role_plan.json").exists()
+    assert not (tmp_path / ".checkpoint").exists()
 
 
 def test_factory_single_run_auto_creates_todo_for_complex_task(monkeypatch, tmp_path):
@@ -330,5 +396,3 @@ def test_factory_single_run_keeps_existing_todo_file(monkeypatch, tmp_path):
     )
 
     assert todo_path.read_text(encoding="utf-8") == "# Existing TODO\n\n- [ ] keep original plan\n"
-
-

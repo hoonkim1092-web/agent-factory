@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-15 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-17 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -86,7 +86,7 @@
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
 | `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | `SkillPackBootstrapper`, `check_installed()`, `missing()`, `installed()` |
-| `core/fsa_loop.py:1-480` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한) | `FSALoop`, `run_mission()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
+| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리 | `FSALoop`, `run_mission()`, `_run_agent()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
 | `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
 | `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | `SkillSelfEvolutionHook` |
@@ -102,7 +102,7 @@
 | `core/model_router.py` | CLI 프로바이더 선택 | `ModelRouter` |
 | `core/policy_runtime.py` | 정책 런타임 래퍼 | `PolicyRuntime` |
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
-| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | `ProjectPipeline`, `ResearchGateBlocked` |
+| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **F15**: `runtime_workspace`로 `.checkpoint/`, `runtime/warnings/`, strategy ledger, orchestrator `runs/data/artifacts`를 사용자 workspace와 분리. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | `ProjectPipeline`, `PreparedBrief`, `PreparedProject`, `ResearchGateBlocked` |
 | `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | `SpecGenerator`, `AdrGenerator`, `TraceabilityGenerator`, `_call_llm_raw`, `SPEC_FILENAMES` |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입 | `execute_cli_chat()`, `_progress_printer()`, `_compose_prompt()`, `_collect_git_context()`, `_detect_repo_root()` |
@@ -423,6 +423,7 @@ AgentRunner.run(agent, task_input, workspace)
 
 **핵심 내부 흐름:**
 - `terminal_per_agent=True` 설정 → `DynamicOrchestrator` 생성
+- **F15 runtime split** (2026-05-16): `workspace`는 사용자 산출물/보드/Git 범위, `runtime_workspace`는 `.checkpoint/`, warning registry, strategy ledger, orchestrator manifest/runtime, `runs/data/artifacts` 범위. `PreparedBrief`/`PreparedProject`가 `runtime_workspace`를 보존하고 `DynamicOrchestrator.run_project(..., runtime_workspace=...)`로 전달. **single-run 경로** (`agent_launcher.py` `fsa`/`ise`/default 디스패치)도 `runtime_workspace=state_workspace`를 전달하며, `ISELoop.run_mission`은 이를 `FSALoop.run_mission`으로 위임한다 (2026-05-17 F15-cont).
 - `print_startup_routing_notice()` 호출 후 오케스트레이션 시작
 - `execute()` 완료 후 `_record_ledger_outcomes()` 호출: 모듈별 3-value 판정
   - `status ∈ {crashed, unknown}` → 전체 skip
@@ -452,6 +453,8 @@ AgentRunner.run(agent, task_input, workspace)
 
 ### §3.2 DynamicOrchestrator (`core/dynamic_orchestrator.py`)
 <!-- last_updated: 2026-04-03 (event-driven sparse governor, run budget, stall detection, state_board asyncio.Lock) -->
+
+**F15 runtime split (2026-05-16)**: `run_project(project_desc, roles, workspace, runtime_workspace=None)`를 지원한다. 보드/메일박스/Git/agent specialization은 `workspace`를 유지하고, `.af_manifest.json`, `.af_runtime/*`, terminal task/result payload, `AgentRunner.run(..., runtime_workspace=...)`, FSA 위임은 `runtime_workspace or workspace`를 사용한다. 터미널 worker(`core/agent_worker.py`)도 payload의 `runtime_workspace`를 `AgentRunner.run()`으로 전달한다.
 
 **클래스:** `DynamicOrchestrator`
 
@@ -1540,6 +1543,12 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_dynamic_orchestrator_workspace_scope.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
+| 2026-05-17 | v1.2.28 | feat(F15-cont): ISE wrapper + single-run dispatch runtime_workspace 완성 — `core/ise_loop.py` `ISELoop.run_mission`에 `runtime_workspace` 파라미터 추가 후 `FSALoop.run_mission`에 전달. `agent_launcher.py` single-run `fsa`/`ise` 분기가 `runtime_workspace=state_workspace`를 전달(`_invoke_runner` else 분기와 정합). F15 project route에 이어 single-run 경로까지 runtime state 분리 완료. 테스트: `tests/test_fsa_runtime_workspace.py`에 `test_ise_loop_forwards_runtime_workspace` 추가. |
+| 2026-05-16 | v1.2.28 | feat(F15-runtime-workspace-split): project pipeline runtime state 격리 — `core/project_pipeline.py`에 `runtime_workspace` 전달/보존 추가(`PreparedBrief`, `PreparedProject`, `prepare_brief`, `prepare`, `execute`, `run`), checkpoint/warning registry/strategy ledger/orchestrator runtime을 state workspace로 라우팅. `agent_launcher.py` project route가 `runtime_workspace=state_workspace` 전달. `core/dynamic_orchestrator.py` `run_project(..., runtime_workspace=None)` 추가, in-thread/terminal/FSA 위임에 runtime workspace 전달 및 manifest/runtime file state 라우팅. `core/fsa_loop.py` runner/ledger state 라우팅, `core/agent_worker.py` payload 지원. 테스트: project pipeline/orchestrator/FSA runtime workspace 회귀 추가. |
 | 2026-05-15 | v1.2.28 | feat(P4.5b): Agent Model Selection runtime escalation — `scripts/agent_model_selector.py` 신규(select_model()/log_routing()/pending state CRUD, escalation matrix: af-test-runner→sonnet/af-critic→opus/af-doc-qa→haiku↓). `scripts/check_model_escalation.py` 신규(UserPromptSubmit one-shot hook, sys.frozen 가드). `scripts/hook_runner.py` `_detect_escalation_triggers()` 신규 + `_post_agent_record` escalation 감지 블록 추가. `.claude/settings.json` check_model_escalation.py hook 등록. `tests/test_agent_model_selector.py` 신규 23케이스. `tests/test_hook_runner_builtins.py` _detect_triggers 15케이스 추가. `tests/test_check_model_escalation.py` 신규 5케이스. 총 65 PASS. 3-tier: af-critic WARN / af-cross-review WARN / af-test-runner PASS. §0 2행 추가. |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, code-review.md, test_cli_providers.py |
 | 2026-05-15 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, code-review.md, test_cli_providers.py |

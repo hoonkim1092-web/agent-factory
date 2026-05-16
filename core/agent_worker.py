@@ -17,6 +17,7 @@ task.json 스키마:
     "subtask": "...",
     "run_id": "run_xxx",
     "workspace": "C:/Project",
+    "runtime_workspace": "C:/AgentFactoryRuntime",
     "task_id": "backend_dev_module_1_scope_1",
     "broker_address": "127.0.0.1:52079"
   }
@@ -60,6 +61,7 @@ def main():
     subtask = task.get("subtask", "")
     run_id = task.get("run_id", "")
     workspace = task.get("workspace", "")
+    runtime_workspace = task.get("runtime_workspace", "") or workspace
     task_id = task.get("task_id", "")
     agent_data = task.get("agent_data", {})
 
@@ -78,6 +80,7 @@ def main():
             run_id=run_id,
             auto_approve=True,
             workspace=workspace,
+            runtime_workspace=runtime_workspace,
             task_id=task_id,
         )
         result = run_result if run_result else {"ok": False, "reason": "empty_result"}

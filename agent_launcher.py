@@ -386,6 +386,7 @@ class AgentFactory:
         self,
         task_input: str,
         workspace: str,
+        runtime_workspace: str | None,
         execution_mode: str,
         enable_build: bool,
         requested_role: str,
@@ -406,6 +407,7 @@ class AgentFactory:
             prepared_brief = self.project_pipeline.prepare_brief(
                 task_input=task_input,
                 workspace=workspace,
+                runtime_workspace=runtime_workspace,
                 execution_mode=execution_mode,
                 enable_build=enable_build,
                 requested_role=requested_role,
@@ -562,6 +564,7 @@ class AgentFactory:
         print(f"- Task: {task_input}")
 
         route = self.request_router.route(task_input=task_input, role_spec=role_spec, pipeline_mode=pipeline_mode)
+        state_workspace = runtime_workspace or workspace or PROJECT_ROOT
         if route.get("pipeline") == "project":
             target_workspace = workspace or PROJECT_ROOT
             print(f"\n[Router] project pipeline selected: {route.get('reasoning', '')}")
@@ -569,6 +572,7 @@ class AgentFactory:
                 return self.project_pipeline.run(
                     task_input=task_input,
                     workspace=target_workspace,
+                    runtime_workspace=state_workspace,
                     execution_mode=execution_mode,
                     enable_build=enable_build,
                     requested_role=role_spec,
@@ -577,6 +581,7 @@ class AgentFactory:
             return self._run_project_with_approval(
                 task_input=task_input,
                 workspace=target_workspace,
+                runtime_workspace=state_workspace,
                 execution_mode=execution_mode,
                 enable_build=enable_build,
                 requested_role=role_spec,
@@ -584,7 +589,6 @@ class AgentFactory:
             )
 
         user_workspace = workspace or PROJECT_ROOT
-        state_workspace = runtime_workspace or workspace or PROJECT_ROOT
 
         agent = self._get_agent(role_spec, workspace=state_workspace)
         reqs = self._analyze_requirements(agent, task_input, workspace=user_workspace)
@@ -626,12 +630,16 @@ class AgentFactory:
             ultra_kwargs = {"run_id": run_id}
             if "workspace" in ultra_params:
                 ultra_kwargs["workspace"] = user_workspace
+            if "runtime_workspace" in ultra_params:
+                ultra_kwargs["runtime_workspace"] = state_workspace
             run_metrics = self.ultra.run_mission(agent, task_input, **ultra_kwargs) or {}
         elif execution_mode == "ise":
             ise_params = inspect.signature(self.ise.run_mission).parameters
             ise_kwargs = {"run_id": run_id}
             if "workspace" in ise_params:
                 ise_kwargs["workspace"] = user_workspace
+            if "runtime_workspace" in ise_params:
+                ise_kwargs["runtime_workspace"] = state_workspace
             run_metrics = self.ise.run_mission(agent, task_input, **ise_kwargs) or {}
         else:
             invoke_params = inspect.signature(self._invoke_runner).parameters
@@ -883,7 +891,6 @@ if __name__ == "__main__":
         workspace=os.getcwd(),
         runtime_workspace=PROJECT_ROOT,
     )
-
 
 
 

@@ -31,6 +31,7 @@ import os
 import json
 import re
 import time
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,7 @@ class FSALoop:
         task_input: str,
         run_id: str,
         workspace: str | None = None,
+        runtime_workspace: str | None = None,
         lineage_id: str | None = None,
         initial_failure_result: dict | None = None,
     ) -> dict:
@@ -129,6 +131,8 @@ class FSALoop:
         target_workspace = workspace or os.getcwd()
         if not target_workspace or not os.path.isdir(target_workspace):
             return {"ok": False, "reason": f"유효하지 않은 워크스페이스: {target_workspace}"}
+        state_workspace = os.path.abspath(runtime_workspace) if runtime_workspace else target_workspace
+        os.makedirs(state_workspace, exist_ok=True)
         self.workspace = target_workspace
         git = GitManager(target_workspace)
 
@@ -138,7 +142,7 @@ class FSALoop:
         # ── lineage 원장 로드 ──
         try:
             from core.lineage_ledger import get_lineage_ledger
-            _ledger_obj = get_lineage_ledger(target_workspace)
+            _ledger_obj = get_lineage_ledger(state_workspace)
         except Exception:
             _ledger_obj = None
 
@@ -189,7 +193,7 @@ class FSALoop:
                         ledger.reset_escalation_counters()
                         continue
                     else:
-                        ledger.save(target_workspace)
+                        ledger.save(state_workspace)
                         return {
                             "ok": False,
                             "reason": human_result.get("reason", "사용자 중단"),
@@ -211,12 +215,12 @@ class FSALoop:
                     result = initial_failure_result
                     print_agent_msg("FSA", "초기 실패 결과 인수인계, 실행 건너뜀", "⏩")
                 else:
-                    result = self.runner.run(
+                    result = self._run_agent(
                         current_agent,
                         current_task,
                         run_id=f"{run_id}_c{cycle}",
-                        auto_approve=True,
                         workspace=target_workspace,
+                        runtime_workspace=state_workspace,
                     )
 
                 # ── 성공 체크 ──
@@ -225,7 +229,7 @@ class FSALoop:
                         self._visualizer.mark_completed(agent_name)
                     else:
                         print_agent_msg("FSA", f"Cycle {cycle}에서 성공!", "✅")
-                    ledger.save(target_workspace)
+                    ledger.save(state_workspace)
                     self._record_episode(task_input, result, evolved_skill_name, gate_result, cycle)
                     if _ledger_obj:
                         try:
@@ -332,11 +336,11 @@ class FSALoop:
                     print_agent_msg("FSA", "태스크 분해: 서브태스크로 분할 실행합니다", "🔀")
                     sub_results = self._decompose_and_execute(
                         task_input, current_agent, analysis, ledger,
-                        run_id, cycle, target_workspace,
+                        run_id, cycle, target_workspace, state_workspace,
                     )
                     if sub_results and all(r.get("ok") for r in sub_results):
                         print_agent_msg("FSA", "모든 서브태스크 성공!", "✅")
-                        ledger.save(target_workspace)
+                        ledger.save(state_workspace)
                         success_result = {
                             "ok": True,
                             "reason": "FSA 태스크 분해 후 전체 성공",
@@ -352,7 +356,7 @@ class FSALoop:
                     current_task = self.redesigner.apply_pivot(task_input, analysis, ledger)
 
                 # ── Step 7: 원장 영속화 ──
-                ledger.save(target_workspace)
+                ledger.save(state_workspace)
 
                 # ── 지수 백오프 (같은 레벨 반복 시) ──
                 backoff = self.stall_detector.compute_backoff(ledger, level)
@@ -362,7 +366,7 @@ class FSALoop:
 
         except KeyboardInterrupt:
             print_agent_msg("FSA", "사용자 인터럽트 — 루프 중단", "⛔")
-            ledger.save(target_workspace)
+            ledger.save(state_workspace)
             return {
                 "ok": False,
                 "reason": "KeyboardInterrupt",
@@ -392,7 +396,7 @@ class FSALoop:
             "failure_patterns": _final_patterns,
             "root_cause": _final_root_cause,
         }
-        ledger.save(target_workspace)
+        ledger.save(state_workspace)
         self._record_episode(task_input, final_result, evolved_skill_name, gate_result, self.max_cycles)
         return final_result
 
@@ -459,6 +463,7 @@ class FSALoop:
         run_id: str,
         cycle: int,
         workspace: str,
+        runtime_workspace: str | None = None,
     ) -> list[dict]:
         """태스크를 분해하고 각 서브태스크를 개별 실행한다."""
         subtasks = self.redesigner.decompose_task(original_task, analysis, ledger)
@@ -487,12 +492,12 @@ class FSALoop:
                     "▶️",
                 )
 
-                sub_result = self.runner.run(
+                sub_result = self._run_agent(
                     agent,
                     sub_task,
                     run_id=sub_run_id,
-                    auto_approve=True,
                     workspace=workspace,
+                    runtime_workspace=runtime_workspace,
                 )
                 results.append(sub_result)
 
@@ -511,6 +516,27 @@ class FSALoop:
                 break
 
         return results
+
+    def _run_agent(
+        self,
+        agent: dict,
+        task_input: str,
+        run_id: str,
+        workspace: str,
+        runtime_workspace: str | None = None,
+    ) -> dict:
+        """Call AgentRunner with runtime_workspace when the runner supports it."""
+        params = inspect.signature(self.runner.run).parameters
+        kwargs = {}
+        if "run_id" in params:
+            kwargs["run_id"] = run_id
+        if "auto_approve" in params:
+            kwargs["auto_approve"] = True
+        if "workspace" in params:
+            kwargs["workspace"] = workspace
+        if "runtime_workspace" in params:
+            kwargs["runtime_workspace"] = runtime_workspace
+        return self.runner.run(agent, task_input, **kwargs)
 
     # ══════════════════════════════════════════════════════════════
     #  사용자 에스컬레이션 (ISE와 동일)

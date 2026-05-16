@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-16 KST** — F15 설계 준비 완료. 다음 진입점 = **F15 구현** (Sonnet으로 바로 진입 가능, Opus 불필요).
+> 마지막 업데이트: **2026-05-17 KST** — F15 완료 (project pipeline + single-run dispatch + ISE wrapper + lineage 캡 정합). 다음 진입점 = 잔존 backlog 정리.
 
 ---
 
@@ -18,59 +18,37 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — F15 구현 (바로 시작 가능)
+## 🔥 다음 진입점 — 잔존 backlog 정리
+
+F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispatch + ISE wrapper + lineage 캡 정합까지 완료. 아래 "잔존 backlog"에서 우선순위를 골라 진행.
+
+### F15 마무리 내역 (2026-05-17 세션)
+
+- `core/ise_loop.py` — `ISELoop.run_mission`에 `runtime_workspace` 파라미터 추가 → `FSALoop.run_mission`에 위임
+- `agent_launcher.py` — single-run `fsa`/`ise` 디스패치가 `runtime_workspace=state_workspace` 전달 (`_invoke_runner` else 분기와 정합)
+- `core/dynamic_orchestrator.py:875` — lineage maxed 사전검사를 `state_workspace`에서 읽도록 수정. auto-review(Codex) BLOCK Finding 1: FSA는 lineage 원장을 `state_workspace`에 기록(`fsa_loop.py:145`)하는데 사전검사가 `target_workspace`를 읽어 캡이 우회되던 버그.
+
+### 검증 상태
+
+- 변경 파일 직접 관련 스위트 **49 passed** (`test_fsa_runtime_workspace` 2 + `test_dynamic_orchestrator_workspace_scope` 9 + `test_ise_integration` 7 + `test_agent_launcher_cli_dispatch` 31), `py_compile` OK
+- lineage 버그 재현 검증: 수정 되돌리면 `test_lineage_maxed_check_reads_runtime_workspace` FAIL 확인
+- `test_project_pipeline` 6건 중 `test_project_pipeline_writes_planning_artifacts_and_roles`가 full-run에서 1회 FAIL → 단독 재실행 PASS (flaky, 실 LLM 호출 의존). 이 테스트는 `DynamicOrchestrator`를 스텁하므로 F15 변경과 무관.
+- Blueprint §0/§3.1/§3.2/§12 동기화됨
+
+---
+
+## ✅ F15 구현 내용 — workspace/runtime_workspace 분리 (참조)
 
 **브랜치**: `main`
 
-> 설계 준비 완료. 기존 패턴(`agent_runner.py` + `agent_launcher.py`)이 이미 정립되어 있어 Sonnet으로 바로 구현 진입 가능.
+### F15 핵심 결과
 
-### F15 핵심 사실 (사전 스캔 완료)
-
-**이미 있는 것** — `runtime_workspace` 개념은 이미 구현됨:
 - `core/agent_runner.py:840-859` — `target_workspace` (사용자) / `state_workspace` (AF 내부) 분리 로직
 - `agent_launcher.py:554-587` — `runtime_workspace` 파라미터 + `state_workspace` 계산
-- `tests/test_agent_launcher_cli_dispatch.py:201-279` — `TestSelfRunWorkspaceSplit` 클래스 (F15/F17 계약 테스트)
-
-**없는 것** — `core/project_pipeline.py`만 `runtime_workspace`가 없음:
-```python
-# 현재 (문제)
-def run(self, task_input: str, workspace: str, ...) -> dict:
-    # workspace 하나로 AF 내부 상태 + 사용자 산출물 모두 씀
-
-# 목표
-def run(self, task_input: str, workspace: str, runtime_workspace: str | None = None, ...) -> dict:
-    state_ws = runtime_workspace or workspace
-    # AF 내부 → state_ws (.checkpoint, .af, runtime/warnings)
-    # 사용자 산출물 → workspace (.todo.md, docs/, planning/, agents/*.yaml)
-```
-
-### F15 구현 범위 (확정)
-
-**변경 파일 1: `core/project_pipeline.py`**
-- `run()`, `prepare()`, `execute()` 시그니처에 `runtime_workspace: str | None = None` 추가
-- 내부 상태 경로는 `state_ws = runtime_workspace or workspace`로 라우팅:
-  - AF 내부 → `state_ws`: `.checkpoint/`, `.af/`, `runtime/warnings/`, `runs/`, `data/`, `artifacts/`
-  - 사용자 산출물 → `workspace`: `.todo.md`, `docs/`, `planning/`, `agents/*.yaml`
-- 기존 helper들: `_planning_dir()`, `_checkpoint_dir()`, `_save_checkpoint()` 등도 `state_ws` 사용
-
-**변경 파일 2: `agent_launcher.py:569-576`** — project_pipeline 호출부에 `runtime_workspace` 전달
-```python
-# 현재
-return self.project_pipeline.run(
-    task_input=task_input,
-    workspace=target_workspace,
-    ...
-)
-# 수정 후
-return self.project_pipeline.run(
-    task_input=task_input,
-    workspace=target_workspace,
-    runtime_workspace=state_workspace,  # 추가
-    ...
-)
-```
-
-**변경 파일 3: `tests/test_project_pipeline.py`** — 기존 테스트는 `runtime_workspace` 없이 호출하므로 호환성 확인 필요 (기본값=None이면 `workspace`로 fallback → 변경 불필요)
+- `core/project_pipeline.py` — `prepare_brief()`, `prepare()`, `execute()`, `run()`에 `runtime_workspace` 추가. `.checkpoint/`, warning registry, strategy ledger, orchestrator runtime을 `state_ws`로 라우팅.
+- `core/dynamic_orchestrator.py` — `run_project(..., runtime_workspace=...)` 추가. in-thread runner, terminal payload, manifest/runtime file을 `state_ws`로 라우팅.
+- `core/fsa_loop.py` / `core/agent_worker.py` — FSA runner 호출과 터미널 worker payload에 `runtime_workspace` 전달.
+- 테스트: `tests/test_project_pipeline.py`, `tests/test_dynamic_orchestrator_workspace_scope.py`, `tests/test_fsa_runtime_workspace.py`, 기존 self-run split 테스트.
 
 ### AF 내부 상태 vs 사용자 산출물 분류표
 
@@ -85,15 +63,6 @@ return self.project_pipeline.run(
 | `runtime/warnings/` | AF 내부 | `state_ws` |
 | `runs/`, `data/`, `artifacts/` | AF 내부 | `state_ws` |
 
-### 구현 시작 방법
-
-1. `core/project_pipeline.py` `run()` 시그니처 수정 → `state_ws` 변수 도입
-2. 내부 helper 함수들 `state_ws` 사용으로 교체
-3. `agent_launcher.py:569` 호출부 `runtime_workspace=state_workspace` 추가
-4. `pytest tests/test_project_pipeline.py -v` 확인
-
----
-
 ## ✅ 완료된 것들 (이전 세션)
 
 - **Backlog #1**: `pytest.ini pythonpath` + `ci.yml` 실제 게이트 (`a0961ebc`)
@@ -101,10 +70,15 @@ return self.project_pipeline.run(
 - **test_orchestrator_manifest**: `.todo.md` 제거 → LLM 경로 강제 → dynamic_log.txt 생성 (`19f261c6`)
 - **test_project_pipeline**: `PlanVerifier` stub + `AF_SKIP_ESCALATION=1` → PASSED (`e4f1e0d0`)
 - **F15 설계 준비**: 코드베이스 전체 `workspace` 사용 패턴 스캔 완료
+- **F15 구현**: project pipeline/orchestrator/FSA/worker까지 runtime state 분리 완료
 
-### 잔존 backlog (낮은 우선순위)
+### 잔존 backlog
+- **전역 싱글톤 storage가 `runtime_workspace`를 무시** — 같은 설계 결함 2곳: ① `prepare_documents()`의 `get_default_storage().save()`(checkpoint), ② `dynamic_orchestrator.py:754` `get_default_store().append(RunEvent(...))`(run event). 둘 다 `runs/`를 CWD 상대 경로로 쓰며 `AF_CHECKPOINT_DIR`를 싱글톤 초기화 전에 set해야만 override됨 → `state_ws` 라우팅 안 됨. 제대로 고치려면 storage injection 또는 run-scoped resolver 설계 필요. (auto-review Finding 2)
+- **터미널 worker I/O hygiene 기존 결함** — `docs/reviews/2026-05-17-014614-dynamic_orchestrator-code-review.md` BLOCK 4건: `agent_worker.py` result.json 비원자 write, corrupt result polling 1h timeout, `dynamic_orchestrator.py` crash.log 비원자 write, timeout worker kill 후 wait 누락. 모두 F15 추가 라인이 아니라 기존 터미널 모드 안정성 결함(C2/M10/M6 계열)이며, 별도 hardening 커밋에서 원자 write + corrupt-result fail-fast + process reap으로 처리.
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - **Master_Blueprint.md hook 잡음** — 비-코드 편집에도 §12 자동 entry 생성
+- **`test_project_pipeline_writes_planning_artifacts_and_roles` flaky** — 실 LLM 호출 의존(19분 소요), full-run에서 간헐 FAIL. `work_item_generator` 경로 stub 보강 필요.
+- **설계 리뷰 미해결** — `docs/reviews/2026-05-17-012959-...-test-suite-triage-handoff-design-review.md`: `docs/2026-05-16-test-suite-triage-handoff.md`에 대한 BLOCK. [Critical] `test_sync_wrappers`가 삭제된 `.cmd` 래퍼를 대상으로 함. F15와 무관 — 별도 처리.
 
 ---
 

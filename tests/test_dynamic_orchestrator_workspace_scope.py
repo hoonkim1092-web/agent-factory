@@ -36,9 +36,11 @@ class _RepeatingLLM:
 class _DummyRunner:
     def __init__(self, _mr):
         self.last_workspace = None
+        self.last_runtime_workspace = None
 
-    def run(self, _agent_data, _subtask, run_id=None, auto_approve=False, workspace=None, task_id=""):
+    def run(self, _agent_data, _subtask, run_id=None, auto_approve=False, workspace=None, task_id="", runtime_workspace=None):
         self.last_workspace = workspace
+        self.last_runtime_workspace = runtime_workspace
         return {"ok": True}
 
 
@@ -101,6 +103,104 @@ def test_workspace_is_propagated_without_rebinding(monkeypatch, tmp_path):
     asyncio.run(orch._execute_agent_task("dev", "do x", "run_1", workspace=str(workspace)))
     assert orch.agent_mgr.last_workspace == str(workspace)
     assert orch.runner.last_workspace == str(workspace)
+
+
+def test_runtime_workspace_is_propagated_to_runner(monkeypatch, tmp_path):
+    monkeypatch.setattr(dyn, "LLMEngine", _DummyLLM)
+    monkeypatch.setattr(dyn, "AgentRunner", _DummyRunner)
+    monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
+    monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
+    monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+
+    workspace = tmp_path / "proj"
+    runtime_ws = tmp_path / "runtime"
+    workspace.mkdir(parents=True, exist_ok=True)
+    runtime_ws.mkdir(parents=True, exist_ok=True)
+
+    orch = dyn.DynamicOrchestrator(_DummyMR())
+    orch._runtime_workspace = str(runtime_ws)
+
+    asyncio.run(orch._execute_agent_task("dev", "do x", "run_1", workspace=str(workspace)))
+
+    assert orch.runner.last_workspace == str(workspace)
+    assert orch.runner.last_runtime_workspace == str(runtime_ws)
+
+
+def test_lineage_maxed_check_reads_runtime_workspace(monkeypatch, tmp_path):
+    """F15: maxed lineage 원장이 runtime_workspace에 있으면 degrade 경로를 타야 한다.
+
+    FSALoop은 lineage 원장을 state_workspace(runtime_workspace)에 기록하므로,
+    orchestrator의 is_maxed 사전검사도 같은 루트를 읽어야 lineage 캡이 우회되지 않는다.
+    """
+    monkeypatch.setattr(dyn, "LLMEngine", _DummyLLM)
+    monkeypatch.setattr(dyn, "AgentRunner", _FailingRunner)
+    monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
+    monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
+    monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+    monkeypatch.setenv("AF_ISE_ENABLED", "1")
+
+    workspace = tmp_path / "proj_lineage"
+    runtime_ws = tmp_path / "runtime"
+    workspace.mkdir(parents=True, exist_ok=True)
+    runtime_ws.mkdir(parents=True, exist_ok=True)
+    (workspace / "project_board_state.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "goal": "demo",
+                "execution_strategy": "parallel",
+                "planning_steps": [],
+                "roles": [],
+                "modules": [
+                    {"id": "dev_module", "name": "Dev", "owner_role": "dev", "task_ids": ["task_dev"], "status": "pending"},
+                ],
+                "tasks": [
+                    {
+                        "task_id": "task_dev",
+                        "instruction": "Dev: implement feature slice",
+                        "owner_role": "dev",
+                        "module_id": "dev_module",
+                        "phase": "build",
+                        "depends_on": [],
+                        "status": "pending",
+                    }
+                ],
+                "summary": {},
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    # maxed lineage 원장을 runtime_workspace에만 배치 (user workspace에는 없음)
+    af_dir = runtime_ws / ".af"
+    af_dir.mkdir(parents=True, exist_ok=True)
+    (af_dir / "lineage_ledger.json").write_text(
+        json.dumps(
+            {"entries": [{"lineage_id": "task_dev", "level": 5, "attempts": 99, "lifetime_attempts": 99}]}
+        ),
+        encoding="utf-8",
+    )
+
+    from core.lineage_ledger import reset_lineage_ledger
+    reset_lineage_ledger()
+
+    orch = dyn.DynamicOrchestrator(_DummyMR())
+    orch._runtime_workspace = str(runtime_ws)
+    asyncio.run(
+        orch._execute_agent_task(
+            "dev",
+            "Dev: implement feature slice",
+            "run_lineage",
+            workspace=str(workspace),
+            task_id="task_dev",
+        )
+    )
+
+    failed = orch.state_board["failed_subtasks"]
+    assert failed, "degrade 경로가 failed_subtasks를 기록해야 한다"
+    assert failed[0]["evaluator_action"] == "degrade"
+    assert failed[0]["lineage_id"] == "task_dev"
 
 
 def test_todo_fallback_assigns_tasks_when_llm_is_unavailable(monkeypatch, tmp_path):
