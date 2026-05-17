@@ -5,6 +5,7 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -708,12 +709,19 @@ class DynamicOrchestrator:
                     with open(result_file, encoding="utf-8") as fh:
                         return json.load(fh)
                 except (json.JSONDecodeError, OSError):
+                    # corrupt result — worker가 이미 종료됐으면 더 기다려도 무의미
+                    if proc.poll() is not None:
+                        return {"ok": False, "reason": "worker_result_corrupt"}
                     continue
             # 프로세스가 비정상 종료되고 결과 파일도 없는 경우
             if proc.poll() is not None and not os.path.exists(result_file):
                 return {"ok": False, "reason": f"worker_exited_code_{proc.returncode}"}
 
         proc.kill()
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
         return {"ok": False, "reason": "worker_timeout"}
 
     async def _execute_agent_task(
@@ -1230,8 +1238,12 @@ class DynamicOrchestrator:
 
             self.state_board["current_status"] = "crashed"
             crash_path = self._runtime_file("crash.log", workspace)
-            with crash_path.open("w", encoding="utf-8") as handle:
-                handle.write(traceback.format_exc())
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=crash_path.parent, delete=False, suffix=".tmp"
+            ) as tmp:
+                tmp.write(traceback.format_exc())
+                tmp_name = tmp.name
+            os.replace(tmp_name, crash_path)
             self._sync_manifest(force=True)
             print_agent_msg("System", f"Orchestration loop crashed: {exc}", "")
         else:

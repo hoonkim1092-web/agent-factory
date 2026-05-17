@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — F15 완료 (project pipeline + single-run dispatch + ISE wrapper + lineage 캡 정합). 다음 진입점 = 잔존 backlog 정리.
+> 마지막 업데이트: **2026-05-17 KST** — 터미널 worker I/O 하드닝 완료. 다음 진입점 = 잔존 backlog (싱글톤 storage runtime_workspace 연결 / flaky 테스트 stub / 설계 리뷰 미해결).
 
 ---
 
@@ -74,7 +74,7 @@ F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispat
 
 ### 잔존 backlog
 - **전역 싱글톤 storage가 `runtime_workspace`를 무시** — 같은 설계 결함 2곳: ① `prepare_documents()`의 `get_default_storage().save()`(checkpoint), ② `dynamic_orchestrator.py:754` `get_default_store().append(RunEvent(...))`(run event). 둘 다 `runs/`를 CWD 상대 경로로 쓰며 `AF_CHECKPOINT_DIR`를 싱글톤 초기화 전에 set해야만 override됨 → `state_ws` 라우팅 안 됨. 제대로 고치려면 storage injection 또는 run-scoped resolver 설계 필요. (auto-review Finding 2)
-- **터미널 worker I/O hygiene 기존 결함** — `docs/reviews/2026-05-17-014614-dynamic_orchestrator-code-review.md` BLOCK 4건: `agent_worker.py` result.json 비원자 write, corrupt result polling 1h timeout, `dynamic_orchestrator.py` crash.log 비원자 write, timeout worker kill 후 wait 누락. 모두 F15 추가 라인이 아니라 기존 터미널 모드 안정성 결함(C2/M10/M6 계열)이며, 별도 hardening 커밋에서 원자 write + corrupt-result fail-fast + process reap으로 처리.
+- ~~**터미널 worker I/O hygiene 기존 결함**~~ — **완료 (2026-05-17)**: result.json/crash.log 원자적 write, corrupt-result fail-fast, proc.wait() 추가. `tests/test_agent_worker.py` 3건 신규.
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - **Master_Blueprint.md hook 잡음** — 비-코드 편집에도 §12 자동 entry 생성
 - **`test_project_pipeline_writes_planning_artifacts_and_roles` flaky** — 실 LLM 호출 의존(19분 소요), full-run에서 간헐 FAIL. `work_item_generator` 경로 stub 보강 필요.

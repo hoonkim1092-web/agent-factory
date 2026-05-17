@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import traceback
 
 
@@ -88,20 +89,20 @@ def main():
         result = {"ok": False, "reason": f"worker_exception: {exc}"}
         traceback.print_exc()
 
-    # result.json 저장
+    # result.json 원자적 저장 (부분 write → corrupt 방지)
     try:
-        os.makedirs(os.path.dirname(args.result_file), exist_ok=True)
-        with open(args.result_file, "w", encoding="utf-8") as fh:
-            json.dump(result, fh, ensure_ascii=False, indent=2)
+        result_path = args.result_file
+        os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8",
+            dir=os.path.dirname(result_path) or ".",
+            delete=False, suffix=".tmp",
+        ) as tmp:
+            json.dump(result, tmp, ensure_ascii=False, indent=2)
+            tmp_name = tmp.name
+        os.replace(tmp_name, result_path)
     except Exception as exc:
-        # 대체 경로에 저장 시도
         print(f"[Worker:{role}] result.json 쓰기 실패: {exc}")
-        fallback = args.result_file + ".fallback.json"
-        try:
-            with open(fallback, "w", encoding="utf-8") as fh:
-                json.dump(result, fh, ensure_ascii=False)
-        except Exception:
-            pass
 
     status = "성공" if result.get("ok") else f"실패: {result.get('reason', '')[:100]}"
     print(f"[Worker:{role}] 완료 — {status}")

@@ -1528,6 +1528,7 @@ model_utils.py (독립 모듈)
 | `worker_exited_code_2` | frozen exe에서 `python agent_worker.py` 실행 시도 | `dynamic_orchestrator.py:515` frozen 분기 |
 | `stopped_max_cycles` | `compute_max_cycles()` 사이클 내 완료 못함 (기본 max(30, pending*3)) | Lilith LLM 실패율, 태스크 재시도 횟수 확인 |
 | `worker_timeout` | 에이전트 3600초 초과 | `dynamic_orchestrator.py:526` max_wait 조정 |
+| `worker_result_corrupt` | worker가 이미 종료됐지만 result.json이 부분 기록(corrupt) 상태 — 이전에는 3600초 폴링 대기. 수정(2026-05-17): `agent_worker.py` atomic write + corrupt 감지 시 `proc.poll() is not None`이면 즉시 반환 | `core/dynamic_orchestrator.py` polling loop / `core/agent_worker.py` tempfile+os.replace |
 | `empty_llm_response` | LLM 호출 실패 (API 키 없음 등) | 환경 변수 및 CLI 설치 확인 |
 | 다운로드 연결 끊김 | GitHub release asset 리다이렉트 실패 | raw LFS URL 사용 (`install-af.ps1:98`) |
 | `NameError: name '_safe_print' is not defined` | `core/project_pipeline.py` 780/782/848/850이 `_safe_print`를 미import — plan verify WARN + structural gate 예외 + doc cross-review 예외 분기에서만 노출됨 | `core/agent_runner.py`에서 import (`from core.agent_runner import _safe_print`) — 2026-04-15 fix |
@@ -1543,6 +1544,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | hardening(terminal-worker-io): 터미널 worker I/O 안정성 — (1) `core/agent_worker.py` result.json 원자적 write: `tempfile.NamedTemporaryFile + os.replace` 적용, `.fallback.json` 대체 경로 제거. (2) `core/dynamic_orchestrator.py` corrupt result 즉시 fail-fast: polling loop에서 `JSONDecodeError` + `proc.poll() is not None` 조합 시 `worker_result_corrupt` 즉시 반환(이전: 3600초 전체 대기). (3) crash.log 원자적 write: `NamedTemporaryFile + os.replace`. (4) kill-후-wait: `proc.kill()` 뒤 `proc.wait(timeout=5)` 추가(zombie 방지). 신규 `tests/test_agent_worker.py` 3건. 전체 1643 PASS. §11 `worker_result_corrupt` 행 추가. |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_agent_worker.py — Master_Blueprint.md, agent_worker.py, dynamic_orchestrator.py, code-review.md |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, agent_worker.py, dynamic_orchestrator.py, code-review.md |
+| 2026-05-17 | v1.2.28 | chore(core): edit: core/agent_worker.py — agent_worker.py |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_dynamic_orchestrator_workspace_scope.py — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_worker.py, dynamic_orchestrator.py (+7) |
