@@ -5711,3 +5711,23 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `core/registry_manager.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 16:34 — `main` (383afde4)
+
+**Context**: edit: core/registry_manager.py
+
+**Changed (1)**: `core/registry_manager.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 17:27 — `main` (58ec7b09)
+
+**Context**: edit: core/registry_manager.py
+
+**Changed (2)**: `core/registry_manager.py, docs/code_review/code-review.md`
+
+_Review skipped (--no-llm or LLM unavailable)_
