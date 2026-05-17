@@ -28,6 +28,7 @@ _INFRA_PATTERNS: tuple[str, ...] = (
     "cli_auto_install_failed",
     "worker_timeout",
     "worker_exited_code",
+    "worker_result_corrupt",
     "quota",
     "rate_limit",
     "429",

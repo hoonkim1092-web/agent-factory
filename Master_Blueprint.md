@@ -1528,7 +1528,7 @@ model_utils.py (독립 모듈)
 | `worker_exited_code_2` | frozen exe에서 `python agent_worker.py` 실행 시도 | `dynamic_orchestrator.py:515` frozen 분기 |
 | `stopped_max_cycles` | `compute_max_cycles()` 사이클 내 완료 못함 (기본 max(30, pending*3)) | Lilith LLM 실패율, 태스크 재시도 횟수 확인 |
 | `worker_timeout` | 에이전트 3600초 초과 | `dynamic_orchestrator.py:526` max_wait 조정 |
-| `worker_result_corrupt` | worker가 이미 종료됐지만 result.json이 부분 기록(corrupt) 상태 — 이전에는 3600초 폴링 대기. 수정(2026-05-17): `agent_worker.py` atomic write + corrupt 감지 시 `proc.poll() is not None`이면 즉시 반환 | `core/dynamic_orchestrator.py` polling loop / `core/agent_worker.py` tempfile+os.replace |
+| `worker_result_corrupt` | worker가 이미 종료됐지만 result.json이 부분 기록(corrupt) 상태 — 이전에는 3600초 폴링 대기. 수정(2026-05-17): `agent_worker.py` atomic write + corrupt 감지 시 `proc.poll() is not None`이면 즉시 반환. `failure_classifier._INFRA_PATTERNS`에 등록 — 미등록 시 IMPLEMENTATION 분류로 FSA 재시도 유발됨 | `core/dynamic_orchestrator.py` polling loop / `core/agent_worker.py` tempfile+os.replace / `core/failure_classifier.py` |
 | `empty_llm_response` | LLM 호출 실패 (API 키 없음 등) | 환경 변수 및 CLI 설치 확인 |
 | 다운로드 연결 끊김 | GitHub release asset 리다이렉트 실패 | raw LFS URL 사용 (`install-af.ps1:98`) |
 | `NameError: name '_safe_print' is not defined` | `core/project_pipeline.py` 780/782/848/850이 `_safe_print`를 미import — plan verify WARN + structural gate 예외 + doc cross-review 예외 분기에서만 노출됨 | `core/agent_runner.py`에서 import (`from core.agent_runner import _safe_print`) — 2026-04-15 fix |
@@ -1544,6 +1544,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_failure_classifier.py — Master_Blueprint.md, failure_classifier.py, code-review.md |
+| 2026-05-17 | v1.2.28 | chore(core): edit: core/failure_classifier.py — failure_classifier.py |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/checkpoint/storage.py — Master_Blueprint.md, NEXT_STEPS.md, __init__.py, storage.py, dynamic_orchestrator.py (+3) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_workspace_scoped_storage.py — Master_Blueprint.md, __init__.py, storage.py, dynamic_orchestrator.py, run_event.py (+2) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_workspace_scoped_storage.py — Master_Blueprint.md, __init__.py, storage.py, dynamic_orchestrator.py, run_event.py (+2) |
