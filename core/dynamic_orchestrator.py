@@ -203,8 +203,9 @@ class DynamicOrchestrator:
         # T1-2: RunEvent store — 재시작 후에도 완료 이력 복원
         if self._run_id:
             try:
-                from core.events.run_event import get_default_store, RunEventType
-                for ev in get_default_store().list_events(self._run_id):
+                from core.events.run_event import get_store_for, RunEventType
+                _rt_ws = self._runtime_workspace or self._workspace or "."
+                for ev in get_store_for(_rt_ws).list_events(self._run_id):
                     if ev.event_type == RunEventType.STEP_COMPLETED and ev.step_id:
                         tid = safe_id(ev.step_id)
                         if tid:
@@ -756,10 +757,10 @@ class DynamicOrchestrator:
         _emit_run_event = None
         if self._run_id and task_id:
             try:
-                from core.events.run_event import RunEvent, RunEventType, get_default_store
+                from core.events.run_event import RunEvent, RunEventType, get_store_for
                 def _emit_run_event(event_type, payload=None):  # noqa: E306
                     try:
-                        get_default_store().append(RunEvent(
+                        get_store_for(state_workspace).append(RunEvent(
                             run_id=self._run_id,
                             event_type=event_type,
                             payload=payload or {},

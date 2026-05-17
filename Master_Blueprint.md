@@ -1544,6 +1544,13 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/checkpoint/storage.py — Master_Blueprint.md, NEXT_STEPS.md, __init__.py, storage.py, dynamic_orchestrator.py (+3) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_workspace_scoped_storage.py — Master_Blueprint.md, __init__.py, storage.py, dynamic_orchestrator.py, run_event.py (+2) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_workspace_scoped_storage.py — Master_Blueprint.md, __init__.py, storage.py, dynamic_orchestrator.py, run_event.py (+2) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, __init__.py, storage.py, dynamic_orchestrator.py, run_event.py (+2) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/project_pipeline.py — Master_Blueprint.md, __init__.py, storage.py, run_event.py, project_pipeline.py (+1) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/checkpoint/__init__.py — Master_Blueprint.md, __init__.py, storage.py, run_event.py, code-review.md |
+| 2026-05-17 | v1.2.28 | feat(storage-workspace-scoped): workspace-keyed storage factory — `core/checkpoint/storage.py`에 `get_storage_for(workspace)` 추가(double-checked lock + 캐시). `core/events/run_event.py`에 `get_store_for(workspace)` 추가(동일 패턴). `core/project_pipeline.py` checkpoint 3곳, `core/dynamic_orchestrator.py` RunEvent 2곳 → `state_workspace` 인자 전달. `tests/test_workspace_scoped_storage.py` 신규 6건. 1649 PASS. |
 | 2026-05-17 | v1.2.28 | hardening(terminal-worker-io): 터미널 worker I/O 안정성 — (1) `core/agent_worker.py` result.json 원자적 write: `tempfile.NamedTemporaryFile + os.replace` 적용, `.fallback.json` 대체 경로 제거. (2) `core/dynamic_orchestrator.py` corrupt result 즉시 fail-fast: polling loop에서 `JSONDecodeError` + `proc.poll() is not None` 조합 시 `worker_result_corrupt` 즉시 반환(이전: 3600초 전체 대기). (3) crash.log 원자적 write: `NamedTemporaryFile + os.replace`. (4) kill-후-wait: `proc.kill()` 뒤 `proc.wait(timeout=5)` 추가(zombie 방지). 신규 `tests/test_agent_worker.py` 3건. 전체 1643 PASS. §11 `worker_result_corrupt` 행 추가. |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_agent_worker.py — Master_Blueprint.md, agent_worker.py, dynamic_orchestrator.py, code-review.md |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/dynamic_orchestrator.py — Master_Blueprint.md, agent_worker.py, dynamic_orchestrator.py, code-review.md |

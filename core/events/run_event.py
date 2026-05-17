@@ -150,6 +150,8 @@ class FileRunEventStore(RunEventStore):
 
 _default_store: Optional[RunEventStore] = None
 _default_store_lock = threading.Lock()  # get_default_store() 멀티스레드 초기화 안전
+_workspace_store_cache: dict[str, RunEventStore] = {}
+_workspace_store_lock = threading.Lock()
 
 
 def get_default_store(base_dir: str = "runs") -> RunEventStore:
@@ -162,3 +164,19 @@ def get_default_store(base_dir: str = "runs") -> RunEventStore:
                 resolved = os.environ.get("AF_CHECKPOINT_DIR") or base_dir
                 _default_store = FileRunEventStore(base_dir=resolved)
     return _default_store
+
+
+def get_store_for(workspace: str) -> RunEventStore:
+    """workspace 경로에 scoped된 RunEventStore를 반환한다.
+
+    전역 싱글톤(`get_default_store`)과 독립적으로 workspace마다 별도
+    인스턴스를 캐시한다. runtime_workspace가 있는 호출 경로에서 사용한다.
+    """
+    key = os.path.abspath(workspace)
+    if key not in _workspace_store_cache:
+        with _workspace_store_lock:
+            if key not in _workspace_store_cache:
+                _workspace_store_cache[key] = FileRunEventStore(
+                    base_dir=os.path.join(key, "runs")
+                )
+    return _workspace_store_cache[key]

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -83,6 +84,8 @@ class FileCheckpointStorage(CheckpointStorage):
 
 
 _default_storage: Optional[CheckpointStorage] = None
+_workspace_storage_cache: dict[str, CheckpointStorage] = {}
+_workspace_storage_lock = threading.Lock()
 
 
 def get_default_storage(base_dir: str = "runs") -> CheckpointStorage:
@@ -91,3 +94,19 @@ def get_default_storage(base_dir: str = "runs") -> CheckpointStorage:
         resolved = os.environ.get("AF_CHECKPOINT_DIR") or base_dir
         _default_storage = FileCheckpointStorage(base_dir=resolved)
     return _default_storage
+
+
+def get_storage_for(workspace: str) -> CheckpointStorage:
+    """workspace 경로에 scoped된 CheckpointStorage를 반환한다.
+
+    전역 싱글톤(`get_default_storage`)과 독립적으로 workspace마다 별도
+    인스턴스를 캐시한다. runtime_workspace가 있는 호출 경로에서 사용한다.
+    """
+    key = os.path.abspath(workspace)
+    if key not in _workspace_storage_cache:
+        with _workspace_storage_lock:
+            if key not in _workspace_storage_cache:  # double-checked locking
+                _workspace_storage_cache[key] = FileCheckpointStorage(
+                    base_dir=os.path.join(key, "runs")
+                )
+    return _workspace_storage_cache[key]

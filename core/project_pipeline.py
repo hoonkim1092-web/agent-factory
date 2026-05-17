@@ -1175,7 +1175,7 @@ class ProjectPipeline:
         # T1-1: canonical checkpoint double-write (이중 쓰기 phase)
         try:
             from core.checkpoint.canonical import Checkpoint
-            from core.checkpoint.storage import get_default_storage
+            from core.checkpoint.storage import get_storage_for
             import hashlib as _hl
             _ext_digest = _hl.sha256(
                 json.dumps({"task_input": task_input, "workspace": target_workspace}, sort_keys=True).encode()
@@ -1210,7 +1210,7 @@ class ProjectPipeline:
                     "task_input": task_input,
                 },
             )
-            get_default_storage().save(_cp)
+            get_storage_for(state_workspace).save(_cp)
             print(f"[Checkpoint] canonical saved — run_id={run_id} cursor=orchestrate")
         except Exception as _cp_err:
             print(f"[Checkpoint] canonical save failed (non-fatal): {_cp_err}")
@@ -1274,8 +1274,8 @@ class ProjectPipeline:
 
         # B2: canonical checkpoint guard — 이미 완료된 run은 재실행하지 않는다
         try:
-            from core.checkpoint.storage import get_default_storage as _get_store
-            _cp = _get_store().load(prepared.run_id)
+            from core.checkpoint.storage import get_storage_for as _get_store
+            _cp = _get_store(state_workspace).load(prepared.run_id)
             if _cp and _cp.next_step_cursor == "done":
                 logger.info("[execute] run_id=%s already done — skipping", prepared.run_id)
                 return {
@@ -1382,14 +1382,14 @@ class ProjectPipeline:
 
         # T1-1: canonical checkpoint → done (run 완료 표시)
         try:
-            from core.checkpoint.storage import get_default_storage
-            _existing = get_default_storage().load(prepared.run_id)
+            from core.checkpoint.storage import get_storage_for
+            _existing = get_storage_for(state_workspace).load(prepared.run_id)
             if _existing:
                 from datetime import datetime, timezone
                 _existing.next_step_cursor = "done"
                 _existing.saved_at = datetime.now(timezone.utc).isoformat()
                 _existing.test_acceptance_results["orchestrator_status"] = status
-                get_default_storage().save(_existing)
+                get_storage_for(state_workspace).save(_existing)
         except Exception as _done_err:
             logger.warning("[execute] done-checkpoint save failed (run_id=%s): %s", prepared.run_id, _done_err)
 

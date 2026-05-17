@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 터미널 worker I/O 하드닝 완료. 다음 진입점 = 잔존 backlog (싱글톤 storage runtime_workspace 연결 / flaky 테스트 stub / 설계 리뷰 미해결).
+> 마지막 업데이트: **2026-05-17 KST** — 싱글톤 storage workspace-keyed factory 완료. 다음 진입점 = 잔존 backlog (flaky 테스트 stub / 설계 리뷰 미해결).
 
 ---
 
@@ -73,7 +73,7 @@ F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispat
 - **F15 구현**: project pipeline/orchestrator/FSA/worker까지 runtime state 분리 완료
 
 ### 잔존 backlog
-- **전역 싱글톤 storage가 `runtime_workspace`를 무시** — 같은 설계 결함 2곳: ① `prepare_documents()`의 `get_default_storage().save()`(checkpoint), ② `dynamic_orchestrator.py:754` `get_default_store().append(RunEvent(...))`(run event). 둘 다 `runs/`를 CWD 상대 경로로 쓰며 `AF_CHECKPOINT_DIR`를 싱글톤 초기화 전에 set해야만 override됨 → `state_ws` 라우팅 안 됨. 제대로 고치려면 storage injection 또는 run-scoped resolver 설계 필요. (auto-review Finding 2)
+- ~~**전역 싱글톤 storage가 `runtime_workspace`를 무시**~~ — **완료 (2026-05-17)**: `get_storage_for(workspace)` + `get_store_for(workspace)` workspace-keyed factory 추가. `project_pipeline.py` 3곳 + `dynamic_orchestrator.py` 2곳 모두 `state_workspace`를 인자로 전달하도록 변경. 싱글톤(`get_default_storage`/`get_default_store`) 계약은 유지 — `approval_gate`, `run_budget`, `skill_self_evolution` 미변경.
 - ~~**터미널 worker I/O hygiene 기존 결함**~~ — **완료 (2026-05-17)**: result.json/crash.log 원자적 write, corrupt-result fail-fast, proc.wait() 추가. `tests/test_agent_worker.py` 3건 신규.
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - **Master_Blueprint.md hook 잡음** — 비-코드 편집에도 §12 자동 entry 생성
