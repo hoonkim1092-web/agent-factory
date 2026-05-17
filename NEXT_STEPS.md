@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — flaky 테스트 fix 완료. 다음 진입점: **후보 항목 중 선택**.
+> 마지막 업데이트: **2026-05-17 KST** — stale 정정(C/D 완료 이동). 다음 진입점: **A Phase 2 → A Phase 3 → 측정 → B → A Phase 4**.
 
 ---
 
@@ -56,32 +56,59 @@ git status -sb
 | P4.5b runtime escalation | ✅ |
 | Cross-review 비용 감축 Phase 1 | ✅ (2026-05-01) |
 | Blueprint §0~§12 동기화 | ✅ 최신 |
+| Work-Item 병렬화 v3.1 | ✅ (`06661764`, `19f72479`) |
+| Nightly Pipeline B2-4 (owner_role YAML) | ✅ (`5cd96564`) |
+| Nightly Pipeline B2-6 (global status) | ✅ (`63990a71`) |
 
 ---
 
-## 🔥 미구현 항목 (다음 진입점 후보)
+## 🔥 미구현 항목 — 실행 순서
 
-### A. Cross-review 비용 감축 Phase 2~4
-| Phase | 내용 | 복잡도 |
-|-------|------|--------|
-| Phase 2 | review_bundle 생성기 (ast-grep-py 의존성) | 높음 |
-| Phase 3 | 에이전트 프롬프트 최적화 | 중간 |
-| Phase 4 | 스마트 라우팅 (Tier 3 skip 조건) | 중간 |
-- 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md`
+> 순서: **A Phase 2 → A Phase 3 → A Phase 3.5(측정) → B → A Phase 4**
+> 근거: 검토 루프 인프라 먼저, 기능 확장은 루프 안정 후
+
+### A Phase 2: review_bundle 생성기 (현재 진입점)
+
+**선행 필수 (Phase 2-prep)**:
+| 게이트 | 내용 |
+|--------|------|
+| 2-prep A | `requirements.txt` + `pyproject.toml`에 `ast-grep-py>=0.30` 추가, dev 설치 확인 |
+| 2-prep B | `pyinstaller_hooks/hook-ast_grep_py.py` + `af.spec` hookspath — frozen 빌드에 native lib 포함 |
+| 2-prep C | `python build_exe.py` → frozen `af`에서 ASTEngine smoke test 통과 |
+| 2-prep D | `core/review_bundle.py` thin wrapper API (dev + frozen 공통 진입점) |
+
+**본체 산출물**:
+- `scripts/build_review_bundle.py` — dev hook entry
+- `core/review_bundle.py` — 공통 wrapper (§§ 1~8 포함: Pending Files, Git Diff, Test Gap, Related Tests, Direct Callers, Risk Flags, Prior Findings, Bundle Stats)
+- `tests/test_build_review_bundle.py`
+- `.af_review_queue/review_bundle.md` (자동 생성 산출물)
+
+**핵심 제약**: 100KB cap, source_hash 무효화, caller 심볼당 max 3개
+- 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` §Phase 2
+
+### A Phase 3: bundle-first + extension log 강제
+
+- `af-critic.md`, `af-cross-review.md`: 진입 시 bundle 먼저 읽기 + extension log 형식 강제
+- Phase 2.5 tool call cap 병행 (af-critic: 20, af-cross-review: 30)
+- 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` §Phase 3, §Phase 2.5
+
+### A Phase 3.5: 측정 인프라 (Phase 4 입장 조건)
+
+- `.af_review_queue/review_metrics.jsonl`: commit_sha / tier / tokens / duration_ms / tool_calls / extension_log_count / verdict
+- `.af_review_queue/skip_audit.jsonl`: always-Tier3 외 skip 이후 사후 BLOCK 발견
+- **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
 ### B. Research Router Phase 2 — 뒤 파이프라인 보강
-설계 문서 §11 Phase 2:
+
+(A Phase 3 완료 후 진입)
 - `core/work_item_generator.py`: `required_capabilities`, `verification_focus`, `skill_gap_hypotheses` 반영
 - `core/project_task_board.py`: acceptance criteria에 새 필드 연결
 - skill pipeline: `skill_gap_hypotheses` → `SkillRetrievalEngine.decide_reuse()` 연결
 
-### C. Work-Item 병렬화 v3.1 본 구현
-- 설계 PASS 간주 상태, 코드 미구현
-- 대상: §11 (c) 항목 본 구현 PR
+### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 
-### D. Nightly Pipeline 미해결 항목
-- B2-4: owner_role YAML 미구현
-- B2-6: global status 미구현
+- Tier 3 skip 조건 결정 (T3-only accepted finding rate < 10% 기준)
+- **1주 실측 데이터 없이 구현 금지**
 
 ---
 

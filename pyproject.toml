@@ -7,6 +7,11 @@ name = "agent-factory"
 version = "0.1.0"
 requires-python = ">=3.9"
 
+[project.optional-dependencies]
+dev = [
+    "ast-grep-py>=0.35.0",
+]
+
 [project.scripts]
 start_db   = "start_db:main"
 end_db     = "end_db:main"

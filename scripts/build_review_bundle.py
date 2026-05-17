@@ -70,11 +70,15 @@ def run(workspace: str | None = None) -> int:
     try:
         sys.path.insert(0, workspace)
         from core import review_bundle
-        bundle = review_bundle.build(abs_files, workspace=workspace)
-        out = review_bundle.save(bundle, workspace)
+        bundle = review_bundle.build_full(workspace, abs_files)
+        out = review_bundle.save_full(bundle, workspace)
+        stats = bundle.get("stats", {})
         print(
-            f"[build_review_bundle] engine={bundle['engine']} "
-            f"files={len(abs_files)} -> {out}",
+            f"[build_review_bundle] "
+            f"files={len(abs_files)} "
+            f"size={stats.get('size_bytes', 0) // 1024}KB "
+            f"callers={stats.get('caller_files_included', 0)}/{stats.get('caller_files_included', 0) + stats.get('caller_files_truncated', 0)} "
+            f"-> {out}",
             file=sys.stderr,
         )
     except Exception as e:
