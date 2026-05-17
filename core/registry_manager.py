@@ -394,6 +394,9 @@ class RegistryManager:
         lock_skill_state(gated["id"], gated)
 
     def workflow_apply(self, metas: list[dict]):
+        if _env_flag("AF_DISABLE_REGISTRY_WRITE"):
+            logger.debug("workflow write skipped (AF_DISABLE_REGISTRY_WRITE set)")
+            return
         wf = read_yaml(WORKFLOW_PATH)
         wf.setdefault("capability_to_skill", {})
         mapping = wf["capability_to_skill"]

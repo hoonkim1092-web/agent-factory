@@ -5701,3 +5701,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `tests/test_sync_wrappers.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 14:31 — `main` (7d7a9030)
+
+**Context**: edit: core/registry_manager.py
+
+**Changed (1)**: `core/registry_manager.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

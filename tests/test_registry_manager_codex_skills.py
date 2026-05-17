@@ -109,3 +109,20 @@ def test_registry_manager_init_falls_back_to_read_only_on_permission_error(monke
     mgr = mod.RegistryManager()
 
     assert mgr._read_only is True
+
+
+def test_workflow_apply_skipped_when_registry_write_disabled(monkeypatch, tmp_path):
+    """F9 회귀 — AF_DISABLE_REGISTRY_WRITE=1 시 workflow_apply가 write_yaml을 호출하지 않아야 한다."""
+    project_root = tmp_path / "project"
+    mod = _load_registry_manager(monkeypatch, project_root)
+
+    # RegistryManager 초기화는 patch 이전에 완료 (ensure_registry_files 호출 혼입 방지)
+    monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")
+    mgr = mod.RegistryManager()
+
+    calls = []
+    monkeypatch.setattr(mod, "write_yaml", lambda *a, **k: calls.append(a))
+
+    mgr.workflow_apply([{"id": "s1", "capabilities": ["cap_a"]}])
+
+    assert calls == [], "write_yaml must not be called when AF_DISABLE_REGISTRY_WRITE is set"

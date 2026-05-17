@@ -620,7 +620,7 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 
 **Self-run isolation env flags (P4.5x/F12, 2026-05-15):**
 - `AGENT_PROJECT_ROOT` (system): ad-hoc CLI 진입(`python agent_launcher.py "task..."`) 시 `agent_launcher._maybe_isolate_project_root_for_self_run()` 가 `tempfile.gettempdir()/af_self_run_<ts>_<pid>/` 로 자동 set. `core.config_paths` 가 import-time 에 frozen 하므로 **모든 core.* import 이전** 에 set 됨. 사용자 명시 설정은 존중.
-- `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `PreflightEvaluator._update_registry_status` 양쪽 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set.
+- `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `RegistryManager.workflow_apply` + `PreflightEvaluator._update_registry_status` 세 곳 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set. (2026-05-17: `workflow_apply` 가드 추가 — F9 cross-review WARN #2/#3 해소)
 - `workspace` vs `runtime_workspace` (F17, 2026-05-15): ad-hoc self-run 에서 `workspace=os.getcwd()` 는 provider cwd/user file edit 대상, `runtime_workspace=PROJECT_ROOT` 는 runs/data/artifacts/agent state 대상. `AgentFactory._invoke_runner()` 와 `AgentRunner.run()` 이 `runtime_workspace` 를 optional로 전달/수용한다. Round 4e strict smoke 기준: real repo 문서 1건만 변경, `projects/default/*`, `skills/registry.yaml`, `data/skill-usage.jsonl`, `agents/general.yaml` 추가 변경 0.
 
 ---
@@ -1544,6 +1544,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | fix(F9-registry-guard): `core/registry_manager.py::workflow_apply()` 에 `_env_flag("AF_DISABLE_REGISTRY_WRITE")` 가드 추가 + `logger.debug` 일관성 보완. `tests/test_registry_manager_codex_skills.py` 회귀 테스트 1건 추가. af-critic WARN 2건 흡수(log 누락, 테스트 monkeypatch 순서). 3-tier 검증 40 PASS. §6 AF_DISABLE_REGISTRY_WRITE 항목 갱신. |
 | 2026-05-17 | v1.2.28 | fix(test-backlog): `.cmd` 래퍼 테스트 재작성 + flaky 테스트 스텁 보강 — (1) `tests/test_sync_wrappers.py`: 삭제된 `start_db.cmd`/`start_sync.cmd`/`sync.cmd` 대상 Windows-only 테스트 2건 → `start_db.py`/`start_sync.py` 크로스플랫폼 단위 테스트 14건으로 재작성(design review [Critical] BLOCK 해소). `_resolve_target()` 순수함수 5종 + `main()` 커맨드 빌드 4종 + `start_sync` 백엔드 디스패치 5종. (2) `tests/test_project_pipeline.py::test_project_pipeline_writes_planning_artifacts_and_roles`: `generate_work_items` 스텁 누락으로 실 LLM 호출 → 19분 소요 + 간헐 FAIL. `monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})` 1줄 추가로 2.88초 결정론적 실행. |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_failure_classifier.py — Master_Blueprint.md, failure_classifier.py, code-review.md |
 | 2026-05-17 | v1.2.28 | chore(core): edit: core/failure_classifier.py — failure_classifier.py |

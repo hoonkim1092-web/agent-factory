@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: registry_manager fix → F3 CLI argparse fix. 분석 완료, 구현 미진입.
+> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: F8 ContextSchema 진단 (F3 완료 확인됨) 또는 `_install_skill_file` AF_DISABLE 가드 불완전 (cross-review BONUS High) 처리.
 
 ---
 
@@ -20,22 +20,23 @@ git status -sb
 
 ## 🔥 다음 진입점 — 순서대로 진행
 
-### Step 1: registry_manager WARN fix (즉시, ~10분)
-- **파일**: `core/registry_manager.py:396` `workflow_apply()`
-- **결함**: `write_yaml(WORKFLOW_PATH, wf)` 호출 전 `AF_DISABLE_REGISTRY_WRITE` 가드 없음
-- **증거**: dogfooding Round 4 F9 — 작업 실패에도 `skills/registry.yaml` 수정됨 → F12 isolation guard 커버리지 갭
-- **수정**: `if _env_flag("AF_DISABLE_REGISTRY_WRITE"): return` 1줄 추가 (`_env_flag`는 L15에서 이미 import)
-- **WARN #2/#3 "advisory"는 재분류** — F9 증거가 있으므로 실제 수정 필요
+### ✅ Step 1: registry_manager WARN fix (완료 2026-05-17)
+- `core/registry_manager.py::workflow_apply()` 에 `AF_DISABLE_REGISTRY_WRITE` 가드 추가
+- `logger.debug` 일관성 보완 + 회귀 테스트 1건 추가
+- 3-tier 검증 40 PASS. Blueprint §6 갱신됨.
 
-### Step 2: F3 CLI argparse fix (다음, ~1-2시간)
-- **파일**: `agent_launcher.py`
-- **결함**: `_KNOWN_SUBCOMMANDS = {"project"}` + `required=True` subparsers → `python agent_launcher.py "task"` 즉시 실패
-- **증거**: Round 4 dogfooding — AF가 CLI task 입력 경로 자체를 지원 안 함, TUI만 가능
-- **수정**: 첫 positional arg이 known subcommand가 아니면 task로 라우팅
-- **주의**: agent_launcher.py는 Tier 3 → af-critic → af-cross-review → af-test-runner 풀 사이클
+### ✅ Step 2: F3 CLI argparse fix (이전 세션에서 완료)
+- `_detect_mode` + `_build_arg_parser` 구현됨. 31 테스트 PASS.
 
-### Step 3: F8 ContextSchema (F3 이후)
-- F3 fix 후 정상 경로에서 재현 → 범위 파악. 지금은 진단 불가.
+### Step 3: `_install_skill_file` AF_DISABLE 가드 불완전 (cross-review BONUS High, ~30분)
+- **파일**: `core/registry_manager.py` L205-244 `_install_skill_file()`
+- **결함**: `AF_DISABLE_REGISTRY_WRITE=1` 설정에도 `shutil.copytree` (L211) + `write_yaml(target_meta, ...)` (L236) 가 글로벌 `skills/` 에 파일을 씀 → `_write_registry()` 가드만 있고 앞단이 무방비
+- **호출경로**: `agent_launcher.py:55` (self-run 격리) → `skill_procurer.py:567` → `registry_manager.py:315` → L236 `write_yaml` 글로벌 오염
+- **수정**: `_install_skill_file()` 진입부에 `if _env_flag("AF_DISABLE_REGISTRY_WRITE"): return False, "disabled"` 추가
+- **주의**: core/ 파일 → Tier 2-3 풀 리뷰 사이클
+
+### Step 4: F8 ContextSchema (F3 완료 확인 후 진단 필요)
+- dogfooding Round 4b에서 F8 fix 확인됨. 추가 재현이 필요하면 진입.
 
 F15 (workspace/runtime_workspace 분리)는 완전 완료.
 
