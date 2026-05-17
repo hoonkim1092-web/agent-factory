@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 훅 중복 정리 완료(settings.json 단일화). 다음 진입점 = 잔존 backlog (flaky 테스트 stub / 설계 리뷰 미해결).
+> 마지막 업데이트: **2026-05-17 KST** — 잔존 backlog 완료: flaky 테스트 stub 보강 + test_sync_wrappers 재작성. 잔존 WARN: cross-review #2/#3 registry_manager (advisory, 자동 수정 의무 없음).
 
 ---
 
@@ -78,8 +78,8 @@ F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispat
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
 - ~~**Master_Blueprint.md hook 잡음**~~ — 별도 처리 보류 (settings.json PostToolUse 정리로 중복 발화 해소)
 - ~~**훅 중복 발화**~~ — **완료 (2026-05-17)**: settings.json을 단일 진실원천으로 통합. post_edit_enqueue + post_edit_blueprint 누락 추가. settings.local.json hooks 섹션 제거.
-- **`test_project_pipeline_writes_planning_artifacts_and_roles` flaky** — 실 LLM 호출 의존(19분 소요), full-run에서 간헐 FAIL. `work_item_generator` 경로 stub 보강 필요.
-- **설계 리뷰 미해결** — `docs/reviews/2026-05-17-012959-...-test-suite-triage-handoff-design-review.md`: `docs/2026-05-16-test-suite-triage-handoff.md`에 대한 BLOCK. [Critical] `test_sync_wrappers`가 삭제된 `.cmd` 래퍼를 대상으로 함. F15와 무관 — 별도 처리.
+- ~~**`test_project_pipeline_writes_planning_artifacts_and_roles` flaky**~~ — **완료 (2026-05-17)**: `monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})` 1줄 추가. 19분 LLM 호출 → 4.5초 결정론적 실행.
+- ~~**설계 리뷰 미해결**~~ — **완료 (2026-05-17)**: `test_sync_wrappers.py` 전면 재작성. 삭제된 `.cmd` 래퍼 Windows-only 테스트 2건 → `start_db.py`/`start_sync.py` 크로스플랫폼 테스트 14건. design review [Critical] BLOCK 해소.
 
 ---
 

@@ -1544,6 +1544,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | fix(test-backlog): `.cmd` 래퍼 테스트 재작성 + flaky 테스트 스텁 보강 — (1) `tests/test_sync_wrappers.py`: 삭제된 `start_db.cmd`/`start_sync.cmd`/`sync.cmd` 대상 Windows-only 테스트 2건 → `start_db.py`/`start_sync.py` 크로스플랫폼 단위 테스트 14건으로 재작성(design review [Critical] BLOCK 해소). `_resolve_target()` 순수함수 5종 + `main()` 커맨드 빌드 4종 + `start_sync` 백엔드 디스패치 5종. (2) `tests/test_project_pipeline.py::test_project_pipeline_writes_planning_artifacts_and_roles`: `generate_work_items` 스텁 누락으로 실 LLM 호출 → 19분 소요 + 간헐 FAIL. `monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})` 1줄 추가로 2.88초 결정론적 실행. |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_failure_classifier.py — Master_Blueprint.md, failure_classifier.py, code-review.md |
 | 2026-05-17 | v1.2.28 | chore(core): edit: core/failure_classifier.py — failure_classifier.py |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/checkpoint/storage.py — Master_Blueprint.md, NEXT_STEPS.md, __init__.py, storage.py, dynamic_orchestrator.py (+3) |

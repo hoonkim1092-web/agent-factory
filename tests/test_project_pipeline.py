@@ -198,6 +198,7 @@ def test_project_pipeline_writes_planning_artifacts_and_roles(monkeypatch, tmp_p
             }
 
     monkeypatch.setattr(pp, "DynamicOrchestrator", _DummyOrchestrator)
+    monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})
 
     res = pipeline.run(
         task_input="build a poker game",
