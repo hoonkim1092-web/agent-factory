@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-17 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-18 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1240,6 +1240,7 @@ Layer 6: 3-Tier Review Gate
     └─ BLOCK → exit 2 (Bash 툴 자체 차단)
   PostToolUse(Task) → hook_runner.py post_agent_record
     └─ af-test-runner/af-critic/af-cross-review 완료 시 tier 기록
+    └─ payload.duration_ms → review_metrics.jsonl duration_ms 수집 (Phase 3.5)
   PostToolUse(Bash) → hook_runner.py post_commit_clear
     └─ git commit 성공 시 큐에서 커밋 파일 제거
   .githooks/pre-commit → review_gate.py --check (이중 차단)
@@ -1544,6 +1545,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-18 | v1.2.28 | feat(phase3.5-metrics): compute_report() 라벨 정정(T3 finding share, T3 고유값 ≠) + [Phase 4 primary] T3 BLOCK-only 커밋 승격 + commits_with_t3<10 샘플 게이트 + 미지원 필드 명시. hook_runner._post_agent_record()에 payload.duration_ms 추출 → append_metric duration_ms 전달. 테스트 2개 신규(guidance_sufficient, duration_ms 2케이스), 기존 1개 assert 수정. 3-Tier: af-critic PASS / af-cross-review PASS / pytest 1704 PASS. |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_metrics_logger.py — Master_Blueprint.md, code-review.md, hook_runner.py, review_metrics_logger.py, test_review_metrics_logger.py |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: scripts/hook_runner.py — Master_Blueprint.md, code-review.md, hook_runner.py, review_metrics_logger.py |
+| 2026-05-18 | v1.2.28 | chore(docs): edit: scripts/review_metrics_logger.py — code-review.md, review_metrics_logger.py |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_build_review_bundle.py — Master_Blueprint.md, NEXT_STEPS.md, review_bundle.py, code-review.md, pyproject.toml (+2) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_build_review_bundle.py — Master_Blueprint.md, NEXT_STEPS.md, review_bundle.py, code-review.md, pyproject.toml (+2) |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_build_review_bundle.py — Master_Blueprint.md, NEXT_STEPS.md, review_bundle.py, code-review.md, pyproject.toml (+2) |

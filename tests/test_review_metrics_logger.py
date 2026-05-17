@@ -265,10 +265,30 @@ def test_compute_report_verdict_distribution(metrics_mod, ws):
 
 
 def test_compute_report_phase4_guidance_low(metrics_mod, ws):
-    """<10%: 공격적 skip 가능 안내 포함."""
+    """commits_with_t3 < 10 → Phase 4 판단 불가 (샘플 게이트)."""
     metrics_mod.append_metric(ws, "af-critic", 2, "warn", findings_count=20)
     metrics_mod.append_metric(ws, "af-cross-review", 3, "pass", findings_count=1)
     report = metrics_mod.compute_report(ws)
+    assert "Phase 4 판단 불가" in report
+
+
+def test_compute_report_phase4_guidance_sufficient(metrics_mod, ws, monkeypatch):
+    """commits_with_t3 >= 10이면 finding share 기반 guidance 출력."""
+    call_count = [0]
+
+    def fake_git_sha(workspace):
+        call_count[0] += 1
+        return f"sha{call_count[0]:03d}"
+
+    monkeypatch.setattr(metrics_mod, "_git_sha", fake_git_sha)
+
+    # 10 distinct commits: T2 findings=2, T3 findings=0 → share 0% < 10%
+    for _ in range(10):
+        metrics_mod.append_metric(ws, "af-critic", 2, "warn", findings_count=2)
+        metrics_mod.append_metric(ws, "af-cross-review", 3, "pass", findings_count=0)
+
+    report = metrics_mod.compute_report(ws)
+    assert "Phase 4 판단 불가" not in report
     assert "skip" in report.lower()
 
 
@@ -340,3 +360,57 @@ def test_post_agent_record_writes_metric(tmp_path, monkeypatch):
     assert kw["verdict"] == "warn"
     assert kw["findings_count"] == 1
     assert kw["extension_log_count"] == 0
+
+
+def _stub_hook_env(tmp_path, monkeypatch):
+    """공통 hook_runner + review_gate stub 설정."""
+    import scripts.review_metrics_logger as rml
+    import scripts.hook_runner as hr
+    importlib.reload(hr)
+    monkeypatch.setattr(hr, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(hr, "_detect_workspace", lambda: str(tmp_path))
+
+    q = tmp_path / ".af_review_queue"
+    q.mkdir(exist_ok=True)
+    (q / "pending_agent_review.json").write_text(
+        json.dumps({"files": [], "blast_tier": 2})
+    )
+
+    import types
+    fake_rg = types.ModuleType("scripts.review_gate")
+    fake_rg._extract_verdict_from_content = lambda c: "pass"
+    fake_rg.record_review_done = lambda *a, **kw: None
+    monkeypatch.setitem(sys.modules, "scripts.review_gate", fake_rg)
+    monkeypatch.setitem(sys.modules, "scripts.review_metrics_logger", rml)
+    return hr, rml
+
+
+def test_post_agent_record_duration_ms_passed(tmp_path, monkeypatch):
+    """payload의 duration_ms가 append_metric(duration_ms=...)에 전달된다."""
+    received = []
+    hr, rml = _stub_hook_env(tmp_path, monkeypatch)
+    monkeypatch.setattr(rml, "append_metric", lambda *a, **kw: received.append(kw))
+
+    hr._post_agent_record({
+        "tool_input": {"subagent_type": "af-critic"},
+        "tool_response": {"content": "Verdict: pass"},
+        "duration_ms": 12345,
+    })
+
+    assert received, "append_metric 미호출"
+    assert received[0].get("duration_ms") == 12345
+
+
+def test_post_agent_record_duration_ms_absent(tmp_path, monkeypatch):
+    """payload에 duration_ms 없으면 None 전달 — 크래시 없음."""
+    received = []
+    hr, rml = _stub_hook_env(tmp_path, monkeypatch)
+    monkeypatch.setattr(rml, "append_metric", lambda *a, **kw: received.append(kw))
+
+    hr._post_agent_record({
+        "tool_input": {"subagent_type": "af-critic"},
+        "tool_response": {"content": "Verdict: pass"},
+    })
+
+    assert received, "append_metric 미호출"
+    assert received[0].get("duration_ms") is None

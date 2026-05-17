@@ -288,18 +288,24 @@ def compute_report(workspace: str) -> str:
         "",
         "── T3-only 기여도 ──",
         f"  전체 findings: T1={t1_findings}  T2={t2_findings}  T3={t3_findings}",
-        f"  T3-only finding rate (근사): {t3_rate:.1f}%",
+        f"  T3 finding share (단순 비율, T3 고유값 ≠): {t3_rate:.1f}%",
+        f"  [Phase 4 primary] T3 BLOCK-only 커밋: {t3_block_only_commits} / {commits_with_t3}",
     ]
 
-    if t3_rate > 30:
-        lines.append("  → T3 고유 가치 큼 — skip 보수적 유지 권고")
-    elif t3_rate >= 10:
-        lines.append("  → 중간 — 위험군 외 선택적 skip 검토 가능")
+    if commits_with_t3 < 10:
+        lines.append(
+            f"  ⚠️  Phase 4 판단 불가 — 커밋 수 부족 (현재: {commits_with_t3} / 필요: 10)"
+        )
     else:
-        lines.append("  → T3 대체로 중복 — 공격적 skip 가능 (Phase 4 진입 검토)")
+        # guidance keyed on finding share; thresholds re-evaluated after 1-week data collection
+        if t3_rate > 30:
+            lines.append("  → T3 고유 가치 큼 — skip 보수적 유지 권고")
+        elif t3_rate >= 10:
+            lines.append("  → 중간 — 위험군 외 선택적 skip 검토 가능")
+        else:
+            lines.append("  → T3 대체로 중복 — 공격적 skip 가능 (Phase 4 진입 검토)")
 
     lines += [
-        f"  T3 BLOCK-only 커밋: {t3_block_only_commits} / {commits_with_t3}",
         f"  T3 평균 extension log: {avg_ext:.1f}건",
         "",
         "── 에이전트별 verdict 분포 ──",
@@ -310,6 +316,11 @@ def compute_report(workspace: str) -> str:
         dist = "  ".join(f"{k}:{v}" for k, v in sorted(counts.items()))
         lines.append(f"  {agent}: {dist}  (총 {total})")
 
+    lines += [
+        "",
+        "── 미지원 필드 ──",
+        "  tokens/tool_calls: 미지원 (API 통합 필요)",
+    ]
     return "\n".join(lines)
 
 

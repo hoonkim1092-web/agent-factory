@@ -449,6 +449,7 @@ def _post_agent_record(payload: dict) -> int:
             # absolute path leading `/`는 word boundary 제거됨 — 상대경로 대부분이므로 허용
             evidence_cited = len(re.findall(r"\b\w[\w/.-]+\.py:\d+", content))
 
+        duration_ms = payload.get("duration_ms")
         append_metric(
             workspace=workspace,
             agent=subagent_type,
@@ -456,6 +457,7 @@ def _post_agent_record(payload: dict) -> int:
             verdict=verdict,
             findings_count=parse_findings_count(content),
             extension_log_count=parse_extension_log_count(content),
+            duration_ms=duration_ms,
             evidence_present=evidence_present,
             evidence_items=evidence_items,
             evidence_cited=evidence_cited,
