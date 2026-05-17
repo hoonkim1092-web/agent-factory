@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: F8 ContextSchema 진단 (F3 완료 확인됨) 또는 `_install_skill_file` AF_DISABLE 가드 불완전 (cross-review BONUS High) 처리.
+> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: `register_built()` → `lock_skill_state` AF_DISABLE_REGISTRY_WRITE 미보호 (cross-review BONUS High, 비격리 환경 한정) 또는 F8 ContextSchema 진단.
 
 ---
 
@@ -28,12 +28,11 @@ git status -sb
 ### ✅ Step 2: F3 CLI argparse fix (이전 세션에서 완료)
 - `_detect_mode` + `_build_arg_parser` 구현됨. 31 테스트 PASS.
 
-### Step 3: `_install_skill_file` AF_DISABLE 가드 불완전 (cross-review BONUS High, ~30분)
-- **파일**: `core/registry_manager.py` L205-244 `_install_skill_file()`
-- **결함**: `AF_DISABLE_REGISTRY_WRITE=1` 설정에도 `shutil.copytree` (L211) + `write_yaml(target_meta, ...)` (L236) 가 글로벌 `skills/` 에 파일을 씀 → `_write_registry()` 가드만 있고 앞단이 무방비
-- **호출경로**: `agent_launcher.py:55` (self-run 격리) → `skill_procurer.py:567` → `registry_manager.py:315` → L236 `write_yaml` 글로벌 오염
-- **수정**: `_install_skill_file()` 진입부에 `if _env_flag("AF_DISABLE_REGISTRY_WRITE"): return False, "disabled"` 추가
-- **주의**: core/ 파일 → Tier 2-3 풀 리뷰 사이클
+### ✅ Step 3: `_install_skill_file` AF_DISABLE 가드 추가 (완료 2026-05-17)
+- `_install_skill_file()` 최상단 `AF_DISABLE_REGISTRY_WRITE` 가드 + `logger.debug` 추가
+- os.makedirs / shutil.copy* / write_yaml(meta) / lock_skill_state 전체 차단
+- 회귀 테스트 2건 추가. 3-tier: af-critic PASS / af-cross-review WARN(BLOCK 없음) / af-test-runner 6 PASS
+- **잔존 (BONUS High)**: `register_built()` → `lock_skill_state` 직접 호출이 AF_DISABLE_REGISTRY_WRITE 미보호. 비격리 환경(AGENT_PROJECT_ROOT 미변경)에서 플래그만 있을 때 `skill-lock.yaml`에 여전히 쓸 수 있음. → 다음 세션 진입점
 
 ### Step 4: F8 ContextSchema (F3 완료 확인 후 진단 필요)
 - dogfooding Round 4b에서 F8 fix 확인됨. 추가 재현이 필요하면 진입.
