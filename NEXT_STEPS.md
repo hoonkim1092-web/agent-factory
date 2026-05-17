@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 잔존 backlog 완료: flaky 테스트 stub 보강 + test_sync_wrappers 재작성. 잔존 WARN: cross-review #2/#3 registry_manager (advisory, 자동 수정 의무 없음).
+> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: registry_manager fix → F3 CLI argparse fix. 분석 완료, 구현 미진입.
 
 ---
 
@@ -18,9 +18,26 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — 잔존 backlog 정리
+## 🔥 다음 진입점 — 순서대로 진행
 
-F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispatch + ISE wrapper + lineage 캡 정합까지 완료. 아래 "잔존 backlog"에서 우선순위를 골라 진행.
+### Step 1: registry_manager WARN fix (즉시, ~10분)
+- **파일**: `core/registry_manager.py:396` `workflow_apply()`
+- **결함**: `write_yaml(WORKFLOW_PATH, wf)` 호출 전 `AF_DISABLE_REGISTRY_WRITE` 가드 없음
+- **증거**: dogfooding Round 4 F9 — 작업 실패에도 `skills/registry.yaml` 수정됨 → F12 isolation guard 커버리지 갭
+- **수정**: `if _env_flag("AF_DISABLE_REGISTRY_WRITE"): return` 1줄 추가 (`_env_flag`는 L15에서 이미 import)
+- **WARN #2/#3 "advisory"는 재분류** — F9 증거가 있으므로 실제 수정 필요
+
+### Step 2: F3 CLI argparse fix (다음, ~1-2시간)
+- **파일**: `agent_launcher.py`
+- **결함**: `_KNOWN_SUBCOMMANDS = {"project"}` + `required=True` subparsers → `python agent_launcher.py "task"` 즉시 실패
+- **증거**: Round 4 dogfooding — AF가 CLI task 입력 경로 자체를 지원 안 함, TUI만 가능
+- **수정**: 첫 positional arg이 known subcommand가 아니면 task로 라우팅
+- **주의**: agent_launcher.py는 Tier 3 → af-critic → af-cross-review → af-test-runner 풀 사이클
+
+### Step 3: F8 ContextSchema (F3 이후)
+- F3 fix 후 정상 경로에서 재현 → 범위 파악. 지금은 진단 불가.
+
+F15 (workspace/runtime_workspace 분리)는 완전 완료.
 
 ### F15 마무리 내역 (2026-05-17 세션)
 

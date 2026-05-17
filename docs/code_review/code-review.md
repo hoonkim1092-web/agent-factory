@@ -5691,3 +5691,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `core/failure_classifier.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 11:35 — `main` (8dddcfdc)
+
+**Context**: edit: tests/test_sync_wrappers.py
+
+**Changed (1)**: `tests/test_sync_wrappers.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
