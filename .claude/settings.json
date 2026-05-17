@@ -143,6 +143,26 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 scripts/run.py post_edit_enqueue",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/run.py post_edit_blueprint",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
             "command": "python3 scripts/run.py post_edit_code_review",
             "timeout": 30
           }

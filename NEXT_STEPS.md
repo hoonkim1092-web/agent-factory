@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 싱글톤 storage workspace-keyed factory 완료. 다음 진입점 = 잔존 backlog (flaky 테스트 stub / 설계 리뷰 미해결).
+> 마지막 업데이트: **2026-05-17 KST** — 훅 중복 정리 완료(settings.json 단일화). 다음 진입점 = 잔존 backlog (flaky 테스트 stub / 설계 리뷰 미해결).
 
 ---
 
@@ -76,7 +76,8 @@ F15 (workspace/runtime_workspace 분리)는 project pipeline + single-run dispat
 - ~~**전역 싱글톤 storage가 `runtime_workspace`를 무시**~~ — **완료 (2026-05-17)**: `get_storage_for(workspace)` + `get_store_for(workspace)` workspace-keyed factory 추가. `project_pipeline.py` 3곳 + `dynamic_orchestrator.py` 2곳 모두 `state_workspace`를 인자로 전달하도록 변경. 싱글톤(`get_default_storage`/`get_default_store`) 계약은 유지 — `approval_gate`, `run_budget`, `skill_self_evolution` 미변경.
 - ~~**터미널 worker I/O hygiene 기존 결함**~~ — **완료 (2026-05-17)**: result.json/crash.log 원자적 write, corrupt-result fail-fast, proc.wait() 추가. `tests/test_agent_worker.py` 3건 신규.
 - **cross-review WARN #2/#3** — registry_manager pre-existing 결함
-- **Master_Blueprint.md hook 잡음** — 비-코드 편집에도 §12 자동 entry 생성
+- ~~**Master_Blueprint.md hook 잡음**~~ — 별도 처리 보류 (settings.json PostToolUse 정리로 중복 발화 해소)
+- ~~**훅 중복 발화**~~ — **완료 (2026-05-17)**: settings.json을 단일 진실원천으로 통합. post_edit_enqueue + post_edit_blueprint 누락 추가. settings.local.json hooks 섹션 제거.
 - **`test_project_pipeline_writes_planning_artifacts_and_roles` flaky** — 실 LLM 호출 의존(19분 소요), full-run에서 간헐 FAIL. `work_item_generator` 경로 stub 보강 필요.
 - **설계 리뷰 미해결** — `docs/reviews/2026-05-17-012959-...-test-suite-triage-handoff-design-review.md`: `docs/2026-05-16-test-suite-triage-handoff.md`에 대한 BLOCK. [Critical] `test_sync_wrappers`가 삭제된 `.cmd` 래퍼를 대상으로 함. F15와 무관 — 별도 처리.
 
