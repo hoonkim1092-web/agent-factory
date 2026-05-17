@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — Phase 2 full bundle 구현 완료 (`23f3e7bc`). 다음 진입점: **A Phase 3 (bundle-first 프롬프트 + extension log)**.
+> 마지막 업데이트: **2026-05-17 KST** — Phase 2+3 완료, Phase 3.5 수술적 수정 합의. 다음 진입점: **Phase 3.5 수정 3개 → B**.
 
 ---
 
@@ -88,17 +88,24 @@ git status -sb
 **핵심 제약**: 100KB cap, source_hash 무효화, caller 심볼당 max 3개
 - 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` §Phase 2
 
-### A Phase 3: bundle-first + extension log 강제 ← **현재 진입점**
+### A Phase 3: bundle-first + extension log 강제 ✅ DONE (agent 파일에 기존 구현)
 
 - `af-critic.md`, `af-cross-review.md`: 진입 시 bundle 먼저 읽기 + extension log 형식 강제
 - Phase 2.5 tool call cap 병행 (af-critic: 20, af-cross-review: 30)
 - 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` §Phase 3, §Phase 2.5
 
-### A Phase 3.5: 측정 인프라 (Phase 4 입장 조건)
+### A Phase 3.5: 측정 인프라 수술적 수정 ← **현재 진입점**
 
-- `.af_review_queue/review_metrics.jsonl`: commit_sha / tier / tokens / duration_ms / tool_calls / extension_log_count / verdict
-- `.af_review_queue/skip_audit.jsonl`: always-Tier3 외 skip 이후 사후 BLOCK 발견
-- **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
+**수술적 수정 3개 (30~45분):**
+1. `compute_report()` metric 이름 정정: "T3-only finding rate" → "T3 finding share (단순 비율, T3 고유값 ≠)"
+   + `t3_block_only_commits / commits_with_t3`를 Phase 4 primary 신호로 승격
+   + 샘플 부족(< 10 커밋) 시 "Phase 4 판단 불가" 명시
+2. `hook_runner.py` duration_ms wall time 측정 추가
+3. (tokens/tool_calls는 API 통합 없이 불가 → "미지원" 명시하고 건드리지 않음)
+
+**True T3-unique finding rate** (structured output + dedup)는 Phase 4 이후 별도 작업으로 분류.
+
+**1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
 ### B. Research Router Phase 2 — 뒤 파이프라인 보강
 
