@@ -384,6 +384,9 @@ class RegistryManager:
         lock_skill_state(sid, {"version": item.get("version", "1.0.0"), "status": item.get("status", "active")})
 
     def register_built(self, meta: dict, skill_dir: str):
+        if _env_flag("AF_DISABLE_REGISTRY_WRITE"):
+            logger.debug("register_built skipped (AF_DISABLE_REGISTRY_WRITE set)")
+            return
         gated = self.apply_quality_gate(meta)
         reg = self._read_registry()
         reg["skills"][gated["id"]] = {

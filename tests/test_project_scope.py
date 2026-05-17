@@ -28,6 +28,16 @@ def test_project_scaffold_files_created(monkeypatch, tmp_path):
 
 def test_register_built_updates_skill_lock(monkeypatch, tmp_path):
     al = _load_launcher(monkeypatch, tmp_path / "proj2")
+    monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+
+    import core.registry_manager as rm_mod
+    isolated_skills = tmp_path / "isolated_skills"
+    isolated_skills.mkdir(parents=True, exist_ok=True)
+    isolated_registry = isolated_skills / "registry.yaml"
+    isolated_registry.write_text("skills: {}\ninstall_candidates: {}\n", encoding="utf-8")
+    monkeypatch.setattr(rm_mod, "REGISTRY_PATH", str(isolated_registry))
+    monkeypatch.setattr(rm_mod, "SKILLS_DIR", str(isolated_skills))
+
     reg = al.RegistryManager()
     skill_dir = tmp_path / "skills" / "abc"
     skill_dir.mkdir(parents=True, exist_ok=True)

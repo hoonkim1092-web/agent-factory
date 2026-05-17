@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: `register_built()` → `lock_skill_state` AF_DISABLE_REGISTRY_WRITE 미보호 (cross-review BONUS High, 비격리 환경 한정) 또는 F8 ContextSchema 진단.
+> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: F8 ContextSchema 진단 또는 Cross-review 비용 감축 Phase 1 (scripts/review_gate.py blast_tier/verdict/routing_state 분리).
 
 ---
 
@@ -32,7 +32,12 @@ git status -sb
 - `_install_skill_file()` 최상단 `AF_DISABLE_REGISTRY_WRITE` 가드 + `logger.debug` 추가
 - os.makedirs / shutil.copy* / write_yaml(meta) / lock_skill_state 전체 차단
 - 회귀 테스트 2건 추가. 3-tier: af-critic PASS / af-cross-review WARN(BLOCK 없음) / af-test-runner 6 PASS
-- **잔존 (BONUS High)**: `register_built()` → `lock_skill_state` 직접 호출이 AF_DISABLE_REGISTRY_WRITE 미보호. 비격리 환경(AGENT_PROJECT_ROOT 미변경)에서 플래그만 있을 때 `skill-lock.yaml`에 여전히 쓸 수 있음. → 다음 세션 진입점
+
+### ✅ Step 3b: `register_built()` AF_DISABLE 가드 추가 (완료 2026-05-17)
+- `register_built()` 최상단 `AF_DISABLE_REGISTRY_WRITE` early-return 가드 추가
+- `lock_skill_state` 미보호 BONUS High 해소 — 비격리 환경에서도 `skill-lock.yaml` 쓰기 차단
+- 회귀 테스트 `test_register_built_skipped_when_registry_write_disabled` 추가. 7 PASS
+- Blueprint §6 가드 목록 4곳 → 5곳, §12 이력 추가
 
 ### Step 4: F8 ContextSchema (F3 완료 확인 후 진단 필요)
 - dogfooding Round 4b에서 F8 fix 확인됨. 추가 재현이 필요하면 진입.

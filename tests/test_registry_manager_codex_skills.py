@@ -177,3 +177,32 @@ def test_workflow_apply_skipped_when_registry_write_disabled(monkeypatch, tmp_pa
     mgr.workflow_apply([{"id": "s1", "capabilities": ["cap_a"]}])
 
     assert calls == [], "write_yaml must not be called when AF_DISABLE_REGISTRY_WRITE is set"
+
+
+def test_register_built_skipped_when_registry_write_disabled(monkeypatch, tmp_path):
+    """F9 BONUS — AF_DISABLE_REGISTRY_WRITE=1 시 register_built()가 registry와 lock_skill_state 모두 건드리지 않아야 한다."""
+    project_root = tmp_path / "project"
+    mod = _load_registry_manager(monkeypatch, project_root)
+
+    skills_dir = tmp_path / "factory_skills"
+    registry_path = skills_dir / "registry.yaml"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text("skills: {}\ninstall_candidates: {}\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "SKILLS_DIR", str(skills_dir))
+    monkeypatch.setattr(mod, "REGISTRY_PATH", str(registry_path))
+
+    monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")
+    mgr = mod.RegistryManager()
+
+    lock_calls = []
+    monkeypatch.setattr(mod, "lock_skill_state", lambda *a, **k: lock_calls.append(a))
+    write_calls = []
+    monkeypatch.setattr(mod, "write_yaml", lambda *a, **k: write_calls.append(a))
+
+    mgr.register_built(
+        {"id": "built_skill", "name": "Built Skill", "capabilities": []},
+        str(skills_dir / "built_skill"),
+    )
+
+    assert write_calls == [], "write_yaml must not be called in register_built when AF_DISABLE_REGISTRY_WRITE is set"
+    assert lock_calls == [], "lock_skill_state must not be called in register_built when AF_DISABLE_REGISTRY_WRITE is set"

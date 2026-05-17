@@ -620,7 +620,7 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 
 **Self-run isolation env flags (P4.5x/F12, 2026-05-15):**
 - `AGENT_PROJECT_ROOT` (system): ad-hoc CLI 진입(`python agent_launcher.py "task..."`) 시 `agent_launcher._maybe_isolate_project_root_for_self_run()` 가 `tempfile.gettempdir()/af_self_run_<ts>_<pid>/` 로 자동 set. `core.config_paths` 가 import-time 에 frozen 하므로 **모든 core.* import 이전** 에 set 됨. 사용자 명시 설정은 존중.
-- `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `RegistryManager.workflow_apply` + `RegistryManager._install_skill_file` + `PreflightEvaluator._update_registry_status` 네 곳 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set. (2026-05-17: `workflow_apply` 가드 추가 — F9 WARN #2/#3 해소. 2026-05-17: `_install_skill_file` 최상단 가드 추가 — os.makedirs/shutil.copy*/meta.yaml/lock write 전체 차단)
+- `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `RegistryManager.workflow_apply` + `RegistryManager._install_skill_file` + `RegistryManager.register_built` + `PreflightEvaluator._update_registry_status` 다섯 곳 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set. (2026-05-17: `workflow_apply` 가드 추가 — F9 WARN #2/#3 해소. 2026-05-17: `_install_skill_file` 최상단 가드 추가 — os.makedirs/shutil.copy*/meta.yaml/lock write 전체 차단. 2026-05-17: `register_built` 최상단 가드 추가 — lock_skill_state 미보호 BONUS High 해소)
 - `workspace` vs `runtime_workspace` (F17, 2026-05-15): ad-hoc self-run 에서 `workspace=os.getcwd()` 는 provider cwd/user file edit 대상, `runtime_workspace=PROJECT_ROOT` 는 runs/data/artifacts/agent state 대상. `AgentFactory._invoke_runner()` 와 `AgentRunner.run()` 이 `runtime_workspace` 를 optional로 전달/수용한다. Round 4e strict smoke 기준: real repo 문서 1건만 변경, `projects/default/*`, `skills/registry.yaml`, `data/skill-usage.jsonl`, `agents/general.yaml` 추가 변경 0.
 
 ---
@@ -1544,7 +1544,12 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_scope.py — Master_Blueprint.md, NEXT_STEPS.md, registry_manager.py, code-review.md, registry.yaml (+2) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_scope.py — Master_Blueprint.md, NEXT_STEPS.md, registry_manager.py, code-review.md, test_project_scope.py (+1) |
+| 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_registry_manager_codex_skills.py — Master_Blueprint.md, registry_manager.py, code-review.md, test_registry_manager_codex_skills.py |
+| 2026-05-17 | v1.2.28 | chore(core): edit: core/registry_manager.py — registry_manager.py, code-review.md |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: core/registry_manager.py — Master_Blueprint.md, registry_manager.py, code-review.md, test_registry_manager_codex_skills.py |
+| 2026-05-17 | v1.2.28 | fix(F9-register-built-guard): `core/registry_manager.py::register_built()` 최상단에 `AF_DISABLE_REGISTRY_WRITE` 가드 추가 — `lock_skill_state` 미보호 BONUS High 해소. 회귀 테스트 `test_register_built_skipped_when_registry_write_disabled` 추가. §6 `register_built` 가드 항목 갱신(4→5곳). |
 | 2026-05-17 | v1.2.28 | fix(F9-install-guard): `core/registry_manager.py::_install_skill_file()` 최상단에 `AF_DISABLE_REGISTRY_WRITE` 가드 추가 — os.makedirs/shutil.copy*/meta.yaml write/lock_skill_state 전체 차단. `tests/test_registry_manager_codex_skills.py` 회귀 테스트 2건 추가(반환값·파일시스템 사이드이펙트). §6 AF_DISABLE_REGISTRY_WRITE 항목 갱신. |
 | 2026-05-17 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_registry_manager_codex_skills.py — Master_Blueprint.md, registry_manager.py, code-review.md, test_registry_manager_codex_skills.py |
 | 2026-05-17 | v1.2.28 | chore(core): edit: core/registry_manager.py — registry_manager.py |
