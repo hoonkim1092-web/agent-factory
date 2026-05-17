@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: F8 ContextSchema 진단 또는 Cross-review 비용 감축 Phase 1 (scripts/review_gate.py blast_tier/verdict/routing_state 분리).
+> 마지막 업데이트: **2026-05-17 KST** — 다음 진입점: **Research Router Phase 1a 구현** (`core/research_router.py` 신규 + 관련 8개 파일).
 
 ---
 
@@ -18,100 +18,61 @@ git status -sb
 
 ---
 
-## 🔥 다음 진입점 — 순서대로 진행
+## 🔥 다음 진입점
 
-### ✅ Step 1: registry_manager WARN fix (완료 2026-05-17)
-- `core/registry_manager.py::workflow_apply()` 에 `AF_DISABLE_REGISTRY_WRITE` 가드 추가
-- `logger.debug` 일관성 보완 + 회귀 테스트 1건 추가
-- 3-tier 검증 40 PASS. Blueprint §6 갱신됨.
+### Research Router Phase 1a 구현 (미구현)
 
-### ✅ Step 2: F3 CLI argparse fix (이전 세션에서 완료)
-- `_detect_mode` + `_build_arg_parser` 구현됨. 31 테스트 PASS.
+설계 v1.4.1이 cross-review 5라운드 통과 완료. **코드를 아직 안 짰다.**
 
-### ✅ Step 3: `_install_skill_file` AF_DISABLE 가드 추가 (완료 2026-05-17)
-- `_install_skill_file()` 최상단 `AF_DISABLE_REGISTRY_WRITE` 가드 + `logger.debug` 추가
-- os.makedirs / shutil.copy* / write_yaml(meta) / lock_skill_state 전체 차단
-- 회귀 테스트 2건 추가. 3-tier: af-critic PASS / af-cross-review WARN(BLOCK 없음) / af-test-runner 6 PASS
+- 설계 문서: `docs/` 내 Research Router v1.4.1 설계 문서 (grep으로 찾을 것)
+- 신규 파일: `core/research_router.py`
+- 수정 파일: 관련 8개 파일 (설계 문서 §7 참조)
 
-### ✅ Step 3b: `register_built()` AF_DISABLE 가드 추가 (완료 2026-05-17)
-- `register_built()` 최상단 `AF_DISABLE_REGISTRY_WRITE` early-return 가드 추가
-- `lock_skill_state` 미보호 BONUS High 해소 — 비격리 환경에서도 `skill-lock.yaml` 쓰기 차단
-- 회귀 테스트 `test_register_built_skipped_when_registry_write_disabled` 추가. 7 PASS
-- Blueprint §6 가드 목록 4곳 → 5곳, §12 이력 추가
-
-### Step 4: F8 ContextSchema (F3 완료 확인 후 진단 필요)
-- dogfooding Round 4b에서 F8 fix 확인됨. 추가 재현이 필요하면 진입.
-
-F15 (workspace/runtime_workspace 분리)는 완전 완료.
-
-### F15 마무리 내역 (2026-05-17 세션)
-
-- `core/ise_loop.py` — `ISELoop.run_mission`에 `runtime_workspace` 파라미터 추가 → `FSALoop.run_mission`에 위임
-- `agent_launcher.py` — single-run `fsa`/`ise` 디스패치가 `runtime_workspace=state_workspace` 전달 (`_invoke_runner` else 분기와 정합)
-- `core/dynamic_orchestrator.py:875` — lineage maxed 사전검사를 `state_workspace`에서 읽도록 수정. auto-review(Codex) BLOCK Finding 1: FSA는 lineage 원장을 `state_workspace`에 기록(`fsa_loop.py:145`)하는데 사전검사가 `target_workspace`를 읽어 캡이 우회되던 버그.
-
-### 검증 상태
-
-- 변경 파일 직접 관련 스위트 **49 passed** (`test_fsa_runtime_workspace` 2 + `test_dynamic_orchestrator_workspace_scope` 9 + `test_ise_integration` 7 + `test_agent_launcher_cli_dispatch` 31), `py_compile` OK
-- lineage 버그 재현 검증: 수정 되돌리면 `test_lineage_maxed_check_reads_runtime_workspace` FAIL 확인
-- `test_project_pipeline` 6건 중 `test_project_pipeline_writes_planning_artifacts_and_roles`가 full-run에서 1회 FAIL → 단독 재실행 PASS (flaky, 실 LLM 호출 의존). 이 테스트는 `DynamicOrchestrator`를 스텁하므로 F15 변경과 무관.
-- Blueprint §0/§3.1/§3.2/§12 동기화됨
+**진입 전 확인 사항**:
+1. 설계 문서 경로 확인: `find docs/ -name "*research*router*" -o -name "*router*research*"`
+2. Blueprint §7 확인 (Research Router 섹션)
+3. `python -m pytest tests/ -x -q` 베이스라인 확인 (현재: 1687 PASSED)
 
 ---
 
-## ✅ F15 구현 내용 — workspace/runtime_workspace 분리 (참조)
+## ✅ 완료된 작업 목록 (2026-05-17 기준)
 
-**브랜치**: `main`
+### 인프라 Fix (F-series)
+| 항목 | 완료일 | 내용 |
+|------|--------|------|
+| F1~F17 전체 | 2026-05-15 | CLI 디스패치, schema, 격리, workspace 분리 등 |
+| F15 workspace/runtime_workspace | 2026-05-17 | project pipeline/orchestrator/FSA 전체 분리 |
+| F16 test isolation | 2026-05-15 | conftest AF_DISABLE 가드 |
 
-### F15 핵심 결과
+### Registry Write Guard (F9 시리즈)
+| 항목 | 완료일 | 내용 |
+|------|--------|------|
+| `_write_registry()` | 2026-05-15 | F12 hardening — 최초 가드 |
+| `workflow_apply()` | 2026-05-17 | WARN #2/#3 해소 |
+| `_install_skill_file()` | 2026-05-17 | os.makedirs/shutil/meta.yaml/lock 전체 차단 |
+| `register_built()` | 2026-05-17 | lock_skill_state 미보호 BONUS High 해소 |
 
-- `core/agent_runner.py:840-859` — `target_workspace` (사용자) / `state_workspace` (AF 내부) 분리 로직
-- `agent_launcher.py:554-587` — `runtime_workspace` 파라미터 + `state_workspace` 계산
-- `core/project_pipeline.py` — `prepare_brief()`, `prepare()`, `execute()`, `run()`에 `runtime_workspace` 추가. `.checkpoint/`, warning registry, strategy ledger, orchestrator runtime을 `state_ws`로 라우팅.
-- `core/dynamic_orchestrator.py` — `run_project(..., runtime_workspace=...)` 추가. in-thread runner, terminal payload, manifest/runtime file을 `state_ws`로 라우팅.
-- `core/fsa_loop.py` / `core/agent_worker.py` — FSA runner 호출과 터미널 worker payload에 `runtime_workspace` 전달.
-- 테스트: `tests/test_project_pipeline.py`, `tests/test_dynamic_orchestrator_workspace_scope.py`, `tests/test_fsa_runtime_workspace.py`, 기존 self-run split 테스트.
+### Cross-review 비용 감축
+| Phase | 상태 | 내용 |
+|-------|------|------|
+| Phase 1 | ✅ 완료 (2026-05-01) | blast_tier/verdict/routing_state 분리, `downgrade_blast_tier` → NotImplementedError |
+| Phase 2 | 미구현 | review_bundle 생성기 (ast-grep-py 의존성, 복잡) |
+| Phase 3 | 미구현 | 에이전트 프롬프트 최적화 |
+| Phase 4 | 미구현 | 스마트 라우팅 (Tier 3 skip 조건) |
 
-### AF 내부 상태 vs 사용자 산출물 분류표
-
-| 경로 | 분류 | 라우팅 |
-|------|------|--------|
-| `planning/` | 사용자 산출물 | `workspace` |
-| `agents/*.yaml` | 사용자 산출물 | `workspace` |
-| `.todo.md` | 사용자 산출물 | `workspace` |
-| `docs/` | 사용자 산출물 | `workspace` |
-| `.checkpoint/` | AF 내부 | `state_ws` |
-| `.af/` | AF 내부 | `state_ws` |
-| `runtime/warnings/` | AF 내부 | `state_ws` |
-| `runs/`, `data/`, `artifacts/` | AF 내부 | `state_ws` |
-
-## ✅ 완료된 것들 (이전 세션)
-
-- **Backlog #1**: `pytest.ini pythonpath` + `ci.yml` 실제 게이트 (`a0961ebc`)
-- **Backlog #2**: runtime 산출물 gitignore (`a0a44928`) — 매 세션 dirty 해소
-- **test_orchestrator_manifest**: `.todo.md` 제거 → LLM 경로 강제 → dynamic_log.txt 생성 (`19f261c6`)
-- **test_project_pipeline**: `PlanVerifier` stub + `AF_SKIP_ESCALATION=1` → PASSED (`e4f1e0d0`)
-- **F15 설계 준비**: 코드베이스 전체 `workspace` 사용 패턴 스캔 완료
-- **F15 구현**: project pipeline/orchestrator/FSA/worker까지 runtime state 분리 완료
-
-### 잔존 backlog
-- ~~**전역 싱글톤 storage가 `runtime_workspace`를 무시**~~ — **완료 (2026-05-17)**: `get_storage_for(workspace)` + `get_store_for(workspace)` workspace-keyed factory 추가. `project_pipeline.py` 3곳 + `dynamic_orchestrator.py` 2곳 모두 `state_workspace`를 인자로 전달하도록 변경. 싱글톤(`get_default_storage`/`get_default_store`) 계약은 유지 — `approval_gate`, `run_budget`, `skill_self_evolution` 미변경.
-- ~~**터미널 worker I/O hygiene 기존 결함**~~ — **완료 (2026-05-17)**: result.json/crash.log 원자적 write, corrupt-result fail-fast, proc.wait() 추가. `tests/test_agent_worker.py` 3건 신규.
-- **cross-review WARN #2/#3** — registry_manager pre-existing 결함
-- ~~**Master_Blueprint.md hook 잡음**~~ — 별도 처리 보류 (settings.json PostToolUse 정리로 중복 발화 해소)
-- ~~**훅 중복 발화**~~ — **완료 (2026-05-17)**: settings.json을 단일 진실원천으로 통합. post_edit_enqueue + post_edit_blueprint 누락 추가. settings.local.json hooks 섹션 제거.
-- ~~**`test_project_pipeline_writes_planning_artifacts_and_roles` flaky**~~ — **완료 (2026-05-17)**: `monkeypatch.setattr(pp, "generate_work_items", lambda **_kwargs: {})` 1줄 추가. 19분 LLM 호출 → 4.5초 결정론적 실행.
-- ~~**설계 리뷰 미해결**~~ — **완료 (2026-05-17)**: `test_sync_wrappers.py` 전면 재작성. 삭제된 `.cmd` 래퍼 Windows-only 테스트 2건 → `start_db.py`/`start_sync.py` 크로스플랫폼 테스트 14건. design review [Critical] BLOCK 해소.
+### 기타
+- F8 ContextSchema — Round 4b에서 fix 확인됨. **재현 없으면 패스.**
+- F3 CLI argparse — 완료
+- test flaky 해소 — 완료
+- 전역 싱글톤 storage workspace isolation — 완료
+- Blueprint §0~§12 동기화 — 최신
 
 ---
 
-## 📜 과거 이력
+## 📜 과거 이력 참조
 
-세션별 누적 이력은 [docs/session-log/2026-05-15-rounds-1-2-3.md](docs/session-log/2026-05-15-rounds-1-2-3.md), dogfooding 마찰 F0~F17은 [docs/dogfooding/round4-af-cli-friction.md](docs/dogfooding/round4-af-cli-friction.md) 참고.
-
-- Round 1~4e dogfooding (2026-05-14~05-15)
-- P5 DomainVerdict / P4.5a model routing / P4.5x F3·F8 / F12 isolation+hardening / F16 test isolation / F17 workspace split — 모두 완료
-- Phase A/B/C, ADR M1~M5, P1~P4, Question Router Stage 0 등 — session-log 파일 참조
+- 세션별 누적 이력: [docs/session-log/2026-05-15-rounds-1-2-3.md](docs/session-log/2026-05-15-rounds-1-2-3.md)
+- dogfooding 마찰 F0~F17: [docs/dogfooding/round4-af-cli-friction.md](docs/dogfooding/round4-af-cli-friction.md)
 
 ---
 
