@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-18 KST** — Phase 3.5 수술적 수정 완료(`f75e01b4`). 다음 진입점: **B (Research Router Phase 2)**.
+> 마지막 업데이트: **2026-05-18 KST** — Phase 3.5 완료(`f75e01b4`) + B 설계 분석 완료. 다음 진입점: **B (structured evidence promotion)** — §B 섹션 정독 후 B-2/B-3 순서 결정부터.
 
 ---
 
@@ -102,12 +102,35 @@ git status -sb
 
 **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
-### B. Research Router Phase 2 — 뒤 파이프라인 보강 ← **현재 진입점**
+### B. Research Router Phase 2 — structured evidence promotion ← **현재 진입점**
 
-(A Phase 3 완료 후 진입)
-- `core/work_item_generator.py`: `required_capabilities`, `verification_focus`, `skill_gap_hypotheses` 반영
-- `core/project_task_board.py`: acceptance criteria에 새 필드 연결
-- skill pipeline: `skill_gap_hypotheses` → `SkillRetrievalEngine.decide_reuse()` 연결
+> 설계: `docs/2026-04-29-research-router-structured-evidence-design.md` §11 Phase 2 (L1139-1145)
+> 본질: **데이터는 이미 생성됨** — 뒤 파이프라인 소비처가 안 쓰는 게 문제. "Research Router 필드 연결"이 아니라 "structured evidence promotion".
+
+**용어 정정 (2026-05-18 세션 분석):**
+- 대상 3필드(`required_capabilities`/`verification_focus`/`skill_gap_hypotheses`)는 `ResearchPlan`(research_router.py)에 **없음**.
+- 생산자는 `core/researcher.py`의 structured evidence — `_synthesize_structured_evidence()`(researcher.py:455, fresh/deep/archive 모드) + `research_project_brief()`(fast_synthesis 모드). 생산자 2개.
+- `_merge_project_brief_evidence()`(researcher.py:1148-1156)가 `project_brief`에 복사하나 **`setdefault`** — brief에 값 있으면 evidence 값 미반영. 모드별 우선순위 상이.
+
+**B-1. `work_item_generator.py`** — 소비 *보장* 없음 (완전 폐기 아님)
+- LLM 경로(`work_item_generator.py:631/673/727`)는 `json.dumps(project_brief)` 전체를 프롬프트에 박음 → 3필드 값은 암묵 도달.
+- 빠진 것: 구조적 렌더링 + fallback 문서 명시 섹션. → fallback에 명시 섹션 추가.
+
+**B-2. `project_task_board.py`** — acceptance가 보일러플레이트
+- `_task_template()`(project_task_board.py:337) verify acceptance = 일반 문구. `build_project_board()`(L590)가 `verification_focus` 미연결.
+- → `verification_focus`/`required_capabilities`를 verify/build task `acceptance`에 주입. **deterministic·소규모·테스트 명확 — 저위험.**
+
+**B-3. skill pipeline** — capability-gap 경로가 死코드 (end-to-end 계약 문제, 단일 함수 아님)
+- `decide_reuse()`(skill_retrieval_engine.py:102)는 payload의 `required_capabilities`로 gap 분석 — 그러나 `_rank_candidates_for_need()`(researcher.py:197-206) target에 미포함 → 항상 `gap=None`.
+- 근본: `project_pipeline.py:641-645` `reqs` = `{goal, constraints, missing_skills}`만 — `required_capabilities`/`skill_gap_hypotheses` 미전달. `_rank_candidates_for_need`만 고치면 무음 no-op.
+- 네임스페이스 리스크: `skill_gap_hypotheses.need_skill_id`(research LLM) ≠ `roles[].required_skills`(`bootstrap_roles.plan()` 별도 LLM). 매칭 키 불일치 가능.
+- **B-3 분할 (4단계, Tier3 파일이므로 메가 PR 금지):**
+  1. contract helper — `skill_gap_hypotheses`를 `safe_id(need_skill_id)` 키 dict로 정규화. **miss 시 `[]` 반환이 계약** (project-union 주입 금지 — gap_ratio 과대산정).
+  2. `project_pipeline.py:641` `reqs`에 `required_capabilities`/`skill_gap_hypotheses` 추가.
+  3. `_rank_candidates_for_need()`에 hypothesis map 전달 → 매칭 need의 `required_capabilities`를 target에 주입.
+  4. `decide_reuse` 결정 사유(`decision.to_dict()`/rationale/capability_gap/confidence)를 `skill_manifest.json` entry에 보존 (현재 `decision_mode/reused_from/forge_run_id/fallback_chain`만).
+
+**진입 순서 미결 (사용자 결정 대기):** B-2 먼저(저위험 워밍업) vs B-3 contract helper 먼저(가치 최대). 설계는 Opus, 구현은 Sonnet.
 
 ### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 
