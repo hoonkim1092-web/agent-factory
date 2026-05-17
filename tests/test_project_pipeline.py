@@ -268,6 +268,17 @@ def test_project_pipeline_routes_runtime_workspace_to_orchestrator(monkeypatch, 
     monkeypatch.setenv("AF_SKIP_ESCALATION", "1")
     monkeypatch.setenv("AF_SKIP_DOMAIN_REVIEW", "1")
 
+    # PlanVerifier: 실제 LLM 호출 차단 (타임아웃 → 체크포인트 경로 불일치 방지)
+    import core.plan_verifier as _pv_mod
+    from core.plan_verifier import PlanVerifyResult
+    class _DummyPlanVerifier:
+        def __init__(self, workspace=None): pass
+        def verify(self, task_input, work_items, project_brief=None):
+            return PlanVerifyResult(passed=True, score=1.0)
+        def refine(self, *args, **kwargs): return None
+        def gate(self, *args, **kwargs): return PlanVerifyResult(passed=True, score=1.0)
+    monkeypatch.setattr(_pv_mod, "PlanVerifier", _DummyPlanVerifier)
+
     al = _load_launcher(monkeypatch)
     factory = al.AgentFactory()
     pipeline = factory.project_pipeline

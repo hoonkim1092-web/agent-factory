@@ -5731,3 +5731,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (2)**: `core/registry_manager.py, docs/code_review/code-review.md`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 20:22 — `main` (06cc00d7)
+
+**Context**: edit: tests/test_project_pipeline.py
+
+**Changed (1)**: `tests/test_project_pipeline.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
