@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-17 KST** — stale 정정(C/D 완료 이동). 다음 진입점: **A Phase 2 → A Phase 3 → 측정 → B → A Phase 4**.
+> 마지막 업데이트: **2026-05-17 KST** — Phase 2 full bundle 구현 완료 (`23f3e7bc`). 다음 진입점: **A Phase 3 (bundle-first 프롬프트 + extension log)**.
 
 ---
 
@@ -59,6 +59,8 @@ git status -sb
 | Work-Item 병렬화 v3.1 | ✅ (`06661764`, `19f72479`) |
 | Nightly Pipeline B2-4 (owner_role YAML) | ✅ (`5cd96564`) |
 | Nightly Pipeline B2-6 (global status) | ✅ (`63990a71`) |
+| Cross-review 비용 감축 Phase 2-prep | ✅ (`23f3e7bc`) |
+| Cross-review 비용 감축 Phase 2 full bundle | ✅ (`23f3e7bc`) — 8섹션, 100KB cap, source_hash |
 
 ---
 
@@ -67,7 +69,7 @@ git status -sb
 > 순서: **A Phase 2 → A Phase 3 → A Phase 3.5(측정) → B → A Phase 4**
 > 근거: 검토 루프 인프라 먼저, 기능 확장은 루프 안정 후
 
-### A Phase 2: review_bundle 생성기 (현재 진입점)
+### A Phase 2: review_bundle 생성기 ✅ DONE (`23f3e7bc`)
 
 **선행 필수 (Phase 2-prep)**:
 | 게이트 | 내용 |
@@ -86,7 +88,7 @@ git status -sb
 **핵심 제약**: 100KB cap, source_hash 무효화, caller 심볼당 max 3개
 - 설계 문서: `docs/plans/2026-04-30-cross-review-cost-reduction-plan.md` §Phase 2
 
-### A Phase 3: bundle-first + extension log 강제
+### A Phase 3: bundle-first + extension log 강제 ← **현재 진입점**
 
 - `af-critic.md`, `af-cross-review.md`: 진입 시 bundle 먼저 읽기 + extension log 형식 강제
 - Phase 2.5 tool call cap 병행 (af-critic: 20, af-cross-review: 30)
