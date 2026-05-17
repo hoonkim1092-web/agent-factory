@@ -178,6 +178,9 @@ class RegistryManager:
         return out
 
     def _install_skill_file(self, need_id: str, source_path: str, source_label: str = "external") -> tuple[bool, str]:
+        if _env_flag("AF_DISABLE_REGISTRY_WRITE"):
+            logger.debug("install_skill_file skipped (AF_DISABLE_REGISTRY_WRITE set)")
+            return False, "registry_write_disabled"
         sid = safe_id(need_id)
         src = self._resolve_path(source_path)
         if not src: return False, "source_not_found"

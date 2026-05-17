@@ -111,6 +111,57 @@ def test_registry_manager_init_falls_back_to_read_only_on_permission_error(monke
     assert mgr._read_only is True
 
 
+def test_install_skill_file_blocked_when_registry_write_disabled(monkeypatch, tmp_path):
+    """F9 확장 — AF_DISABLE_REGISTRY_WRITE=1 시 _install_skill_file이 즉시 (False, reason) 반환해야 한다."""
+    project_root = tmp_path / "project"
+    mod = _load_registry_manager(monkeypatch, project_root)
+
+    skills_dir = tmp_path / "factory_skills"
+    registry_path = skills_dir / "registry.yaml"
+    monkeypatch.setattr(mod, "SKILLS_DIR", str(skills_dir))
+    monkeypatch.setattr(mod, "REGISTRY_PATH", str(registry_path))
+
+    src_dir = tmp_path / "source" / "my_skill"
+    src_dir.mkdir(parents=True)
+    (src_dir / "skill.py").write_text("def run(): pass\n", encoding="utf-8")
+
+    monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")
+    mgr = mod.RegistryManager()
+
+    ok, reason = mgr._install_skill_file("my_skill", str(src_dir))
+
+    assert ok is False
+    assert reason == "registry_write_disabled"
+    # 파일시스템 사이드이펙트 없어야 함
+    assert not (skills_dir / "my_skill").exists(), "target_dir must not be created under write-disabled flag"
+
+
+def test_install_skill_file_blocked_leaves_no_registry_entry(monkeypatch, tmp_path):
+    """AF_DISABLE_REGISTRY_WRITE=1 시 registry와 skill-lock에 항목이 생기지 않아야 한다."""
+    project_root = tmp_path / "project"
+    mod = _load_registry_manager(monkeypatch, project_root)
+
+    skills_dir = tmp_path / "factory_skills"
+    registry_path = skills_dir / "registry.yaml"
+    skills_dir.mkdir(parents=True)
+    registry_path.write_text("skills: {}\ninstall_candidates: {}\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "SKILLS_DIR", str(skills_dir))
+    monkeypatch.setattr(mod, "REGISTRY_PATH", str(registry_path))
+
+    src_dir = tmp_path / "source" / "blocked_skill"
+    src_dir.mkdir(parents=True)
+    (src_dir / "skill.py").write_text("def run(): pass\n", encoding="utf-8")
+
+    monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")
+    mgr = mod.RegistryManager()
+
+    mgr._install_skill_file("blocked_skill", str(src_dir))
+
+    reg = mgr._read_registry()
+    assert "blocked_skill" not in reg.get("skills", {}), "registry must not gain entry under write-disabled flag"
+    assert not (skills_dir / "blocked_skill").exists(), "target_dir must not be created under write-disabled flag"
+
+
 def test_workflow_apply_skipped_when_registry_write_disabled(monkeypatch, tmp_path):
     """F9 회귀 — AF_DISABLE_REGISTRY_WRITE=1 시 workflow_apply가 write_yaml을 호출하지 않아야 한다."""
     project_root = tmp_path / "project"
