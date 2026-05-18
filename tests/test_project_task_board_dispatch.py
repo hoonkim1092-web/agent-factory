@@ -282,6 +282,47 @@ def test_build_project_board_acceptance_injection_is_idempotent():
     assert by_id["t_verify"]["acceptance"].count("검증 초점: reconnect") == 1
 
 
+# ----- board_prompt_digest: task_id/acceptance 노출 (P1-C, finding #1) -----
+# LLM dispatch(dynamic_orchestrator._lilith_decide_next)는 board_prompt_digest로만
+# 보드를 본다. task_id가 노출돼야 LLM이 echo → _resolve_task_meta() 성공 →
+# build_project_board()가 주입한 acceptance(검증 초점)가 AgentSpecializer에 도달한다.
+
+
+def test_board_prompt_digest_exposes_task_id_phase_and_acceptance():
+    from core.project_task_board import build_project_board, board_prompt_digest
+    brief = {"goal": "build app", "verification_focus": ["reconnect handling"]}
+    board = build_project_board(brief, _role_plan_with_tasks())
+    digest = board_prompt_digest(board)
+    # LLM이 echo할 수 있도록 task_id가 노출된다.
+    assert "task_id=t_verify" in digest
+    assert "phase=verify" in digest
+    # 주입된 검증 초점이 digest를 통해 LLM 프롬프트에 도달한다.
+    assert "검증 초점: reconnect handling" in digest
+
+
+def test_board_prompt_digest_bounds_acceptance_length():
+    # public funnel이므로 과대 acceptance가 들어와도 프롬프트가 부풀지 않게 절단된다.
+    from core.project_task_board import board_prompt_digest
+    long_item = "x" * 600
+    board = {
+        "goal": "g", "execution_strategy": "parallel", "summary": {},
+        "tasks": [{
+            "task_id": "t1", "phase": "verify", "owner_role": "qa",
+            "instruction": "verify", "status": "pending", "depends_on": [],
+            "acceptance": [long_item],
+        }],
+    }
+    digest = board_prompt_digest(board)
+    accept_line = next(l for l in digest.splitlines() if l.strip().startswith("acceptance:"))
+    # max_acceptance_chars=240 기본값에서 정확히 240자 + "..." 로 절단된다.
+    assert accept_line == "    acceptance: " + "x" * 240 + "..."
+
+
+def test_board_prompt_digest_empty_board_unchanged():
+    from core.project_task_board import board_prompt_digest
+    assert board_prompt_digest({}) == "No project board available."
+
+
 def test_clean_list_string_not_split_into_chars():
     # str 입력이 문자 단위로 분해되지 않고 1-item 리스트로 반환돼야 한다.
     from core.project_task_board import _clean_list

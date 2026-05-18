@@ -411,11 +411,13 @@ class DynamicOrchestrator:
         ## Instruction:
         Based on the roadmap and current state, determine the next immediate sub-tasks
         that should be executed in parallel. If the project is complete, return an empty array.
+        When a next task corresponds to a task in the Structured Project Board above,
+        set "task_id" to that board task's exact task_id so its acceptance criteria are applied.
 
         Return JSON ONLY:
         {{
             "next_tasks": [
-                {{"assigned_role": "role_name", "subtask_instruction": "detailed instruction", "estimated_complexity": "LOW/HIGH", "task_id": "optional_task_id"}}
+                {{"assigned_role": "role_name", "subtask_instruction": "detailed instruction", "estimated_complexity": "LOW/HIGH", "task_id": "<board task_id, blank if not a board task>"}}
             ]
         }}
         """

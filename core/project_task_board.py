@@ -925,7 +925,12 @@ def reset_in_progress_tasks(workspace: str) -> bool:
     return changed
 
 
-def board_prompt_digest(board: dict[str, Any], max_tasks: int = 12, max_instruction_chars: int = 200) -> str:
+def board_prompt_digest(
+    board: dict[str, Any],
+    max_tasks: int = 12,
+    max_instruction_chars: int = 200,
+    max_acceptance_chars: int = 240,
+) -> str:
     if not board:
         return "No project board available."
     lines = [
@@ -944,7 +949,23 @@ def board_prompt_digest(board: dict[str, Any], max_tasks: int = 12, max_instruct
         instruction = str(task.get("instruction") or "")
         if len(instruction) > max_instruction_chars:
             instruction = instruction[:max_instruction_chars].rstrip() + "..."
-        lines.append(f"- [{task.get('status', 'pending')}] {task.get('owner_role')}: {instruction} | depends_on={deps or '-'}")
+        # task_id/phase/acceptance를 노출해 LLM dispatch 경로(dynamic_orchestrator
+        # _lilith_decide_next)가 보드 메타데이터 계약을 유지하게 한다. task_id가
+        # 빠지면 LLM이 echo할 수 없어 _resolve_task_meta()가 None을 반환하고,
+        # build_project_board()가 verify 태스크에 주입한 acceptance(검증 초점)가
+        # AgentSpecializer에 도달하지 못한다.
+        task_id = _clean_text(task.get("task_id"))
+        phase = _clean_text(task.get("phase")) or "build"
+        lines.append(
+            f"- [{task.get('status', 'pending')}] task_id={task_id or '-'} phase={phase} "
+            f"{task.get('owner_role')}: {instruction} | depends_on={deps or '-'}"
+        )
+        acceptance = _clean_list(task.get("acceptance"))
+        if acceptance:
+            accept_text = "; ".join(acceptance)
+            if len(accept_text) > max_acceptance_chars:
+                accept_text = accept_text[:max_acceptance_chars].rstrip() + "..."
+            lines.append(f"    acceptance: {accept_text}")
         count += 1
         if count >= max_tasks:
             remaining = sum(
