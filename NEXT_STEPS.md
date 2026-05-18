@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-18 KST** — B-2 완료·push(`dd439f73`, 3-Tier 전부 PASS). 다음 진입점: **B-3 skill pipeline** (capability-gap 死코드 복구).
+> 마지막 업데이트: **2026-05-18 KST** — hook amend 루프 근본 fix·push(`f5d5461d`). B-3 5라운드 사전분석 완료 — 배선 2군데 확정. 다음 진입점: **B-3 구현** (좌표 재캡처 → #1·#2 → 테스트).
 
 ---
 
@@ -61,6 +61,7 @@ git status -sb
 | Nightly Pipeline B2-6 (global status) | ✅ (`63990a71`) |
 | Cross-review 비용 감축 Phase 2-prep | ✅ (`23f3e7bc`) |
 | Cross-review 비용 감축 Phase 2 full bundle | ✅ (`23f3e7bc`) — 8섹션, 100KB cap, source_hash |
+| post-commit amend 루프 근본 fix | ✅ (`f5d5461d`) — pre-commit 단일화, post_edit_blueprint/code_review hook 제거 |
 
 ---
 
@@ -122,17 +123,30 @@ git status -sb
 - **Finding 2 (설계 결정 = ①)** — `required_capabilities`의 build `acceptance` 주입 제거. 근거: `acceptance`는 "완료 기준"으로 소비되는데(`agent_specializer.py:93`·`work_item_generator.py:333`) `required_capabilities`는 실행 전제·스킬 조달 신호 → 의미 불일치. 정규 소비처는 B-3 `decide_reuse()` capability-gap 경로 → B-3에 위임.
 - 3-Tier: af-critic / af-cross-review / af-test-runner **전부 PASS**. Blueprint §3.1+§12 갱신. tests 6건 신규.
 
-**B-3. skill pipeline** — capability-gap 경로가 死코드 (end-to-end 계약 문제, 단일 함수 아님) ← **현재 진입점**
-- `decide_reuse()`(skill_retrieval_engine.py:102)는 payload의 `required_capabilities`로 gap 분석 — 그러나 `_rank_candidates_for_need()`(researcher.py:197-206) target에 미포함 → 항상 `gap=None`.
-- 근본: `project_pipeline.py:641-645` `reqs` = `{goal, constraints, missing_skills}`만 — `required_capabilities`/`skill_gap_hypotheses` 미전달. `_rank_candidates_for_need`만 고치면 무음 no-op.
-- 네임스페이스 리스크: `skill_gap_hypotheses.need_skill_id`(research LLM) ≠ `roles[].required_skills`(`bootstrap_roles.plan()` 별도 LLM). 매칭 키 불일치 가능.
-- **B-3 분할 (4단계, Tier3 파일이므로 메가 PR 금지):**
-  1. contract helper — `skill_gap_hypotheses`를 `safe_id(need_skill_id)` 키 dict로 정규화. **miss 시 `[]` 반환이 계약** (project-union 주입 금지 — gap_ratio 과대산정).
-  2. `project_pipeline.py:641` `reqs`에 `required_capabilities`/`skill_gap_hypotheses` 추가.
-  3. `_rank_candidates_for_need()`에 hypothesis map 전달 → 매칭 need의 `required_capabilities`를 target에 주입.
-  4. `decide_reuse` 결정 사유(`decision.to_dict()`/rationale/capability_gap/confidence)를 `skill_manifest.json` entry에 보존 (현재 `decision_mode/reused_from/forge_run_id/fallback_chain`만).
+**B-3. skill pipeline — capability-gap 死코드 복구** ← **현재 진입점 (5라운드 사전분석 완료, 다음은 구현)**
 
-**진입 순서 (2026-05-18 갱신):** B-2 완료·push(`dd439f73`). 다음: **B-3 step 1~3** (contract helper → `project_pipeline.py` reqs → `_rank_candidates_for_need` target 주입 — step 2 단독은 무음 no-op이라 1~3 한 묶음). step 4(manifest 보존)는 후행 분리 가능. 설계는 Opus, 구현은 Sonnet.
+> 아래 라인 좌표는 2026-05-18 재캡처 기준. **구현 진입 시 grep으로 재확인** (라인은 stale 가능 — NEXT_STEPS의 이전 좌표 `:102`/`:197-206`이 실제 `:64`/`:172`로 어긋나 있었음).
+
+**배선은 2군데 — 둘 다 고쳐야 함. #1만 하면 死코드가 "항상 forge" 오작동으로 바뀜:**
+
+- **#1 요구 capability 배선** — `decide_reuse()`(skill_retrieval_engine.py:64)는 `payload["required_capabilities"]`(:102)로 gap 분석(:108). 그러나 `project_pipeline.py:641` `reqs`={goal,constraints,missing_skills}만 → `_rank_candidates_for_need()`(researcher.py:172) target dict(:197)에 `required_capabilities` 없음 → 항상 `gap=None`.
+- **#2 후보 capability 배선 (5라운드 분석서 발견)** — `_analyze_capability_gap(skill_meta, required_capabilities)`(:308)는 입력이 2개. `skill_meta`는 `decide_reuse:105` `candidate_meta = best.get("meta", {})`에서 옴 — 그러나 researcher candidate row(researcher.py:187-194)에 `meta` 키 없음 → `candidate_meta` 항상 `{}` → `existing=set()` → `gap_ratio=1.0` → enhance-range 후보가 전부 forge로 밀림 (단 high-confidence+verified는 `:110`에서 gap 보기 전 ranked_reuse). **데이터는 `best["capabilities"]`에 살아있음** (researcher.py:192 → `_rank_candidates:191` `row=dict(item)`로 전파, `_iter_candidates:271` dict 무변형 통과 확인) — 순수 키 불일치 버그.
+
+**B-3 분할 (Tier3 메가 PR 금지):**
+1. contract helper — `skill_gap_hypotheses`를 `safe_id(need_skill_id)` 키 dict로 정규화. **miss 시 `[]` 반환이 계약** (project-union 주입 금지 — gap_ratio 과대산정).
+2. `project_pipeline.py:641` `reqs`에 `required_capabilities`/`skill_gap_hypotheses` 추가.
+3. `_rank_candidates_for_need()` target에 need의 `required_capabilities` 주입 — 후보의 `capabilities` 키와 충돌하지 않게 별도 키명(예: `required_capabilities` top-level) + 설명 키 동반.
+3b. **(#2)** `decide_reuse:105` candidate_meta 정규화 — `best["meta"]` 없으면 `best["capabilities"]`(list)를 `{"capabilities": ...}`로 흡수. WHY 주석 명시 (researcher candidate는 capabilities를 top-level에 둠).
+4. `decide_reuse` 결정 사유(`ReuseDecision.to_dict()` — `capability_gap` 이미 직렬화됨 `:39,:43`)를 `skill_manifest.json` entry에 보존. 후행 분리 가능.
+
+**테스트 계약 (positive 필수 — forge 케이스만 짜면 #2 버그를 통과시킴):**
+- 후보 capabilities ⊇ required → `missing=[]`, `gap_ratio=0.0`
+- 일부 빠지면 missing 정확 계산
+- `gap_ratio=0.5` 경계 — enhance(`:115` `<=0.5`) vs forge(`:121` `>0.5`) 분기 assert
+- researcher candidate shape fixture로 통합 검증 — fixture는 `researcher.py:187-194` 출처 주석 명시 (stale 방지)
+- `required_capabilities` 비면 점수기반 enhance 유지 (regression)
+
+**진입 순서:** step 1~3+3b 한 묶음 (step 2 단독은 무음 no-op). step 4 후행 분리. 설계 Opus, 구현 Sonnet. **첫 작업은 코딩이 아니라 grep 좌표·payload 계약 재캡처.**
 
 ### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 
