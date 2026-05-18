@@ -1534,6 +1534,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-19 | v1.2.28 | fix(review-metrics): `scripts/review_metrics_logger.py` Phase 4 guidance BLOCK 4건 해소 — guidance 게이팅을 raw `t3_rate`(finding share)에서 `t3_block_only_commits` 기반 `block_only_rate`로 전환(`t3_rate`는 informational 유지), `compute_report()`에 `_load_skip_audit_records()` 신규(`subsequent_block=True` 시 guidance 억제), 샘플 게이트에 7일 timestamp span 조건 추가, 충분-샘플 테스트 단일 커밋 T2+T3 그룹핑 수정 + skip 억제 경로 테스트 신규. 테스트 40 PASS. 3-Tier af-critic PASS/af-cross-review WARN(BLOCK 0)/af-test-runner PASS. P0-B. |
+| 2026-05-19 | v1.2.28 | chore(hygiene): `projects/` 런타임 산출물 317개 git untrack(`projects/*/runs/` 274 + `dashboard.json` 21 + `skill-lock.yaml` 22) — 파일은 디스크 보존(`git rm --cached`). `.gitignore` per-project `runs/` 5개 항목을 `projects/*/runs/`로 일반화 + `projects/*/dashboard.json`·`projects/*/skill-lock.yaml` 패턴 추가. dogfooding 런 산출물의 영구 git status 오염 해소. P0-A. |
 | 2026-05-18 | v1.2.28 | refactor(pre-commit): 레거시 severity-gate `pre_commit_review.py` 제거 — Phase 0 `review_gate.py` verdict-block(step 7)과 중복, `docs/reviews/` 데이터 desync로 매 커밋 허위 WARN. `.githooks/pre-commit` 호출 블록 + `blast_radius._TIER3_PATHS` 항목 + Blueprint "Pre-commit 교차검증 게이트" 섹션 동반 삭제. 2026-04-19 §4.1 역할분리 결정 retire. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, project_pipeline.py, meta.yaml, skill-spec.yaml |
 | 2026-05-18 | v1.2.28 | fix(research-router-p2-B3): `reqs`의 `required_capabilities` 死코드 제거 — 소비처 0건(`_skill_gap_capabilities_map`는 `skill_gap_hypotheses`만 소비, project-union 주입 금지 계약). §3.1 "reqs에 required_capabilities 추가/end-to-end" 표현 정정 + step 4(manifest projection) 미착수 명시. |
