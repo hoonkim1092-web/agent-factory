@@ -6082,3 +6082,25 @@ No issues found.
 - `:625-629` — verify phase에만 주입, `line not in acceptance` dedup 가드 존재. `_clean_list`가 이미 입력측 dedup하므로 이중 안전. 정상.
 
 - [Info] working tree — `projects/agent_factory/runs/**`, `dashboard.json`, 에이전트 YAML 등 다수가 `M` 상태(테스트 부산물). 이번 커밋(5파일)엔 미포함이나 트리를 더럽힘. `.gitignore` 처리 또는 정리 권장.
+
+---
+
+## 2026-05-18 11:44 — `main` (6f739a62)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (37)**: `NEXT_STEPS.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json ... (+22)`
+
+### Findings
+
+**리뷰 결과 — 핵심 코드(`core/project_task_board.py`)는 정상이나, 브랜치 상태에 실질 문제 발견:**
+
+- [High] 브랜치 분기 — `main...origin/main [ahead 1, behind 1]`. 로컬 HEAD `6f739a62`와 origin의 `dd439f73`는 **동일 커밋 메시지의 B-2 fix가 별개 해시로 중복** 존재(`dd439f73`는 HEAD 조상 아님 — amend/rebase 후 push 불일치 추정). `git pull` 시 머지·충돌 발생, B-2 패치가 이중 적용될 수 있음. 추가 작업 전 reconcile 필요(origin에 정렬 또는 중복 커밋 정리).
+- [Medium] NEXT_STEPS.md:4 — "B-2 완료·push(`dd439f73`)"로 명시하나 재개 브랜치 HEAD는 `6f739a62`. 연속성 가이드가 **현재 브랜치에 없는 해시**를 가리킴 → 다른 PC에서 `git show dd439f73`/`git log` 불일치.
+- [Low] working tree 37개 중 35개가 `projects/agent_factory/` 런 산출물(테스트 부산물). NEXT_STEPS.md 자체 규칙("커밋 제외")대로 staged 금지 — 현재 staged 0건이라 즉각 위험은 없음, 커밋 시 주의.
+
+핵심 코드 변경(`6f739a62`):
+- `_clean_list` `isinstance(str)` 가드 — 정확. 공유 헬퍼라 전 호출처 char-split 버그 동시 해소.
+- `build_project_board` verify 주입 — `acceptance`는 항상 `_clean_list` 결과(list)라 `.append` 안전, dedup 가드 정상. 이슈 없음.
+
+권고: 코드 자체는 머지 가능. **커밋 push 전 origin/main 분기부터 해소**하고 NEXT_STEPS.md 해시를 실제 HEAD로 정정할 것.
