@@ -6104,3 +6104,13 @@ No issues found.
 - `build_project_board` verify 주입 — `acceptance`는 항상 `_clean_list` 결과(list)라 `.append` 안전, dedup 가드 정상. 이슈 없음.
 
 권고: 코드 자체는 머지 가능. **커밋 push 전 origin/main 분기부터 해소**하고 NEXT_STEPS.md 해시를 실제 HEAD로 정정할 것.
+
+---
+
+## 2026-05-18 17:03 — `main` (b959d1ab)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `Master_Blueprint.md, core/project_pipeline.py, core/researcher.py, core/skill_retrieval_engine.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, tests/test_skill_retrieval_engine.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

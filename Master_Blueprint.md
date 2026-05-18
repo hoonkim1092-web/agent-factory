@@ -411,7 +411,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-05-18 (Research Router P2-B2 ① — build_project_board verification_focus 주입) -->
+<!-- last_updated: 2026-05-18 (Research Router P2-B3 — reqs에 required_capabilities/skill_gap_hypotheses 추가) -->
 
 **클래스:** `ProjectPipeline`
 
@@ -429,6 +429,7 @@ AgentRunner.run(agent, task_input, workspace)
   - `status ∈ {crashed, unknown}` → 전체 skip
   - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
+- **Research Router P2-B3** (2026-05-18): `_run_role()` 내 `reqs` dict에 `project_brief`의 `required_capabilities`/`skill_gap_hypotheses` 추가 → `procurer.procure_multiple()` → `researcher.research()` → `HimariResearchAgent._skill_gap_capabilities_map()` → per-need `required_capabilities` → `_rank_candidates_for_need()` target dict → `SkillRetrievalEngine.decide_reuse()` payload. 이로써 capability-gap 분석 경로가 end-to-end 연결됨. `SkillRetrievalEngine.decide_reuse():105` candidate_meta 정규화 — researcher candidate row는 `meta` 키 없이 `capabilities`를 top-level에 두므로 `meta` 없거나 빈 dict면 `{"capabilities": best["capabilities"]}` 흡수.
 - **Research Router P2-B2** (2026-05-18, ① 적용): `project_task_board.build_project_board()`가 `project_brief`의 `verification_focus`(researcher.py §6.4)를 verify phase 태스크 `acceptance`에 주입 — LLM·fallback 태스크 경로 공통 funnel, dedup 가드 포함. `required_capabilities`는 acceptance(완료 기준)와 의미가 맞지 않고 B-3 capability-gap 경로(`skill_retrieval_engine.decide_reuse()`)가 정규 소비처이므로 build 태스크 주입 대상에서 제외
 - **P0 A6** (2026-05-05): `prepare_brief()` → `docs/research/<slug>-project-brief.json` 보조 저장
 - **P2 C1** (2026-05-06): `prepare_documents()` Work Items 직전 Domain Spec Gate — `research_plan.domain` 감지 시 `_verify_domain_spec()` → 미존재면 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise
@@ -560,6 +561,13 @@ cli_providers = [preferred] + [fallbacks...]
 ---
 
 ### §3.5 스킬 시스템
+<!-- last_updated: 2026-05-18 (B-3 capability-gap end-to-end 연결) -->
+
+**Capability-Gap 분석 파이프라인 (B-3, 2026-05-18):**
+- `project_brief.skill_gap_hypotheses` → `HimariResearchAgent._skill_gap_capabilities_map()` (정적 헬퍼, safe_id 정규화, miss→[]) → per-need `required_capabilities`
+- `_rank_candidates_for_need(required_capabilities=...)` → target dict에 `required_capabilities` 포함 → `decide_reuse(evidence)` payload
+- `SkillRetrievalEngine.decide_reuse():105` — `candidate_meta` 정규화: researcher candidate row는 `meta` 키 없이 `capabilities` top-level 보유 → `best.get("meta")` None이거나 빈 dict면 `{"capabilities": best.get("capabilities", [])}` 흡수. 이로써 `_analyze_capability_gap()` 입력이 올바르게 채워짐.
+- enhance 판정: `gap_ratio <= 0.5` → enhance. `gap_ratio > 0.5` → forge. `required_capabilities=[]` → 점수 기반 enhance 유지(regression).
 
 **로딩 파이프라인:**
 ```
@@ -1546,6 +1554,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, code-review.md (+4) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, code-review.md (+4) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, meta.yaml (+2) |
+| 2026-05-18 | v1.2.28 | fix(research-router-p2-B3): capability-gap 死코드 복구 — project_pipeline.py reqs에 required_capabilities/skill_gap_hypotheses 추가, HimariResearchAgent._skill_gap_capabilities_map() 헬퍼 신규, _rank_candidates_for_need() required_capabilities 파라미터 추가, SkillRetrievalEngine.decide_reuse():105 candidate_meta 정규화(researcher top-level capabilities 흡수). 테스트 8건 신규(gap_ratio 경계, researcher fixture, regression). §3.1+§3.5+§12 갱신. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_task_board_dispatch.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: core/project_task_board.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |

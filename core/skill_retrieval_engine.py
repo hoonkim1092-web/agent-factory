@@ -102,14 +102,28 @@ class SkillRetrievalEngine:
         required_capabilities = payload.get("required_capabilities", [])
         if not isinstance(required_capabilities, list):
             required_capabilities = []
-        candidate_meta = best.get("meta", {}) if best else {}
-        if not isinstance(candidate_meta, dict):
-            candidate_meta = {}
+        candidate_meta = best.get("meta") if best else None
+        if not isinstance(candidate_meta, dict) or not candidate_meta:
+            # researcher candidate row stores capabilities at top-level (not in meta key)
+            candidate_meta = {"capabilities": best.get("capabilities", [])} if best else {}
         gap = self._analyze_capability_gap(candidate_meta, required_capabilities) if required_capabilities else None
 
         if candidate_skill_id and verified and confidence >= self.high_confidence:
-            mode = "ranked_reuse"
-            reason = rationale or f"confidence={confidence:.2f} verified candidate is safe to reuse"
+            if gap and gap.missing_capabilities:
+                # 고신뢰 verified라도 required capability 부재 시 enhance/forge로 강등
+                if gap.enhancement_feasible and gap.gap_ratio <= 0.5:
+                    mode = "enhance"
+                    reason = rationale or (
+                        f"confidence={confidence:.2f} verified but missing caps: {gap.missing_capabilities}"
+                    )
+                else:
+                    mode = "forge"
+                    reason = rationale or (
+                        f"confidence={confidence:.2f} verified but gap_ratio={gap.gap_ratio:.2f} too large"
+                    )
+            else:
+                mode = "ranked_reuse"
+                reason = rationale or f"confidence={confidence:.2f} verified candidate is safe to reuse"
         elif candidate_skill_id and confidence >= self.enhance_confidence:
             # enhance 판정: gap이 없거나 feasible하면 enhance, 아니면 shadow_reuse
             if gap and gap.missing_capabilities and gap.enhancement_feasible and gap.gap_ratio <= 0.5:

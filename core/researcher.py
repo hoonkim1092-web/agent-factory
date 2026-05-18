@@ -169,6 +169,24 @@ class HimariResearchAgent:
             parts.append("test_passed")
         return f"score={best.get('score', 0)}: {' + '.join(parts)}" if parts else ""
 
+    @staticmethod
+    def _skill_gap_capabilities_map(skill_gap_hypotheses: list) -> dict:
+        """skill_gap_hypotheses 리스트 → {safe_id(need_skill_id): required_capabilities} 딕트.
+        miss 시 [] 반환이 계약 (project-union 주입 금지 — gap_ratio 과대산정 방지).
+        capabilities는 safe_id()로 정규화 — registry candidate caps과 비교 정합 보장.
+        """
+        result: dict = {}
+        for item in (skill_gap_hypotheses or []):
+            if not isinstance(item, dict):
+                continue
+            raw_need = str(item.get("need_skill_id") or "").strip()
+            if not raw_need:
+                continue
+            need_id = safe_id(raw_need)
+            caps = item.get("required_capabilities")
+            result[need_id] = [safe_id(str(c)) for c in caps if safe_id(str(c))] if isinstance(caps, list) else []
+        return result
+
     def _rank_candidates_for_need(
         self,
         need: str,
@@ -177,6 +195,7 @@ class HimariResearchAgent:
         *,
         feedback_loop: SkillFeedbackLoop | None,
         feedback_summaries: dict | None = None,
+        required_capabilities: list[str] | None = None,
     ) -> dict:
         ranked = []
         for sid in candidate_skill_ids:
@@ -203,6 +222,7 @@ class HimariResearchAgent:
             "matching_rationale": str((best or {}).get("matching_rationale") or ""),
             "source_type": "local_registry",
             "feedback_history": [],
+            "required_capabilities": list(required_capabilities or []),
         }
         self._skill_retrieval_engine.decide_reuse(
             need,
@@ -1419,6 +1439,8 @@ LocalSkillCatalog(JSON): {json.dumps(skill_catalog, ensure_ascii=False)}
         feedback_history: list[dict] = []
         feedback_history_skill_ids: set[str] = set()
 
+        gap_map = self._skill_gap_capabilities_map(reqs.get("skill_gap_hypotheses") or [])
+
         targets: dict = {}
         for need in missing:
             target = self._rank_candidates_for_need(
@@ -1427,6 +1449,7 @@ LocalSkillCatalog(JSON): {json.dumps(skill_catalog, ensure_ascii=False)}
                 idx,
                 feedback_loop=feedback_loop,
                 feedback_summaries=feedback_summaries,
+                required_capabilities=gap_map.get(need, []),
             )
             targets[need] = target
             for entry in target.get("feedback_history", []):
