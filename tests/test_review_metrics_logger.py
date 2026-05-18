@@ -272,24 +272,74 @@ def test_compute_report_phase4_guidance_low(metrics_mod, ws):
     assert "Phase 4 판단 불가" in report
 
 
-def test_compute_report_phase4_guidance_sufficient(metrics_mod, ws, monkeypatch):
-    """commits_with_t3 >= 10이면 finding share 기반 guidance 출력."""
-    call_count = [0]
-
-    def fake_git_sha(workspace):
-        call_count[0] += 1
-        return f"sha{call_count[0]:03d}"
-
-    monkeypatch.setattr(metrics_mod, "_git_sha", fake_git_sha)
-
-    # 10 distinct commits: T2 findings=2, T3 findings=0 → share 0% < 10%
-    for _ in range(10):
-        metrics_mod.append_metric(ws, "af-critic", 2, "warn", findings_count=2)
-        metrics_mod.append_metric(ws, "af-cross-review", 3, "pass", findings_count=0)
+def test_compute_report_phase4_guidance_sufficient(metrics_mod, ws):
+    """commits_with_t3 >= 10이고 기간 >= 7일이면 t3_block_only 기반 guidance 출력."""
+    # Write 10 pairs of T2+T3 records directly with timestamps spanning 8 days
+    # so span_days >= 7 and commits_with_t3 == 10
+    import datetime as _dt
+    metrics_path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        for i in range(10):
+            sha = f"sha{i + 1:03d}"
+            ts = (base + _dt.timedelta(days=i * 0.9)).isoformat()
+            # T2 record: findings_count=2, verdict=warn
+            f.write(json.dumps({
+                "ts": ts, "commit_sha": sha, "tier": 2, "agent": "af-critic",
+                "verdict": "warn", "findings_count": 2, "extension_log_count": 0,
+                "duration_ms": None, "tokens": None, "tool_calls": None,
+                "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+            }) + "\n")
+            # T3 record: findings_count=0, verdict=pass (same commit)
+            f.write(json.dumps({
+                "ts": ts, "commit_sha": sha, "tier": 3, "agent": "af-cross-review",
+                "verdict": "pass", "findings_count": 0, "extension_log_count": 0,
+                "duration_ms": None, "tokens": None, "tool_calls": None,
+                "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+            }) + "\n")
 
     report = metrics_mod.compute_report(ws)
+    # 10 commits with T3, spanning > 7 days, no skip subsequent_block → guidance should appear
     assert "Phase 4 판단 불가" not in report
     assert "skip" in report.lower()
+    # Verify per-commit grouping: 10 pairs → 10 distinct commits, commits_with_t3=10
+    assert "T3 BLOCK-only 커밋: 0 / 10" in report
+
+
+def test_compute_report_phase4_skip_suppresses_guidance(metrics_mod, ws):
+    """skip_audit에 subsequent_block=True가 있으면 충분 데이터여도 guidance 억제 (Finding R1-2)."""
+    import datetime as _dt
+    metrics_path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    # 10 commits spanning 8 days → 데이터 게이트(commits>=10 AND span>=7일)는 통과하는 상태
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        for i in range(10):
+            sha = f"sha{i + 1:03d}"
+            ts = (base + _dt.timedelta(days=i * 0.9)).isoformat()
+            f.write(json.dumps({
+                "ts": ts, "commit_sha": sha, "tier": 2, "agent": "af-critic",
+                "verdict": "warn", "findings_count": 2, "extension_log_count": 0,
+                "duration_ms": None, "tokens": None, "tool_calls": None,
+                "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+            }) + "\n")
+            f.write(json.dumps({
+                "ts": ts, "commit_sha": sha, "tier": 3, "agent": "af-cross-review",
+                "verdict": "pass", "findings_count": 0, "extension_log_count": 0,
+                "duration_ms": None, "tokens": None, "tool_calls": None,
+                "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+            }) + "\n")
+
+    # skip 후 BLOCK이 발견된 사례 1건 기록
+    metrics_mod.append_skip_audit(ws, skipped_tier=3, reason="tier-1-only", subsequent_block=True)
+
+    report = metrics_mod.compute_report(ws)
+    # 충분 데이터지만 skip-후-BLOCK 때문에 guidance가 억제돼야 함
+    assert "Phase 4 판단 불가" in report
+    assert "skip 후 BLOCK 발견" in report
+    # 정상 guidance 문구는 나오면 안 됨 (억제가 데이터 게이트를 실제로 override함을 검증)
+    assert "skip 보수적 유지" not in report
+    assert "선택적 skip 검토" not in report
+    assert "공격적 skip" not in report
 
 
 # ── hook_runner integration ───────────────────────────────────────────────────

@@ -214,6 +214,22 @@ def _load_records(workspace: str) -> list[dict]:
     return records
 
 
+def _load_skip_audit_records(workspace: str) -> list[dict]:
+    path = _skip_audit_path(workspace)
+    if not os.path.exists(path):
+        return []
+    records = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    records.append(json.loads(line))
+                except Exception:
+                    pass
+    return records
+
+
 def compute_report(workspace: str) -> str:
     """Compute T3-only contribution rate and cost summary from collected metrics.
 
@@ -225,6 +241,7 @@ def compute_report(workspace: str) -> str:
     records = _load_records(workspace)
     if not records:
         return "review_metrics.jsonl 비어 있음 — 데이터 없음."
+    skip_records = _load_skip_audit_records(workspace)
 
     # Group by commit SHA
     by_commit: dict[str, dict[int, dict]] = defaultdict(dict)
@@ -280,6 +297,18 @@ def compute_report(workspace: str) -> str:
     ]
     avg_ext = (sum(t3_ext_logs) / len(t3_ext_logs)) if t3_ext_logs else 0.0
 
+    # Skip audit summary
+    skip_total = len(skip_records)
+    skip_subsequent_block = sum(1 for r in skip_records if r.get("subsequent_block"))
+
+    # Timestamp span check for 1-week data gate (Finding 3)
+    try:
+        first_ts = datetime.fromisoformat(records[0]["ts"])
+        last_ts = datetime.fromisoformat(records[-1]["ts"])
+        span_days = (last_ts - first_ts).total_seconds() / 86400
+    except Exception:
+        span_days = 0.0
+
     # Build report
     lines = [
         "=== Review Metrics Report (Phase 3.5) ===",
@@ -290,17 +319,25 @@ def compute_report(workspace: str) -> str:
         f"  전체 findings: T1={t1_findings}  T2={t2_findings}  T3={t3_findings}",
         f"  T3 finding share (단순 비율, T3 고유값 ≠): {t3_rate:.1f}%",
         f"  [Phase 4 primary] T3 BLOCK-only 커밋: {t3_block_only_commits} / {commits_with_t3}",
+        f"  skip audit: 총 {skip_total}건 (이후 BLOCK 발견: {skip_subsequent_block}건)",
     ]
 
-    if commits_with_t3 < 10:
+    # Finding 2: suppress guidance if any skip has subsequent_block=True
+    if skip_subsequent_block > 0:
         lines.append(
-            f"  ⚠️  Phase 4 판단 불가 — 커밋 수 부족 (현재: {commits_with_t3} / 필요: 10)"
+            f"  ⚠️  Phase 4 판단 불가 — skip 후 BLOCK 발견 {skip_subsequent_block}건 (skip audit 검토 필요)"
+        )
+    elif commits_with_t3 < 10 or span_days < 7:
+        # Finding 3: gate on both minimum commits AND 7-day span
+        lines.append(
+            f"  ⚠️  Phase 4 판단 불가 — 데이터 부족 (커밋: {commits_with_t3}/10, 기간: {span_days:.1f}일/7일)"
         )
     else:
-        # guidance keyed on finding share; thresholds re-evaluated after 1-week data collection
-        if t3_rate > 30:
+        # Finding 1: guidance keyed on t3_block_only_commits (primary), not raw t3_rate
+        block_only_rate = (t3_block_only_commits / commits_with_t3 * 100) if commits_with_t3 else 0.0
+        if block_only_rate > 30:
             lines.append("  → T3 고유 가치 큼 — skip 보수적 유지 권고")
-        elif t3_rate >= 10:
+        elif block_only_rate >= 10:
             lines.append("  → 중간 — 위험군 외 선택적 skip 검토 가능")
         else:
             lines.append("  → T3 대체로 중복 — 공격적 skip 가능 (Phase 4 진입 검토)")
