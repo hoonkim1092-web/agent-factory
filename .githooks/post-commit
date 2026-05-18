@@ -1,16 +1,13 @@
 #!/bin/sh
-# git-lfs (optional — Blueprint 업데이트는 git-lfs 없어도 계속 실행)
+# git-lfs (optional)
 if command -v git-lfs >/dev/null 2>&1; then
     git lfs post-commit "$@"
 fi
 
-# ── 문서 자동 업데이트 (Blueprint + code-review) ──
-# 코드 파일 변경이 있을 때만 실행, 항상 exit 0
-CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
-
 # ── review-gate 큐 클리어 (commit 성공 후) ──
 # Round 1 dogfooding fix: PostToolUse Bash hook 미등록으로 큐가 stale 누적되던 버그 해소.
 # .py 0건 커밋도 호출하지만 clear_committed_files가 committed_set로 필터링하므로 무해.
+CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
 if [ -n "$CHANGED" ]; then
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
     VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
@@ -18,48 +15,12 @@ if [ -n "$CHANGED" ]; then
     COMMITTED=$(echo "$CHANGED" | tr '\n' ',' | sed 's/,$//')
     "$CLEAR_PY" "${REPO_ROOT}/scripts/review_gate.py" --clear --files "$COMMITTED" >/dev/null 2>&1 || true
 fi
-CODE_CHANGED=$(echo "$CHANGED" | grep -E "^(core/|scripts/|skills/|run_factory_cli\.py|model_utils\.py|version\.py|af\.spec)" | head -1)
 
-if [ -n "$CODE_CHANGED" ]; then
-    # rebase/merge/cherry-pick 중이면 문서 업데이트 스킵 (amend 위험 방지)
-    GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
-    if [ -d "$GIT_DIR/rebase-merge" ] || \
-       [ -d "$GIT_DIR/rebase-apply" ] || \
-       [ -f "$GIT_DIR/MERGE_HEAD" ] || \
-       [ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]; then
-        exit 0
-    fi
-
-    COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null)
-
-    # Blueprint §12 자동 업데이트
-    python scripts/blueprint_updater.py --context "$COMMIT_MSG" 2>/dev/null &
-
-    # Code review 자동 업데이트
-    python scripts/code_review_updater.py --context "$COMMIT_MSG" 2>/dev/null &
-
-    wait
-
-    # Blueprint / code-review.md 변경 시 자동 amend
-    AMENDED=0
-    if git diff --name-only 2>/dev/null | grep -q "Master_Blueprint.md"; then
-        git add Master_Blueprint.md 2>/dev/null
-        AMENDED=1
-    fi
-    if git diff --name-only 2>/dev/null | grep -q "docs/code_review/code-review.md"; then
-        git add docs/code_review/code-review.md 2>/dev/null
-        AMENDED=1
-    fi
-    if [ "$AMENDED" = "1" ]; then
-        git commit --amend --no-edit 2>/dev/null
-    fi
-
-    # §3 수동 갱신 리마인더 — 클래스·메서드 변경 시
-    CORE_CHANGED=$(echo "$CHANGED" | grep "^core/.*\.py$" | head -1)
-    if [ -n "$CORE_CHANGED" ]; then
-        echo ""
-        echo "  📋 [blueprint] §3 서브시스템 내용 수동 확인 필요: $CORE_CHANGED"
-        echo "     클래스·메서드 변경 시 Master_Blueprint.md §3 해당 섹션 갱신"
-        echo ""
-    fi
+# ── §3 수동 갱신 리마인더 ──
+CORE_CHANGED=$(echo "$CHANGED" | grep "^core/.*\.py$" | head -1)
+if [ -n "$CORE_CHANGED" ]; then
+    echo ""
+    echo "  [blueprint] §3 서브시스템 내용 수동 확인 필요: $CORE_CHANGED"
+    echo "     클래스·메서드 변경 시 Master_Blueprint.md §3 해당 섹션 갱신"
+    echo ""
 fi
