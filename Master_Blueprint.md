@@ -411,7 +411,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-05-18 (Research Router P2-B3 — reqs에 required_capabilities/skill_gap_hypotheses 추가) -->
+<!-- last_updated: 2026-05-18 (Research Router P2-B3 — reqs에 skill_gap_hypotheses 추가) -->
 
 **클래스:** `ProjectPipeline`
 
@@ -429,7 +429,8 @@ AgentRunner.run(agent, task_input, workspace)
   - `status ∈ {crashed, unknown}` → 전체 skip
   - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
-- **Research Router P2-B3** (2026-05-18): `_run_role()` 내 `reqs` dict에 `project_brief`의 `required_capabilities`/`skill_gap_hypotheses` 추가 → `procurer.procure_multiple()` → `researcher.research()` → `HimariResearchAgent._skill_gap_capabilities_map()` → per-need `required_capabilities` → `_rank_candidates_for_need()` target dict → `SkillRetrievalEngine.decide_reuse()` payload. 이로써 capability-gap 분석 경로가 end-to-end 연결됨. `SkillRetrievalEngine.decide_reuse():105` candidate_meta 정규화 — researcher candidate row는 `meta` 키 없이 `capabilities`를 top-level에 두므로 `meta` 없거나 빈 dict면 `{"capabilities": best["capabilities"]}` 흡수.
+- **Research Router P2-B3** (2026-05-18): `_run_role()` 내 `reqs` dict에 `project_brief`의 `skill_gap_hypotheses` 추가 → `procurer.procure_multiple()` → `researcher.research()` → `HimariResearchAgent._skill_gap_capabilities_map()` → per-need `required_capabilities` → `_rank_candidates_for_need()` target dict → `SkillRetrievalEngine.decide_reuse()` payload. 이로써 `skill_gap_hypotheses` 기반 capability-gap 분석 경로가 end-to-end 연결됨. project-level `required_capabilities`는 gap 입력에서 의도적으로 제외 — `_skill_gap_capabilities_map` 계약(per-need miss→[], project-union 주입 금지)상 소비처가 없어 `reqs`에 싣지 않음. capability-gap 분석은 per-need `skill_gap_hypotheses`가 있을 때만 발화(`skill_gap_hypotheses=[]`인 fast_synthesis 경로는 강등 없이 점수 기반 판정). `SkillRetrievalEngine.decide_reuse():105` candidate_meta 정규화 — researcher candidate row는 `meta` 키 없이 `capabilities`를 top-level에 두므로 `meta` 없거나 빈 dict면 `{"capabilities": best["capabilities"]}` 흡수.
+- **B-3 미착수분**: step 4 (`ReuseDecision` 사유 → `skill_manifest.json` entry 보존)는 후행 분리 — manifest entry는 현재 `decision_mode/reused_from/forge_run_id/fallback_chain`만 투영, `capability_gap/confidence/rationale` 미포함.
 - **Research Router P2-B2** (2026-05-18, ① 적용): `project_task_board.build_project_board()`가 `project_brief`의 `verification_focus`(researcher.py §6.4)를 verify phase 태스크 `acceptance`에 주입 — LLM·fallback 태스크 경로 공통 funnel, dedup 가드 포함. `required_capabilities`는 acceptance(완료 기준)와 의미가 맞지 않고 B-3 capability-gap 경로(`skill_retrieval_engine.decide_reuse()`)가 정규 소비처이므로 build 태스크 주입 대상에서 제외
 - **P0 A6** (2026-05-05): `prepare_brief()` → `docs/research/<slug>-project-brief.json` 보조 저장
 - **P2 C1** (2026-05-06): `prepare_documents()` Work Items 직전 Domain Spec Gate — `research_plan.domain` 감지 시 `_verify_domain_spec()` → 미존재면 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise
@@ -1554,6 +1555,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, project_pipeline.py, meta.yaml, skill-spec.yaml |
+| 2026-05-18 | v1.2.28 | fix(research-router-p2-B3): `reqs`의 `required_capabilities` 死코드 제거 — 소비처 0건(`_skill_gap_capabilities_map`는 `skill_gap_hypotheses`만 소비, project-union 주입 금지 계약). §3.1 "reqs에 required_capabilities 추가/end-to-end" 표현 정정 + step 4(manifest projection) 미착수 명시. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, code-review.md (+4) |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, code-review.md (+4) |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, meta.yaml (+2) |

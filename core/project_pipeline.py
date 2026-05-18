@@ -642,7 +642,6 @@ class ProjectPipeline:
                     "goal": objective or project_brief.get("goal") or role_name,
                     "constraints": list(project_brief.get("constraints") or []),
                     "missing_skills": required_skills,
-                    "required_capabilities": list(project_brief.get("required_capabilities") or []),
                     "skill_gap_hypotheses": list(project_brief.get("skill_gap_hypotheses") or []),
                 }
                 installed, manifest_entries = self.procurer.procure_multiple(
