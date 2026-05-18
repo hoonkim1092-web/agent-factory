@@ -323,6 +323,44 @@ def test_board_prompt_digest_empty_board_unchanged():
     assert board_prompt_digest({}) == "No project board available."
 
 
+# ----- verification_focus 주입 상한 (finding #3) + plan 문서 반영 (finding #2) -----
+
+
+def test_build_project_board_caps_verification_focus_count():
+    # 8개 초과 verification_focus는 MAX_VERIFICATION_FOCUS_ITEMS까지만 주입된다.
+    from core.project_task_board import build_project_board, MAX_VERIFICATION_FOCUS_ITEMS
+    focus = [f"검증항목{i}" for i in range(20)]
+    board = build_project_board({"goal": "g", "verification_focus": focus}, _role_plan_with_tasks())
+    by_id = {t["task_id"]: t for t in board["tasks"]}
+    injected = [a for a in by_id["t_verify"]["acceptance"] if a.startswith("검증 초점:")]
+    assert len(injected) == MAX_VERIFICATION_FOCUS_ITEMS
+
+
+def test_build_project_board_trims_long_verification_focus_item():
+    # 항목 길이가 MAX_VERIFICATION_FOCUS_ITEM_CHARS를 넘으면 절단된다.
+    from core.project_task_board import build_project_board, MAX_VERIFICATION_FOCUS_ITEM_CHARS
+    board = build_project_board(
+        {"goal": "g", "verification_focus": ["y" * 500]}, _role_plan_with_tasks())
+    by_id = {t["task_id"]: t for t in board["tasks"]}
+    injected = next(a for a in by_id["t_verify"]["acceptance"] if a.startswith("검증 초점:"))
+    assert injected == "검증 초점: " + "y" * MAX_VERIFICATION_FOCUS_ITEM_CHARS + "..."
+
+
+def test_write_task_execution_plan_includes_injected_verification_focus(tmp_path):
+    # finding #2: docs/task_execution_plan.md가 board의 주입 `검증 초점:`을 반영해야 한다.
+    # 태스크 행을 role_plan이 아닌 board["tasks"]에서 렌더하므로 누락되지 않는다.
+    from core.project_task_board import build_project_board, write_task_execution_plan
+    brief = {"goal": "build app", "verification_focus": ["reconnect handling"]}
+    role_plan = _role_plan_with_tasks()
+    board = build_project_board(brief, role_plan)
+    path = write_task_execution_plan(str(tmp_path), brief, role_plan, board)
+    with open(path, encoding="utf-8") as handle:
+        content = handle.read()
+    assert "검증 초점: reconnect handling" in content
+    # 기존 build 태스크 acceptance도 그대로 렌더된다 (회귀 방지).
+    assert "기능 구현" in content
+
+
 def test_clean_list_string_not_split_into_chars():
     # str 입력이 문자 단위로 분해되지 않고 1-item 리스트로 반환돼야 한다.
     from core.project_task_board import _clean_list

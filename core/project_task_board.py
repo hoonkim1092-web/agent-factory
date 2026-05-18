@@ -16,6 +16,12 @@ BOARD_FILENAME = "project_board_state.json"
 TASK_EXECUTION_PLAN_REL_PATH = os.path.join("docs", "task_execution_plan.md")
 _PHASE_ORDER = {"scope": 0, "build": 1, "integrate": 2, "code_review": 3, "cross_validate": 4, "verify": 5}
 
+# verification_focus 주입 상한 — build_project_board()는 public funnel이므로
+# 과대 입력(편집된 JSON·비정상 fallback)이 와도 board 파일·프롬프트·work-item
+# acceptance가 부풀지 않게 개수·항목 길이를 제한한다.
+MAX_VERIFICATION_FOCUS_ITEMS = 8
+MAX_VERIFICATION_FOCUS_ITEM_CHARS = 200
+
 _MODULE_SUFFIX_RE = re.compile(r"^(.+)_(\d+)$")
 
 
@@ -595,7 +601,7 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
     role_index: dict[str, list[str]] = {}
 
     # structured evidence (researcher.py §6.4) → verify 태스크 acceptance 주입
-    verification_focus = _clean_list(project_brief.get("verification_focus"))
+    verification_focus = _clean_list(project_brief.get("verification_focus"))[:MAX_VERIFICATION_FOCUS_ITEMS]
 
     for module in (role_plan.get("modules") or []):
         if not isinstance(module, dict):
@@ -624,7 +630,11 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
                 continue
             if task["phase"] == "verify":
                 for item in verification_focus:
-                    line = f"검증 초점: {item}"
+                    trimmed = (
+                        item if len(item) <= MAX_VERIFICATION_FOCUS_ITEM_CHARS
+                        else item[:MAX_VERIFICATION_FOCUS_ITEM_CHARS].rstrip() + "..."
+                    )
+                    line = f"검증 초점: {trimmed}"
                     if line not in task["acceptance"]:
                         task["acceptance"].append(line)
             tasks.append(task)
@@ -1018,6 +1028,14 @@ def write_task_execution_plan(workspace: str, project_brief: dict[str, Any], rol
         lines.append(f"   exit_criteria: {', '.join(criteria) if criteria else '-'}")
     lines.extend(["", "## Module Breakdown By Role"])
 
+    # 태스크 행은 role_plan 모듈이 아닌 board["tasks"]에서 module_id로 그룹핑해 렌더한다.
+    # role_plan 모듈의 task는 build_project_board()가 verify 태스크 acceptance에 주입한
+    # `검증 초점:` 라인을 갖지 않으므로, board 기준이어야 검증 기준이 plan 문서에서 누락되지 않는다.
+    board_tasks_by_module: dict[str, list[dict[str, Any]]] = {}
+    for task in (board.get("tasks") or []):
+        if isinstance(task, dict):
+            board_tasks_by_module.setdefault(_clean_text(task.get("module_id")), []).append(task)
+
     role_lookup = {safe_id(role.get("id")): role for role in (role_plan.get("roles") or []) if isinstance(role, dict)}
     for module in (role_plan.get("modules") or []):
         if not isinstance(module, dict):
@@ -1031,9 +1049,7 @@ def write_task_execution_plan(workspace: str, project_brief: dict[str, Any], rol
         depends = ", ".join(_clean_list(module.get("depends_on"))) or "-"
         lines.append(f"- depends_on: {depends}")
         lines.append("- tasks:")
-        for task in (module.get("tasks") or []):
-            if not isinstance(task, dict):
-                continue
+        for task in board_tasks_by_module.get(_clean_text(module.get("id")), []):
             acceptance = ", ".join(_clean_list(task.get("acceptance"))) or "-"
             lines.append(f"  - [{task.get('phase', 'build')}] {task.get('instruction')}")
             lines.append(f"    acceptance: {acceptance}")
