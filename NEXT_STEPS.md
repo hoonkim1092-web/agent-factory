@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-18 KST** — hook amend 루프 근본 fix·push(`f5d5461d`). B-3 5라운드 사전분석 완료 — 배선 2군데 확정. 다음 진입점: **B-3 구현** (좌표 재캡처 → #1·#2 → 테스트).
+> 마지막 업데이트: **2026-05-18 KST** — B-3 capability-gap 복구·push(`9eb14577`). Research Router Phase 2 B-1~B-3 전부 완료. 다음 진입점: **A Phase 4** (1주 데이터 수집 후 스마트 라우팅).
 
 ---
 
@@ -103,7 +103,7 @@ git status -sb
 
 **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
-### B. Research Router Phase 2 — structured evidence promotion ← **현재 진입점**
+### B. Research Router Phase 2 — structured evidence promotion ✅ B-1~B-3 완료
 
 > 설계: `docs/2026-04-29-research-router-structured-evidence-design.md` §11 Phase 2 (L1139-1145)
 > 본질: **데이터는 이미 생성됨** — 뒤 파이프라인 소비처가 안 쓰는 게 문제. "Research Router 필드 연결"이 아니라 "structured evidence promotion".
@@ -123,7 +123,7 @@ git status -sb
 - **Finding 2 (설계 결정 = ①)** — `required_capabilities`의 build `acceptance` 주입 제거. 근거: `acceptance`는 "완료 기준"으로 소비되는데(`agent_specializer.py:93`·`work_item_generator.py:333`) `required_capabilities`는 실행 전제·스킬 조달 신호 → 의미 불일치. 정규 소비처는 B-3 `decide_reuse()` capability-gap 경로 → B-3에 위임.
 - 3-Tier: af-critic / af-cross-review / af-test-runner **전부 PASS**. Blueprint §3.1+§12 갱신. tests 6건 신규.
 
-**B-3. skill pipeline — capability-gap 死코드 복구** ← **현재 진입점 (5라운드 사전분석 완료, 다음은 구현)**
+**B-3. skill pipeline — capability-gap 死코드 복구** ← ✅ **완료·push** (`9eb14577`, 2026-05-18)
 
 > 아래 라인 좌표는 2026-05-18 재캡처 기준. **구현 진입 시 grep으로 재확인** (라인은 stale 가능 — NEXT_STEPS의 이전 좌표 `:102`/`:197-206`이 실제 `:64`/`:172`로 어긋나 있었음).
 
