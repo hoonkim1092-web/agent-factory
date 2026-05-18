@@ -207,3 +207,92 @@ def test_compute_max_cycles_logs_on_load_failure(monkeypatch):
     assert result == ptb.MAX_CYCLES_FLOOR
     assert len(captured) == 1
     assert "OSError" in captured[0] and "simulated disk error" in captured[0]
+
+
+# ----- build_project_board: verification_focus → verify acceptance 주입 (B-2) -----
+# Research Router Phase 2 — researcher.py가 project_brief에 채우는 verification_focus가
+# verify 태스크 acceptance 까지 전파되는지 고정한다.
+# required_capabilities는 build acceptance에 주입하지 않는다 (B-3 capability-gap 경로 위임).
+
+
+def _role_plan_with_tasks() -> dict:
+    return {
+        "execution_strategy": "sequential",
+        "modules": [
+            {
+                "id": "backend_dev_module_1",
+                "name": "API",
+                "summary": "build the API",
+                "owner_role": "backend_dev",
+                "depends_on": [],
+                "deliverables": ["api"],
+                "feature_slices": [],
+                "tasks": [
+                    {"id": "t_scope", "title": "scope", "instruction": "scope it",
+                     "phase": "scope", "acceptance": ["범위 정리"]},
+                    {"id": "t_build", "title": "build", "instruction": "build it",
+                     "phase": "build", "acceptance": ["기능 구현"]},
+                    {"id": "t_verify", "title": "verify", "instruction": "verify it",
+                     "phase": "verify", "acceptance": ["검증 정리"]},
+                ],
+            }
+        ],
+    }
+
+
+def test_build_project_board_injects_verification_focus_into_acceptance():
+    from core.project_task_board import build_project_board
+    brief = {
+        "goal": "build app",
+        "verification_focus": ["reconnect handling", "multi-client test"],
+        "required_capabilities": ["websocket_server", "session_state"],
+    }
+    board = build_project_board(brief, _role_plan_with_tasks())
+    by_id = {t["task_id"]: t for t in board["tasks"]}
+    # verify 태스크는 verification_focus를 받는다.
+    assert "검증 초점: reconnect handling" in by_id["t_verify"]["acceptance"]
+    assert "검증 초점: multi-client test" in by_id["t_verify"]["acceptance"]
+    # 기존 acceptance는 보존된다.
+    assert "검증 정리" in by_id["t_verify"]["acceptance"]
+    # build 태스크는 required_capabilities를 받지 않는다 (B-3 capability-gap 경로 위임).
+    assert by_id["t_build"]["acceptance"] == ["기능 구현"]
+    # scope 태스크는 손대지 않는다.
+    assert by_id["t_scope"]["acceptance"] == ["범위 정리"]
+
+
+def test_build_project_board_without_structured_evidence_keeps_acceptance():
+    from core.project_task_board import build_project_board
+    board = build_project_board({"goal": "build app"}, _role_plan_with_tasks())
+    by_id = {t["task_id"]: t for t in board["tasks"]}
+    assert by_id["t_verify"]["acceptance"] == ["검증 정리"]
+    assert by_id["t_build"]["acceptance"] == ["기능 구현"]
+    assert by_id["t_scope"]["acceptance"] == ["범위 정리"]
+
+
+def test_build_project_board_acceptance_injection_is_idempotent():
+    # 이미 동일 라인이 있으면 중복 추가하지 않는다.
+    from core.project_task_board import build_project_board
+    plan = _role_plan_with_tasks()
+    for module in plan["modules"]:
+        for task in module["tasks"]:
+            if task["phase"] == "verify":
+                task["acceptance"].append("검증 초점: reconnect")
+    board = build_project_board({"goal": "g", "verification_focus": ["reconnect"]}, plan)
+    by_id = {t["task_id"]: t for t in board["tasks"]}
+    assert by_id["t_verify"]["acceptance"].count("검증 초점: reconnect") == 1
+
+
+def test_clean_list_string_not_split_into_chars():
+    # str 입력이 문자 단위로 분해되지 않고 1-item 리스트로 반환돼야 한다.
+    from core.project_task_board import _clean_list
+    assert _clean_list("hello") == ["hello"]
+
+
+def test_clean_list_list_input_unchanged():
+    from core.project_task_board import _clean_list
+    assert _clean_list(["a", "b", "c"]) == ["a", "b", "c"]
+
+
+def test_clean_list_none_returns_empty():
+    from core.project_task_board import _clean_list
+    assert _clean_list(None) == []

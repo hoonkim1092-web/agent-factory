@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-18 KST** — Phase 3.5 완료(`f75e01b4`) + B 설계 분석 완료. 다음 진입점: **B (structured evidence promotion)** — §B 섹션 정독 후 B-2/B-3 순서 결정부터.
+> 마지막 업데이트: **2026-05-18 KST** — B-2 Finding 1 완료(미커밋), Finding 2 결정=**①** 합의. 다음 진입점: **B-2 ① 코드 적용** → 3-Tier → 커밋 → B-3.
 
 ---
 
@@ -116,9 +116,27 @@ git status -sb
 - LLM 경로(`work_item_generator.py:631/673/727`)는 `json.dumps(project_brief)` 전체를 프롬프트에 박음 → 3필드 값은 암묵 도달.
 - 빠진 것: 구조적 렌더링 + fallback 문서 명시 섹션. → fallback에 명시 섹션 추가.
 
-**B-2. `project_task_board.py`** — acceptance가 보일러플레이트
-- `_task_template()`(project_task_board.py:337) verify acceptance = 일반 문구. `build_project_board()`(L590)가 `verification_focus` 미연결.
-- → `verification_focus`/`required_capabilities`를 verify/build task `acceptance`에 주입. **deterministic·소규모·테스트 명확 — 저위험.**
+**B-2. `project_task_board.py`** — ✅ 구현 완료 (워킹트리 **미커밋**, 2026-05-18)
+- 구현: `build_project_board()`(L590~)가 `project_brief`의 `verification_focus`→verify 태스크 / `required_capabilities`→build 태스크 `acceptance`에 dedup 가드와 함께 주입. LLM·fallback 경로 공통 funnel.
+- 테스트: `tests/test_project_task_board_dispatch.py` 3건 신규(주입/미주입/멱등성).
+- 3-Tier: af-critic **PASS** / af-cross-review **WARN**(advisory Medium 3) / af-test-runner **PASS** (15+51 PASS).
+- Blueprint §3.1 + §12 갱신 완료.
+- **⚠️ 미커밋** — 아래 2건 처리 후 커밋. `projects/agent_factory/` 변경은 테스트 부산물(커밋 제외).
+
+**B-2 진행 상태 (2026-05-18 갱신):**
+
+1. **Finding 1 (버그) — ✅ 완료 (미커밋).** `_clean_list()`(project_task_board.py:126) 진입부에 `if isinstance(values, str): values = [values]` 가드 추가. 회귀 테스트 3건(`tests/test_project_task_board_dispatch.py` — string/list/None). 18/18 PASS.
+2. **Finding 2 (설계 결정) — 결정=① 합의 (코드 미적용).** `required_capabilities`(프로젝트 레벨)를 모든 build 태스크 `acceptance`에 동일 주입 → 의미 오염(`acceptance`=완료 기준인데 "필요 역량"은 실행 전제·스킬 조달 신호, `agent_specializer.py:93`·`work_item_generator.py:333`이 그렇게 소비) + B-3 capability-gap 경로와 이중 소비. **결정: ① — build `acceptance` 주입 제거, verify←`verification_focus`만 유지.** `required_capabilities`는 B-3(skill pipeline)에 위임.
+   - 합의: 커밋은 B-2(①)/B-3 **2개로 분리**(B-3는 Tier3 메가 PR 금지 — 4분할). dangling은 "한 커밋"이 아니라 **B-3 즉시 연속 착수**로 해소.
+   - 팩트 보정: 부작용(스킬 잘림)은 선언 스킬 **9개 이상**에서만 — `_select_task_skills` `result[:8]`, 8개는 전부 통과. 현재 코드베이스 0건(최대 8개). ①의 근거 무게중심은 스킬 잘림이 아니라 **의미 오염 + B-3 정합**(스킬 개수와 무관하게 상존).
+   - B-3 "전달 계약"은 step 2 단독=무음 no-op(`_rank_candidates_for_need`의 `target` dict에 `required_capabilities` 없음). step 1~3 한 묶음 필요.
+- advisory(Finding 3, 낮은 우선순위): `verification_focus` 항목 수 상한 없음 — dedup+LLM 3-6개 제약으로 실질 영향 작음.
+
+**B-2 다음 세션 진입점 — ① 코드 적용:**
+- `core/project_task_board.py` — L599 `required_capabilities` 변수 제거 + L631-635 `elif task["phase"] == "build"` 블록 제거(verify `if`만 유지).
+- `tests/test_project_task_board_dispatch.py` — `required_capabilities` 검증 케이스 정리(주입 테스트에서 build 부분 제거 등).
+- Blueprint §3.1 + §12 갱신.
+- → 3-Tier 재실행 → 커밋 → **B-3 즉시 진입**.
 
 **B-3. skill pipeline** — capability-gap 경로가 死코드 (end-to-end 계약 문제, 단일 함수 아님)
 - `decide_reuse()`(skill_retrieval_engine.py:102)는 payload의 `required_capabilities`로 gap 분석 — 그러나 `_rank_candidates_for_need()`(researcher.py:197-206) target에 미포함 → 항상 `gap=None`.
@@ -130,7 +148,7 @@ git status -sb
   3. `_rank_candidates_for_need()`에 hypothesis map 전달 → 매칭 need의 `required_capabilities`를 target에 주입.
   4. `decide_reuse` 결정 사유(`decision.to_dict()`/rationale/capability_gap/confidence)를 `skill_manifest.json` entry에 보존 (현재 `decision_mode/reused_from/forge_run_id/fallback_chain`만).
 
-**진입 순서 미결 (사용자 결정 대기):** B-2 먼저(저위험 워밍업) vs B-3 contract helper 먼저(가치 최대). 설계는 Opus, 구현은 Sonnet.
+**진입 순서 결정됨 (2026-05-18):** B-2 먼저 → 완료(미커밋). 다음: B-2 Finding 1·2 처리 → 커밋 → B-3. 설계는 Opus, 구현은 Sonnet.
 
 ### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 

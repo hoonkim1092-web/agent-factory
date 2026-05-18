@@ -411,7 +411,7 @@ AgentRunner.run(agent, task_input, workspace)
 ## §3 핵심 서브시스템
 
 ### §3.1 ProjectPipeline (`core/project_pipeline.py`)
-<!-- last_updated: 2026-05-07 -->
+<!-- last_updated: 2026-05-18 (Research Router P2-B2 ① — build_project_board verification_focus 주입) -->
 
 **클래스:** `ProjectPipeline`
 
@@ -429,6 +429,7 @@ AgentRunner.run(agent, task_input, workspace)
   - `status ∈ {crashed, unknown}` → 전체 skip
   - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
+- **Research Router P2-B2** (2026-05-18, ① 적용): `project_task_board.build_project_board()`가 `project_brief`의 `verification_focus`(researcher.py §6.4)를 verify phase 태스크 `acceptance`에 주입 — LLM·fallback 태스크 경로 공통 funnel, dedup 가드 포함. `required_capabilities`는 acceptance(완료 기준)와 의미가 맞지 않고 B-3 capability-gap 경로(`skill_retrieval_engine.decide_reuse()`)가 정규 소비처이므로 build 태스크 주입 대상에서 제외
 - **P0 A6** (2026-05-05): `prepare_brief()` → `docs/research/<slug>-project-brief.json` 보조 저장
 - **P2 C1** (2026-05-06): `prepare_documents()` Work Items 직전 Domain Spec Gate — `research_plan.domain` 감지 시 `_verify_domain_spec()` → 미존재면 `SpecGenerator.generate()` 호출 + `_save_specs()` → `coverage_report.block==True`면 `ResearchGateBlocked` raise
 - **P2 C3+C4** (2026-05-06): Domain 분기 내 ADR + traceability 자동 생성. `_load_evidence(workspace, task_input)` → `safe_id(task_input)[:40]` slug 사용(researcher.py 파일명 일치). `AdrGenerator.generate()` / `TraceabilityGenerator.generate()`. 생성 결과 `planning_files`에 추가.
@@ -1545,6 +1546,14 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_task_board_dispatch.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: core/project_task_board.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_task_board_dispatch.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: core/project_task_board.py — Master_Blueprint.md, NEXT_STEPS.md, project_task_board.py, code-review.md, architect.yaml (+36) |
+| 2026-05-18 | v1.2.28 | feat(research-router-p2-B2): `project_task_board.build_project_board()`가 `project_brief`의 `verification_focus`(researcher.py §6.4)를 verify phase 태스크 `acceptance`에 주입 — dedup 가드, LLM·fallback 경로 공통 funnel. `required_capabilities`는 acceptance(완료 기준) 의미 불일치 + B-3 capability-gap 경로가 정규 소비처라 build 주입 제외(①). `_clean_list()` 문자열 인자 char-split 버그 수정(isinstance 가드). tests/test_project_task_board_dispatch.py 6건 신규. §3.1 갱신. |
+| 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_project_task_board_dispatch.py — Master_Blueprint.md, project_task_board.py, code-review.md, architect.yaml, logicdev.yaml (+35) |
+| 2026-05-18 | v1.2.28 | chore(core): edit: core/project_task_board.py — project_task_board.py, code-review.md, architect.yaml, logicdev.yaml, context_schema.yaml (+33) |
 | 2026-05-18 | v1.2.28 | feat(phase3.5-metrics): compute_report() 라벨 정정(T3 finding share, T3 고유값 ≠) + [Phase 4 primary] T3 BLOCK-only 커밋 승격 + commits_with_t3<10 샘플 게이트 + 미지원 필드 명시. hook_runner._post_agent_record()에 payload.duration_ms 추출 → append_metric duration_ms 전달. 테스트 2개 신규(guidance_sufficient, duration_ms 2케이스), 기존 1개 assert 수정. 3-Tier: af-critic PASS / af-cross-review PASS / pytest 1704 PASS. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: tests/test_review_metrics_logger.py — Master_Blueprint.md, code-review.md, hook_runner.py, review_metrics_logger.py, test_review_metrics_logger.py |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): edit: scripts/hook_runner.py — Master_Blueprint.md, code-review.md, hook_runner.py, review_metrics_logger.py |

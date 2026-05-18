@@ -5741,3 +5741,344 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (1)**: `tests/test_project_pipeline.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-17 23:02 — `main` (065a5b28)
+
+**Context**: edit: tests/test_ast_engine_smoke.py
+
+**Changed (2)**: `NEXT_STEPS.md, pyproject.toml`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-18 00:07 — `main` (083ea93b)
+
+**Context**: edit: scripts/review_metrics_logger.py
+
+**Changed (3)**: `Master_Blueprint.md, docs/code_review/code-review.md, scripts/review_metrics_logger.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-18 00:49 — `main` (5bd395ce)
+
+**Context**: edit: core/project_task_board.py
+
+**Changed (38)**: `core/project_task_board.py, docs/code_review/code-review.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json ... (+23)`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-18 11:32 — `main` (2b67b362)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [High] (커밋 전체) — 변경 36개 파일이 전부 `runs/`·`agents/*.yaml`·`dashboard.json`·`context_schema.yaml` 등 데이터/런타임 산출물이다. 커밋 메시지가 명시한 코드 수정(build acceptance `required_capabilities` 주입 제거, `_clean_list` 문자열 가드)에 해당하는 `.py` 소스 변경이 diff에 **전혀 없음** — 메시지와 실제 변경 불일치. 의도한 `core/*.py` 수정이 누락됐거나 다른 커밋에 섞였는지 확인 필요.
+- [Medium] 전 파일 — 모든 diff가 줄 끝 문자(CRLF↔LF/trailing whitespace) 정규화 churn뿐, 의미 변경 0. 라인이 통째로 삭제·재추가되어 history·blame 오염. `.gitattributes`로 EOL 고정 후 별도 정리 커밋 권장, 기능 커밋과 분리.
+- [Medium] `runs/**/chat_trace.json`, `state.json`, `dp_meta.yaml`, `dp_skill.py`, `dashboard.json` — 파이프라인 실행 시 생성되는 런타임 산출물로 보임. 매 실행마다 재생성되어 diff 노이즈를 유발하므로 `.gitignore` 처리 검토.
+- [Info] `architect.yaml`/`logicdev.yaml` 등 페르소나 정의의 trailing whitespace 변경은 동작 영향 없음.
+
+보안·런타임 버그는 발견되지 않음 (검토 범위 내 실행 코드 변경 없음). 핵심은 **커밋 메시지와 변경 내용 불일치** — 실제 `_clean_list`/build acceptance 패치가 어디 있는지 먼저 확인하세요.
+
+---
+
+## 2026-05-18 11:33 — `main` (48fbcb01)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+All 36 files in this changeset are **pure CRLF→LF line-ending churn** — every file reports equal insertions/deletions (1130/1130), content byte-identical apart from line endings. None of the code described in the commit message (`_clean_list` guard, build acceptance `required_capabilities` removal in `core/research_router.py`) is present here.
+
+- [High] (전체 changeset) — 커밋 메시지가 설명하는 `_clean_list` 문자열 가드·build acceptance 주입 제거 코드가 이 변경 세트에 **하나도 없음**. 36개 파일 전부 CRLF→LF 라인엔딩 churn뿐. 메시지와 실제 diff 불일치 — 의도한 `core/*.py` 변경이 누락됐거나 커밋이 잘못 묶임.
+- [Medium] projects/agent_factory/runs/** — 생성 산출물(chat_trace.json, state.json, dp_skill.py, dashboard.json)이 라인엔딩만 바뀐 채 커밋됨. git 히스토리 오염. `.gitattributes`에 `* text=auto eol=lf` 지정하거나 `runs/`를 `.gitignore` 처리 권장.
+- [Low] projects/agent_factory/runs/r2/dp_skill.py:41 — 파일 끝 newline 없음(`\ No newline at end of file`). 라인엔딩 정규화 시 함께 수정 권장.
+- [Info] — `dp_skill.py`의 `propose/apply/_norm` 로직 자체는 변경 없음(라인엔딩만). 보안·버그·에러처리 결함 없음.
+
+권장: 이 커밋은 의도한 코드 변경을 포함하지 않음. `core/research_router.py` 등 실제 수정 파일을 확인하고, 라인엔딩 churn은 별도 정리 커밋으로 분리할 것.
+
+---
+
+## 2026-05-18 11:33 — `main` (1b25bbcf)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Info] projects/agent_factory/* — 제공된 diff 36개 파일은 전부 줄바꿈(CRLF→LF) 정규화 변경뿐. 커밋 메시지가 가리키는 실제 로직 변경(`runs/r2/dp_skill.py`, `runs/r3/dp_skill.py`의 build acceptance `required_capabilities` 주입 제거 + `_clean_list` 문자열 가드)은 truncated diff에 포함되지 않아 검증 불가 — 해당 hunk를 별도로 제출 필요.
+- [Low] projects/agent_factory/runs/** — 실행 산출물(`chat_trace.json`, `state.json`, `dp_meta.yaml`)이 줄바꿈 churn만으로 30개 이상 스테이징됨. 런타임 생성물은 `.gitignore` 처리 권장. 의미 없는 diff 노이즈가 실제 코드 리뷰를 가림.
+- [Low] 리포지토리 전반 — 줄바꿈 불일치가 반복 발생 중. `.gitattributes`에 `* text=auto eol=lf` 추가로 재발 방지 권장.
+
+보안·에러 처리 관점에서 검토 가능한 변경 없음 — 핵심 변경(`dp_skill.py`)의 실제 diff가 누락되어 `_clean_list` 가드 로직(타입 체크/빈 문자열 처리/주입 제거 후 fallback)을 평가할 수 없습니다. 해당 파일의 변경 hunk를 제공해 주시면 재검토하겠습니다.
+
+---
+
+## 2026-05-18 11:34 — `main` (8e126308)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Info] projects/agent_factory/runs/**, *.yaml, dashboard.json — 36개 파일 변경이 전부 줄바꿈(CRLF↔LF/trailing CR) 차이뿐인 run 아티팩트·설정 노이즈입니다. 커밋 메시지의 실제 코드 수정(`_clean_list`, build acceptance)과 무관하니 이 파일들은 스테이지에서 제외하고 `.gitattributes`로 줄바꿈을 고정하는 게 맞습니다.
+- [Info] core/research_router.py — 커밋 제목이 명시한 핵심 변경(`required_capabilities` 주입 제거, `_clean_list` 문자열 가드)이 제공된 diff에 포함돼 있지 않아 검토 불가입니다. 실제 로직 파일 diff를 함께 제시해야 리뷰가 성립합니다.
+- [Low] projects/agent_factory/runs/r2/dp_skill.py, runs/r3/dp_skill.py — `.py` 파일이 커밋에 포함되어 Review-Gate(Tier 2~3)가 발화 대상으로 잡을 수 있습니다. 생성된 산출물이라면 diff가 줄바꿈뿐인지 재확인하고 게이트 오발화 여부를 점검하세요.
+
+검토 가능한 diff 범위 내에서는 보안·버그·예외 처리 결함 없음. 단, 핵심 코드 변경이 누락되어 실질 검토는 미완입니다 — `core/research_router.py`의 실제 diff를 제공해 주십시오.
+
+---
+
+## 2026-05-18 11:35 — `main` (b8e27ffb)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Low] projects/agent_factory/runs/**, dashboard.json, *.yaml — 34개 파일이 순수 줄바꿈/후행공백 변경(CRLF↔LF)만 포함. 실제 수정과 무관한 생성물 churn이 diff를 가려 리뷰 신뢰성을 떨어뜨림. `runs/`·`dashboard.json` 등 런타임 산출물은 `.gitignore` 처리 권장, 코드 fix와 별도 커밋 분리.
+- [Info] runs/r2/dp_skill.py, runs/r3/dp_skill.py — 커밋 메시지의 핵심 변경(`_clean_list` 문자열 가드, build acceptance `required_capabilities` 주입 제거)이 제공된 diff에 보이지 않음(whitespace-only로 표시). 실제 가드 로직·엣지케이스(빈 문자열/None/비-list 입력)를 이 diff만으로 검증 불가 — 해당 파일의 실 변경분 diff 필요.
+- [Info] 보안·에러 처리 관점에서 가시 범위 내 결함 없음. 단, `_clean_list` 가드는 비-iterable·dict 입력 시 동작이 핵심이므로 별도 확인 요망.
+
+No critical/high issues found in the visible diff.
+
+---
+
+## 2026-05-18 11:35 — `main` (dd439f73)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [High] (전체 36개 파일) — diff가 전부 줄바꿈 정규화(CRLF↔LF) 변경뿐. 커밋 메시지가 명시한 `required_capabilities` 주입 제거 / `_clean_list` 문자열 가드 변경이 이 diff에 없음. 실제 수정은 `core/*.py`에 있어야 하나 변경 파일 목록에 코드 파일이 없어 핵심 fix를 검증 불가.
+- [Medium] projects/agent_factory/runs/** , dashboard.json, chat_trace.json, state.json — 생성 산출물(run 아티팩트)이 추적 대상. 줄바꿈 변경만으로 36개 파일이 diff에 잡힘 → `.gitignore` 처리 권장. 실코드 변경과 노이즈가 섞여 리뷰·blast-radius 판정 방해.
+- [Low] runs/r2/dp_skill.py, runs/r3/dp_skill.py — `.py` 확장자라 review-gate가 Tier 2~3로 오분류할 수 있음. 생성 샘플임을 경로/패턴으로 게이트에서 제외 확인 필요.
+- [Info] — 줄바꿈 일관성 자체는 개선이나, 의도된 fix 커밋에 섞으면 회귀 추적이 어려움. 줄바꿈 정규화는 별도 커밋 + `.gitattributes`(`* text=auto eol=lf`)로 고정 권장.
+
+검증 한계: 제공된 diff가 줄바꿈 churn만 담고 있어 B-2 ①(build acceptance / `_clean_list`)의 실제 구현 정합성은 이 입력만으로 평가할 수 없음. 해당 `core` 변경 diff를 별도로 받아야 정상 리뷰 가능.
+
+---
+
+## 2026-05-18 11:36 — `main` (ec0cccf5)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Medium] (commit scope) — 커밋 메시지는 `core/*.py`의 코드 수정(`build acceptance required_capabilities 주입 제거`, `_clean_list 문자열 가드`)을 명시하지만, 제시된 diff 36개 파일은 전부 `projects/agent_factory/runs/`·`agents/`·`dashboard.json` 등 **생성 산출물**뿐임. 실제 리뷰 대상인 소스 변경이 diff에 없어 검증 불가 — `core/research_router.py` diff를 별도로 확인해야 함.
+
+- [Low] all files — 변경 내용이 전부 **줄 끝 공백/개행(CRLF↔LF 추정) churn**임. 의미 있는 데이터 변경 없음. `.gitattributes`에 `* text=auto eol=lf` 미설정으로 추정되며, 매 실행마다 산출물이 무의미하게 diff에 잡힘.
+
+- [Low] projects/agent_factory/runs/**, dashboard.json, skill-lock.yaml — 파이프라인 실행 산출물(`chat_trace.json`, `state.json`, `dp_skill.py`, `dp_meta.yaml`)이 git 추적 중. 코드 fix 커밋에 함께 묶이면 리뷰 노이즈와 머지 충돌을 유발. `.gitignore` 처리 검토 권장.
+
+- [Info] — 제공된 diff 범위에서 보안·버그·에러 처리 결함은 발견되지 않음(데이터 산출물 한정). 실질 리뷰는 `_clean_list` 가드 및 build acceptance 변경 소스 확인 후 가능.
+
+---
+
+## 2026-05-18 11:36 — `main` (00b47e6f)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Medium] projects/agent_factory/runs/**, dashboard.json, agents/*.yaml, context_schema.yaml — 36개 파일 전부 줄바꿈/후행 공백 정규화(CRLF→LF)만 발생한 런타임 생성 산출물. 실제 `_clean_list`/build acceptance 코드 수정과 무관한 노이즈이며, `runs/`·`dashboard.json`·`chat_trace.json`·`state.json`은 생성물이므로 `.gitignore` 처리 후 커밋에서 제외해야 함. 현재 diff로는 실제 변경을 검토 불가.
+- [High] (검토 불가) — 커밋 메시지의 핵심 변경(`build acceptance required_capabilities 주입 제거`, `_clean_list` 문자열 가드)에 해당하는 `core/*.py` 파일이 제공된 diff에 전혀 없음. 코드 수정과 산출물 churn이 같은 커밋에 섞여 실제 로직 변경을 리뷰할 수 없음 — 분리 커밋 필요.
+- [Info] 산출물 파일의 일괄 line-ending 변경은 OS/에디터 간 체크아웃 차이일 가능성이 큼. `.gitattributes`에 `* text=auto` 또는 해당 경로 `-text` 지정으로 재발 방지 권장.
+
+핵심 코드(`_clean_list` 가드, build acceptance 주입 제거)는 diff에 포함돼 있지 않아 보안·버그·예외처리 관점의 실질 검토가 불가능합니다. 해당 `core/*.py` 변경분을 별도로 제시해 주시면 다시 리뷰하겠습니다.
+
+---
+
+## 2026-05-18 11:37 — `main` (4951e582)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Medium] projects/agent_factory/runs/** — 표시된 diff 전체가 CRLF→LF/후행 공백 정규화 노이즈일 뿐, 커밋 메시지의 실제 변경(`required_capabilities` 주입 제거, `_clean_list` 문자열 가드)은 이 diff에 없음. 로직 변경을 검토할 수 없음.
+- [Medium] projects/agent_factory/runs/run_*/chat_trace.json, wf_*/state.json, dashboard.json — 런타임 생성 산출물이 버전 관리되며 매 실행마다 churn 발생. `.gitignore` 처리 대상으로 보임. 36개 파일 중 대부분이 이 부류.
+- [Low] (커밋 위생) — 대량 줄바꿈 재작성과 실제 버그 수정이 한 커밋에 섞여 blame/리뷰가 오염됨. 정규화는 별도 커밋으로 분리 권장.
+- [Info] agents/*.yaml, context_schema.yaml — 내용 변경 없음, 줄 끝 문자만 변경. 기능 영향 없음.
+
+검토 한계: 커밋 제목이 명시한 핵심 수정(build acceptance 주입 제거, `_clean_list` 가드)에 해당하는 `core/*.py` diff가 제공된 변경분에 포함되어 있지 않아 해당 로직의 보안·버그·예외처리 검증은 불가. 실제 코드 hunk를 제시해 주면 재검토 가능.
+
+---
+
+## 2026-05-18 11:38 — `main` (eee86093)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Info] (전 파일) — 표시된 36개 파일 diff는 전부 생성 산출물(`runs/`, `dashboard.json`, `agents/*.yaml`, `context_schema.yaml`)의 줄끝 공백/개행 정규화 변경뿐. 기능 변경 없음.
+- [Medium] 커밋 범위 불일치 — 커밋 메시지는 "build acceptance required_capabilities 주입 제거 + `_clean_list` 문자열 가드" 코드 수정인데, 변경 파일에 해당 소스(`core/*.py`, research_router 모듈)가 없음. 실제 로직 변경 파일이 누락됐거나, 산출물 재생성 노이즈가 커밋에 섞여 의도와 다른 diff가 됨.
+- [Low] `runs/r2/dp_skill.py`, `runs/r3/dp_skill.py` — 변경 목록에 포함되나 diff 본문이 제공된 발췌에 없어 `_clean_list` 가드 실체를 검증 불가. 빈 문자열/None/리스트 외 타입 입력에 대한 가드 동작은 별도 확인 필요.
+- [Low] 산출물 공백 정규화가 커밋에 동반됨 — 향후 산출물 재생성마다 동일 noise diff 재발 가능. `runs/` 산출물을 `.gitignore` 처리하거나 정규화 규칙을 고정할 것을 권장.
+
+검증 한계: 제공된 diff에는 보안/버그/에러 처리에 영향을 주는 실행 코드 변경이 포함되어 있지 않아, 커밋 제목이 가리키는 실제 수정(주입 제거·문자열 가드)의 정합성은 이 리뷰 범위에서 확인되지 않음. 해당 소스 파일을 diff에 포함해 재리뷰 권장.
+
+---
+
+## 2026-05-18 11:38 — `main` (12983f81)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [High] (commit scope) — 커밋 메시지는 `research_router.py` 빌드 수용/`_clean_list` 변경을 명시하나, 변경 파일 36개는 전부 `projects/agent_factory/runs/` 산출물·에이전트 YAML뿐. 실제 코드 변경이 이 diff에 없어 리뷰로 검증 불가. 코드 파일이 누락 커밋됐는지 확인 필요.
+- [Medium] projects/agent_factory/runs/** — `chat_trace.json`, `state.json`, `dp_skill.py`, `dp_meta.yaml` 등은 파이프라인 실행 산출물(generated). 줄바꿈/후행 공백 churn만으로 36개 파일이 스테이징됨 — `.gitignore`에 `runs/` 추가 권장. 매 실행마다 무의미한 diff 노이즈 발생.
+- [Low] architect.yaml:1 / logicdev.yaml:1 / context_schema.yaml:1 / dashboard.json:1 — 내용 변경 0, 순수 line-ending 정규화(CRLF↔LF 또는 후행 공백 제거)뿐. 의도된 변경이 아니면 되돌리고, 의도면 `.gitattributes`로 `eol` 고정 권장.
+
+검토 결론: 이 diff에는 보안·버그·에러 처리 관점에서 검토할 **실질 코드 로직이 없습니다**. 전부 생성 산출물의 줄바꿈 churn입니다. 커밋 메시지가 기술한 `_clean_list` 문자열 가드와 build acceptance 주입 제거 코드를 별도로 제시해 주시면 정식 리뷰하겠습니다.
+
+---
+
+## 2026-05-18 11:39 — `main` (704fd2df)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Medium] (commit scope) — 36개 파일 중 대부분이 stated fix(`_clean_list`/build acceptance)와 무관한 생성 산출물(`runs/*/chat_trace.json`, `dashboard.json`, `agents/*.yaml`, `context_schema.yaml`)의 줄바꿈/후행공백 churn임. 커밋 1개에 무관 변경을 섞으면 blast radius·리뷰·revert가 어려워짐. 실제 B2 수정만 분리 커밋 권장.
+- [Medium] .gitattributes 부재 — diff 전 줄이 CRLF↔LF(또는 후행 CR) 토글로 재작성됨. 프로젝트가 Windows(`C:\Project`)/darwin 양쪽에서 편집되어 줄바꿈 churn 반복 발생. `* text=auto eol=lf` 또는 해당 경로 `-text` 추가로 재발 방지.
+- [Low] `projects/agent_factory/runs/**` — 런타임 실행 산출물(`state.json`, `chat_trace.json`, `dp_skill.py` 등)이 버전관리됨. `.gitignore` 처리 검토 필요. 의도적 픽스처라면 무방.
+- [Info] 핵심 수정(`runs/r2,r3/dp_skill.py`의 `_clean_list` 문자열 가드, build acceptance `required_capabilities` 주입 제거)이 제공된 diff에 truncate되어 보이지 않음 — 실질 로직 검토 불가. 해당 diff 제공 시 재검토 필요.
+
+No issues found in the visible diff portion itself (순수 줄바꿈 변경, 의미 변화 없음).
+
+---
+
+## 2026-05-18 11:39 — `main` (53bec06b)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Info] (all 36 files) — 표시된 diff는 전부 CRLF↔LF / 트레일링 `\r` 정규화 churn일 뿐, 의미 있는 코드 변경 없음. `architect.yaml`·`logicdev.yaml`·`context_schema.yaml`·`dashboard.json`·`dp_skill.py` 등 내용은 동일.
+- [Low] runs/r2/dp_skill.py, runs/r3/dp_skill.py — 생성 산출물(run artifacts)이 라인엔딩 변경만으로 커밋에 포함됨. `.gitattributes`에 `* text=auto eol=lf` 또는 `runs/` 디렉터리 gitignore 검토 권장 — 매 실행마다 무의미한 diff 재발.
+- [Info] 커밋 메시지가 명시한 실제 수정(`_clean_list` 문자열 가드, build acceptance `required_capabilities` 주입 제거)에 해당하는 `core/*.py` 변경이 이 diff 36개 파일에는 **포함되어 있지 않음**. 리뷰 대상 범위와 커밋 의도가 불일치 — 실제 로직 변경분이 별도 커밋/스테이지에 있는지 확인 필요.
+
+보안·버그·에러 처리 관점에서 이 diff 자체에는 결함 없음. 단, 의도된 로직 수정이 리뷰 범위에 누락되어 정상 검증 불가.
+
+---
+
+## 2026-05-18 11:40 — `main` (0ad22863)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+요청한 코드 리뷰입니다. 다만 제공된 diff에는 **커밋 메시지가 말하는 실제 코드 변경(`_clean_list`, `required_capabilities`)이 전혀 없습니다.** 36개 변경 파일 전부 run 산출물·agent config이며, 모든 라인이 줄바꿈(CRLF→LF 추정) 차이로만 삭제·재추가되었습니다.
+
+- [Medium] (commit) — 커밋 메시지는 `build acceptance required_capabilities 주입 제거 + _clean_list 가드` 코드 수정을 표방하나, changeset 36개 파일은 전부 `runs/`, `dashboard.json`, `chat_trace.json`, `agents/*.yaml` 등 생성 산출물의 줄바꿈 정규화뿐. **실제 코드 fix가 이 커밋에 누락**됨 — `core/` 파일이 별도 커밋에 있는지 확인 필요.
+- [Low] projects/agent_factory/runs/** — run 산출물(`dp_skill.py`, `chat_trace.json`, `state.json`)이 커밋에 포함. 생성물이라면 `.gitignore` 처리 검토. 줄바꿈 churn이 진짜 변경을 가린다.
+- [Info] (전반) — 줄바꿈 혼재 방지를 위해 `.gitattributes`(`* text=auto eol=lf`) 도입 권장. 현재 산출물이 CRLF로 쓰여 매 실행마다 diff 노이즈 발생.
+- [Info] (리뷰 범위) — diff가 truncate되어 `core/research_router.py` 등 핵심 로직은 검토 불가. 실제 `_clean_list` 문자열 가드 / 주입 제거 로직은 별도로 제출해 주셔야 정상 리뷰 가능합니다.
+
+핵심: 보안·버그 관점 결함은 보이지 않으나, **이 커밋은 커밋 메시지와 내용이 불일치**합니다. 실제 코드 변경 diff를 받으면 다시 리뷰하겠습니다.
+
+---
+
+## 2026-05-18 11:41 — `main` (fd6723dc)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [High] (commit-wide) — 커밋 메시지는 `required_capabilities` 주입 제거 + `_clean_list` 문자열 가드를 명시하지만, 제시된 diff에는 해당 코드 변경(`dp_skill.py`의 실제 로직, `_clean_list` 정의)이 전혀 없음. 실제 fix가 누락됐거나 별도 미스테이지 상태 — 커밋 내용과 메시지 불일치.
+- [Medium] architect.yaml:1-18, logicdev.yaml:1-19, context_schema.yaml:1-8, dashboard.json:1+ — 전 라인이 동일 내용으로 삭제·재추가됨. 트레일링 공백/CRLF 정규화 churn만 발생. 의미 변경 0인데 36개 파일을 오염시켜 실제 diff를 가리고 머지 충돌·blame 손상 유발. 이 커밋에서 분리하거나 되돌릴 것.
+- [Medium] runs/run_*/chat_trace.json, runs/wf_*/state.json, runs/r2·r3/dp_meta.yaml — 파이프라인이 매 실행마다 재생성하는 산출물이 git 추적 중. `.gitignore` 처리 후 추적 해제 권장. 현재는 매 실행이 무관한 변경을 만들어 리뷰 신호를 묻음.
+- [Info] — `_clean_list` 문자열 가드의 정합성(단일 str 입력 시 char 단위 분해 방지 등)은 해당 함수 diff가 없어 검증 불가. 코드 본문 포함한 재리뷰 필요.
+
+요약: 이 diff는 줄바꿈/공백 정규화 noise가 전부이며, 커밋 메시지가 약속한 실질 수정은 확인되지 않음. 게이트 통과 전 (1) 산출물 파일 언스테이지, (2) 실제 `dp_skill.py`/`_clean_list` 변경 포함 여부 확인 필요.
+
+---
+
+## 2026-05-18 11:41 — `main` (c213166d)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (36)**: `projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473949_Architect/chat_trace.json ... (+21)`
+
+### Findings
+
+- [Low] projects/agent_factory/agents/architect.yaml, logicdev.yaml, context_schema.yaml, dashboard.json — 변경 내용이 전부 trailing whitespace / 줄끝(CRLF↔LF) 정규화 noise. 커밋 메시지(`_clean_list 문자열 가드` 등 로직 수정)와 무관한 churn이 diff를 오염시킴. `.gitattributes`로 줄끝 고정 권장.
+- [Low] projects/agent_factory/runs/** (chat_trace.json, state.json, dp_meta.yaml 등 다수) — 런타임 산출물이 버전 관리에 포함돼 매 실행마다 noise 커밋 발생. `.gitignore` 처리 검토 필요.
+- [Info] runs/r2/dp_skill.py, runs/r3/dp_skill.py — 커밋 메시지가 지목한 실제 로직 변경(`required_capabilities` 주입 제거, `_clean_list` 가드)이 제공된 diff에 포함되지 않아(절단됨) 검증 불가. 해당 hunk를 별도로 확인해야 함.
+
+제공된 diff 범위 내에서는 보안/버그/에러 처리 결함 없음 — 전부 무해한 공백 변경. 단, 핵심 로직 파일(`dp_skill.py`)의 실제 변경분이 누락되어 완전한 리뷰는 불가하다.
+
+---
+
+## 2026-05-18 11:42 — `main` (6068ea15)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (37)**: `NEXT_STEPS.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json ... (+22)`
+
+### Findings
+
+- [Info] (commit `6068ea15`) — 커밋 메시지는 `core/project_task_board.py`의 `_clean_list` 문자열 가드 + build acceptance 주입 제거를 명시하나, 변경 파일 목록 37개에 `core/project_task_board.py`가 없음. 실제 코드 수정이 이 changeset에 포함되지 않았거나 별도 커밋으로 분리됨 — 확인 필요.
+
+- [Medium] projects/agent_factory/runs/** — `chat_trace.json`, `state.json`, `dp_skill.py`, `dp_meta.yaml` 등 파이프라인 런 부산물 30+개가 스테이징됨. CLAUDE.md 및 NEXT_STEPS 본문("`projects/agent_factory/` 변경은 테스트 부산물(커밋 제외)") 정책과 충돌. `.gitignore` 처리 또는 커밋 제외 권장.
+
+- [Low] NEXT_STEPS.md — B-2를 "완료·push (`dd439f73`)"로 기재하나 현재 HEAD는 `6068ea15`. 참조 해시 정합성 확인 필요(다른 브랜치/후속 커밋 해시일 가능성).
+
+- [Info] architect.yaml/logicdev.yaml/context_schema.yaml/settings.yaml — diff가 잘려 실내용 미확인. agent yaml 변경이 의도된 것인지(테스트 부산물 vs 실제 설정 변경) 분리 검토 필요.
+
+검토 한계: 제공된 diff가 NEXT_STEPS.md와 architect.yaml 일부에서 잘렸고, 핵심 코드 파일 diff가 없어 `_clean_list` 가드·acceptance 주입 제거의 정확성은 검증 불가. 실제 `core/project_task_board.py` diff 제공 시 재검토 권장.
+
+---
+
+## 2026-05-18 11:43 — `main` (e0936678)
+
+**Context**: fix(research-router-p2-B2): ① 적용 — build acceptance required_capabilities 주입 제거 + _clean_list 문자열 가드
+
+**Changed (37)**: `NEXT_STEPS.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/dashboard.json, projects/agent_factory/runs/r2/dp_meta.yaml, projects/agent_factory/runs/r2/dp_skill.py, projects/agent_factory/runs/r3/dp_meta.yaml, projects/agent_factory/runs/r3/dp_skill.py, projects/agent_factory/runs/run_1772473924_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473928_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473932_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473937_LogicDev/chat_trace.json, projects/agent_factory/runs/run_1772473941_Architect/chat_trace.json, projects/agent_factory/runs/run_1772473945_LogicDev/chat_trace.json ... (+22)`
+
+### Findings
+
+**Review — `core/project_task_board.py` (commit `e0936678`)**
+
+No issues found.
+
+검증 내역:
+- `_clean_list:127` — `isinstance(str)` 가드 정확. 문자열 char-split 버그 제거. 공유 헬퍼라 전 호출처(`depends_on`/`acceptance`/`artifacts`)가 모두 list를 기대하므로 의도적 char-split 호출처 없음 → 회귀 위험 0.
+- `build_project_board:598` — `verification_focus`는 루프 밖 1회 계산, 수정된 `_clean_list` 경유라 문자열 값도 안전. None은 `get()` → `or []`로 처리됨.
+- `:625-629` — verify phase에만 주입, `line not in acceptance` dedup 가드 존재. `_clean_list`가 이미 입력측 dedup하므로 이중 안전. 정상.
+
+- [Info] working tree — `projects/agent_factory/runs/**`, `dashboard.json`, 에이전트 YAML 등 다수가 `M` 상태(테스트 부산물). 이번 커밋(5파일)엔 미포함이나 트리를 더럽힘. `.gitignore` 처리 또는 정리 권장.

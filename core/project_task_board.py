@@ -124,6 +124,8 @@ def _clean_text(value: Any) -> str:
 
 
 def _clean_list(values: Any) -> list[str]:
+    if isinstance(values, str):
+        values = [values]
     cleaned = [_clean_text(item) for item in (values or []) if _clean_text(item)]
     return list(dict.fromkeys(cleaned))
 
@@ -592,6 +594,9 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
     tasks: list[dict[str, Any]] = []
     role_index: dict[str, list[str]] = {}
 
+    # structured evidence (researcher.py §6.4) → verify 태스크 acceptance 주입
+    verification_focus = _clean_list(project_brief.get("verification_focus"))
+
     for module in (role_plan.get("modules") or []):
         if not isinstance(module, dict):
             continue
@@ -617,6 +622,11 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
             }
             if not task["task_id"] or not task["instruction"]:
                 continue
+            if task["phase"] == "verify":
+                for item in verification_focus:
+                    line = f"검증 초점: {item}"
+                    if line not in task["acceptance"]:
+                        task["acceptance"].append(line)
             tasks.append(task)
             module_tasks.append(task)
             role_index.setdefault(task["owner_role"], []).append(task["task_id"])
