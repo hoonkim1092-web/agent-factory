@@ -1197,27 +1197,6 @@ approve() → [blast_radius=system_wide] domain-review.md verdict 체크
 invalidate() → execution_open: false (재승인 필요)
 ```
 
-### Pre-commit 교차검증 게이트
-<!-- last_updated: 2026-04-10 -->
-
-커밋 시 `core/*.py` 변경이 포함되면 기존 watcher의 리뷰 결과를 자동 확인한다.
-
-**실행 흐름:**
-```
-git commit → .githooks/pre-commit
-  ├─ Blueprint 스테이징 체크 (기존)
-  └─ scripts/pre_commit_review.py (결과 확인 전용, claude 미호출)
-       ├─ docs/reviews/ 에서 파일별 최신 리뷰 수집
-       ├─ Verdict 추출: BLOCK만 severity 카운트, WARN/PASS는 0 (advisory)
-       ├─ stale 판정 강화: 트리거 파일 + 본문 참조 파일 mtime 모두 검사
-       ├─ severity 집계 (Critical/High/Medium/Low)
-       └─ 판정: PASS(exit 0) / WARN(exit 0) / BLOCK(exit 1)
-```
-
-**판정 기준:** `AF_PRE_COMMIT_REVIEW_BLOCK_ON=high` (기본) → High 1건 이상 차단
-**비차단 원칙:** 인프라 장애(결과 없음, 파싱 실패 등)로 커밋을 차단하지 않음
-**비활성화:** `AF_PRE_COMMIT_REVIEW=0` 또는 `git commit --no-verify`
-
 ### 3-Tier Review-Gate (§9)
 <!-- last_updated: 2026-05-01 -->
 
@@ -1555,6 +1534,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-18 | v1.2.28 | refactor(pre-commit): 레거시 severity-gate `pre_commit_review.py` 제거 — Phase 0 `review_gate.py` verdict-block(step 7)과 중복, `docs/reviews/` 데이터 desync로 매 커밋 허위 WARN. `.githooks/pre-commit` 호출 블록 + `blast_radius._TIER3_PATHS` 항목 + Blueprint "Pre-commit 교차검증 게이트" 섹션 동반 삭제. 2026-04-19 §4.1 역할분리 결정 retire. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, project_pipeline.py, meta.yaml, skill-spec.yaml |
 | 2026-05-18 | v1.2.28 | fix(research-router-p2-B3): `reqs`의 `required_capabilities` 死코드 제거 — 소비처 0건(`_skill_gap_capabilities_map`는 `skill_gap_hypotheses`만 소비, project-union 주입 금지 계약). §3.1 "reqs에 required_capabilities 추가/end-to-end" 표현 정정 + step 4(manifest projection) 미착수 명시. |
 | 2026-05-18 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, project_pipeline.py, researcher.py, skill_retrieval_engine.py, code-review.md (+4) |

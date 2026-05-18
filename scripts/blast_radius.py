@@ -50,7 +50,6 @@ _TIER3_PATHS = frozenset({
     "scripts/run.py",
     "scripts/hook_runner.py",
     "scripts/cli_hook_bridge.py",
-    "scripts/pre_commit_review.py",
     "scripts/review_gate.py",
     # DB 동기화 — 루트에 위치 (CLAUDE.md: `python end_db.py agent-factory`)
     "start_db.py",
