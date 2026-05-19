@@ -72,6 +72,8 @@ class TestG2FastSynthesisSecondaryFreshLookup(unittest.TestCase):
              patch.object(agent, "_workspace_notes", return_value=""), \
              patch.object(agent, "_is_sufficient", return_value=True), \
              patch.object(agent, "_collect_notebook_summary", return_value=""), \
+             patch.object(agent, "_build_quality_contract", return_value=None), \
+             patch.object(agent, "_load_domain_manifest", return_value=[]), \
              patch.object(agent, "_build_source_pack", return_value={"sources": []}), \
              patch.object(agent, "_synthesize_structured_evidence", return_value={
                  "research_mode": "fast_synthesis", "goal_interpretation": "",
@@ -107,6 +109,8 @@ class TestG3TavilyUnsetFallbackPath(unittest.TestCase):
              patch.object(agent, "_workspace_notes", return_value=""), \
              patch.object(agent, "_is_sufficient", return_value=False), \
              patch.object(agent, "_collect_notebook_summary", return_value=""), \
+             patch.object(agent, "_build_quality_contract", return_value=None), \
+             patch.object(agent, "_load_domain_manifest", return_value=[]), \
              patch.object(agent, "_build_source_pack", return_value={"sources": []}), \
              patch.object(agent, "_synthesize_structured_evidence", return_value={
                  "research_mode": "fresh_lookup", "goal_interpretation": "",
@@ -148,6 +152,8 @@ class TestG4EvidenceParallelRunsWithinBudget(unittest.TestCase):
              patch.object(agent, "_workspace_notes", return_value=""), \
              patch.object(agent, "_is_sufficient", return_value=False), \
              patch.object(agent, "_collect_notebook_summary", return_value=""), \
+             patch.object(agent, "_build_quality_contract", return_value=None), \
+             patch.object(agent, "_load_domain_manifest", return_value=[]), \
              patch.object(agent, "_build_source_pack", return_value={"sources": []}), \
              patch.object(agent, "_synthesize_structured_evidence", return_value={
                  "research_mode": "fresh_lookup", "goal_interpretation": "",

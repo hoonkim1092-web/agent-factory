@@ -657,13 +657,14 @@ Rules:
         local_refs: list[dict],
         web_refs: list[dict],
         checklist: list[str] | None,
+        llm_prior_refs: list[dict] | None = None,
     ) -> list[str]:
         """B1 helper: checklist 항목 중 refs 텍스트에 매칭 안 된 항목 반환."""
         if not checklist:
             return []
         joined = " ".join(
             (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
-            for r in local_refs + web_refs
+            for r in local_refs + web_refs + (llm_prior_refs or [])
         ).lower()
         return [item for item in checklist if item.replace("_", " ") not in joined and item.lower() not in joined]
 
@@ -742,6 +743,7 @@ Rules:
         slug: str,
         rounds_used: int,
         workspace: str | None = None,
+        llm_prior_refs: list[dict] | None = None,
     ) -> dict:
         """B5: docs/research/<slug>-coverage.json + .md 저장. block 여부 반환."""
         if not domain_checklist or not domain:
@@ -758,7 +760,7 @@ Rules:
                 pass
         joined = " ".join(
             (r.get("excerpt") or "") + " " + (r.get("heading") or "") + " " + (r.get("title") or "")
-            for r in local_refs + web_refs
+            for r in local_refs + web_refs + (llm_prior_refs or [])
         ).lower()
         matched, missing = [], []
         for field in domain_checklist:
@@ -949,7 +951,10 @@ Rules:
             if escalated_mode and (research_plan is None or research_plan.mode != escalated_mode):
                 # for_mode()으로 모든 파생 필드를 atomic하게 재계산 (partial mutation 방지)
                 prev_domain = (research_plan.domain if research_plan else None) or ResearchRouter()._detect_domain(task_input)
-                research_plan = ResearchPlan.for_mode(escalated_mode)
+                research_plan = ResearchPlan.for_mode(
+                    escalated_mode,
+                    scores=research_plan.scores if research_plan else None,
+                )
                 research_plan.domain = prev_domain  # A5: escalation 후 기존 도메인 감지 결과 유지
 
         if research_plan is None:
@@ -966,7 +971,17 @@ Rules:
         llm_prior_refs: list[dict] = []
         sufficient: bool = True  # requires_web/fast_synthesis 분기에선 gate 미사용
         _recovery_rounds = 0  # B1: RecoverySearchLoop 라운드 카운터
-        _domain_checklist: list[str] | None = None  # B1: else 분기에서 할당, 이후 재사용
+        _quality_contract = None
+        _domain_checklist: list[str] | None = None
+        if research_plan.requires_web or mode != "fast_synthesis":
+            _quality_contract = self._build_quality_contract(task_input, research_plan)
+            _domain_checklist = (
+                [item.id.replace("_", " ") for item in _quality_contract.checklist]
+                if _quality_contract
+                else self._load_domain_manifest(research_plan.domain)
+            )
+            if not _domain_checklist:
+                _domain_checklist = ["requirements_coverage", "architecture_rationale"]
 
         if research_plan.requires_web:
             # fresh_lookup/deep/live: local + secondary 병렬 수집 (sufficiency gate 무시)
@@ -991,15 +1006,6 @@ Rules:
             local_refs = self._collect_local_references(task_input, target_workspace)
         else:
             # archive_research 또는 기타: RecoverySearchLoop (B1 → Phase 5 QualityContract)
-            _quality_contract = self._build_quality_contract(task_input, research_plan)
-            _domain_checklist = (
-                [item.id.replace("_", " ") for item in _quality_contract.checklist]
-                if _quality_contract
-                else self._load_domain_manifest(research_plan.domain)
-            )
-            if not _domain_checklist:
-                # Phase 5: 체크리스트 없음 = 통과 아님 → degraded evidence로 처리
-                _domain_checklist = ["requirements_coverage", "architecture_rationale"]
             _max_rounds = 3 if research_plan.research_depth == "deep" else 2
             local_refs = self._collect_local_references(task_input, target_workspace)
             _recovery_rounds = 0
@@ -1081,10 +1087,10 @@ Rules:
                 task_input, mode, source_pack
             )
 
-        # B1: RecoverySearchLoop 최종 상태 (_domain_checklist는 else 분기에서 할당됨)
+        # B1: RecoverySearchLoop 최종 상태
         _final_unmet: list[str] = []
         if _domain_checklist:
-            _final_unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist)
+            _final_unmet = self._identify_unmet_gaps(local_refs, web_refs, _domain_checklist, llm_prior_refs)
 
         initial_evidence = {
             "workspace_notes": workspace_notes,
@@ -1111,6 +1117,7 @@ Rules:
                     workspace=workspace,
                     risk_level=risk_level,
                     comparison_mode=comparison_mode,
+                    research_plan=research_plan,
                     hint_gaps=router_gaps,
                 )
 
@@ -1130,6 +1137,7 @@ Rules:
                 _slug,
                 rounds_used=_recovery_rounds,
                 workspace=target_workspace,    # H1
+                llm_prior_refs=llm_prior_refs,
             )
             if _coverage:
                 initial_evidence["coverage_report"] = _coverage
