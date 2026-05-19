@@ -1052,13 +1052,14 @@ class SkillOrchestrator:
                     feedback_loop=feedback_loop,
                     workspace=workspace,
                 )
+                installable = False
                 if built_id:
                     installable = True
                     if hasattr(self.registry, "is_installable"):
                         installable = bool(self.registry.is_installable(built_id))
                     if installable:
                         installed.append(built_id)
-                manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": installable, "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                 continue
 
             external_skill_id = ""
@@ -1138,13 +1139,14 @@ class SkillOrchestrator:
                 feedback_loop=feedback_loop,
                 workspace=workspace,
             )
-            manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "forge", "reused_from": None, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
+            installable = False
             if built_id:
                 installable = True
                 if hasattr(self.registry, "is_installable"):
                     installable = bool(self.registry.is_installable(built_id))
                 if installable:
                     installed.append(built_id)
+            manifest_entries.append({"skill_id": name, "requested": True, "installed": installable, "decision_mode": "forge", "reused_from": None, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
 
         if built_metas and hasattr(self.registry, "workflow_apply"):
             self.registry.workflow_apply(built_metas)

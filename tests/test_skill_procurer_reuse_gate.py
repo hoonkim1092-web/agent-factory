@@ -465,3 +465,82 @@ def test_manifest_entry_has_no_reuse_decision_for_exact_match(monkeypatch, tmp_p
     assert manifest[0]["decision_mode"] == "exact_match"
     assert "reuse_decision" not in manifest[0]
 
+
+# ── manifest installed 정합성 (is_installable=False) ─────────────────────────
+
+def test_shadow_reuse_manifest_installed_reflects_is_installable_false(monkeypatch, tmp_path):
+    """built_id 있어도 is_installable=False면 manifest installed=False."""
+    sp = _load_skill_procurer()
+    candidate_path = tmp_path / "candidate_skill.py"
+    candidate_path.write_text("def apply(ctx):\n    return {'ok': True}\n", encoding="utf-8")
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda sid: (str(candidate_path), None) if sid == "candidate_skill" else (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            return {"evidence_pack": {"targets": {"target_skill": {"top_candidate": "candidate_skill", "verified": True, "top_score": 65, "candidates": []}}}}
+
+    class _Registry:
+        def __init__(self):
+            self.registered = []
+        def register_built(self, meta, skill_dir): self.registered.append(meta["id"])
+        def workflow_apply(self, metas): pass
+        def resolve_and_install_external_detailed(self, needs, reqs=None, evidence_pack=None):
+            return {"installed": {}, "results": {needs[0]: {"need_id": needs[0], "installed_skill_id": "", "installed_from": "", "attempts": []}}}
+        def is_installable(self, _sid): return False  # 핵심: 빌드는 됐지만 installable=False
+
+    class _Builder:
+        def build_skill(self, **kwargs):
+            skill_dir = tmp_path / "built"
+            skill_dir.mkdir(exist_ok=True)
+            (skill_dir / "skill.py").write_text("def apply(ctx): return {}\n")
+            return True, str(skill_dir / "skill.py"), {"id": "target_skill", "status": "draft"}
+
+    orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
+    installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "Gen"}, skill_names=["target_skill"],
+        reqs={"goal": "g", "constraints": []}, run_id="r_shadow_not_installable",
+    )
+
+    assert installed == []
+    assert len(manifest) == 1
+    entry = manifest[0]
+    assert entry["decision_mode"] == "shadow_reuse"
+    assert entry["installed"] is False
+
+
+def test_forge_manifest_installed_reflects_is_installable_false(monkeypatch, tmp_path):
+    """forge: built_id 있어도 is_installable=False면 manifest installed=False."""
+    sp = _load_skill_procurer()
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda _sid: (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            return {"evidence_pack": {"targets": {}}}
+
+    class _Registry:
+        def register_built(self, meta, skill_dir): pass
+        def workflow_apply(self, metas): pass
+        def resolve_and_install_external_detailed(self, needs, reqs=None, evidence_pack=None):
+            return {"installed": {}, "results": {needs[0]: {"need_id": needs[0], "installed_skill_id": "", "installed_from": "", "attempts": []}}}
+        def is_installable(self, _sid): return False  # 핵심: installable=False
+
+    class _Builder:
+        def build_skill(self, **kwargs):
+            skill_dir = tmp_path / "forged"
+            skill_dir.mkdir(exist_ok=True)
+            (skill_dir / "skill.py").write_text("def apply(ctx): return {}\n")
+            return True, str(skill_dir / "skill.py"), {"id": "forged_skill", "status": "draft"}
+
+    orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
+    installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "Gen"}, skill_names=["forged_skill"],
+        reqs={"goal": "g", "constraints": []}, run_id="r_forge_not_installable",
+    )
+
+    assert installed == []
+    assert len(manifest) == 1
+    entry = manifest[0]
+    assert entry["decision_mode"] == "forge"
+    assert entry["installed"] is False
+    assert entry["forge_run_id"] == "r_forge_not_installable"  # forge는 됐으므로 run_id 기록
+
