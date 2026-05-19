@@ -19,7 +19,7 @@ import os
 import re
 from typing import Any
 
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, safe_optional_id
 
 
 def _clean(value: Any) -> str:
@@ -130,7 +130,7 @@ def parse_implementation_tasks(text: str) -> list[dict[str, Any]]:
             title = m.group(2).strip()
             current = {
                 "title": title,
-                "task_id": safe_id(title),
+                "task_id": safe_optional_id(title),
                 "owner_role": "",
                 "phase": "build",
                 "depends_on": [],
@@ -221,10 +221,10 @@ def sync_board_from_work_items(
     existing_by_id: dict[str, dict[str, Any]] = {}
     existing_by_title: dict[str, dict[str, Any]] = {}
     for task in existing_tasks:
-        tid = safe_id(str(task.get("task_id") or ""))
+        tid = safe_optional_id(str(task.get("task_id") or ""))
         if tid:
             existing_by_id[tid] = task
-        title_key = safe_id(str(task.get("title") or task.get("instruction") or ""))
+        title_key = safe_optional_id(str(task.get("title") or task.get("instruction") or ""))
         if title_key:
             existing_by_title[title_key] = task
 
@@ -233,7 +233,7 @@ def sync_board_from_work_items(
 
     for pt in parsed_tasks:
         pt_id = _clean(pt.get("task_id") or "")
-        pt_title_key = safe_id(_clean(pt.get("title") or ""))
+        pt_title_key = safe_optional_id(_clean(pt.get("title") or ""))
         matched = existing_by_id.get(pt_id) or existing_by_title.get(pt_title_key)
 
         if matched:
@@ -283,7 +283,7 @@ def sync_board_from_work_items(
     # role_index 재계산
     role_index: dict[str, list[str]] = {}
     for task in board["tasks"]:
-        role = safe_id(str(task.get("owner_role") or ""))
+        role = safe_optional_id(str(task.get("owner_role") or ""))
         if role:
             role_index.setdefault(role, [])
             tid = _clean(task.get("task_id") or "")

@@ -181,7 +181,7 @@ class AgentFactory:
     def _missing_local_skill_files(self, agent: dict) -> list[str]:
         missing: list[str] = []
         for sid_raw in (agent.get("skills") or []):
-            sid = safe_id(str(sid_raw))
+            sid = safe_optional_id(str(sid_raw))
             if not sid:
                 continue
             if not has_local_skill(sid):
@@ -602,7 +602,7 @@ class AgentFactory:
         file_missing = self._missing_local_skill_files(agent)
 
         skills = reqs.get("missing_skills", [])
-        initial_targets = list(dict.fromkeys([safe_id(s) for s in skills] + file_missing))
+        initial_targets = list(dict.fromkeys([safe_optional_id(s) for s in skills] + file_missing))
 
         skipped_build_targets: list[str] = []
         if initial_targets and not enable_build:

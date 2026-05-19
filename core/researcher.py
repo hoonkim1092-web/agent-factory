@@ -5,7 +5,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from core.requirement_llm import execute_requirement_prompt
 from core.utils import (
-    safe_id, read_yaml, write_yaml, now_iso, get_random_signature,
+    safe_id, safe_optional_id, read_yaml, write_yaml, now_iso, get_random_signature,
     print_agent_msg, safe_json_load, resolve_skill_paths, resolve_existing_path,
     to_portable_path,
 )
@@ -87,7 +87,7 @@ class HimariResearchAgent:
         idx: dict = {}
         for sid, meta in items.items():
             key = safe_id(str(sid))
-            caps = [safe_id(str(c)) for c in (meta.get("capabilities") or [])]
+            caps = [safe_optional_id(str(c)) for c in (meta.get("capabilities") or [])]
             idx[key] = {
                 "id": key,
                 "name": meta.get("name") or sid,
@@ -97,19 +97,19 @@ class HimariResearchAgent:
         return idx
 
     def _fallback_match(self, need: str, idx: dict) -> list[str]:
-        need_tokens = set(t for t in safe_id(need).split("_") if t)
+        need_tokens = set(t for t in safe_optional_id(need).split("_") if t)
         picked: list[str] = []
         for sid, item in idx.items():
-            corpus = " ".join([sid, safe_id(item.get("name", ""))] + item.get("capabilities", []))
+            corpus = " ".join([sid, safe_optional_id(item.get("name", ""))] + item.get("capabilities", []))
             tokens = set(t for t in corpus.split("_") if t)
             if need_tokens and (need_tokens & tokens):
                 picked.append(sid)
         return picked[:3]
 
     def _score_candidate(self, need: str, item: dict) -> tuple[int, dict]:
-        need_tokens = set(t for t in safe_id(need).split("_") if t)
-        caps = [safe_id(str(c)) for c in (item.get("capabilities") or [])]
-        corpus = " ".join([safe_id(item.get("id", "")), safe_id(item.get("name", ""))] + caps)
+        need_tokens = set(t for t in safe_optional_id(need).split("_") if t)
+        caps = [safe_optional_id(str(c)) for c in (item.get("capabilities") or [])]
+        corpus = " ".join([safe_optional_id(item.get("id", "")), safe_optional_id(item.get("name", ""))] + caps)
         tokens = set(t for t in corpus.split("_") if t)
         overlap = sorted(list(need_tokens & tokens))
 
@@ -1414,7 +1414,7 @@ LocalSkillCatalog(JSON): {json.dumps(skill_catalog, ensure_ascii=False)}
             raw = payload.get("suggestions", {}) if isinstance(payload, dict) else {}
             if isinstance(raw, dict):
                 for need, cands in raw.items():
-                    k = safe_id(str(need))
+                    k = safe_optional_id(str(need))
                     values = [safe_id(str(c)) for c in (cands or []) if safe_id(str(c)) in idx]
                     if values:
                         suggestions[k] = list(dict.fromkeys(values))
@@ -1455,7 +1455,7 @@ LocalSkillCatalog(JSON): {json.dumps(skill_catalog, ensure_ascii=False)}
             for entry in target.get("feedback_history", []):
                 if not isinstance(entry, dict):
                     continue
-                feedback_skill_id = safe_id(str(entry.get("skill_id") or ""))
+                feedback_skill_id = safe_optional_id(str(entry.get("skill_id") or ""))
                 if feedback_skill_id and feedback_skill_id not in feedback_history_skill_ids:
                     feedback_history_skill_ids.add(feedback_skill_id)
                     feedback_history.append(entry)

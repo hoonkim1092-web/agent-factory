@@ -14,7 +14,7 @@ from core.skill_feedback import SkillFeedbackLoop
 from core.skill_promotion import SkillPromotionManager
 from core.skill_registry import check_skill_exists, register_skill
 from core.skill_retrieval_engine import SkillRetrievalEngine
-from core.utils import now_iso, read_skill_lock, resolve_knowledge_skill_path, resolve_skill_paths, safe_id, skill_markdown_filenames
+from core.utils import now_iso, read_skill_lock, resolve_knowledge_skill_path, resolve_skill_paths, safe_id, safe_optional_id, skill_markdown_filenames
 
 
 FACTORY_ROOT = os.getcwd()
@@ -695,7 +695,7 @@ class SkillOrchestrator:
         log("BUILD", f"Skill build failed for '{skill_name}': {reason}{suffix}")
 
     def _default_build_stage(self, meta: dict) -> str:
-        stage = safe_id(str((meta or {}).get("lifecycle_stage") or (meta or {}).get("status") or ""))
+        stage = safe_optional_id(str((meta or {}).get("lifecycle_stage") or (meta or {}).get("status") or ""))
         if stage and stage != "draft":
             return stage
 
@@ -705,7 +705,7 @@ class SkillOrchestrator:
             except Exception:
                 gated = {}
             if isinstance(gated, dict):
-                gated_stage = safe_id(str(gated.get("lifecycle_stage") or gated.get("status") or ""))
+                gated_stage = safe_optional_id(str(gated.get("lifecycle_stage") or gated.get("status") or ""))
                 if gated_stage:
                     return gated_stage
 
@@ -734,7 +734,7 @@ class SkillOrchestrator:
         if evals_path and not os.path.exists(evals_path):
             evals_path = ""
 
-        reference_candidate_id = safe_id(str(meta.get("reference_candidate_id") or ""))
+        reference_candidate_id = safe_optional_id(str(meta.get("reference_candidate_id") or ""))
         current_stage = self._default_build_stage(meta)
 
         result = evaluate_and_promote(

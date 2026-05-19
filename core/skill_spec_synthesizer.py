@@ -12,7 +12,7 @@ from core.capability_intent import (
     normalize_risk as _normalize_risk,
     tokenize as _tokenize,
 )
-from core.utils import now_iso, resolve_skill_paths, safe_id, write_yaml
+from core.utils import now_iso, resolve_skill_paths, safe_id, safe_optional_id, write_yaml
 
 
 SPEC_FILENAME = "skill-spec.yaml"
@@ -94,7 +94,7 @@ class SkillSpecSynthesizer:
     def _build_skill_spec(self, *, intent: dict[str, Any], skill_kind: str) -> dict[str, Any]:
         skill_id = safe_id(str(intent.get("skill_id") or "skill"))
         goal = str(intent.get("goal") or f"Provide the {skill_id} capability").strip()
-        role = safe_id(str(intent.get("role") or ""))
+        role = safe_optional_id(str(intent.get("role") or ""))
         constraints = _dedupe_strings(intent.get("constraints") or [])
         risk_level = _normalize_risk(intent.get("risk_level"))
         capability_ids = [safe_id(str(item.get("id") or "")) for item in (intent.get("capabilities") or []) if safe_id(str(item.get("id") or ""))]
@@ -220,7 +220,7 @@ class SkillSpecSynthesizer:
 
 def _resolve_baseline_skill_path(skill_id: str, target_evidence: dict[str, Any] | None) -> str:
     evidence = target_evidence if isinstance(target_evidence, dict) else {}
-    candidate_id = safe_id(str(evidence.get("top_candidate") or evidence.get("installed_skill_id") or ""))
+    candidate_id = safe_optional_id(str(evidence.get("top_candidate") or evidence.get("installed_skill_id") or ""))
     if not candidate_id or candidate_id == safe_id(skill_id):
         return ""
     skill_path, _meta_path = resolve_skill_paths(candidate_id)

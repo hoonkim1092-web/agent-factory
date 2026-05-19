@@ -64,6 +64,13 @@ def safe_id(text: str) -> str:
     return (t[:60] if t else "skill")
 
 
+def safe_optional_id(text: str | None) -> str:
+    t = (text or "").strip().lower()
+    t = re.sub(r"[^a-z0-9_]+", "_", t)
+    t = re.sub(r"_+", "_", t).strip("_")
+    return t[:60]
+
+
 def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 

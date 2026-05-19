@@ -9,7 +9,7 @@ from typing import Any
 from core.policy import resolve_quality_gate_policy
 from core.skill_eval_harness import SkillEvalReport, _phase_from_payload, _shadow_from_payload, load_eval_report
 from core.skill_feedback import SkillFeedbackLoop, SkillFeedbackSummary
-from core.utils import lock_skill_state, now_iso, read_project_policies, read_skill_lock, safe_id, to_portable_path
+from core.utils import lock_skill_state, now_iso, read_project_policies, read_skill_lock, safe_id, safe_optional_id, to_portable_path
 
 
 PROMOTION_REPORT_FILENAME = "skill-promotion.json"
@@ -149,8 +149,8 @@ class SkillPromotionManager:
         feedback_loop: SkillFeedbackLoop | None = None,
     ) -> PromotionDecision:
         eval_report = _ensure_report(report)
-        requested_skill_id = safe_id(skill_id)
-        report_skill_id = safe_id(eval_report.skill_id)
+        requested_skill_id = safe_optional_id(skill_id)
+        report_skill_id = safe_optional_id(eval_report.skill_id)
         if requested_skill_id and report_skill_id and requested_skill_id != report_skill_id:
             raise ValueError(f"skill_id_mismatch:{requested_skill_id}!={report_skill_id}")
         effective_skill_id = eval_report.skill_id or skill_id
@@ -260,7 +260,7 @@ def _ensure_report(report: SkillEvalReport | dict[str, Any] | str) -> SkillEvalR
 
 
 def _normalize_stage(stage: str) -> str:
-    normalized = safe_id(stage) or "draft"
+    normalized = safe_optional_id(stage) or "draft"
     if normalized == "archive":
         return "archived"
     return normalized

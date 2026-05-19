@@ -8,7 +8,7 @@ from core.external_skill_source_ids import (
     DEFAULT_EXTERNAL_SOURCE_PRIORITY,
     normalize_external_source_id,
 )
-from core.utils import get_external_skill_roots, get_codex_skill_roots, has_local_skill, safe_id
+from core.utils import get_external_skill_roots, get_codex_skill_roots, has_local_skill, safe_id, safe_optional_id
 
 
 def _split_csv(raw: str | None) -> list[str]:
@@ -264,7 +264,7 @@ class RepoCacheSkillSource(ExternalSkillSource):
                 continue
             if normalize_external_source_id(str(item.get("source_id") or ""), default="") != self.source_id:
                 continue
-            skill_id = safe_id(str(item.get("id") or ""))
+            skill_id = safe_optional_id(str(item.get("id") or ""))
             path = str(item.get("path") or "").strip()
             if not skill_id or not path:
                 continue
@@ -381,7 +381,7 @@ class CacheSweepSkillSource(ExternalSkillSource):
         for item in discovered.values():
             if not isinstance(item, dict):
                 continue
-            skill_id = safe_id(str(item.get("id") or ""))
+            skill_id = safe_optional_id(str(item.get("id") or ""))
             path = str(item.get("path") or "").strip()
             if not skill_id or not path:
                 continue
@@ -422,7 +422,7 @@ class ExternalSkillResolver:
             if not isinstance(item, dict):
                 continue
             source_id = normalize_external_source_id(str(item.get("source_id") or "registry"), default="registry")
-            skill_id = safe_id(str(item.get("id") or ""))
+            skill_id = safe_optional_id(str(item.get("id") or ""))
             path = str(item.get("path") or "").strip()
             if not skill_id or not path:
                 continue
@@ -467,13 +467,13 @@ class ExternalSkillResolver:
             return []
 
         preferred: list[str] = []
-        top_candidate = safe_id(str(target.get("top_candidate") or ""))
+        top_candidate = safe_optional_id(str(target.get("top_candidate") or ""))
         if top_candidate:
             preferred.append(top_candidate)
         for item in target.get("candidates") or []:
             if not isinstance(item, dict):
                 continue
-            candidate_id = safe_id(str(item.get("candidate_skill_id") or item.get("id") or ""))
+            candidate_id = safe_optional_id(str(item.get("candidate_skill_id") or item.get("id") or ""))
             if candidate_id and candidate_id not in preferred:
                 preferred.append(candidate_id)
         return preferred
@@ -484,7 +484,7 @@ class ExternalSkillResolver:
         candidate: ExternalSkillCandidate,
         preferred_ids: list[str],
     ) -> int:
-        candidate_id = safe_id(candidate.skill_id)
+        candidate_id = safe_optional_id(candidate.skill_id)
         if candidate_id in preferred_ids:
             index = preferred_ids.index(candidate_id)
             return max(120 - (index * 10), 80)

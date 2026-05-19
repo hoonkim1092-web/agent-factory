@@ -8,7 +8,7 @@ from uuid import uuid4
 from core.file_io import write_text
 from core.file_lock import locked_file
 from core.project_task_board import append_project_board_note
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, safe_optional_id
 
 MAILBOX_REL_DIR = os.path.join("data", "comm")
 MESSAGES_FILENAME = "messages.jsonl"
@@ -149,11 +149,11 @@ def send_agent_message(
         in_reply_to: 이 메시지가 응답하는 원본 message_id.
         strict_files: False면 아직 생성되지 않은 파일도 related_files에 허용.
     """
-    sender = safe_id(from_role) or "unknown_sender"
-    recipient = safe_id(to_role)
+    sender = safe_optional_id(from_role) or "unknown_sender"
+    recipient = safe_optional_id(to_role)
     kind = safe_id(message_type)
     message_body = _clean_text(body)
-    task_key = safe_id(task_id)
+    task_key = safe_optional_id(task_id)
     files = _normalize_related_files(workspace, related_files, strict=strict_files)
 
     if not recipient:
@@ -213,15 +213,15 @@ def read_inbox(
     include_acknowledged: bool = False,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
-    recipient = safe_id(role)
-    task_key = safe_id(task_id)
+    recipient = safe_optional_id(role)
+    task_key = safe_optional_id(task_id)
     allowed_statuses = {"pending", "acknowledged"} if include_acknowledged else {"pending"}
     selected: list[dict[str, Any]] = []
 
     for message in load_mailbox_messages(workspace):
-        if safe_id(str(message.get("to_role") or "")) != recipient:
+        if safe_optional_id(str(message.get("to_role") or "")) != recipient:
             continue
-        if task_key and safe_id(str(message.get("task_id") or "")) != task_key:
+        if task_key and safe_optional_id(str(message.get("task_id") or "")) != task_key:
             continue
         if str(message.get("status") or "pending") not in allowed_statuses:
             continue
@@ -242,8 +242,8 @@ def read_inbox(
 
 
 def ack_mailbox_message(workspace: str, message_id: str, role: str = "") -> bool:
-    target_id = safe_id(message_id)
-    actor_role = safe_id(role)
+    target_id = safe_optional_id(message_id)
+    actor_role = safe_optional_id(role)
     if not target_id:
         return False
 
@@ -255,11 +255,11 @@ def ack_mailbox_message(workspace: str, message_id: str, role: str = "") -> bool
         for message in messages:
             if safe_id(str(message.get("message_id") or "")) != target_id:
                 continue
-            if actor_role and safe_id(str(message.get("to_role") or "")) != actor_role:
+            if actor_role and safe_optional_id(str(message.get("to_role") or "")) != actor_role:
                 continue
             message["status"] = "acknowledged"
             message["acked_at"] = now_iso()
-            message["acked_by"] = actor_role or safe_id(str(message.get("to_role") or ""))
+            message["acked_by"] = actor_role or safe_optional_id(str(message.get("to_role") or ""))
             message["updated_at"] = now_iso()
             updated = True
             break

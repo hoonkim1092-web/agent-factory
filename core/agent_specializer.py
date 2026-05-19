@@ -17,7 +17,7 @@ from typing import Any
 
 from core.project_mailbox import mailbox_prompt_digest
 from core.project_task_board import load_project_board
-from core.utils import safe_id
+from core.utils import safe_id, safe_optional_id
 
 
 class AgentSpecializer:
@@ -44,7 +44,7 @@ class AgentSpecializer:
         # 비동기 병렬 실행 시 base_agent의 중첩 dict가 공유되지 않도록 deep copy
         agent = copy.deepcopy(base_agent)
         agent["_specialized"] = True
-        agent["_task_id"] = safe_id(
+        agent["_task_id"] = safe_optional_id(
             task_meta.get("task_id") or task_meta.get("id", "")
         )
         agent["_task_meta"] = task_meta
@@ -76,7 +76,7 @@ class AgentSpecializer:
         sections.append(f"[역할] {role_name}\n{abbreviated}")
 
         # ── Section 2: 현재 작업 정보 ──
-        task_id = safe_id(task_meta.get("task_id") or task_meta.get("id", ""))
+        task_id = safe_optional_id(task_meta.get("task_id") or task_meta.get("id", ""))
         title = str(task_meta.get("title", "")).strip()
         instruction = str(task_meta.get("instruction", "")).strip()
         phase = str(task_meta.get("phase", "")).strip()
@@ -108,7 +108,7 @@ class AgentSpecializer:
                 sections.append(f"[선행 작업 결과]\n{dep_context}")
 
         # ── Section 4: 수신 메일박스 메시지 ──
-        owner_role = safe_id(
+        owner_role = safe_optional_id(
             task_meta.get("owner_role", "")
         ) or safe_id(
             str(base_agent.get("role", ""))
@@ -216,13 +216,13 @@ class AgentSpecializer:
 
         task_map: dict[str, dict] = {}
         for task in board.get("tasks") or []:
-            tid = safe_id(str(task.get("task_id", "")))
+            tid = safe_optional_id(str(task.get("task_id", "")))
             if tid:
                 task_map[tid] = task
 
         lines: list[str] = []
         for dep_id in depends_on:
-            dep_key = safe_id(dep_id)
+            dep_key = safe_optional_id(dep_id)
             dep_task = task_map.get(dep_key)
             if not dep_task:
                 lines.append(f"- {dep_id}: (정보 없음)")

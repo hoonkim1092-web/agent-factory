@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 from core.utils import (
-    safe_id, read_yaml, write_yaml, now_iso, resolve_skill_paths,
+    safe_id, safe_optional_id, read_yaml, write_yaml, now_iso, resolve_skill_paths,
     resolve_existing_path, to_portable_path, is_portable_rel_path,
     read_skill_lock, lock_skill_state, append_dashboard_run, skill_markdown_filenames
 )
@@ -59,7 +59,7 @@ class RegistryManager:
         write_yaml(REGISTRY_PATH, reg)
 
     def _tokenize(self, text: str) -> set[str]:
-        return {t for t in safe_id(text).split("_") if t}
+        return {t for t in safe_optional_id(text).split("_") if t}
 
     def _score_need_match(self, need: str, candidate_text: str) -> int:
         need_tokens = self._tokenize(need)
@@ -70,7 +70,7 @@ class RegistryManager:
         if overlap == 0:
             return 0
         base = overlap * 20
-        if safe_id(need) == safe_id(candidate_text):
+        if safe_optional_id(need) == safe_optional_id(candidate_text):
             base += 40
         return min(100, base)
 
@@ -108,7 +108,7 @@ class RegistryManager:
                 n_item.pop("source_url", None)
             capabilities: list[str] = []
             for raw_value in (n_item.get("capabilities") or []):
-                capability = safe_id(str(raw_value))
+                capability = safe_optional_id(str(raw_value))
                 if capability and capability not in capabilities:
                     capabilities.append(capability)
             if capabilities:
@@ -357,7 +357,7 @@ class RegistryManager:
     def apply_quality_gate(self, meta: dict) -> dict:
         qg = self._quality_gate_policy()
         patched = dict(meta or {})
-        explicit_stage = safe_id(str(patched.get("lifecycle_stage") or patched.get("status") or ""))
+        explicit_stage = safe_optional_id(str(patched.get("lifecycle_stage") or patched.get("status") or ""))
         if explicit_stage and explicit_stage != "draft":
             stage = explicit_stage
         else:
@@ -409,7 +409,7 @@ class RegistryManager:
         for meta in metas:
             sid = meta["id"]
             for cap in meta.get("capabilities", []):
-                k = safe_id(str(cap))
+                k = safe_optional_id(str(cap))
                 mapping.setdefault(k, [])
                 if sid not in mapping[k]: mapping[k].append(sid)
         wf["updated_at"] = now_iso()

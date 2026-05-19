@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from core.config_paths import DATA_DIR, PROJECT_ID
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, safe_optional_id
 
 
 FEEDBACK_FILENAME = "skill-usage.jsonl"
@@ -90,7 +90,7 @@ class SkillFeedbackLoop:
     ) -> SkillFeedbackEvent:
         event = SkillFeedbackEvent(
             event_type=event_type,
-            skill_id=safe_id(skill_id),
+            skill_id=safe_optional_id(skill_id),
             status=str(status or "").strip() or "recorded",
             project_id=self.project_id,
             run_id=str(run_id or "").strip(),
@@ -118,7 +118,7 @@ class SkillFeedbackLoop:
         payload: dict[str, Any] | None = None,
     ) -> SkillFeedbackEvent:
         merged_payload = {
-            "decision_mode": safe_id(decision_mode),
+            "decision_mode": safe_optional_id(decision_mode),
             "candidate_skill_id": safe_id(candidate_skill_id) if candidate_skill_id else "",
             "confidence": float(confidence or 0.0),
             "score": float(score or 0.0),
@@ -192,8 +192,8 @@ class SkillFeedbackLoop:
         payload: dict[str, Any] | None = None,
     ) -> SkillFeedbackEvent:
         merged_payload = {
-            "from_stage": safe_id(from_stage),
-            "to_stage": safe_id(to_stage),
+            "from_stage": safe_optional_id(from_stage),
+            "to_stage": safe_optional_id(to_stage),
         }
         if isinstance(payload, dict):
             merged_payload.update(payload)
@@ -223,7 +223,7 @@ class SkillFeedbackLoop:
         requested_ids: list[str] = []
         if skill_ids is not None:
             for raw_skill_id in skill_ids:
-                normalized_skill_id = safe_id(str(raw_skill_id))
+                normalized_skill_id = safe_optional_id(str(raw_skill_id))
                 if normalized_skill_id and normalized_skill_id not in requested_ids:
                     requested_ids.append(normalized_skill_id)
         requested_filter = set(requested_ids)
@@ -244,7 +244,7 @@ class SkillFeedbackLoop:
         return summaries
 
     def summarize_skill(self, skill_id: str) -> SkillFeedbackSummary:
-        normalized_skill_id = safe_id(skill_id)
+        normalized_skill_id = safe_optional_id(skill_id)
         if not normalized_skill_id:
             return SkillFeedbackSummary(skill_id="")
         return self.summarize_skills([normalized_skill_id]).get(
@@ -257,7 +257,7 @@ class SkillFeedbackLoop:
         summary.last_event_at = str(event.get("ts") or summary.last_event_at)
         status = safe_id(str(event.get("status") or ""))
         payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-        lifecycle_stage = safe_id(
+        lifecycle_stage = safe_optional_id(
             str(
                 event.get("lifecycle_stage")
                 or payload.get("to_stage")
@@ -282,7 +282,7 @@ class SkillFeedbackLoop:
             elif status == "failed":
                 summary.runtime_failed += 1
         elif event_type == "skill_promotion" and not summary.current_stage:
-            promoted_stage = safe_id(str(payload.get("to_stage") or ""))
+            promoted_stage = safe_optional_id(str(payload.get("to_stage") or ""))
             if promoted_stage:
                 summary.current_stage = promoted_stage
 
@@ -352,8 +352,8 @@ class SkillFeedbackLoop:
         if not isinstance(payload, dict):
             return {}
         return {
-            "event_type": safe_id(str(payload.get("event_type") or "")),
-            "skill_id": safe_id(str(payload.get("skill_id") or "")),
+            "event_type": safe_optional_id(str(payload.get("event_type") or "")),
+            "skill_id": safe_optional_id(str(payload.get("skill_id") or "")),
             "status": str(payload.get("status") or "").strip(),
             "project_id": safe_id(str(payload.get("project_id") or "")) if payload.get("project_id") else "",
             "run_id": str(payload.get("run_id") or "").strip(),

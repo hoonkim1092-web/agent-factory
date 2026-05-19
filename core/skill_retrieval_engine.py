@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from core.skill_feedback import SkillFeedbackLoop, SkillFeedbackSummary
-from core.utils import safe_id
+from core.utils import safe_id, safe_optional_id
 
 
 @dataclass
@@ -77,7 +77,7 @@ class SkillRetrievalEngine:
         )
         best = ranked_candidates[0] if ranked_candidates else {}
 
-        candidate_skill_id = safe_id(str(best.get("candidate_skill_id") or payload.get("top_candidate") or ""))
+        candidate_skill_id = safe_optional_id(str(best.get("candidate_skill_id") or payload.get("top_candidate") or ""))
         verified = bool(best.get("verified", payload.get("verified", False)))
         base_score = int(best.get("base_score") or self._normalize_score(payload.get("top_score")))
         historical_score = int(best.get("historical_score") or base_score)
@@ -150,7 +150,7 @@ class SkillRetrievalEngine:
             reason = rationale or "no candidate cleared the reuse confidence gate"
 
         return ReuseDecision(
-            need_skill_id=safe_id(need_skill_id),
+            need_skill_id=safe_optional_id(need_skill_id),
             candidate_skill_id=candidate_skill_id,
             mode=mode,
             confidence=confidence,
@@ -184,7 +184,7 @@ class SkillRetrievalEngine:
         )
         ranked: list[dict[str, Any]] = []
         for item in candidates:
-            candidate_skill_id = safe_id(str(item.get("candidate_skill_id") or item.get("skill_id") or item.get("id") or ""))
+            candidate_skill_id = safe_optional_id(str(item.get("candidate_skill_id") or item.get("skill_id") or item.get("id") or ""))
             if not candidate_skill_id:
                 continue
             base_score = self._normalize_score(item.get("score"))
@@ -198,7 +198,7 @@ class SkillRetrievalEngine:
                 item.get("verified")
                 or verification.get("exists_skill_py")
                 or (
-                    candidate_skill_id == safe_id(str(payload.get("top_candidate") or ""))
+                    candidate_skill_id == safe_optional_id(str(payload.get("top_candidate") or ""))
                     and bool(payload.get("verified", False))
                 )
             )
@@ -230,7 +230,7 @@ class SkillRetrievalEngine:
     ) -> dict[str, SkillFeedbackSummary]:
         candidate_ids: list[str] = []
         for item in candidates:
-            candidate_skill_id = safe_id(str(item.get("candidate_skill_id") or item.get("skill_id") or item.get("id") or ""))
+            candidate_skill_id = safe_optional_id(str(item.get("candidate_skill_id") or item.get("skill_id") or item.get("id") or ""))
             if candidate_skill_id and candidate_skill_id not in candidate_ids:
                 candidate_ids.append(candidate_skill_id)
         if not candidate_ids:
@@ -258,7 +258,7 @@ class SkillRetrievalEngine:
             return summary
         if isinstance(summary, dict):
             payload = dict(summary)
-            payload["skill_id"] = safe_id(str(payload.get("skill_id") or candidate_skill_id))
+            payload["skill_id"] = safe_optional_id(str(payload.get("skill_id") or candidate_skill_id))
             allowed_keys = {
                 "skill_id",
                 "total_events",
@@ -283,7 +283,7 @@ class SkillRetrievalEngine:
         raw_candidates = payload.get("candidates") if isinstance(payload.get("candidates"), list) else []
         if raw_candidates:
             return [item for item in raw_candidates if isinstance(item, dict)]
-        candidate_skill_id = safe_id(str(payload.get("top_candidate") or ""))
+        candidate_skill_id = safe_optional_id(str(payload.get("top_candidate") or ""))
         if not candidate_skill_id:
             return []
         return [

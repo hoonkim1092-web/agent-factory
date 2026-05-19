@@ -31,7 +31,7 @@ from core.project_task_board import (
 )
 from core.agent_specializer import AgentSpecializer
 from core.message_broker import MessageBroker
-from core.utils import print_agent_msg, safe_id, safe_json_load
+from core.utils import print_agent_msg, safe_id, safe_json_load, safe_optional_id
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +183,7 @@ class DynamicOrchestrator:
             for item in self.state_board.get(bucket, []) or []:
                 if not isinstance(item, dict):
                     continue
-                task_id = safe_id(item.get("task_id"))
+                task_id = safe_optional_id(item.get("task_id"))
                 if task_id:
                     keys.add(task_id)
                 text = str(item.get("subtask") or "").strip()
@@ -195,7 +195,7 @@ class DynamicOrchestrator:
                 board = load_project_board(self._workspace)
                 for task in (board.get("tasks") or []):
                     if isinstance(task, dict) and task.get("status") == "completed":
-                        tid = safe_id(task.get("task_id"))
+                        tid = safe_optional_id(task.get("task_id"))
                         if tid:
                             keys.add(tid)
             except Exception:
@@ -234,7 +234,7 @@ class DynamicOrchestrator:
             # board에서 module_id를 가져오기 위해 한 번만 읽음 (inject_review_tasks 내부 lock에서 재확인)
             board = load_project_board(workspace)
             for t in (board.get("tasks") or []):
-                if isinstance(t, dict) and safe_id(t.get("task_id")) == safe_id(task_id):
+                if isinstance(t, dict) and safe_id(t.get("task_id")) == safe_optional_id(task_id):
                     completed_task["module_id"] = t.get("module_id", "")
                     completed_task["phase"] = t.get("phase", "build")
                     break
@@ -433,7 +433,7 @@ class DynamicOrchestrator:
             for task in tasks:
                 if task.get("assigned_role") not in available_roles:
                     continue
-                task_key = safe_id(str(task.get("task_id") or task.get("subtask_instruction") or ""))
+                task_key = safe_optional_id(str(task.get("task_id") or task.get("subtask_instruction") or ""))
                 if task_key and task_key in completed:
                     continue
                 filtered_tasks.append(task)
@@ -488,14 +488,14 @@ class DynamicOrchestrator:
         if not board or not board.get("tasks"):
             return None
 
-        target_id = safe_id(task_id)
+        target_id = safe_optional_id(task_id)
         if not target_id:
             return None
 
         for task in board.get("tasks", []):
             if not isinstance(task, dict):
                 continue
-            if safe_id(str(task.get("task_id", ""))) == target_id:
+            if safe_optional_id(str(task.get("task_id", ""))) == target_id:
                 return task
         return None
 

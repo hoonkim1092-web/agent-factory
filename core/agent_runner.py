@@ -27,7 +27,7 @@ from core.config_paths import (
     GLOBAL_MEMORY_DIR, GLOBAL_AGENTS_DIR,
 )
 from core.utils import (
-    safe_id, now_iso, read_yaml, write_yaml, safe_json_load,
+    safe_id, safe_optional_id, now_iso, read_yaml, write_yaml, safe_json_load,
     read_core_memory, get_random_signature, print_agent_msg,
     is_codex_model, is_claude_model,
     run_skill_safely, validate_context_with_schema, resolve_knowledge_skill_path, resolve_skill_paths,
@@ -255,7 +255,7 @@ class AgentRunner:
         needs = []
         for fn in tool_functions:
             fname = str(getattr(fn, "__name__", "unknown"))
-            sid = safe_id(str(getattr(fn, "_skill_id", "")))
+            sid = safe_optional_id(str(getattr(fn, "_skill_id", "")))
             if self._requires_tool_approval(policy, sid, fname):
                 needs.append((sid or "unknown", fname))
         if not needs:
@@ -756,7 +756,7 @@ class AgentRunner:
         workspace = str(ctx.get("workspace") or PROJECT_ROOT)
         agent = ctx.get("agent") if isinstance(ctx.get("agent"), dict) else {}
         actor_role = self._mailbox_actor_role(agent)
-        current_task_id = safe_id(str(ctx.get("task_id") or ""))
+        current_task_id = safe_optional_id(str(ctx.get("task_id") or ""))
 
         def _split_related_files(value: str) -> list[str]:
             raw_items = str(value or "").replace("\r", "\n").replace(",", "\n").split("\n")
@@ -945,7 +945,7 @@ class AgentRunner:
                 "agent_name": str(agent.get("name", "")),
                 "agent_role": str(agent.get("role", "")),
                 "task": str(task_input or ""),
-                "task_id": safe_id(task_id),
+                "task_id": safe_optional_id(task_id),
                 "workspace": target_workspace,
                 "runtime_workspace": state_workspace,
                 "transcript": transcript,
@@ -964,7 +964,7 @@ class AgentRunner:
             "project_id": project_id,
             "runtime_workspace": state_workspace,
             "task_input": task_input,
-            "task_id": safe_id(task_id),
+            "task_id": safe_optional_id(task_id),
         }
         ok_ctx, msg_ctx = validate_context_with_schema(ctx)
         if not ok_ctx:
@@ -1128,7 +1128,7 @@ class AgentRunner:
             "agent_name": str(agent.get("name", "")),
             "agent": agent,
             "task_input": task_input,
-            "task_id": safe_id(task_id),
+            "task_id": safe_optional_id(task_id),
             "intent": "complex_feature" if is_complex else "trivial",
             "workspace": target_workspace,
         }

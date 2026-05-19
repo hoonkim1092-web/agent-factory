@@ -16,6 +16,7 @@ from core.utils import (
     resolve_skill_paths,
     run_isolated,
     safe_id,
+    safe_optional_id,
     sha256_text,
     strip_code_fences,
     write_text,
@@ -283,7 +284,7 @@ class SandboxedBuilder:
         if mode != "shadow_reuse":
             return {}
 
-        candidate_skill_id = safe_id(str(target_evidence.get("top_candidate") or decision.get("candidate_skill_id") or ""))
+        candidate_skill_id = safe_optional_id(str(target_evidence.get("top_candidate") or decision.get("candidate_skill_id") or ""))
         if not candidate_skill_id:
             return {}
         candidate_path, _meta_path = resolve_skill_paths(candidate_skill_id)

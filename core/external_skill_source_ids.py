@@ -16,6 +16,21 @@ def safe_id(text: str) -> str:
     return normalized or "skill"
 
 
+def safe_optional_id(text: str | None) -> str:
+    value = (text or "").strip().lower()
+    chars = []
+    for ch in value:
+        if ("a" <= ch <= "z") or ("0" <= ch <= "9") or ch == "_":
+            chars.append(ch)
+        else:
+            chars.append("_")
+    normalized = "".join(chars)
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+    normalized = normalized.strip("_")
+    return normalized
+
+
 EXTERNAL_SOURCE_ID_ALIASES = {
     "codex_official": "codex_official",
     "official_codex": "codex_official",
@@ -49,7 +64,7 @@ DEFAULT_EXTERNAL_SOURCE_PRIORITY = [
 
 
 def normalize_external_source_id(raw: str | None, default: str = "external") -> str:
-    sid = safe_id(str(raw or ""))
+    sid = safe_optional_id(str(raw or ""))
     if not sid:
         return default
     return EXTERNAL_SOURCE_ID_ALIASES.get(sid, sid)

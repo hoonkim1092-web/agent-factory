@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 from core.file_io import write_text
 from core.file_lock import locked_file
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, safe_optional_id
 
 BOARD_FILENAME = "project_board_state.json"
 TASK_EXECUTION_PLAN_REL_PATH = os.path.join("docs", "task_execution_plan.md")
@@ -615,7 +615,7 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
                 "task_id": _task_id,
                 "title": _clean_text(raw_task.get("title") or raw_task.get("instruction")),
                 "instruction": _clean_text(raw_task.get("instruction") or raw_task.get("title")),
-                "owner_role": safe_id(raw_task.get("owner_role") or module.get("owner_role")),
+                "owner_role": safe_optional_id(raw_task.get("owner_role") or module.get("owner_role")),
                 "module_id": _clean_text(module.get("id")),
                 "phase": safe_id(raw_task.get("phase") or "build") or "build",
                 "depends_on": [safe_id(item) for item in _clean_list(raw_task.get("depends_on")) if safe_id(item)],
@@ -646,7 +646,7 @@ def build_project_board(project_brief: dict[str, Any], role_plan: dict[str, Any]
                 "id": _clean_text(module.get("id")),
                 "name": _clean_text(module.get("name")),
                 "summary": _clean_text(module.get("summary")),
-                "owner_role": safe_id(module.get("owner_role")),
+                "owner_role": safe_optional_id(module.get("owner_role")),
                 "depends_on": [safe_id(item) for item in _clean_list(module.get("depends_on")) if safe_id(item)],
                 "deliverables": _clean_list(module.get("deliverables")),
                 "feature_slices": _clean_list(module.get("feature_slices")),
@@ -745,14 +745,14 @@ def board_is_complete(board: dict[str, Any]) -> bool:
 
 
 def _dependency_satisfied(dep: str, board: dict[str, Any], completed_ids: set[str]) -> bool:
-    dependency = safe_id(dep)
+    dependency = safe_optional_id(dep)
     if not dependency:
         return True
     if dependency in completed_ids:
         return True
     tasks = [t for t in (board.get("tasks") or []) if isinstance(t, dict)]
     for task in tasks:
-        if safe_id(task.get("task_id")) == dependency and task.get("status") == "completed":
+        if safe_optional_id(task.get("task_id")) == dependency and task.get("status") == "completed":
             return True
     # module-level 의존성 — module.status는 `_recalculate_board`가 호출돼야 갱신되므로
     # load_project_board/write_project_board 사이에 stale할 수 있다. 그 race를 피하기 위해
@@ -761,13 +761,13 @@ def _dependency_satisfied(dep: str, board: dict[str, Any], completed_ids: set[st
     for module in (board.get("modules") or []):
         if not isinstance(module, dict):
             continue
-        if safe_id(module.get("id")) != dependency:
+        if safe_optional_id(module.get("id")) != dependency:
             continue
         module_task_ids = [safe_id(tid) for tid in module.get("task_ids") or [] if safe_id(tid)]
         if not module_task_ids:
             # 빈 모듈은 보수적으로 불만족 취급 (기존 동작과 동일)
             return module.get("status") == "completed"
-        task_map = {safe_id(t.get("task_id")): t for t in tasks}
+        task_map = {safe_optional_id(t.get("task_id")): t for t in tasks}
         for tid in module_task_ids:
             if tid in completed_ids:
                 continue
@@ -805,7 +805,7 @@ def next_board_tasks(board: dict[str, Any], available_roles: list[str], complete
             continue
         if str(task.get("status") or "pending") not in {"pending", "blocked"}:
             continue
-        task_key = safe_id(task.get("task_id") or task.get("instruction"))
+        task_key = safe_optional_id(task.get("task_id") or task.get("instruction"))
         if task_key in completed:
             continue
         dependencies = [safe_id(dep) for dep in task.get("depends_on", []) if safe_id(dep)]
@@ -829,14 +829,14 @@ def update_project_board_task(workspace: str, role: str, instruction: str, statu
         board = load_project_board(workspace)
         if not board:
             return False
-        target_task_id = safe_id(task_id)
+        target_task_id = safe_optional_id(task_id)
         target_instruction = safe_id(instruction)
         target_role = safe_id(role)
         updated = False
         for task in (board.get("tasks") or []):
             if not isinstance(task, dict):
                 continue
-            task_key = safe_id(str(task.get("task_id") or ""))
+            task_key = safe_optional_id(str(task.get("task_id") or ""))
             instruction_key = safe_id(str(task.get("instruction") or ""))
             if target_task_id:
                 matched = task_key == target_task_id
@@ -889,21 +889,21 @@ def append_project_board_note(workspace: str, note: str, task_id: str = "", role
         if not board:
             return False
 
-        target_task_id = safe_id(task_id)
-        target_instruction = safe_id(instruction)
-        target_role = safe_id(role)
+        target_task_id = safe_optional_id(task_id)
+        target_instruction = safe_optional_id(instruction)
+        target_role = safe_optional_id(role)
 
         updated = False
         for task in (board.get("tasks") or []):
             if not isinstance(task, dict):
                 continue
-            task_key = safe_id(str(task.get("task_id") or ""))
-            instruction_key = safe_id(str(task.get("instruction") or ""))
+            task_key = safe_optional_id(str(task.get("task_id") or ""))
+            instruction_key = safe_optional_id(str(task.get("instruction") or ""))
             if target_task_id:
                 matched = task_key == target_task_id
             elif target_instruction:
                 matched = instruction_key == target_instruction and (
-                    not target_role or safe_id(str(task.get("owner_role") or "")) == target_role
+                    not target_role or safe_optional_id(str(task.get("owner_role") or "")) == target_role
                 )
             else:
                 matched = False

@@ -199,7 +199,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity | `TextFileFormat`, `TextFileSnapshot` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함) |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -1536,6 +1536,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_runner.py (+25) |
+| 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_runner.py (+25) |
+| 2026-05-19 | (unreleased) | fix(optional-id): `safe_id("")="skill"` 계약 버그 전체 교정 — `core/utils.py`+`core/external_skill_source_ids.py`에 `safe_optional_id()` 신설(빈 값→`""` 반환). 22개 파일 114개 B-site 교체(task_id·owner_role·role·capability·candidate_id 등 optional 식별자 도메인). A-site(스킬 이름 생성 17개)는 유지. CALIB 테스트 `tests/test_safe_optional_id.py`(20종)+`tests/test_optional_id_calib.py`(11종) 31 PASS. 회귀 1759 PASS. 3-Tier 교차검증 WARN(design cross-review 2라운드 완료). |
 | 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, project_task_board.py, test_project_task_board_dispatch.py |
 | 2026-05-19 | v1.2.28 | fix(P1-C-cont): code-review finding #2·#3 후속 해소 — #2: `write_task_execution_plan()`이 태스크 행을 `role_plan` 모듈이 아닌 `board["tasks"]`에서 `module_id`로 그룹핑해 렌더 → `build_project_board()`가 주입한 `검증 초점:`이 `docs/task_execution_plan.md`에 반영(기존엔 board 미반영으로 누락). #3: `build_project_board()`의 `verification_focus` 주입에 `MAX_VERIFICATION_FOCUS_ITEMS=8`·`MAX_VERIFICATION_FOCUS_ITEM_CHARS=200` cap 신설(public funnel 과대 입력으로 board/프롬프트/work-item acceptance 부풀림 방어). 테스트 3건 신규(개수 cap·길이 절단·plan 문서 반영). 근거: `docs/reviews/2026-05-18-104543-project_task_board-code-review.md` finding #2·#3. §3 갱신. |
 | 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, dynamic_orchestrator.py, project_task_board.py, code-review.md (+1) |

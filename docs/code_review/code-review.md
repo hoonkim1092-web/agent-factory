@@ -301,6 +301,12 @@
 | C5 | `skill_procurer.py:380` | `SkillMetadata(path=..., source=...)` — 존재하지 않는 필드명으로 TypeError. `source_path`, `distribution_source`가 올바른 필드명 | ✅ 수정됨 |
 | H7 | `skill_procurer.py:124` | `read_skill_lock()` 키 조회 시 `safe_id()` 미적용. `lock_skill_state()`는 `safe_id()`로 키 저장하므로 대문자/특수문자 포함 시 lock 키 불일치 | ✅ 수정됨 |
 
+### 3.2.3 optional-id 정규화 work-item (2026-05-19)
+
+| ID | 파일 | 문제 | 상태 |
+|----|------|------|------|
+| H8 | `core/utils.py` | `safe_id("")` = `"skill"` 계약 버그 — task_id·owner_role·candidate_id 등 optional 식별자 22개 파일 114곳에서 빈 값→`"skill"` 오염. `if not id` 가드 무력화·유령 수신자·잘못된 중복 제거 발생 | ✅ 수정됨 (`safe_optional_id()` 신설, 114개 B-site 교체) |
+
 ### 3.3 Medium — 성능/유지보수
 
 | ID | 파일 | 라인 | 문제 |
@@ -6142,5 +6148,15 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Context**: Claude Code edit session
 
 **Changed (4)**: `.claude/settings.json, Master_Blueprint.md, core/project_task_board.py, tests/test_project_task_board_dispatch.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-19 22:38 — `2026-05-19-optional-id-normalization` (96c834a2)
+
+**Context**: Claude Code edit session
+
+**Changed (30)**: `.claude/settings.json, Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, core/agent_runner.py, core/agent_specializer.py, core/bootstrap_roles.py, core/builder.py, core/capability_intent.py, core/dynamic_orchestrator.py, core/external_skill_candidate_importer.py, core/external_skill_source_ids.py, core/external_skill_sources.py, core/install_candidate_utils.py, core/interactive_chat.py ... (+15)`
 
 _Review skipped (--no-llm or LLM unavailable)_

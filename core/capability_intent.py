@@ -3,7 +3,7 @@
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from core.utils import now_iso, safe_id
+from core.utils import now_iso, safe_id, safe_optional_id
 
 
 @dataclass
@@ -53,7 +53,7 @@ class CapabilityIntentAnalyzer:
         explicit = reqs.get("capabilities") or []
         for raw_value in explicit:
             if isinstance(raw_value, dict):
-                cap_id = safe_id(str(raw_value.get("id") or ""))
+                cap_id = safe_optional_id(str(raw_value.get("id") or ""))
                 if not cap_id:
                     continue
                 capabilities.append(
@@ -65,13 +65,13 @@ class CapabilityIntentAnalyzer:
                     )
                 )
             else:
-                cap_id = safe_id(str(raw_value))
+                cap_id = safe_optional_id(str(raw_value))
                 if cap_id:
                     capabilities.append(CapabilityNeed(id=cap_id, required=True, source="reqs.capabilities"))
 
         goal_tokens = tokenize(skill_id, goal)
         for raw_missing in reqs.get("missing_skills") or []:
-            missing_id = safe_id(str(raw_missing))
+            missing_id = safe_optional_id(str(raw_missing))
             if not missing_id:
                 continue
             if missing_id == skill_id or token_overlap(goal_tokens, tokenize(missing_id)):
@@ -118,7 +118,7 @@ def dedupe_capabilities(values: list[CapabilityNeed]) -> list[CapabilityNeed]:
     merged: list[CapabilityNeed] = []
     seen: set[str] = set()
     for item in values:
-        cap_id = safe_id(item.id)
+        cap_id = safe_optional_id(item.id)
         if not cap_id or cap_id in seen:
             continue
         seen.add(cap_id)
@@ -136,7 +136,7 @@ def normalize_risk(value: Any) -> str:
 def tokenize(*values: Any) -> set[str]:
     tokens: set[str] = set()
     for value in values:
-        text = safe_id(str(value or ""))
+        text = safe_optional_id(str(value or ""))
         for token in text.split("_"):
             if token:
                 tokens.add(token)

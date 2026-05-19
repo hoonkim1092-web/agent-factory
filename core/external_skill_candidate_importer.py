@@ -8,7 +8,7 @@ import yaml
 
 from core.external_skill_source_ids import normalize_external_source_id
 from core.install_candidate_utils import normalize_install_candidate_collection
-from core.utils import safe_id
+from core.utils import safe_id, safe_optional_id
 
 
 SOURCE_CACHE_SEGMENTS = {
@@ -30,7 +30,7 @@ def _default_root_dir() -> str:
 
 
 def cache_root_for_source(cache_dir: str, source_id: str) -> str:
-    normalized_source_id = normalize_external_source_id(source_id, default=safe_id(str(source_id or "")))
+    normalized_source_id = normalize_external_source_id(source_id, default=safe_optional_id(str(source_id or "")))
     segment = SOURCE_CACHE_SEGMENTS.get(normalized_source_id, normalized_source_id)
     return os.path.join(cache_dir, segment)
 
@@ -127,7 +127,7 @@ def _candidate_from_manifest(
         return None
 
     _canonical_key, item = next(iter(normalized.items()))
-    skill_id = safe_id(str(item.get("id") or ""))
+    skill_id = safe_optional_id(str(item.get("id") or ""))
     rel_path = str(item.get("path") or "").strip().replace("\\", "/")
     if not skill_id or not rel_path:
         return None
@@ -260,7 +260,7 @@ def discover_external_candidates(
             if not discovered and scan_python:
                 discovered = _scan_repo_fallback_candidates(root_dir, source_id, repo_dir)
             for item in discovered:
-                skill_id = safe_id(str(item.get("id") or ""))
+                skill_id = safe_optional_id(str(item.get("id") or ""))
                 if not skill_id:
                     continue
                 key = _candidate_key(source_id, skill_id)

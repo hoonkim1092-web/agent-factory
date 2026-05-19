@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.external_skill_source_ids import legacy_external_source_ids, normalize_external_source_id
+from core.external_skill_source_ids import legacy_external_source_ids, normalize_external_source_id, safe_optional_id
 
 
 def safe_id(text: str) -> str:
@@ -19,8 +19,8 @@ def safe_id(text: str) -> str:
 
 
 def infer_source_id_from_candidate_key(raw_key: str | None, skill_id: str | None) -> str:
-    key = safe_id(str(raw_key or ""))
-    sid = safe_id(str(skill_id or ""))
+    key = safe_optional_id(str(raw_key or ""))
+    sid = safe_optional_id(str(skill_id or ""))
     if not key or not sid or key == sid:
         return ""
 
@@ -37,7 +37,7 @@ def canonical_install_candidate_key(
     skill_id: str | None,
     raw_key: str | None = None,
 ) -> str:
-    sid = safe_id(str(skill_id or ""))
+    sid = safe_optional_id(str(skill_id or ""))
     source = normalize_external_source_id(source_id, default="registry")
     if source == "registry":
         return safe_id(str(raw_key or sid))
@@ -45,7 +45,7 @@ def canonical_install_candidate_key(
 
 
 def legacy_install_candidate_keys(source_id: str | None, skill_id: str | None) -> list[str]:
-    sid = safe_id(str(skill_id or ""))
+    sid = safe_optional_id(str(skill_id or ""))
     if not sid:
         return []
 
@@ -65,7 +65,7 @@ def normalize_install_candidate_item(
 ) -> tuple[str, dict] | None:
     if isinstance(raw_value, str):
         path = raw_value.strip()
-        skill_id = safe_id(raw_key)
+        skill_id = safe_optional_id(raw_key)
         if not path or not skill_id:
             return None
         source_id = infer_source_id_from_candidate_key(raw_key, skill_id) or default_source
@@ -79,7 +79,7 @@ def normalize_install_candidate_item(
         return None
 
     item = dict(raw_value)
-    skill_id = safe_id(
+    skill_id = safe_optional_id(
         str(item.get("id") or item.get("skill_id") or item.get("name") or raw_key)
     )
     if not skill_id:

@@ -4,7 +4,7 @@ import os
 from core.agent_runner import ModelRouter
 from core.engine_auth import check_llm_available
 from core.llm_engine import LLMEngine
-from core.utils import now_iso, safe_id, safe_json_load
+from core.utils import now_iso, safe_id, safe_json_load, safe_optional_id
 
 _POLICY_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "policy.yaml")
 
@@ -102,7 +102,7 @@ BOOTSTRAP_ROLES = {
 
 
 def build_bootstrap_agent(role_id: str) -> dict:
-    sid = safe_id(role_id)
+    sid = safe_optional_id(role_id)
     base = BOOTSTRAP_ROLES.get(sid, {})
     return {
         "id": sid,
@@ -282,7 +282,7 @@ class ProjectPlanningDirector:
                         "id": task_id,
                         "title": str(raw_task.get("title") or raw_task.get("instruction") or task_id).strip(),
                         "instruction": str(raw_task.get("instruction") or raw_task.get("title") or task_id).strip(),
-                        "owner_role": safe_id(str(raw_task.get("owner_role") or item.get("owner_role") or "")),
+                        "owner_role": safe_optional_id(str(raw_task.get("owner_role") or item.get("owner_role") or "")),
                         "phase": safe_id(str(raw_task.get("phase") or "build")) or "build",
                         "depends_on": [
                             safe_id(str(dep)) for dep in (raw_task.get("depends_on") or []) if str(dep).strip()
@@ -300,7 +300,7 @@ class ProjectPlanningDirector:
                     "id": module_id,
                     "name": str(item.get("name") or module_id).strip(),
                     "summary": str(item.get("summary") or "").strip(),
-                    "owner_role": safe_id(str(item.get("owner_role") or "")),
+                    "owner_role": safe_optional_id(str(item.get("owner_role") or "")),
                     "depends_on": [
                         safe_id(str(dep)) for dep in (item.get("depends_on") or []) if str(dep).strip()
                     ],
@@ -362,9 +362,9 @@ class ProjectPlanningDirector:
                 "summary": "전체 통합 검증 및 회귀 테스트",
                 "owner_role": "qa_engineer",
                 "depends_on": [
-                    safe_id(str(m.get("id", "")))
+                    safe_optional_id(str(m.get("id", "")))
                     for m in modules
-                    if isinstance(m, dict) and safe_id(str(m.get("id", "")))
+                    if isinstance(m, dict) and safe_optional_id(str(m.get("id", "")))
                 ],
                 "deliverables": ["테스트 결과 리포트"],
                 "feature_slices": ["통합 테스트", "회귀 테스트"],
@@ -376,9 +376,9 @@ class ProjectPlanningDirector:
                         "owner_role": "qa_engineer",
                         "phase": "verify",
                         "depends_on": [
-                            safe_id(str(m.get("id", "")))
+                            safe_optional_id(str(m.get("id", "")))
                             for m in modules
-                            if isinstance(m, dict) and safe_id(str(m.get("id", "")))
+                            if isinstance(m, dict) and safe_optional_id(str(m.get("id", "")))
                         ],
                         "acceptance": ["전체 통합 테스트 통과", "테스트 리포트 생성"],
                         "artifacts": ["tests/", "test_report.md"],

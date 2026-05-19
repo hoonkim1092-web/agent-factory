@@ -27,7 +27,7 @@ import sys
 import time
 from typing import Any
 
-from core.utils import safe_id, now_iso, _safe_write_json
+from core.utils import safe_id, now_iso, _safe_write_json, safe_optional_id
 from core.terminal_visualizer import TerminalVisualizer, AgentPhase
 from core.documentation_policy import ensure_documentation_files, single_task_todo_items, write_project_todo
 
@@ -740,10 +740,10 @@ def _print_pdca_help():
 
 def _load_or_build_agent(role: str, workspace: str) -> dict:
     """AgentFactory 전체 초기화 없이 에이전트를 빠르게 로드/생성한다."""
-    from core.utils import safe_id, read_yaml, apply_agent_overrides
+    from core.utils import safe_id, read_yaml, apply_agent_overrides, safe_optional_id
     from core.config_paths import AGENTS_DIR, GLOBAL_AGENTS_DIR
 
-    role_id = safe_id(role) or "agent"
+    role_id = safe_optional_id(role) or "agent"
 
     # 1) 워크스페이스 로컬 YAML
     local_path = os.path.join(workspace, "agents", f"{role_id}.yaml")

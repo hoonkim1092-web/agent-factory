@@ -47,7 +47,7 @@ optional id가 비었을 때 `safe_id(x)` → `"skill"`(truthy·비공백) 이 �
 ### 2.1 `core/utils.py` (regex 구현 — utils.safe_id 미러)
 
 ```python
-def safe_optional_id(text: str) -> str:
+def safe_optional_id(text: str | None) -> str:
     """safe_id 와 동일하나 빈/None/공백 입력에 "skill" 대신 "" 를 반환한다.
     optional identifier(task_id, owner_role 등) 정규화 전용."""
     t = (text or "").strip().lower()
@@ -61,7 +61,7 @@ def safe_optional_id(text: str) -> str:
 ### 2.2 `core/external_skill_source_ids.py` (char-loop 구현 — 로컬 safe_id 미러)
 
 ```python
-def safe_optional_id(text: str) -> str:
+def safe_optional_id(text: str | None) -> str:
     value = (text or "").strip().lower()
     chars = []
     for ch in value:
@@ -234,7 +234,11 @@ audit B-marked              117
 
 | # | 사이트 | 재현 | 기대 (수정 후) |
 |---|--------|------|----------------|
-| C1 | `project_mailbox.py:152/153` | `send(..., to_role="")` | `if not recipient: raise` 발화 (현재: `"skill"` 메일박스로 무음 발송) |
+| C1a | `project_mailbox.py:153/160` | `send_agent_message(..., to_role="")` | `recipient=""` → `raise ValueError("to_role_required")` 발화 (현재: `"skill"` 메일박스로 무음 발송) |
+| C1b | `project_mailbox.py:152` | `send_agent_message(from_role="", ...)` | `safe_optional_id("") or "unknown_sender"` = `"unknown_sender"` (현재: `"skill"` 발신자) |
+| C1c | `project_mailbox.py:156/168` | `send_agent_message(..., task_id="")` | `task_key=""` → thread_id 에 `'general'` 사용 (현재: `"skill"` 스레드로 분기) |
+| C1d | `project_mailbox.py:217/224` | `read_inbox(..., task_id="")` | `task_key=""` → `if task_key and …` 필터 비활성, 전체 inbox 반환 (현재: `task_id=="skill"` 메시지만) |
+| C1e | `project_mailbox.py:246/258` | `ack_mailbox_message(..., role="")` | `actor_role=""` → `if actor_role and …` 필터 비활성 (현재: `"skill"`로 잘못 필터) |
 | C2 | `install_candidate_utils.py:24/68/85` | `infer_source_id_from_candidate_key("","")` 등 | 빈 입력 → `""`/`None` 반환 (현재: `"skill"` 처리) |
 | C3 | `project_task_board.py:748/755` `_dependency_satisfied` | 빈 dependency | `if not dependency: return True` 발화 = "충족" (현재: `"skill"`로 미발화) |
 | C4 | `dynamic_orchestrator.py:186/198` | task_id 누락 board task | completed-key 집합에 `"skill"` 미진입 |
@@ -261,18 +265,20 @@ production 호출 경로 확인 — `safe_optional_id`가 테스트 픽스처가
 ```
 1. 헬퍼 정의 2곳 (utils.py, external_skill_source_ids.py) + install_candidate_utils.py import
    → 검증: tests/test_safe_optional_id.py 작성·통과 (§6.1)
-2. CALIB 재현 테스트 5건 작성 (현재 fail 확인)
-   → 검증: 5건 모두 fail (버그 재현 확인)
-3. 108 사이트 교체 (파일별, A 사이트는 safe_id 유지)
-   → 검증: CALIB 5건 pass + 헬퍼 테스트 pass
+2. CALIB 재현 테스트 작성 (§6.2 표 전 케이스 — 현재 fail 확인)
+   → 검증: 전 케이스 fail (버그 재현 확인)
+3. 114 사이트 교체 (파일별, A 사이트는 safe_id 유지)
+   → 검증: CALIB 회귀 테스트 pass + 헬퍼 테스트 pass
+   → 검증: §4.1 A 사이트 17곳은 `safe_id` 유지 (grep) — multi-call 라인은 audit 좌표로 호출별 대조
+   → 검증: 파일별 `safe_optional_id` 교체 수가 §5 표와 일치, 합계 114
 4. 전체 회귀 — pytest tests/
    → 검증: 기존 테스트 0 regression
 5. 3-Tier 코드리뷰 (af-critic → af-cross-review → af-test-runner)
-   → Master_Blueprint.md 동기화 → 단일 커밋
+   → Master_Blueprint.md + docs/code_review/code-review.md 동기화 → 단일 커밋
 ```
 
 - **브랜치**: 현재 `main`. 첫 커밋 전 feature 브랜치 분기. 미커밋 캐리오버(`.claude/settings.json`, `projects/agent_factory/*`)와 섞지 않는다.
-- **단일 PR**: 108 사이트는 기계적이나 sed 일괄 금지 — 같은 파일에 A 사이트(`safe_id` 유지)가 공존하므로 사이트별 수동 교체.
+- **단일 PR**: 114 사이트는 기계적이나 sed 일괄 금지 — 같은 파일에 A 사이트(`safe_id` 유지)가 공존하고 한 라인에 A·B 호출이 함께 올 수 있으므로 사이트별 수동 교체. multi-call 라인(예: `researcher.py:112`의 `id`/`name` 2개 호출)은 audit 문서 좌표로 호출 단위 대조한다.
 
 ---
 
