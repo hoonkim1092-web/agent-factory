@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-19 KST** — B-3 전체 완료(`b48bf7cc` step4 manifest projection + `4bdb8b80` installed 정합성). 다음: A Phase 4(스마트 라우팅, 1주 실측 데이터 후).
+> 마지막 업데이트: **2026-05-20 KST** — research coverage-gate 수정 설계 완료(설계노트 + af-cross-review WARN). 다음: Sonnet으로 Step A+B 구현.
 
 ---
 
@@ -22,6 +22,25 @@ git status -sb
 
 `safe_id("")="skill"` 계약 버그 전체 교정. safe_optional_id() 헬퍼 신설, 22파일 116 B-site 교체.
 3-Tier: af-critic PASS → af-cross-review WARN(2건 수정) → af-test-runner PASS. 브랜치: `2026-05-19-optional-id-normalization`.
+
+---
+
+## 🚧 research coverage-gate deep-mode fix (2026-05-20) — 설계 완료, 구현 대기
+
+**브랜치**: `2026-05-20-research-coverage-gate`
+**설계노트**: `docs/2026-05-20-research-coverage-gate-deep-mode-fix-design.md` (v2 — af-cross-review WARN 4건 반영)
+
+ResearchRouter 재논의(Codex↔Claude) 결론. `core/researcher.py` `collect_project_evidence()`의
+coverage gate가 `archive_research` 모드에만 적용되고 deep/fresh/live(risk=high)는
+우회되는 실제 동작 버그. **다음 세션: `/model` Sonnet 전환 후 구현 진입.**
+
+- **Step A-1**: `_build_quality_contract`/`_domain_checklist` 계산을 분기 진입 전으로 hoist. 조건 `requires_web or mode != "fast_synthesis"` (순수 fast_synthesis는 LLM 호출 스킵).
+- **Step A-2**: `_emit_coverage_report`에 `llm_prior_refs` 파라미터 추가 + join 포함 (no-Tavily 배포 false BLOCK 방지).
+- **Step B**: 재귀 호출(`researcher.py:1109`)에 `research_plan=` 전달 + `for_mode(scores=...)` (관측성).
+- 부수: Master_Blueprint §3·§12 동기화, 테스트 8케이스(설계노트 §5), Tier 2~3 Review-Gate.
+- 비범위: C(planner ordering+prompt), D(WidthPlanner/PermissionPolicy), escalation 안전망 keyword-reuse 결함 — 각각 별도.
+
+baseline은 설계노트가 확정 — `collect_project_evidence` 재정독 불필요.
 
 ---
 
