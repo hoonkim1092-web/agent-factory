@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-19 KST** — optional-id-normalization work-item: **✅ 완료·push** (`fb085fdb`). 22파일 116 B-site 교체 + 3-Tier PASS. 다음: B-3 step 4(manifest projection) 또는 A Phase 4(스마트 라우팅, 1주 데이터 후).
+> 마지막 업데이트: **2026-05-19 KST** — B-3 전체 완료(`b48bf7cc` step4 manifest projection + `4bdb8b80` installed 정합성). 다음: A Phase 4(스마트 라우팅, 1주 실측 데이터 후).
 
 ---
 
