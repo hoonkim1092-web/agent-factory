@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-18 KST** — B-3 capability-gap 복구·push(`9eb14577`). Research Router Phase 2 B-1~B-2 + B-3 step 1-3b 완료 (B-3 step 4 manifest projection 후행 분리). 다음 진입점: **A Phase 4** (1주 데이터 수집 후 스마트 라우팅).
+> 마지막 업데이트: **2026-05-19 KST** — optional-id-normalization work-item 진행 중 (설계문서 cross-review 라운드2 검증 중 — 아래 🚧 섹션). 이전: B-3 capability-gap 복구·push(`9eb14577`), Research Router Phase 2 B-1~B-2 + B-3 step 1-3b 완료.
 
 ---
 
@@ -14,7 +14,21 @@ python start_db.py agent-factory   # Supabase → 로컬 메모리 pull
 git status -sb
 ```
 
-그 다음 이 파일 "🔥 다음 진입점" 섹션부터 읽으면 됨.
+그 다음 아래 "🚧 진행 중 work-item" 섹션부터 읽으면 됨.
+
+---
+
+## 🚧 진행 중 work-item — optional-id-normalization (2026-05-19)
+
+`safe_id("")="skill"` optional-ID 계약 버그 정규화. **5단계 플랜 중 3단계 진행 중**.
+
+- **durable 핸드오프**: Claude 메모리 `project_optional_id_normalization.md` (`start_db.py`로 pull) — 전체 상태·플랜·확정 분류.
+- 설계문서: `docs/plans/2026-05-19-optional-id-normalization.md` — 헬퍼 spec + 114 사이트 교체 범위 + CALIB 재현 테스트
+- 라인-레벨 audit: `docs/plans/2026-05-19-optional-id-normalization-audit.md` (510줄)
+- **현재**: 설계문서 cross-review 라운드1 BLOCK("required→C" carve-out 비일관) → 수정 완료(교체 집합 108→114), 라운드2 검증 중.
+- **다음**: 라운드2 PASS 확인 → 4단계 구현(`safe_optional_id` 헬퍼 2곳 + 114 사이트 교체 + CALIB 재현 테스트 5건) → 5단계 3-Tier 리뷰 → Blueprint 동기화 → 커밋.
+- 작업 브랜치: `2026-05-19-optional-id-normalization`
+- **재개 한 줄**: `optional-id-normalization work-item 이어서 진행해줘`
 
 ---
 
