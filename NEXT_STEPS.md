@@ -25,22 +25,11 @@ git status -sb
 
 ---
 
-## 🚧 research coverage-gate deep-mode fix (2026-05-20) — 설계 완료, 구현 대기
+## ✅ research coverage-gate deep-mode fix (2026-05-20) — DONE (`9e610a5d`)
 
-**브랜치**: `2026-05-20-research-coverage-gate`
-**설계노트**: `docs/2026-05-20-research-coverage-gate-deep-mode-fix-design.md` (v2 — af-cross-review WARN 4건 반영)
-
-ResearchRouter 재논의(Codex↔Claude) 결론. `core/researcher.py` `collect_project_evidence()`의
-coverage gate가 `archive_research` 모드에만 적용되고 deep/fresh/live(risk=high)는
-우회되는 실제 동작 버그. **다음 세션: `/model` Sonnet 전환 후 구현 진입.**
-
-- **Step A-1**: `_build_quality_contract`/`_domain_checklist` 계산을 분기 진입 전으로 hoist. 조건 `requires_web or mode != "fast_synthesis"` (순수 fast_synthesis는 LLM 호출 스킵).
-- **Step A-2**: `_emit_coverage_report`에 `llm_prior_refs` 파라미터 추가 + join 포함 (no-Tavily 배포 false BLOCK 방지).
-- **Step B**: 재귀 호출(`researcher.py:1109`)에 `research_plan=` 전달 + `for_mode(scores=...)` (관측성).
-- 부수: Master_Blueprint §3·§12 동기화, 테스트 8케이스(설계노트 §5), Tier 2~3 Review-Gate.
-- 비범위: C(planner ordering+prompt), D(WidthPlanner/PermissionPolicy), escalation 안전망 keyword-reuse 결함 — 각각 별도.
-
-baseline은 설계노트가 확정 — `collect_project_evidence` 재정독 불필요.
+`collect_project_evidence()` coverage gate가 archive_research 에서만 적용되던 구조 결함 수정.
+Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신규 8테스트. 1772 PASS.
+3-Tier: af-critic PASS / af-cross-review WARN(G2/G3 mock 수정 반영) / af-test-runner PASS.
 
 ---
 
