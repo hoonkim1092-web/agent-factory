@@ -367,3 +367,101 @@ def test_procure_multiple_promotes_built_skill_before_install(monkeypatch, tmp_p
     assert registry.registered == [("new_skill", str(tmp_path / "new_skill"), "canary")]
     assert agent_mgr.calls == [("General", ["new_skill"], None)]
 
+
+# ── B-3 step 4: manifest projection — reuse_decision ─────────────────────────
+
+def test_manifest_entry_includes_reuse_decision_for_ranked_reuse(monkeypatch, tmp_path):
+    """ranked_reuse 경로: manifest entry에 reuse_decision dict 포함."""
+    sp = _load_skill_procurer()
+    candidate_path = tmp_path / "candidate_skill.py"
+    candidate_path.write_text("def apply(ctx):\n    return {'ok': True}\n", encoding="utf-8")
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda sid: (str(candidate_path), None) if sid == "candidate_skill" else (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            return {"evidence_pack": {"targets": {"target_skill": {"top_candidate": "candidate_skill", "verified": True, "top_score": 92, "candidates": []}}}}
+
+    class _Registry:
+        def ensure_lock_for_existing_skill(self, _sid): pass
+        def is_installable(self, _sid): return True
+
+    orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), None, _AgentMgr())
+    _installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "Gen"}, skill_names=["target_skill"],
+        reqs={"goal": "g", "constraints": []}, run_id="r1",
+    )
+
+    assert len(manifest) == 1
+    entry = manifest[0]
+    assert entry["decision_mode"] == "ranked_reuse"
+    assert "reuse_decision" in entry
+    rd = entry["reuse_decision"]
+    assert rd["mode"] == "ranked_reuse"
+    assert rd["candidate_skill_id"] == "candidate_skill"
+    assert "confidence" in rd
+    assert "capability_gap" in rd
+
+
+def test_manifest_entry_includes_reuse_decision_for_forge(monkeypatch, tmp_path):
+    """forge 경로: manifest entry에 reuse_decision dict 포함."""
+    sp = _load_skill_procurer()
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda _sid: (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            return {"evidence_pack": {"targets": {}}}
+
+    class _Registry:
+        def register_built(self, meta, skill_dir): pass
+        def workflow_apply(self, metas): pass
+        def is_installable(self, _sid): return True
+        def resolve_and_install_external_detailed(self, needs, reqs=None, evidence_pack=None):
+            return {"installed": {}, "results": {needs[0]: {"need_id": needs[0], "installed_skill_id": "", "installed_from": "", "attempts": []}}}
+
+    class _Builder:
+        def build_skill(self, **kwargs):
+            skill_dir = tmp_path / "forged"
+            skill_dir.mkdir(exist_ok=True)
+            (skill_dir / "skill.py").write_text("def apply(ctx): return {}\n")
+            return True, str(skill_dir / "skill.py"), {"id": "forged_skill", "status": "draft"}
+
+    orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), _Builder(), _AgentMgr())
+    _installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "Gen"}, skill_names=["forged_skill"],
+        reqs={"goal": "g", "constraints": []}, run_id="r2",
+    )
+
+    assert len(manifest) == 1
+    entry = manifest[0]
+    assert entry["decision_mode"] == "forge"
+    assert "reuse_decision" in entry
+    rd = entry["reuse_decision"]
+    assert rd["mode"] == "forge"
+    assert rd["candidate_skill_id"] == ""
+
+
+def test_manifest_entry_has_no_reuse_decision_for_exact_match(monkeypatch, tmp_path):
+    """exact_match 경로: decide_reuse() 미호출 → reuse_decision 키 없음."""
+    sp = _load_skill_procurer()
+    exact_path = tmp_path / "existing_skill.py"
+    exact_path.write_text("def apply(ctx):\n    return {'ok': True}\n", encoding="utf-8")
+    monkeypatch.setattr(sp, "resolve_skill_paths", lambda sid: (str(exact_path), None) if sid == "existing_skill" else (None, None))
+
+    class _Research:
+        def research(self, _agent, _reqs, build_targets=None):
+            return {"evidence_pack": {"targets": {}}}
+
+    class _Registry:
+        def ensure_lock_for_existing_skill(self, _sid): pass
+        def is_installable(self, _sid): return True
+
+    orchestrator = sp.SkillOrchestrator(_Registry(), _Research(), None, _AgentMgr())
+    _installed, manifest = orchestrator.procure_multiple(
+        agent={"role": "Gen"}, skill_names=["existing_skill"],
+        reqs={"goal": "g", "constraints": []}, run_id="r3",
+    )
+
+    assert len(manifest) == 1
+    assert manifest[0]["decision_mode"] == "exact_match"
+    assert "reuse_decision" not in manifest[0]
+

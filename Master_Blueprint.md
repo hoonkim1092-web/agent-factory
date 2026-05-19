@@ -430,7 +430,7 @@ AgentRunner.run(agent, task_input, workspace)
   - `completed/partial/stopped_max_cycles` → `module_outcome_from_board()` + `detect_owner_drift()` 판정
 - `write_project_board()` atomic write 보장: tempfile + os.replace (C0 fix)
 - **Research Router P2-B3** (2026-05-18): `_run_role()` 내 `reqs` dict에 `project_brief`의 `skill_gap_hypotheses` 추가 → `procurer.procure_multiple()` → `researcher.research()` → `HimariResearchAgent._skill_gap_capabilities_map()` → per-need `required_capabilities` → `_rank_candidates_for_need()` target dict → `SkillRetrievalEngine.decide_reuse()` payload. 이로써 `skill_gap_hypotheses` 기반 capability-gap 분석 경로가 end-to-end 연결됨. project-level `required_capabilities`는 gap 입력에서 의도적으로 제외 — `_skill_gap_capabilities_map` 계약(per-need miss→[], project-union 주입 금지)상 소비처가 없어 `reqs`에 싣지 않음. capability-gap 분석은 per-need `skill_gap_hypotheses`가 있을 때만 발화(`skill_gap_hypotheses=[]`인 fast_synthesis 경로는 강등 없이 점수 기반 판정). `SkillRetrievalEngine.decide_reuse():105` candidate_meta 정규화 — researcher candidate row는 `meta` 키 없이 `capabilities`를 top-level에 두므로 `meta` 없거나 빈 dict면 `{"capabilities": best["capabilities"]}` 흡수.
-- **B-3 미착수분**: step 4 (`ReuseDecision` 사유 → `skill_manifest.json` entry 보존)는 후행 분리 — manifest entry는 현재 `decision_mode/reused_from/forge_run_id/fallback_chain`만 투영, `capability_gap/confidence/rationale` 미포함.
+- **B-3 step 4** (2026-05-19): `ReuseDecision.to_dict()` 전체를 `skill_manifest.json` entry의 `reuse_decision` 키로 보존. `decide_reuse()` 이후 7개 경로(ranked_reuse/enhance/shadow_reuse×2/external_install/forge_approval_denied/forge) 모두 적용. exact_match는 `decide_reuse()` 미호출이므로 키 없음. `capability_gap/confidence/rationale` 이제 manifest에 포함.
 - **Research Router P2-B2** (2026-05-18, ① 적용): `project_task_board.build_project_board()`가 `project_brief`의 `verification_focus`(researcher.py §6.4)를 verify phase 태스크 `acceptance`에 주입 — LLM·fallback 태스크 경로 공통 funnel, dedup 가드 포함. `required_capabilities`는 acceptance(완료 기준)와 의미가 맞지 않고 B-3 capability-gap 경로(`skill_retrieval_engine.decide_reuse()`)가 정규 소비처이므로 build 태스크 주입 대상에서 제외
 - **P1-C verification_focus 전달 갭 fix** (2026-05-19): P2-B2가 주입한 `verification_focus`는 rule-based dispatch(`next_board_tasks()`)만 `task_id`를 채워 `_resolve_task_meta()`가 성공했고, LLM dispatch(`dynamic_orchestrator._lilith_decide_next`)는 `board_prompt_digest()`로만 보드를 봐 `task_id`/`acceptance` 미노출 → LLM이 task_id를 echo 못 함 → `_resolve_task_meta()` None → `AgentSpecializer`가 주입 acceptance 미수신(배포 동등성 위반). `board_prompt_digest()`에 `task_id`/`phase`/bounded `acceptance`(`max_acceptance_chars=240`) 렌더링 + `_lilith_decide_next` 프롬프트에 보드 task_id echo 지시 추가로 해소. 근거: `docs/reviews/2026-05-18-104543-project_task_board-code-review.md` finding #1 [High]. 실제 LLM run(claude_cli ×2)으로 end-to-end 도달 확인.
 - **P1-C 후속 finding #2·#3** (2026-05-19): finding #2 — `write_task_execution_plan()`이 `role_plan` 모듈이 아닌 `board["tasks"]`에서 `module_id`로 그룹핑해 태스크 행을 렌더 → 주입된 `검증 초점:`이 `docs/task_execution_plan.md`에 반영. finding #3 — `build_project_board()`의 `verification_focus` 주입에 `MAX_VERIFICATION_FOCUS_ITEMS=8`/`MAX_VERIFICATION_FOCUS_ITEM_CHARS=200` cap 적용(public funnel 과대 입력 방어).
@@ -564,7 +564,7 @@ cli_providers = [preferred] + [fallbacks...]
 ---
 
 ### §3.5 스킬 시스템
-<!-- last_updated: 2026-05-18 (B-3 capability-gap end-to-end 연결) -->
+<!-- last_updated: 2026-05-19 (B-3 step4 manifest projection) -->
 
 **Capability-Gap 분석 파이프라인 (B-3, 2026-05-18):**
 - `project_brief.skill_gap_hypotheses` → `HimariResearchAgent._skill_gap_capabilities_map()` (정적 헬퍼, safe_id 정규화, miss→[]) → per-need `required_capabilities`
@@ -1536,6 +1536,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, NEXT_STEPS.md, skill_procurer.py, test_skill_procurer_reuse_gate.py |
+| 2026-05-19 | v1.2.28 | feat(research-router-p2-B3-step4): `ReuseDecision.to_dict()` → `skill_manifest.json` entry projection — `procure_multiple()` 내 `decide_reuse()` 이후 7개 경로(ranked_reuse/enhance/shadow_reuse×2/external_install/forge_approval_denied/forge)에 `"reuse_decision"` 키 추가. exact_match는 `decide_reuse()` 미호출로 키 없음. 테스트 3건 신규(ranked_reuse/forge/exact_match 계약). 3-Tier af-critic PASS / af-cross-review PASS / af-test-runner 14 PASS. §3.5+§12 갱신. |
 | 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_runner.py (+25) |
 | 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, agent_runner.py (+25) |
 | 2026-05-19 | (unreleased) | fix(optional-id): `safe_id("")="skill"` 계약 버그 전체 교정 — `core/utils.py`+`core/external_skill_source_ids.py`에 `safe_optional_id()` 신설(빈 값→`""` 반환). 22개 파일 114개 B-site 교체(task_id·owner_role·role·capability·candidate_id 등 optional 식별자 도메인). A-site(스킬 이름 생성 17개)는 유지. CALIB 테스트 `tests/test_safe_optional_id.py`(20종)+`tests/test_optional_id_calib.py`(11종) 31 PASS. 회귀 1759 PASS. 3-Tier 교차검증 WARN(design cross-review 2라운드 완료). |

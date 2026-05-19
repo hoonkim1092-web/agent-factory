@@ -130,7 +130,7 @@ git status -sb
 - **Finding 2 (설계 결정 = ①)** — `required_capabilities`의 build `acceptance` 주입 제거. 근거: `acceptance`는 "완료 기준"으로 소비되는데(`agent_specializer.py:93`·`work_item_generator.py:333`) `required_capabilities`는 실행 전제·스킬 조달 신호 → 의미 불일치. 정규 소비처는 B-3 `decide_reuse()` capability-gap 경로 → B-3에 위임.
 - 3-Tier: af-critic / af-cross-review / af-test-runner **전부 PASS**. Blueprint §3.1+§12 갱신. tests 6건 신규.
 
-**B-3. skill pipeline — capability-gap 死코드 복구** ← ✅ **step 1-3b 완료·push** (`9eb14577`, 2026-05-18) · step 4(manifest projection) 후행 분리 — 미착수
+**B-3. skill pipeline — capability-gap 死코드 복구** ← ✅ **전체 완료·push** (`9eb14577` step1-3b + 2026-05-19 step4)
 
 > 아래 라인 좌표는 2026-05-18 재캡처 기준. **구현 진입 시 grep으로 재확인** (라인은 stale 가능 — NEXT_STEPS의 이전 좌표 `:102`/`:197-206`이 실제 `:64`/`:172`로 어긋나 있었음).
 

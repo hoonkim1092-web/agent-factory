@@ -963,7 +963,7 @@ class SkillOrchestrator:
                 )
                 if install_ok:
                     installed.append(candidate_id)
-                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "ranked_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "ranked_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                     continue
                 fallback_chain.append("ranked_reuse")
 
@@ -998,7 +998,7 @@ class SkillOrchestrator:
                     )
                     if install_ok:
                         installed.append(enhanced_id)
-                        manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "enhance", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
+                        manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "enhance", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                         continue
                     fallback_chain.append("enhance")
                 else:
@@ -1040,7 +1040,7 @@ class SkillOrchestrator:
                         decision=decision,
                         payload={"candidate_path": candidate_path},
                     )
-                    manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                     continue
                 built_id = self._build_and_register(
                     agent=agent,
@@ -1058,7 +1058,7 @@ class SkillOrchestrator:
                         installable = bool(self.registry.is_installable(built_id))
                     if installable:
                         installed.append(built_id)
-                manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain)})
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "shadow_reuse", "reused_from": candidate_id, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                 continue
 
             external_skill_id = ""
@@ -1104,7 +1104,7 @@ class SkillOrchestrator:
                     installable = bool(self.registry.is_installable(external_skill_id))
                 if installable:
                     installed.append(external_skill_id)
-                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "external_install", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
+                    manifest_entries.append({"skill_id": name, "requested": True, "installed": True, "decision_mode": "external_install", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                     continue
             fallback_chain.append("external_miss")
 
@@ -1117,7 +1117,7 @@ class SkillOrchestrator:
                     run_id=run_id,
                     agent_role=agent_role,
                 )
-                manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "forge_approval_denied", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain)})
+                manifest_entries.append({"skill_id": name, "requested": True, "installed": False, "decision_mode": "forge_approval_denied", "reused_from": None, "forge_run_id": None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
                 continue
 
             self._record_selection_feedback(
@@ -1138,7 +1138,7 @@ class SkillOrchestrator:
                 feedback_loop=feedback_loop,
                 workspace=workspace,
             )
-            manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "forge", "reused_from": None, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain)})
+            manifest_entries.append({"skill_id": name, "requested": True, "installed": bool(built_id), "decision_mode": "forge", "reused_from": None, "forge_run_id": run_id if built_id else None, "fallback_chain": list(fallback_chain), "reuse_decision": decision.to_dict()})
             if built_id:
                 installable = True
                 if hasattr(self.registry, "is_installable"):
