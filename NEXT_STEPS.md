@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-20 KST (afternoon)** — C follow-up 후속 리뷰 4건 적용 완료, 교차검증 대기. 아래 "🔍 C follow-up 후속 리뷰" 섹션 참조.
+> 마지막 업데이트: **2026-05-21 KST** — B-1 3-tier PASS + B-1 후행(LLM prompt) 완료. B 시리즈 전체 완료.
 
 ---
 
@@ -132,7 +132,7 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - LLM 경로(`work_item_generator.py:631/673/727`)는 `json.dumps(project_brief)` 전체를 프롬프트에 박음 → 3필드 값은 암묵 도달 (변경 없음).
 - **완료**: `_inline()` sanitizer + `_skill_gap_bullets()` dict formatter + `_structured_evidence_block()` 추가. plan/spec/design fallback `## Evidence`/`## Design Evidence` 내부 sub-bullet으로 3필드 trace 보존. 새 `##` 헤더 없음 — `_extract_section_outline(expected_count=12)` 회귀 없음.
 - 회귀 테스트 12개 추가 (`tests/test_work_item_generator_structured_evidence.py`).
-- **후행**: LLM prompt structured evidence 명시 section(`work_item_generator.py:631/673/727`) — 현재 암묵 도달이므로 별도 라운드에서 효과 측정 분리.
+- **후행**: ✅ **완료 (2026-05-21)** — `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 3필드 명시. 21 tests PASS.
 
 **B-2. `project_task_board.py`** — ✅ **완료·push** (`dd439f73`, 2026-05-18)
 - `build_project_board()`가 `project_brief`의 `verification_focus`를 verify 태스크 `acceptance`에 주입 (dedup 가드, LLM·fallback 공통 funnel).

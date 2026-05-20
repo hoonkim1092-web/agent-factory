@@ -702,7 +702,11 @@ def _generate_feature_plan(
         f"- work_item: {work_item}\n"
         f"- Goal: {goal}\n"
         f"- Deliverables: {', '.join(deliverables)}\n"
-        f"- Constraints: {', '.join(constraints)}"
+        f"- Constraints: {', '.join(constraints)}\n"
+        "- Structured evidence (Brief JSON의 3필드 — 기존 섹션 내에만 반영, 새 ## 섹션 금지):\n"
+        "  * required_capabilities → 스킬 조달 신호 (Background/Scope 참고용)\n"
+        "  * verification_focus → ## Evidence 하위에 검증 기준으로 포함\n"
+        "  * skill_gap_hypotheses → reuse/enhance/forge 계획 신호 (## Evidence 내)"
     )
 
     def _fb() -> str:
@@ -744,7 +748,11 @@ def _generate_feature_spec(
         "- 한국어로 작성\n"
         "- \"(edit required)\" 사용 금지\n"
         "- Acceptance Criteria는 검증 가능한 문장으로\n"
-        f"- work_item: {work_item}, goal: {goal}"
+        f"- work_item: {work_item}, goal: {goal}\n"
+        "- Structured evidence (Brief JSON의 3필드 — 기존 섹션 내에만 반영, 새 ## 섹션 금지):\n"
+        "  * required_capabilities → 스킬 조달 신호 (Functional Requirements 참고)\n"
+        "  * verification_focus → ## Acceptance Criteria 및 ## Evidence에 검증 기준으로 반영\n"
+        "  * skill_gap_hypotheses → reuse/enhance/forge 계획 신호 (## Evidence 내)"
     )
 
     def _fb() -> str:
@@ -801,7 +809,11 @@ def _generate_implementation_design(
         "- \"(edit required)\" 사용 금지\n"
         "- 기술 선택 근거 포함\n"
         "- Event Sequence / Phase Flow는 반드시 작성 (생략 불가)\n"
-        f"- work_item: {work_item}, goal: {goal}"
+        f"- work_item: {work_item}, goal: {goal}\n"
+        "- Structured evidence (Brief JSON의 3필드 — 기존 섹션 내에만 반영, 새 ## 섹션 금지):\n"
+        "  * required_capabilities → 스킬 조달 신호 (Design Summary/Risks 참고)\n"
+        "  * verification_focus → ## Design Evidence 하위에 검증 기준으로 포함\n"
+        "  * skill_gap_hypotheses → reuse/enhance/forge 계획 신호 (## Design Evidence 내)"
     )
 
     def _fb() -> str:
