@@ -6200,3 +6200,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (18)**: `Master_Blueprint.md, NEXT_STEPS.md, core/text_integrity.py, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/settings.yaml, projects/agent_factory/workflow.yaml, scripts/blast_radius.py, scripts/check_pending_review.py, scripts/enqueue_agent_review.py, scripts/hook_runner.py, scripts/prompts/code_critic.txt, scripts/review_gate.py, tests/test_hook_runner_builtins.py ... (+3)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-21 00:21 — `2026-05-20-research-coverage-gate` (0d649032)
+
+**Context**: Claude Code edit session
+
+**Changed (4)**: `Master_Blueprint.md, NEXT_STEPS.md, core/work_item_generator.py, tests/test_work_item_generator_structured_evidence.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

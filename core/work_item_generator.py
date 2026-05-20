@@ -150,6 +150,58 @@ def _reference_bullets(project_brief: dict[str, Any], limit: int = 8) -> str:
     return "\n".join(lines) if lines else "- (no additional references)"
 
 
+def _inline(value: Any, limit: int = 220) -> str:
+    """줄바꿈을 제거하고 단일 inline 문자열로 정리. ## 분리를 막아 _extract_section_outline 카운트 오염 방지."""
+    s = str(value or "").strip()
+    s = re.sub(r"\s+", " ", s)
+    if len(s) > limit:
+        s = s[:max(limit - 3, 0)].rstrip() + "..."
+    return s
+
+
+def _skill_gap_bullets(project_brief: dict[str, Any], limit: int = 6) -> list[str]:
+    """skill_gap_hypotheses list[dict] → 렌더 줄 목록. dict 아닌 entry는 silent skip."""
+    out: list[str] = []
+    for item in (project_brief.get("skill_gap_hypotheses") or []):
+        if not isinstance(item, dict):
+            continue
+        need = _inline(_clean(item.get("need_skill_id")), 80)
+        if not need:
+            continue
+        caps = ", ".join(_inline(c, 60) for c in _clean_list(item.get("required_capabilities"))[:4])
+        reuse = _inline(_clean(item.get("reuse_expectation")), 20)
+        reason = _inline(item.get("reason"), 160)
+        out.append(f"  - {need} [{reuse}]: caps={caps or '—'}; {reason or '—'}")
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _structured_evidence_block(project_brief: dict[str, Any]) -> str:
+    """structured evidence 3필드를 ## Evidence 내부 sub-bullet으로 렌더.
+
+    새 ## 헤더 추가 금지 — _extract_section_outline(expected_count=12) 카운트 회귀 방지.
+    """
+    lines: list[str] = []
+
+    req_caps = [_inline(c) for c in _clean_list(project_brief.get("required_capabilities"))[:6] if _inline(c)]
+    if req_caps:
+        lines.append("- Skill procurement signals (not acceptance criteria):")
+        lines.extend(f"  - {c}" for c in req_caps)
+
+    vf = [_inline(v) for v in _clean_list(project_brief.get("verification_focus"))[:8] if _inline(v)]
+    if vf:
+        lines.append("- Verification focus (also injected into task acceptance):")
+        lines.extend(f"  - {v}" for v in vf)
+
+    gap = _skill_gap_bullets(project_brief)
+    if gap:
+        lines.append("- Skill gap hypotheses:")
+        lines.extend(gap)
+
+    return "\n".join(lines)
+
+
 def _slug_from_goal(goal: str) -> str:
     text = goal.lower()[:60]
     text = re.sub("[^a-z0-9\\uac00-\\ud7a3\\s]", " ", text)
@@ -239,6 +291,8 @@ def _fallback_feature_plan(
 
     research_lines = _research_bullets(project_brief)
     reference_lines = _reference_bullets(project_brief)
+    structured_block = _structured_evidence_block(project_brief)
+    evidence_section = research_lines + ("\n" + structured_block if structured_block else "")
 
     return (
         "# Feature Plan\n\n"
@@ -264,7 +318,7 @@ def _fallback_feature_plan(
         "## Risks and Assumptions\n\n"
         f"{risks_lines}\n\n"
         "## Evidence\n\n"
-        f"{research_lines}\n\n"
+        f"{evidence_section}\n\n"
         "## References\n\n"
         f"{reference_lines}\n\n"
         "## Approval Request\n\n"
@@ -287,6 +341,8 @@ def _fallback_feature_spec(
     data_model = project_brief.get("data_model") or []
     research_lines = _research_bullets(project_brief)
     reference_lines = _reference_bullets(project_brief)
+    structured_block = _structured_evidence_block(project_brief)
+    evidence_section = research_lines + ("\n" + structured_block if structured_block else "")
 
     # User Scenarios: brief.user_flows 우선, 없으면 module summary 활용
     if user_flows:
@@ -368,7 +424,7 @@ def _fallback_feature_spec(
         "## Acceptance Criteria\n\n"
         f"{acceptance_text}\n\n"
         "## Evidence\n\n"
-        f"{research_lines}\n\n"
+        f"{evidence_section}\n\n"
         "## References\n\n"
         f"{reference_lines}\n\n"
         "## Out Of Scope\n\n"
@@ -391,6 +447,8 @@ def _fallback_impl_design(
     constraints = _clean_list(project_brief.get("constraints"))
     research_lines = _research_bullets(project_brief)
     reference_lines = _reference_bullets(project_brief)
+    structured_block = _structured_evidence_block(project_brief)
+    evidence_section = research_lines + ("\n" + structured_block if structured_block else "")
 
     # Design Summary: goal + architecture + tech stack
     tech_str = ", ".join(tech_stack) if tech_stack else ""
@@ -500,7 +558,7 @@ def _fallback_impl_design(
         "## Alternatives Considered\n\n"
         "- (edit required)\n\n"
         "## Design Evidence\n\n"
-        f"{research_lines}\n\n"
+        f"{evidence_section}\n\n"
         "## References\n\n"
         f"{reference_lines}\n\n"
         "## Test Strategy\n\n"

@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-20 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-21 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1536,6 +1536,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md, test_work_item_generator_structured_evidence.py |
+| 2026-05-21 | v1.2.28 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, work_item_generator.py, test_work_item_generator_structured_evidence.py |
 | 2026-05-20 | v1.2.28 | fix(review-safety-followups #3+#4): `scripts/review_gate.py` CLI에 `--t3-required {yes,no,unknown}` 옵션 추가 — `_cli`의 `--record` 분기에서 `record_review_done(..., t3_required=args.t3_required)` 전달. 디버그·재현 시 af-critic advisory 수동 주입 가능(다른 agent는 무시, fail-closed 유지). `_T3_SKIP_CLASSIFIER_VERSION`을 리터럴에서 `scripts.t3_classifier.CLASSIFIER_VERSION`의 dual-import 패턴으로 단일소스화 — 한쪽만 bump 시 silent BLOCK 회귀 차단. 회귀 테스트 4건 신규(`test_cli_record_with_t3_required_advisory` 외 3건). 139 PASS. 3-Tier af-critic/af-cross-review/af-test-runner PASS. 근거: `docs/2026-05-20-af-dogfooding-review-safety-followups.md` #3·#4(status: DONE). |
 | 2026-05-20 | v1.2.28 | docs(review-safety-followups #1+#2): `scripts/t3_classifier.py` 모듈 docstring(7-9) 정정 — "annotations are preserved as semantic"로 실제 `_CosmeticAstNormalizer` 동작(docstring만 strip)과 일치시킴. `scripts/prompts/code_critic.txt:48` af-critic 프롬프트 정정 — `no` 허용 범위를 "annotation-only"에서 "comment/docstring/whitespace-only"로 좁히고 type annotation = semantic(runtime-observable) 명시. 분류기-프롬프트 시그널 정합. 3-Tier af-critic / af-cross-review PASS + af-test-runner 38 PASS. 근거: `docs/2026-05-20-af-dogfooding-review-safety-followups.md` #1·#2. |
 | 2026-05-20 | v1.2.28 | fix(text-integrity): tracked project YAML files contained committed literal carriage-return control characters (`\r\r\n` style), not semantic YAML changes. Added `repeated_carriage_return` / `bare_carriage_return` suspicious markers in `core/text_integrity.py` and regression coverage in `tests/test_text_integrity.py` so future changed files fail text-integrity before the churn reaches review. |

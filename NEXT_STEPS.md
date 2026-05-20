@@ -118,7 +118,7 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
-### B. Research Router Phase 2 — structured evidence promotion ✅ B-1~B-2 완료 · B-3 step 1-3b 완료 (step 4 후행)
+### B. Research Router Phase 2 — structured evidence promotion ✅ B-1(fallback trace) · B-2 완료 · B-3 step 1-3b 완료 (step 4 후행)
 
 > 설계: `docs/2026-04-29-research-router-structured-evidence-design.md` §11 Phase 2 (L1139-1145)
 > 본질: **데이터는 이미 생성됨** — 뒤 파이프라인 소비처가 안 쓰는 게 문제. "Research Router 필드 연결"이 아니라 "structured evidence promotion".
@@ -128,9 +128,11 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - 생산자는 `core/researcher.py`의 structured evidence — `_synthesize_structured_evidence()`(researcher.py:455, fresh/deep/archive 모드) + `research_project_brief()`(fast_synthesis 모드). 생산자 2개.
 - `_merge_project_brief_evidence()`(researcher.py:1148-1156)가 `project_brief`에 복사하나 **`setdefault`** — brief에 값 있으면 evidence 값 미반영. 모드별 우선순위 상이.
 
-**B-1. `work_item_generator.py`** — 소비 *보장* 없음 (완전 폐기 아님)
-- LLM 경로(`work_item_generator.py:631/673/727`)는 `json.dumps(project_brief)` 전체를 프롬프트에 박음 → 3필드 값은 암묵 도달.
-- 빠진 것: 구조적 렌더링 + fallback 문서 명시 섹션. → fallback에 명시 섹션 추가.
+**B-1. `work_item_generator.py`** — ✅ **fallback trace 완료** (2026-05-21)
+- LLM 경로(`work_item_generator.py:631/673/727`)는 `json.dumps(project_brief)` 전체를 프롬프트에 박음 → 3필드 값은 암묵 도달 (변경 없음).
+- **완료**: `_inline()` sanitizer + `_skill_gap_bullets()` dict formatter + `_structured_evidence_block()` 추가. plan/spec/design fallback `## Evidence`/`## Design Evidence` 내부 sub-bullet으로 3필드 trace 보존. 새 `##` 헤더 없음 — `_extract_section_outline(expected_count=12)` 회귀 없음.
+- 회귀 테스트 12개 추가 (`tests/test_work_item_generator_structured_evidence.py`).
+- **후행**: LLM prompt structured evidence 명시 section(`work_item_generator.py:631/673/727`) — 현재 암묵 도달이므로 별도 라운드에서 효과 측정 분리.
 
 **B-2. `project_task_board.py`** — ✅ **완료·push** (`dd439f73`, 2026-05-18)
 - `build_project_board()`가 `project_brief`의 `verification_focus`를 verify 태스크 `acceptance`에 주입 (dedup 가드, LLM·fallback 공통 funnel).
