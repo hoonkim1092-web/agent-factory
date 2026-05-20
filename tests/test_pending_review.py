@@ -300,6 +300,7 @@ def test_enqueue_t3_classifier_stale_file_set_fails_closed(tmp_path, monkeypatch
             }
 
     fake = types.SimpleNamespace(
+        CLASSIFIER_VERSION="test",
         classify_t3_requirement=lambda workspace, files: FakeDecision(),
         record_skip_telemetry=lambda workspace, decision: None,
     )
@@ -334,6 +335,7 @@ def test_enqueue_telemetry_failure_does_not_drop_marker(tmp_path, monkeypatch):
             }
 
     fake = types.SimpleNamespace(
+        CLASSIFIER_VERSION="test",
         classify_t3_requirement=lambda workspace, files: FakeDecision(),
         record_skip_telemetry=lambda workspace, decision: (_ for _ in ()).throw(RuntimeError("boom")),
     )

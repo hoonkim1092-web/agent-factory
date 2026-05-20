@@ -119,7 +119,7 @@ def main() -> None:
             data["t3_decision"] = {
                 "decision": "require_t3",
                 "reason": "classifier-unavailable",
-                "classifier_version": "t3-deterministic-v1",
+                "classifier_version": CLASSIFIER_VERSION,
                 "files": expected_files,
                 "diff_summary": {},
             }
@@ -128,7 +128,7 @@ def main() -> None:
             data["t3_decision"] = {
                 "decision": "require_t3",
                 "reason": "classifier-stale-file-set",
-                "classifier_version": getattr(t3_decision, "classifier_version", "t3-deterministic-v1"),
+                "classifier_version": getattr(t3_decision, "classifier_version", CLASSIFIER_VERSION),
                 "files": expected_files,
                 "diff_summary": getattr(t3_decision, "diff_summary", {}),
             }
@@ -171,7 +171,11 @@ def main() -> None:
     t3_decision = None
     record_skip_telemetry_func = None
     try:
-        from t3_classifier import classify_t3_requirement, record_skip_telemetry  # type: ignore
+        from t3_classifier import (  # type: ignore
+            CLASSIFIER_VERSION,
+            classify_t3_requirement,
+            record_skip_telemetry,
+        )
         record_skip_telemetry_func = record_skip_telemetry
         current_files = [rel]
         if os.path.exists(marker):
@@ -186,6 +190,7 @@ def main() -> None:
         t3_decision = classify_t3_requirement(workspace, current_files)
     except Exception:
         t3_decision = None
+        CLASSIFIER_VERSION = "classifier-unavailable"
 
     try:
         if _state_lock is not None:
