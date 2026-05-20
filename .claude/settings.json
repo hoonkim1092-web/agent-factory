@@ -63,16 +63,6 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -95,44 +85,6 @@
           {
             "type": "command",
             "command": "python3 scripts/run.py check_model_escalation.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
