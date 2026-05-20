@@ -87,7 +87,14 @@ _TIER_AGENTS: dict[int, str] = {
     3: "af-cross-review",
 }
 _AGENT_TIER: dict[str, int] = {v: k for k, v in _TIER_AGENTS.items()}
-_T3_SKIP_CLASSIFIER_VERSION = "t3-deterministic-v1"
+
+# Single source of truth: classifier version is owned by scripts.t3_classifier.
+# _deterministic_t3_skip_candidate() compares state["t3_decision"]["classifier_version"]
+# against this constant; one-side bump → silent BLOCK regression.
+try:
+    from t3_classifier import CLASSIFIER_VERSION as _T3_SKIP_CLASSIFIER_VERSION
+except ImportError:  # pragma: no cover - import style differs under pytest/package use
+    from scripts.t3_classifier import CLASSIFIER_VERSION as _T3_SKIP_CLASSIFIER_VERSION  # type: ignore
 
 
 def _deterministic_t3_skip_candidate(state: dict) -> bool:
@@ -509,6 +516,12 @@ def _cli(argv: list[str] | None = None) -> int:
     group.add_argument("--debug", action="store_true", help="상태 + 판정 출력")
     parser.add_argument("--tier", type=int, choices=[1, 2, 3])
     parser.add_argument("--verdict", choices=["pass", "warn", "block", "fail"])
+    parser.add_argument(
+        "--t3-required",
+        choices=["yes", "no", "unknown"],
+        default=None,
+        help="af-critic T3 advisory (af-critic 레코드 시에만 의미. 다른 agent는 무시).",
+    )
     parser.add_argument("--files", default="", help="쉼표 구분 파일 목록")
     args = parser.parse_args(argv)
 
@@ -535,7 +548,7 @@ def _cli(argv: list[str] | None = None) -> int:
             return 1
         tier = args.tier if args.tier is not None else _AGENT_TIER[agent]
         verdict = args.verdict or "pass"
-        record_review_done(ws, agent, tier, verdict, files)
+        record_review_done(ws, agent, tier, verdict, files, t3_required=args.t3_required)
         print(f"[review_gate] 기록 완료: {agent} tier={tier} verdict={verdict}")
         return 0
 

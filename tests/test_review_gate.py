@@ -719,3 +719,58 @@ def test_workspace_path_consistency_via_log_event():
     workspace 하위 .af_review_queue/ 경로에 기록되는가."""
     # test_j_skip_gate_env 와 같은 보장이지만 path 자체에 초점.
     pass  # test_j_skip_gate_env가 동일 보장을 이미 다룸 — duplicate 방지
+
+
+# ── Followup #3+#4 (2026-05-20): --t3-required CLI + version single-source ───
+
+def test_cli_record_with_t3_required_advisory(ws):
+    """#3: --record af-critic --t3-required no → state['reviews']['af-critic']['t3_required']='no'."""
+    from scripts.review_gate import _cli
+    _write_state(ws, {"files": ["a.py"], "updated_at": time.time(), "created_at": time.time() - 1})
+    rc = _cli([
+        "--workspace", ws,
+        "--record", "af-critic",
+        "--verdict", "pass",
+        "--t3-required", "no",
+        "--files", "a.py",
+    ])
+    assert rc == 0
+    state = _load_state(ws)
+    assert state["reviews"]["af-critic"]["t3_required"] == "no"
+
+
+def test_cli_record_without_t3_required_defaults_to_unknown(ws):
+    """#3: --t3-required 미전달 시 af-critic 어드바이저리는 'unknown'으로 정규화 (fail-closed)."""
+    from scripts.review_gate import _cli
+    _write_state(ws, {"files": ["a.py"], "updated_at": time.time(), "created_at": time.time() - 1})
+    rc = _cli([
+        "--workspace", ws,
+        "--record", "af-critic",
+        "--verdict", "pass",
+        "--files", "a.py",
+    ])
+    assert rc == 0
+    state = _load_state(ws)
+    assert state["reviews"]["af-critic"]["t3_required"] == "unknown"
+
+
+def test_cli_record_t3_required_invalid_choice_rejected(ws):
+    """#3: argparse choices가 잘못된 advisory 값을 거부 (SystemExit). fail-closed 보호."""
+    from scripts.review_gate import _cli
+    _write_state(ws, {"files": ["a.py"], "updated_at": time.time(), "created_at": time.time() - 1})
+    with pytest.raises(SystemExit):
+        _cli([
+            "--workspace", ws,
+            "--record", "af-critic",
+            "--verdict", "pass",
+            "--t3-required", "maybe",
+            "--files", "a.py",
+        ])
+
+
+def test_t3_skip_classifier_version_single_source():
+    """#4: review_gate._T3_SKIP_CLASSIFIER_VERSION은 t3_classifier.CLASSIFIER_VERSION에서
+    import — 한쪽만 bump 시 silent BLOCK 회귀 차단."""
+    from scripts.review_gate import _T3_SKIP_CLASSIFIER_VERSION
+    from scripts.t3_classifier import CLASSIFIER_VERSION
+    assert _T3_SKIP_CLASSIFIER_VERSION == CLASSIFIER_VERSION
