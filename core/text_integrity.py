@@ -127,4 +127,8 @@ def find_suspicious_markers(text: str) -> list[str]:
         markers.append("question_mark_before_hangul")
     if any(token in sample for token in _CP1252_MOJIBAKE):
         markers.append("cp1252_utf8_mojibake")
+    if re.search(r"\r{2,}(?=\n|$)", sample):
+        markers.append("repeated_carriage_return")
+    if "\r" in sample.replace("\r\n", "\n"):
+        markers.append("bare_carriage_return")
     return markers

@@ -53,6 +53,18 @@ def test_find_suspicious_markers_detects_common_mojibake():
     assert "cp1252_utf8_mojibake" in find_suspicious_markers("\u00C3\u00A9")
 
 
+def test_find_suspicious_markers_allows_normal_crlf():
+    assert "bare_carriage_return" not in find_suspicious_markers("a\r\nb\r\n")
+    assert "repeated_carriage_return" not in find_suspicious_markers("a\r\nb\r\n")
+
+
+def test_find_suspicious_markers_detects_trailing_control_cr():
+    markers = find_suspicious_markers("a\r\r\nb\n")
+
+    assert "repeated_carriage_return" in markers
+    assert "bare_carriage_return" in markers
+
+
 def test_check_paths_against_revision_flags_new_mojibake(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir(parents=True, exist_ok=True)
@@ -71,6 +83,29 @@ def test_check_paths_against_revision_flags_new_mojibake(tmp_path: Path):
     issues = check_paths_against_revision(repo, "HEAD", [target])
 
     assert any(issue.code == "suspicious_text" for issue in issues)
+
+
+def test_check_paths_against_revision_flags_new_trailing_control_cr(tmp_path: Path):
+    repo = tmp_path / "repo_control_cr"
+    repo.mkdir(parents=True, exist_ok=True)
+
+    assert _git(repo, "init").returncode == 0
+    assert _git(repo, "config", "user.email", "test@example.com").returncode == 0
+    assert _git(repo, "config", "user.name", "Test User").returncode == 0
+
+    target = repo / "settings.yaml"
+    target.write_text("agent_overrides: {}\n", encoding="utf-8", newline="\n")
+    assert _git(repo, "add", "settings.yaml").returncode == 0
+    assert _git(repo, "commit", "-m", "init").returncode == 0
+
+    target.write_bytes(b"agent_overrides: {}\r\r\n")
+
+    issues = check_paths_against_revision(repo, "HEAD", [target])
+
+    assert any(
+        issue.code == "suspicious_text" and "carriage_return" in issue.message
+        for issue in issues
+    )
 
 
 def test_check_script_returns_nonzero_for_new_mojibake(tmp_path: Path):

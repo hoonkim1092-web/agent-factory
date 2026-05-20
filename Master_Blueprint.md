@@ -197,7 +197,7 @@
 | `core/template_input.py` | template input | `prompt_mission_template()` |
 | `core/terminal_bridge.py` | terminal bridge | `TerminalBridge` |
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
-| `core/text_integrity.py` | text integrity | `TextFileFormat`, `TextFileSnapshot` |
+| `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
 | `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함) |
 ### 서브디렉토리
@@ -1536,6 +1536,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-20 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, text_integrity.py, architect.yaml, logicdev.yaml (+13) |
+| 2026-05-20 | v1.2.28 | fix(text-integrity): tracked project YAML files contained committed literal carriage-return control characters (`\r\r\n` style), not semantic YAML changes. Added `repeated_carriage_return` / `bare_carriage_return` suspicious markers in `core/text_integrity.py` and regression coverage in `tests/test_text_integrity.py` so future changed files fail text-integrity before the churn reaches review. |
 | 2026-05-20 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, researcher.py, code-review.md, test_coverage_gate_hoist.py (+1) |
 | 2026-05-20 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, researcher.py, test_coverage_gate_hoist.py, test_research_system_regression.py |
 | 2026-05-19 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, skill_procurer.py, test_skill_procurer_reuse_gate.py |
