@@ -178,6 +178,183 @@ def test_g_all_tiers_pass(ws):
     assert reason == "all-tiers-passed"
 
 
+def test_g2_t3_skip_requires_only_tier1_and_tier2(ws):
+    """Deterministic cosmetic classifier may skip only Tier 3."""
+    files = ["core/cosmetic.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["blast_tier"] = 2
+    state["t3_required"] = False
+    state["t3_decision"] = {
+        "decision": "skip_t3",
+        "reason": "cosmetic-only-python-ast",
+        "classifier_version": "t3-deterministic-v1",
+        "files": files,
+        "diff_summary": {"added": 1, "deleted": 1},
+    }
+    state["reviews"] = {
+        "af-test-runner": {
+            "tier": 1,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed,
+        },
+        "af-critic": {
+            "tier": 2,
+            "verdict": "pass",
+            "t3_required": "no",
+            "files_snapshot": files,
+            "completed_at": completed + 1,
+        },
+    }
+    _write_state(ws, state)
+
+    blocked, reason = is_gate_blocked(ws)
+
+    assert not blocked
+    assert reason == "all-tiers-passed"
+
+
+def test_g2b_t3_skip_requires_critic_no_advisory(ws):
+    """If af-critic says yes/unknown, deterministic candidate still requires Tier 3."""
+    files = ["core/cosmetic.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["blast_tier"] = 2
+    state["t3_required"] = False
+    state["t3_decision"] = {
+        "decision": "skip_t3",
+        "reason": "cosmetic-only-python-ast",
+        "classifier_version": "t3-deterministic-v1",
+        "files": files,
+        "diff_summary": {"added": 1, "deleted": 1},
+    }
+    state["reviews"] = {
+        "af-test-runner": {
+            "tier": 1,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed,
+        },
+        "af-critic": {
+            "tier": 2,
+            "verdict": "pass",
+            "t3_required": "unknown",
+            "files_snapshot": files,
+            "completed_at": completed + 1,
+        },
+    }
+    _write_state(ws, state)
+
+    blocked, reason = is_gate_blocked(ws)
+
+    assert blocked
+    assert reason == "missing-tier-3"
+
+
+def test_g2c_critic_t3_escalation_rearms_pending_prompt(ws):
+    """When T2 escalates a deterministic skip candidate, pending hook must re-fire."""
+    files = ["core/cosmetic.py"]
+    now = time.time() - 100
+    _write_state(ws, {
+        "files": files,
+        "created_at": now - 10,
+        "updated_at": now,
+        "fired_at": now + 1,
+        "blast_tier": 2,
+        "t3_required": False,
+        "t3_decision": {
+            "decision": "skip_t3",
+            "reason": "cosmetic-only-python-ast",
+            "classifier_version": "t3-deterministic-v1",
+            "files": files,
+            "diff_summary": {"added": 1, "deleted": 1},
+        },
+        "reviews": {},
+    })
+
+    record_review_done(ws, "af-test-runner", 1, "pass", files)
+    record_review_done(ws, "af-critic", 2, "pass", files, t3_required="unknown")
+
+    state = _load_state(ws)
+    assert "fired_at" not in state
+    blocked, reason = is_gate_blocked(ws)
+    assert blocked
+    assert reason == "missing-tier-3"
+
+
+def test_g3_t3_skip_ignored_for_blast_tier3(ws):
+    """Hard-guard/Tier 3 queues cannot skip Tier 3 even with stale t3_required=false."""
+    files = ["scripts/t3_classifier.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["blast_tier"] = 3
+    state["t3_required"] = False
+    state["t3_decision"] = {
+        "decision": "skip_t3",
+        "reason": "cosmetic-only-python-ast",
+        "classifier_version": "t3-deterministic-v1",
+        "files": files,
+        "diff_summary": {"added": 1, "deleted": 1},
+    }
+    state["reviews"] = {
+        "af-test-runner": {
+            "tier": 1,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed,
+        },
+        "af-critic": {
+            "tier": 2,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed + 1,
+        },
+    }
+    _write_state(ws, state)
+
+    blocked, reason = is_gate_blocked(ws)
+
+    assert blocked
+    assert reason == "missing-tier-3"
+
+
+def test_g4_t3_skip_requires_matching_decision_files(ws):
+    """Stale/mismatched classifier state is fail-closed at gate time."""
+    files = ["core/current.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["blast_tier"] = 2
+    state["t3_required"] = False
+    state["t3_decision"] = {
+        "decision": "skip_t3",
+        "reason": "cosmetic-only-python-ast",
+        "classifier_version": "t3-deterministic-v1",
+        "files": ["core/old.py"],
+        "diff_summary": {"added": 1, "deleted": 1},
+    }
+    state["reviews"] = {
+        "af-test-runner": {
+            "tier": 1,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed,
+        },
+        "af-critic": {
+            "tier": 2,
+            "verdict": "pass",
+            "files_snapshot": files,
+            "completed_at": completed + 1,
+        },
+    }
+    _write_state(ws, state)
+
+    blocked, reason = is_gate_blocked(ws)
+
+    assert blocked
+    assert reason == "missing-tier-3"
+
+
 def test_h_verdict_block_without_env(ws, monkeypatch):
     """(h) verdict=block + AF_GATE_ALLOW_VERDICT_BLOCK 미설정 → BLOCK(verdict-block:...)."""
     monkeypatch.delenv("AF_GATE_ALLOW_VERDICT_BLOCK", raising=False)
@@ -410,7 +587,10 @@ def test_clear_no_stale_reset_when_last_round_had_block(ws):
 
 # ── Phase 2 v7 §7.2: `_extract_verdict_from_content` collision 회귀 (C1~C7) ─
 
-from scripts.review_gate import _extract_verdict_from_content  # noqa: E402
+from scripts.review_gate import (  # noqa: E402
+    _extract_t3_required_from_content,
+    _extract_verdict_from_content,
+)
 
 
 def test_c1_fence_inner_single_verdict_line():
@@ -502,6 +682,36 @@ def test_c7_no_fence_trailing_body_quote_known_limitation():
     )
     # 알려진 한계 — last-position이 trailing BLOCK 인용을 캡처
     assert _extract_verdict_from_content(content) == "block"
+
+
+def test_t3_advisory_parser_uses_last_value():
+    content = "t3_required: yes\nbody\n### T3 Advisory\n\nt3_required: no\n### Findings\n"
+    assert _extract_t3_required_from_content(content) == "no"
+
+
+def test_t3_advisory_parser_missing_is_unknown():
+    assert _extract_t3_required_from_content("### Verdict: PASS\n") == "unknown"
+
+
+def test_t3_advisory_parser_fence_only():
+    content = (
+        "outside t3_required: yes\n"
+        "<!-- final-verdict-start -->\n"
+        "### Verdict: PASS\n"
+        "t3_required: unknown\n"
+        "<!-- final-verdict-end -->\n"
+    )
+    assert _extract_t3_required_from_content(content) == "unknown"
+
+
+def test_t3_advisory_parser_conflicting_values_fail_closed():
+    content = "### T3 Advisory\n\nt3_required: yes\n### Findings\nexample: t3_required: no\n"
+    assert _extract_t3_required_from_content(content) == "yes"
+
+
+def test_t3_advisory_parser_multiple_values_without_section_unknown():
+    content = "t3_required: yes\nbody example t3_required: no\n"
+    assert _extract_t3_required_from_content(content) == "unknown"
 
 
 def test_workspace_path_consistency_via_log_event():

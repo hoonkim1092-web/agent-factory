@@ -36,6 +36,14 @@ _VERDICT_FENCE_RE = re.compile(
     r"<!--\s*final-verdict-start\s*-->(.*?)<!--\s*final-verdict-end\s*-->",
     re.DOTALL | re.IGNORECASE,
 )
+_T3_REQUIRED_RE = re.compile(
+    r"\bt3_required\s*[:\-]\s*(yes|no|unknown)\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+_T3_ADVISORY_SECTION_RE = re.compile(
+    r"^#{1,4}\s+T3 Advisory\b(.*?)(?=^#{1,4}\s+|\Z)",
+    re.DOTALL | re.IGNORECASE | re.MULTILINE,
+)
 
 
 def _extract_verdict_from_content(content: str) -> str | None:
@@ -61,12 +69,59 @@ def _extract_verdict_from_content(content: str) -> str | None:
     matches.sort(key=lambda t: t[0])
     return matches[-1][1]
 
+
+def _extract_t3_required_from_content(content: str) -> str:
+    """Parse af-critic's T3 advisory. Missing/invalid is fail-closed unknown."""
+    fence = _VERDICT_FENCE_RE.search(content)
+    target = fence.group(1) if fence else content
+    section = _T3_ADVISORY_SECTION_RE.search(target)
+    search_area = section.group(1) if section else target
+    matches = list(_T3_REQUIRED_RE.finditer(search_area))
+    if len(matches) != 1:
+        return "unknown"
+    return matches[0].group(1).lower()
+
 _TIER_AGENTS: dict[int, str] = {
     1: "af-test-runner",
     2: "af-critic",
     3: "af-cross-review",
 }
 _AGENT_TIER: dict[str, int] = {v: k for k, v in _TIER_AGENTS.items()}
+_T3_SKIP_CLASSIFIER_VERSION = "t3-deterministic-v1"
+
+
+def _deterministic_t3_skip_candidate(state: dict) -> bool:
+    """Fail-closed validation for deterministic Tier-3 skip candidate state."""
+    try:
+        blast = int(state.get("blast_tier", 2))
+    except (TypeError, ValueError):
+        return False
+    t3_decision = state.get("t3_decision") or {}
+    files = sorted(state.get("files") or [])
+    decision_files = sorted(t3_decision.get("files") or []) if isinstance(t3_decision, dict) else []
+    return (
+        blast == 2
+        and state.get("t3_required") is False
+        and isinstance(t3_decision, dict)
+        and t3_decision.get("decision") == "skip_t3"
+        and t3_decision.get("reason") == "cosmetic-only-python-ast"
+        and t3_decision.get("classifier_version") == _T3_SKIP_CLASSIFIER_VERSION
+        and decision_files == files
+    )
+
+
+def _critic_t3_advisory(state: dict) -> str | None:
+    reviews = state.get("reviews") or {}
+    critic = reviews.get("af-critic")
+    if not isinstance(critic, dict):
+        return None
+    value = str(critic.get("t3_required") or "unknown").lower()
+    return value if value in ("yes", "no", "unknown") else "unknown"
+
+
+def _allows_t3_skip(state: dict) -> bool:
+    """Final permission: deterministic candidate AND af-critic explicitly says no."""
+    return _deterministic_t3_skip_candidate(state) and _critic_t3_advisory(state) == "no"
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────────────────────────
@@ -160,7 +215,13 @@ def _required_tiers_for(state: dict) -> list[int]:
     - 이 함수가 blast_tier를 변경하거나 다른 곳에서 override하는 것은 금지된다.
     """
     blast = int(state.get("blast_tier", 2))
-    return [1] if blast == 1 else [1, 2, 3]
+    if blast == 1:
+        return [1]
+    if _deterministic_t3_skip_candidate(state) and _critic_t3_advisory(state) is None:
+        return [1, 2]
+    if _allows_t3_skip(state):
+        return [1, 2]
+    return [1, 2, 3]
 
 
 def is_gate_blocked(workspace: str) -> tuple[bool, str]:
@@ -237,6 +298,7 @@ def record_review_done(
     tier: int,
     verdict: str,
     files_snapshot: list[str] | None = None,
+    t3_required: str | None = None,
 ) -> None:
     """reviews[agent] 기록. 파일 락 + atomic write.
 
@@ -273,6 +335,13 @@ def record_review_done(
                 "completed_at": now,
                 "claim_id": _make_claim_id(agent, current_round, now),
             }
+            if agent == "af-critic":
+                advisory = str(t3_required or "unknown").lower()
+                state["reviews"][agent]["t3_required"] = (
+                    advisory if advisory in ("yes", "no", "unknown") else "unknown"
+                )
+                if _deterministic_t3_skip_candidate(state) and advisory != "no":
+                    state.pop("fired_at", None)
 
             # 라운드 종료 판정: 모든 required 에이전트가 round_started_at 이후 완료
             required = _required_tiers_for(state)

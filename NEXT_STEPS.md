@@ -168,6 +168,21 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - Tier 3 skip 조건 결정 (T3-only accepted finding rate < 10% 기준)
 - **1주 실측 데이터 없이 구현 금지**
 
+### C. AF Dogfooding Review Safety — Follow-ups (2026-05-20, 대기)
+
+> 설계: [docs/2026-05-20-af-dogfooding-review-safety.md](docs/2026-05-20-af-dogfooding-review-safety.md)
+> 후속: [docs/2026-05-20-af-dogfooding-review-safety-followups.md](docs/2026-05-20-af-dogfooding-review-safety-followups.md)
+
+본체 코드는 들어와 있고 106 테스트 PASS · fail-closed 동작 확인. 즉시 안전성 위협 없음.
+잔여 정합성 흠 4건 — 위 followups 문서에 근거·diff·블래스트 정리:
+
+- **#1 P1** `scripts/t3_classifier.py:7-9` 모듈 docstring이 "annotation 제거"라 거짓 기술 — 실제는 docstring만 제거. 텍스트 1줄 수정.
+- **#2 P2** `scripts/prompts/code_critic.txt:48` 프롬프트가 annotation-only에 "no" 허용 — deterministic은 semantic 처리. LLM 시그널 오염, 안전 구멍 아님.
+- **#3 P3** `scripts/review_gate.py` CLI에 `--t3-required` 부재 — 수동 advisory 주입 불가, fail-closed라 안전.
+- **#4 P3** `_T3_SKIP_CLASSIFIER_VERSION` 이 t3_classifier·review_gate에 이중 정의 — version bump 시 silent BLOCK 회귀 위험.
+
+권장 묶음: (#1+#2) 텍스트 커밋, (#3+#4) `review_gate.py` 동일 파일 커밋. 둘 다 hard-guard라 T3 라운드 각 1회.
+
 ---
 
 ## 📜 과거 이력 참조

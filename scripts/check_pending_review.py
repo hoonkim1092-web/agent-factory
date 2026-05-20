@@ -44,12 +44,17 @@ def _detect_workspace() -> str:
     return os.getcwd()
 
 
-def _agents_for_tier(tier: int) -> tuple[str, str]:
+def _agents_for_tier(tier: int, t3_skip_allowed: bool = False) -> tuple[str, str]:
     """(agent_list_str, instruction) 반환."""
     if tier == 1:
         return (
             "af-test-runner",
             "Tier 1 (저영향) — af-test-runner 1개만 실행하면 충분합니다.",
+        )
+    if t3_skip_allowed:
+        return (
+            "af-test-runner → af-critic",
+            "Tier 2 cosmetic-only — deterministic classifier가 Tier 3를 생략했습니다.",
         )
     return (
         "af-test-runner → af-critic → af-cross-review",
@@ -172,7 +177,12 @@ def main() -> None:
         if len(files) > 10:
             file_list += f" ... (+{len(files) - 10})"
 
-        agent_list, instruction = _agents_for_tier(blast_tier)
+        try:
+            from review_gate import _required_tiers_for  # type: ignore
+            t3_skip_allowed = blast_tier != 1 and 3 not in _required_tiers_for(data)
+        except Exception:
+            t3_skip_allowed = False
+        agent_list, instruction = _agents_for_tier(blast_tier, t3_skip_allowed)
         round_info = f" (round {round_count + 1}/{MAX_ROUNDS})"
 
         print(f"[af-review-pending] {len(files)}개 .py 파일이 교차검증 대기 중입니다{round_info}: {file_list}")

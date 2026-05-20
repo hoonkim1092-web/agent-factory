@@ -86,7 +86,11 @@ def main() -> None:
     except Exception:
         _state_lock = None  # type: ignore
 
-    def _do_update(new_file_tier: int) -> None:
+    def _do_update(
+        new_file_tier: int,
+        t3_decision: object | None,
+        record_skip_telemetry_func: object | None,
+    ) -> None:
         now = time.time()
 
         # 기존 마커 읽기
@@ -107,6 +111,35 @@ def main() -> None:
         # classify_with_content는 락 밖에서 미리 수행 (파일 I/O로 인한 3s 타임아웃 방지)
         existing_tier = int(data.get("blast_tier") or 2)
         data["blast_tier"] = max(existing_tier, new_file_tier)
+
+        expected_files = sorted(data.get("files") or [])
+        decision_files = sorted(getattr(t3_decision, "files", []) or [])
+        if t3_decision is None:
+            data["t3_required"] = True
+            data["t3_decision"] = {
+                "decision": "require_t3",
+                "reason": "classifier-unavailable",
+                "classifier_version": "t3-deterministic-v1",
+                "files": expected_files,
+                "diff_summary": {},
+            }
+        elif decision_files != expected_files:
+            data["t3_required"] = True
+            data["t3_decision"] = {
+                "decision": "require_t3",
+                "reason": "classifier-stale-file-set",
+                "classifier_version": getattr(t3_decision, "classifier_version", "t3-deterministic-v1"),
+                "files": expected_files,
+                "diff_summary": getattr(t3_decision, "diff_summary", {}),
+            }
+        else:
+            data["t3_required"] = bool(getattr(t3_decision, "t3_required", True))
+            data["t3_decision"] = t3_decision.to_state()
+            if not data["t3_required"] and record_skip_telemetry_func is not None:
+                try:
+                    record_skip_telemetry_func(workspace, t3_decision)
+                except Exception:
+                    pass
 
         # Phase 0 라운드 토큰: 새 라운드 시작 시점에만 set
         # round_started_at가 None이면 이전 라운드가 종료됐다는 뜻 → 새 라운드 시작
@@ -135,12 +168,31 @@ def main() -> None:
     except Exception:
         new_file_tier = 2
 
+    t3_decision = None
+    record_skip_telemetry_func = None
+    try:
+        from t3_classifier import classify_t3_requirement, record_skip_telemetry  # type: ignore
+        record_skip_telemetry_func = record_skip_telemetry
+        current_files = [rel]
+        if os.path.exists(marker):
+            try:
+                with open(marker, encoding="utf-8") as f:
+                    current_data = json.load(f)
+                current_files = list(current_data.get("files") or [])
+            except Exception:
+                current_files = [rel]
+        if rel not in current_files:
+            current_files.append(rel)
+        t3_decision = classify_t3_requirement(workspace, current_files)
+    except Exception:
+        t3_decision = None
+
     try:
         if _state_lock is not None:
             with _state_lock(workspace):
-                _do_update(new_file_tier)
+                _do_update(new_file_tier, t3_decision, record_skip_telemetry_func)
         else:
-            _do_update(new_file_tier)
+            _do_update(new_file_tier, t3_decision, record_skip_telemetry_func)
     except Exception:
         pass
 

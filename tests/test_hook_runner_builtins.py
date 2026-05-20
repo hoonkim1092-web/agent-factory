@@ -205,7 +205,7 @@ def test_post_agent_record_forces_fail_when_test_gap_analyzer_fails(monkeypatch,
     import scripts.review_gate as rg
     import scripts.test_gap_analyzer as tga
 
-    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict, **kw: recorded.append((workspace, agent, tier, verdict, kw.get("t3_required"))))
     monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/providers/cli.py"])
     monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
     monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "diff --git a/core/providers/cli.py b/core/providers/cli.py\n+shlex.split(raw)\n")
@@ -232,7 +232,7 @@ def test_post_agent_record_forces_fail_when_test_gap_analyzer_fails(monkeypatch,
     }
 
     assert m._post_agent_record(payload) == 0
-    assert recorded == [(str(tmp_path), "af-test-runner", 1, "fail")]
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "fail", None)]
     report_path = Path(tmp_path) / ".af_review_queue" / "test_gap_report.json"
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["verdict"] == "FAIL"
@@ -249,7 +249,7 @@ def test_post_agent_record_keeps_verdict_when_test_gap_analyzer_passes(monkeypat
     import scripts.review_gate as rg
     import scripts.test_gap_analyzer as tga
 
-    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict, **kw: recorded.append((workspace, agent, tier, verdict, kw.get("t3_required"))))
     monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/a.py"])
     monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
     monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "")
@@ -261,7 +261,7 @@ def test_post_agent_record_keeps_verdict_when_test_gap_analyzer_passes(monkeypat
     }
 
     assert m._post_agent_record(payload) == 0
-    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass")]
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass", None)]
 
 
 def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(monkeypatch, tmp_path):
@@ -279,7 +279,7 @@ def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(mon
     import scripts.review_gate as rg
     import scripts.test_gap_analyzer as tga
 
-    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict: recorded.append((workspace, agent, tier, verdict)))
+    monkeypatch.setattr(rg, "record_review_done", lambda workspace, agent, tier, verdict, **kw: recorded.append((workspace, agent, tier, verdict, kw.get("t3_required"))))
     monkeypatch.setattr(tga, "changed_files_from_pending", lambda workspace: ["core/a.py"])
     monkeypatch.setattr(tga, "changed_files_from_git", lambda workspace: [])
     monkeypatch.setattr(tga, "git_diff", lambda workspace, changed: "")
@@ -291,8 +291,34 @@ def test_post_agent_record_clears_stale_test_gap_report_when_analyzer_passes(mon
     }
 
     assert m._post_agent_record(payload) == 0
-    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass")]
+    assert recorded == [(str(tmp_path), "af-test-runner", 1, "pass", None)]
     assert not stale_report.exists()
+
+
+def test_post_agent_record_stores_critic_t3_advisory(monkeypatch, tmp_path):
+    m = _runner()
+    recorded = []
+
+    monkeypatch.setattr(m, "_project_root", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+
+    import scripts.review_gate as rg
+
+    monkeypatch.setattr(
+        rg,
+        "record_review_done",
+        lambda workspace, agent, tier, verdict, **kw: recorded.append(
+            (workspace, agent, tier, verdict, kw.get("t3_required"))
+        ),
+    )
+
+    payload = {
+        "tool_input": {"subagent_type": "af-critic"},
+        "tool_response": {"content": "### Verdict: PASS\n\nt3_required: no\n"},
+    }
+
+    assert m._post_agent_record(payload) == 0
+    assert recorded == [(str(tmp_path), "af-critic", 2, "pass", "no")]
 
 
 def test_apply_test_gap_verdict_does_not_modify_blast_tier_on_fail(monkeypatch, tmp_path):

@@ -398,11 +398,18 @@ def _post_agent_record(payload: dict) -> int:
 
     if subagent_type == "af-test-runner":
         verdict = _apply_test_gap_verdict(workspace, verdict)
+    t3_required = None
+    if subagent_type == "af-critic":
+        try:
+            from scripts.review_gate import _extract_t3_required_from_content  # type: ignore[import]
+            t3_required = _extract_t3_required_from_content(content)
+        except Exception:
+            t3_required = "unknown"
 
     try:
         from scripts.review_gate import record_review_done  # type: ignore[import]
         # M1: files_snapshot=None → record_review_done이 락 내부에서 직접 읽음 (TOCTOU 해소)
-        record_review_done(workspace, subagent_type, tier, verdict)
+        record_review_done(workspace, subagent_type, tier, verdict, t3_required=t3_required)
         _log_hook_event("post_agent_record", subagent_type, 0)
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))

@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import time
+import types
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -69,6 +70,56 @@ def test_first_fire_triggers_after_interval(tmp_path, monkeypatch, capsys):
     })
     m.main()
     assert "[af-review-pending]" in capsys.readouterr().out
+
+
+def test_first_fire_t3_skip_prints_two_agents(tmp_path, monkeypatch, capsys):
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    _write_marker(tmp_path, {
+        "files": ["core/cosmetic.py"],
+        "created_at": time.time() - 400,
+        "updated_at": time.time() - 400,
+        "blast_tier": 2,
+        "t3_required": False,
+        "t3_decision": {
+            "decision": "skip_t3",
+            "reason": "cosmetic-only-python-ast",
+            "classifier_version": "t3-deterministic-v1",
+            "files": ["core/cosmetic.py"],
+            "diff_summary": {"added": 1, "deleted": 1},
+        },
+    })
+    m.main()
+    out = capsys.readouterr().out
+    assert "af-test-runner" in out
+    assert "af-critic" in out
+    assert "af-cross-review" not in out
+
+
+def test_first_fire_t3_skip_ignored_for_blast_tier3_guidance(tmp_path, monkeypatch, capsys):
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    _write_marker(tmp_path, {
+        "files": ["scripts/t3_classifier.py"],
+        "created_at": time.time() - 400,
+        "updated_at": time.time() - 400,
+        "blast_tier": 3,
+        "t3_required": False,
+        "t3_decision": {
+            "decision": "skip_t3",
+            "reason": "cosmetic-only-python-ast",
+            "classifier_version": "t3-deterministic-v1",
+            "files": ["scripts/t3_classifier.py"],
+            "diff_summary": {"added": 1, "deleted": 1},
+        },
+    })
+    m.main()
+    out = capsys.readouterr().out
+    assert "af-cross-review" in out
 
 
 def test_first_fire_writes_fired_at(tmp_path, monkeypatch, capsys):
@@ -230,3 +281,88 @@ def test_enqueue_atomic_write_produces_valid_json(tmp_path, monkeypatch):
     assert p.exists()
     parsed = json.loads(p.read_text(encoding="utf-8"))
     assert isinstance(parsed["files"], list)
+
+
+def test_enqueue_t3_classifier_stale_file_set_fails_closed(tmp_path, monkeypatch):
+    class FakeDecision:
+        t3_required = False
+        classifier_version = "test"
+        files = ["core/new.py"]
+        diff_summary = {"added": 1, "deleted": 1}
+
+        def to_state(self):
+            return {
+                "decision": "skip_t3",
+                "reason": "cosmetic-only-python-ast",
+                "classifier_version": self.classifier_version,
+                "files": self.files,
+                "diff_summary": self.diff_summary,
+            }
+
+    fake = types.SimpleNamespace(
+        classify_t3_requirement=lambda workspace, files: FakeDecision(),
+        record_skip_telemetry=lambda workspace, decision: None,
+    )
+    monkeypatch.setitem(sys.modules, "t3_classifier", fake)
+    _write_marker(tmp_path, {
+        "files": ["core/existing.py"],
+        "created_at": time.time() - 10,
+        "updated_at": time.time() - 10,
+    })
+
+    _enqueue_main(tmp_path, monkeypatch, "core/new.py")
+
+    data = _read_marker(tmp_path)
+    assert data["t3_required"] is True
+    assert data["t3_decision"]["reason"] == "classifier-stale-file-set"
+
+
+def test_enqueue_telemetry_failure_does_not_drop_marker(tmp_path, monkeypatch):
+    class FakeDecision:
+        t3_required = False
+        classifier_version = "test"
+        files = ["core/foo.py"]
+        diff_summary = {"added": 1, "deleted": 1}
+
+        def to_state(self):
+            return {
+                "decision": "skip_t3",
+                "reason": "cosmetic-only-python-ast",
+                "classifier_version": "t3-deterministic-v1",
+                "files": self.files,
+                "diff_summary": self.diff_summary,
+            }
+
+    fake = types.SimpleNamespace(
+        classify_t3_requirement=lambda workspace, files: FakeDecision(),
+        record_skip_telemetry=lambda workspace, decision: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setitem(sys.modules, "t3_classifier", fake)
+
+    _enqueue_main(tmp_path, monkeypatch, "core/foo.py")
+
+    data = _read_marker(tmp_path)
+    assert data is not None
+    assert data["files"] == ["core/foo.py"]
+    assert data["t3_required"] is False
+
+
+def test_enqueue_classifier_unavailable_fails_closed_over_stale_skip(tmp_path, monkeypatch):
+    fake = types.SimpleNamespace(
+        classify_t3_requirement=lambda workspace, files: (_ for _ in ()).throw(RuntimeError("boom")),
+        record_skip_telemetry=lambda workspace, decision: None,
+    )
+    monkeypatch.setitem(sys.modules, "t3_classifier", fake)
+    _write_marker(tmp_path, {
+        "files": ["core/foo.py"],
+        "created_at": time.time() - 10,
+        "updated_at": time.time() - 10,
+        "t3_required": False,
+        "t3_decision": {"decision": "skip_t3", "reason": "old"},
+    })
+
+    _enqueue_main(tmp_path, monkeypatch, "core/foo.py")
+
+    data = _read_marker(tmp_path)
+    assert data["t3_required"] is True
+    assert data["t3_decision"]["reason"] == "classifier-unavailable"

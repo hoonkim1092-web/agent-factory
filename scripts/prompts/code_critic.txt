@@ -40,6 +40,14 @@ You will receive:
 
 ### Verdict: BLOCK / WARN / PASS
 
+### T3 Advisory
+
+t3_required: yes / no / unknown
+
+- Use `yes` when the change touches security, auth, tokens, shell/subprocess, hooks, gates, policy, deployment, DB sync, destructive file operations, or meaningful behavior.
+- Use `no` only when the change is clearly cosmetic/documentation/annotation-only and does not affect execution behavior.
+- Use `unknown` when unsure. Unknown is treated as requiring Tier 3.
+
 ### Findings
 
 1. [Severity] Title
