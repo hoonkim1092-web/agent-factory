@@ -2,7 +2,7 @@
 
 Date: 2026-05-20
 Parent design: [docs/2026-05-20-af-dogfooding-review-safety.md](2026-05-20-af-dogfooding-review-safety.md)
-Status: **DONE (2026-05-20)** — #1+#2 `89559a8d`, #3+#4 (이 커밋). 전체 후속 4건 흡수 완료.
+Status: **DONE (2026-05-20)** — #1+#2 `89559a8d`, #3+#4 `d3734717`. 전체 후속 4건 흡수 완료.
 
 ## 검증 시점 사실
 

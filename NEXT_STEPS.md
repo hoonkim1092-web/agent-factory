@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-20 KST** — research coverage-gate 수정 설계 완료(설계노트 + af-cross-review WARN). 다음: Sonnet으로 Step A+B 구현.
+> 마지막 업데이트: **2026-05-20 KST (afternoon)** — C follow-up 후속 리뷰 4건 적용 완료, 교차검증 대기. 아래 "🔍 C follow-up 후속 리뷰" 섹션 참조.
 
 ---
 
@@ -176,8 +176,22 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 후속 4건 전부 흡수:
 - ✅ **#1 P1** (`89559a8d`) `scripts/t3_classifier.py:7-9` 모듈 docstring 정정 — annotations preserved as semantic.
 - ✅ **#2 P2** (`89559a8d`) `scripts/prompts/code_critic.txt:48` 프롬프트 `no` 허용 범위 좁힘 + annotation=semantic 명시.
-- ✅ **#3 P3** (이 커밋) `scripts/review_gate.py` CLI에 `--t3-required` 옵션 추가 (choices=yes/no/unknown).
-- ✅ **#4 P3** (이 커밋) `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import하는 dual-import 패턴으로 단일소스화 — 회귀 테스트로 invariant 봉인.
+- ✅ **#3 P3** (`d3734717`) `scripts/review_gate.py` CLI에 `--t3-required` 옵션 추가 (choices=yes/no/unknown).
+- ✅ **#4 P3** (`d3734717`) `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import하는 dual-import 패턴으로 단일소스화 — 회귀 테스트로 invariant 봉인.
+
+### 🔍 C follow-up 후속 리뷰 (2026-05-20) — 4건 적용 완료, 교차검증 대기
+
+> 코덱스 + 추가 검토. 4건 findings 중 **3건 수용 / 1건 거절**. 적용 결과: 111 tests passed.
+
+- ✅ **#3 P0** `docs/2026-05-20-af-dogfooding-review-safety-followups.md:5` `(이 커밋)` → `d3734717` 치환.
+- ✅ **#4 P1** `tests/test_review_gate.py` non-critic invariant 회귀 테스트 추가 — CLI `--record af-test-runner --t3-required yes` → `reviews[af-test-runner]`에 `t3_required` 키 없음 + `fired_at` 보존. 가드(`scripts/review_gate.py:345`) mutation 시 정상 fail 확인.
+- ✅ **#1-a P2** `scripts/enqueue_agent_review.py` t3_decision=None 분기 `classifier_version` → `CLASSIFIER_VERSION` 변수 (except 분기에선 `"classifier-unavailable"` sentinel). sentinel은 `pending_agent_review.json.t3_decision.classifier_version` 필드에 forensic 마커로 남고 `reason: "classifier-unavailable"` 라벨과 일관 유지. *(주의: `t3_skip_telemetry.jsonl`은 `if decision.t3_required: return`으로 skip-only 기록이고 sentinel 분기는 t3_required=True이므로 telemetry/report 카운터에는 노출되지 않음 — af-cross-review WARN으로 사후 정정.)*
+- ✅ **#1-b P2** `scripts/enqueue_agent_review.py:174` try 블록에 `CLASSIFIER_VERSION` 동시 import → stale-file-set 분기 `getattr` fallback도 동일 변수로 단일소스화. T3Decision dataclass `classifier_version: str` 필수 필드 확인.
+- **#2 P? 거절** `scripts/review_gate.py:94` `ImportError` catch 확대 안 함. SyntaxError까지 sentinel로 숨기면 분류기 코드 깨짐을 hide → 진단성 저하. enqueue 측 fail-closed가 이미 SyntaxError까지 커버(`enqueue:187` `except Exception: t3_decision=None`). 상한은 `(ImportError, AttributeError)`.
+
+**부수 변경**: `tests/test_pending_review.py` 두 fake fixture에 `CLASSIFIER_VERSION="test"` 추가 — fake 모듈이 `t3_classifier`를 위장할 때 import 호환성. (NEXT_STEPS 사전 분석에서 놓친 영향.)
+
+**커밋 분리 권고**: #3+#4 한 커밋 / #1+fixture 별도 커밋 (enqueue 변경은 Tier 2 가능성).
 
 ---
 

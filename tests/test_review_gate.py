@@ -774,3 +774,45 @@ def test_t3_skip_classifier_version_single_source():
     from scripts.review_gate import _T3_SKIP_CLASSIFIER_VERSION
     from scripts.t3_classifier import CLASSIFIER_VERSION
     assert _T3_SKIP_CLASSIFIER_VERSION == CLASSIFIER_VERSION
+
+
+# ── Followup-of-followup #4 (2026-05-20): non-critic invariant guard ──────────
+
+def test_cli_record_non_critic_does_not_persist_t3_required(ws):
+    """non-critic agent의 --t3-required 인자는 reviews[agent]에 기록되지 않는다.
+
+    가드(review_gate.py: `if agent == "af-critic":`)가 풀리면 deterministic skip
+    candidate에서 af-test-runner advisory='yes'가 fired_at을 pop하여 재발화 루프 유발.
+    """
+    from scripts.review_gate import _cli
+    files = ["core/cosmetic.py"]
+    now = time.time() - 100
+    _write_state(ws, {
+        "files": files,
+        "created_at": now - 10,
+        "updated_at": now,
+        "fired_at": now + 1,
+        "blast_tier": 2,
+        "t3_required": False,
+        "t3_decision": {
+            "decision": "skip_t3",
+            "reason": "cosmetic-only-python-ast",
+            "classifier_version": "t3-deterministic-v1",
+            "files": files,
+            "diff_summary": {"added": 1, "deleted": 1},
+        },
+        "reviews": {},
+    })
+
+    rc = _cli([
+        "--workspace", ws,
+        "--record", "af-test-runner",
+        "--verdict", "pass",
+        "--t3-required", "yes",
+        "--files", "core/cosmetic.py",
+    ])
+    assert rc == 0
+
+    state = _load_state(ws)
+    assert "t3_required" not in state["reviews"]["af-test-runner"]
+    assert state.get("fired_at") == now + 1
