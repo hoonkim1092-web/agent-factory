@@ -4,8 +4,9 @@
 The classifier is intentionally conservative:
 - hard-guard paths always require Tier 3;
 - risk tokens in added or deleted diff lines always require Tier 3;
-- only Python changes that are AST-equivalent after removing docstrings and
-  annotations may skip Tier 3.
+- only Python changes that are AST-equivalent after removing docstrings
+  may skip Tier 3 (annotations are preserved as semantic — see
+  `_CosmeticAstNormalizer`).
 """
 from __future__ import annotations
 

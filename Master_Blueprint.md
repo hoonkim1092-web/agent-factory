@@ -1536,7 +1536,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
-| 2026-05-20 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, text_integrity.py, architect.yaml, logicdev.yaml (+13) |
+| 2026-05-20 | v1.2.28 | docs(review-safety-followups #1+#2): `scripts/t3_classifier.py` 모듈 docstring(7-9) 정정 — "annotations are preserved as semantic"로 실제 `_CosmeticAstNormalizer` 동작(docstring만 strip)과 일치시킴. `scripts/prompts/code_critic.txt:48` af-critic 프롬프트 정정 — `no` 허용 범위를 "annotation-only"에서 "comment/docstring/whitespace-only"로 좁히고 type annotation = semantic(runtime-observable) 명시. 분류기-프롬프트 시그널 정합. 3-Tier af-critic / af-cross-review PASS + af-test-runner 38 PASS. 근거: `docs/2026-05-20-af-dogfooding-review-safety-followups.md` #1·#2. |
 | 2026-05-20 | v1.2.28 | fix(text-integrity): tracked project YAML files contained committed literal carriage-return control characters (`\r\r\n` style), not semantic YAML changes. Added `repeated_carriage_return` / `bare_carriage_return` suspicious markers in `core/text_integrity.py` and regression coverage in `tests/test_text_integrity.py` so future changed files fail text-integrity before the churn reaches review. |
 | 2026-05-20 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, researcher.py, code-review.md, test_coverage_gate_hoist.py (+1) |
 | 2026-05-20 | v1.2.28 | chore(.claude): code update — settings.json, Master_Blueprint.md, researcher.py, test_coverage_gate_hoist.py, test_research_system_regression.py |
