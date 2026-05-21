@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-21 KST** — R1 self-run 실험 완료 (PASS). 다음: R4 fix(gemini 우선순위) 또는 A Phase 4(데이터 수집 후) 또는 backlog(G2/G4/G5) 중 선택.
+> 마지막 업데이트: **2026-05-21 KST** — R4 fix 완료 (`cf4754b9`). 다음: A Phase 4(데이터 수집 후) 또는 backlog(G2/G4/G5) 중 선택.
 
 ---
 
@@ -180,6 +180,12 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - ✅ **#2 P2** (`89559a8d`) `scripts/prompts/code_critic.txt:48` 프롬프트 `no` 허용 범위 좁힘 + annotation=semantic 명시.
 - ✅ **#3 P3** (`d3734717`) `scripts/review_gate.py` CLI에 `--t3-required` 옵션 추가 (choices=yes/no/unknown).
 - ✅ **#4 P3** (`d3734717`) `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import하는 dual-import 패턴으로 단일소스화 — 회귀 테스트로 invariant 봉인.
+
+### ✅ R4 Provider Priority Fix (2026-05-21) — DONE (`cf4754b9`)
+
+`GOOGLE_API_KEY` 없을 때 gemini_cli가 claude_cli보다 먼저 시도되어 3초 낭비하는 문제 수정.
+`_PROVIDER_KEY_ENVS` + `_has_required_credentials()` 추가, 정렬 키 2-tuple화.
+테스트 10건. 3-Tier PASS.
 
 ### ✅ R1 Self-Run 실험 (2026-05-21) — DONE
 
