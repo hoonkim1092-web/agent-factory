@@ -64,6 +64,9 @@
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | `run(workspace)` |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | `select_model()`, `log_routing()`, `store_pending_escalation()`, `get_pending_escalation()`, `clear_pending_escalation()` |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | `main()` |
+| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 deterministic classifier + af-critic `t3_required: no` 양쪽 합의일 때만 허용. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | `is_gate_blocked()`, `record_review_done()`, `clear_committed_files()`, `_required_tiers_for()`, `_deterministic_t3_skip_candidate()`, `_cli()` |
+| `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | `CLASSIFIER_VERSION`, `classify_t3_requirement()`, `record_skip_telemetry()` |
+| `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier 결과를 `.af_review_queue/pending_agent_review.json`에 atomic write | `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1200,7 +1203,7 @@ invalidate() → execution_open: false (재승인 필요)
 ```
 
 ### 3-Tier Review-Gate (§9)
-<!-- last_updated: 2026-05-01 -->
+<!-- last_updated: 2026-05-21 -->
 
 `.py` 파일을 포함한 커밋은 **af-test-runner → af-critic → af-cross-review** 순서로 3단계 교차검증을 완료해야 한다.
 
@@ -1209,6 +1212,14 @@ invalidate() → execution_open: false (재승인 필요)
 - `verdict` — 각 agent 검증 결과. 결정 주체: 해당 agent. `reviews[agent]`에 기록.
 - `routing_state` — 현재 필요한 tier 집합. `_required_tiers_for(state)` 순수 함수가 derived-only로 계산. 저장 안 함.
 - `review_gate.downgrade_blast_tier()` — DEPRECATED (NotImplementedError). 호출 금지.
+
+**Deterministic T3 skip 정책 (2026-05-20):**
+- T3 skip은 **최적화일 뿐 안전 기본값이 아니다**. 불확실하면 fail-closed로 Tier 3을 요구한다.
+- skip 후보 생성: `scripts/t3_classifier.py:classify_t3_requirement()`가 `decision=="skip_t3"`, `reason=="cosmetic-only-python-ast"`, `blast_tier==2`, 파일 목록 일치, `classifier_version==scripts.t3_classifier.CLASSIFIER_VERSION`일 때만 후보.
+- 최종 skip 허가: `review_gate._deterministic_t3_skip_candidate(state)` **AND** af-critic advisory `reviews["af-critic"]["t3_required"] == "no"`.
+- `scripts/review_gate.py`는 `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import한다. version 문자열은 classifier가 단일 원천이며, 한쪽만 bump되는 drift를 방지한다.
+- `scripts/review_gate.py --record af-critic --t3-required {yes,no,unknown}`은 af-critic advisory를 수동 기록한다. 다른 agent의 `--t3-required`는 저장되지 않으며 T3 skip 판단에 사용되지 않는다.
+- annotation-only 변경은 cosmetic으로 보지 않는다. Python annotations는 `__annotations__` 및 dataclass/Pydantic/FastAPI/CLI schema 등에서 런타임 관찰 가능하므로 semantic change로 취급한다.
 
 **test-gap gate (af-test-runner 전처리):**
 - `scripts/test_gap_analyzer.py`: diff에서 subprocess/shlex/sys.platform 위험 패턴 탐지. 관련 테스트에 cross-platform quoted-path 케이스 없으면 `verdict=FAIL`.
@@ -1245,8 +1256,17 @@ Layer 6: 3-Tier Review Gate
   "updated_at": 1234567891,
   "reviews": {
     "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": [...], "completed_at": ...},
-    "af-critic":      {"tier": 2, "verdict": "pass", "files_snapshot": [...], "completed_at": ...},
+    "af-critic":      {"tier": 2, "verdict": "pass", "t3_required": "no", "files_snapshot": [...], "completed_at": ...},
     "af-cross-review":{"tier": 3, "verdict": "pass", "files_snapshot": [...], "completed_at": ...}
+  },
+  "blast_tier": 2,
+  "t3_required": false,
+  "t3_decision": {
+    "decision": "skip_t3",
+    "reason": "cosmetic-only-python-ast",
+    "classifier_version": "t3-deterministic-v1",
+    "files": ["core/foo.py"],
+    "diff_summary": {"added": 1, "deleted": 1}
   }
 }
 ```
@@ -1259,6 +1279,7 @@ Layer 6: 3-Tier Review Gate
 | tier 1(af-test-runner) 미완료 | `missing-tier-1` |
 | tier 2(af-critic) 미완료 | `missing-tier-2` |
 | tier 3(af-cross-review) 미완료 | `missing-tier-3` |
+| deterministic T3 skip 후보 + af-critic `t3_required: no` | tier 3만 생략 가능 |
 | 리뷰 완료 후 파일 재편집 | `stale-review` |
 | tier-3 snapshot에 없는 `.py` 신규 추가 | `new-files-added` |
 | 어느 tier에서든 verdict=block/fail | `verdict-block:<agent>` |
@@ -1536,6 +1557,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | docs(blueprint-review-gate-sync): §0에 `scripts/review_gate.py` / `scripts/t3_classifier.py` / `scripts/enqueue_agent_review.py` 빠른 참조 행 추가. §3 3-Tier Review-Gate에 deterministic T3 skip 조건, af-critic `t3_required` advisory, classifier version 단일 원천(`scripts.t3_classifier.CLASSIFIER_VERSION`), annotation semantic 정책, `--t3-required` CLI 동작을 실제 구현 기준으로 명시. 근거: `docs/reviews/2026-05-20-190212-2026-05-20-af-dogfooding-review-safety-followups-design-review.md` Blueprint §0/§3 갱신 지적. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py |
 | 2026-05-21 | v1.2.28 | feat(B-1-후행): `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 명시 — required_capabilities=스킬조달신호, verification_focus=Evidence 하위 검증기준, skill_gap_hypotheses=reuse/enhance/forge계획신호, 새 ## 섹션 금지. 21 tests PASS (회귀 없음). |
