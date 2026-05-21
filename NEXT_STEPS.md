@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-21 KST** — G8/G7/G1 정합화 완료 (`529fa1a9`). G6도 기완료(`82e256a7`). 다음: Step 3 R1 .py self-run 실험 또는 backlog(G2/G4/G5) 중 선택.
+> 마지막 업데이트: **2026-05-21 KST** — R1 self-run 실험 완료 (PASS). 다음: R4 fix(gemini 우선순위) 또는 A Phase 4(데이터 수집 후) 또는 backlog(G2/G4/G5) 중 선택.
 
 ---
 
@@ -180,6 +180,15 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - ✅ **#2 P2** (`89559a8d`) `scripts/prompts/code_critic.txt:48` 프롬프트 `no` 허용 범위 좁힘 + annotation=semantic 명시.
 - ✅ **#3 P3** (`d3734717`) `scripts/review_gate.py` CLI에 `--t3-required` 옵션 추가 (choices=yes/no/unknown).
 - ✅ **#4 P3** (`d3734717`) `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import하는 dual-import 패턴으로 단일소스화 — 회귀 테스트로 invariant 봉인.
+
+### ✅ R1 Self-Run 실험 (2026-05-21) — DONE
+
+- **결과**: AF가 자기 `.py`를 수정하는 핵심 명제 **최초 증명**
+- scope: `core/utils.py` 단 1파일 수정 — scope leak 없음
+- claude_cli 17초 완료 (gemini_cli 폴백 포함 ~25초)
+- 마찰점: gemini 1순위 낭비(R4), 단순 작업에 57 skill 로드(노이즈), `"skill"` 오인식(무해)
+- 결과 문서: `docs/dogfooding/2026-05-21-r1-selfrun-result.md`
+- 실험 worktree: `r1-selfrun-exp` (수동 삭제 필요: `git worktree remove --force ...`)
 
 ### ✅ G8/G7/G1 정합화 (`529fa1a9`, 2026-05-21) — DONE
 
