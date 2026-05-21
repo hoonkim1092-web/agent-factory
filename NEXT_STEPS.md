@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-21 KST** — B-1 3-tier PASS + B-1 후행(LLM prompt) 완료. B 시리즈 전체 완료.
+> 마지막 업데이트: **2026-05-21 KST** — dogfooding 인프라 격차 분석 완료 (cross-review BLOCK 흡수). 다음 진입점: `docs/2026-05-21-af-dogfooding-infrastructure-gap-analysis.md` §6 (G8 → G7 → G1 → G6 순). 설계 불필요, Sonnet으로 코드 fix.
 
 ---
 
