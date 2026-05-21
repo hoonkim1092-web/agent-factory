@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-21 KST** — dogfooding 인프라 격차 분석 완료 (cross-review BLOCK 흡수). 다음 진입점: `docs/2026-05-21-af-dogfooding-infrastructure-gap-analysis.md` §6 (G8 → G7 → G1 → G6 순). 설계 불필요, Sonnet으로 코드 fix.
+> 마지막 업데이트: **2026-05-21 KST** — G8/G7/G1 정합화 완료 (`529fa1a9`). G6도 기완료(`82e256a7`). 다음: Step 3 R1 .py self-run 실험 또는 backlog(G2/G4/G5) 중 선택.
 
 ---
 
@@ -180,6 +180,16 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - ✅ **#2 P2** (`89559a8d`) `scripts/prompts/code_critic.txt:48` 프롬프트 `no` 허용 범위 좁힘 + annotation=semantic 명시.
 - ✅ **#3 P3** (`d3734717`) `scripts/review_gate.py` CLI에 `--t3-required` 옵션 추가 (choices=yes/no/unknown).
 - ✅ **#4 P3** (`d3734717`) `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import하는 dual-import 패턴으로 단일소스화 — 회귀 테스트로 invariant 봉인.
+
+### ✅ G8/G7/G1 정합화 (`529fa1a9`, 2026-05-21) — DONE
+
+- G8: `check_design_pending.py` → "af-cross-review 1개만" (2026-05-01 정책)
+- G7: `check_pending_review._agents_for_tier()` review-first 순서 + 전파 4곳
+- G1: `MAX_ROUNDS 2→5` (CLAUDE.md 기준) + `review_gate.py:282` 동반
+- G6: 기완료 (`82e256a7`)
+- 3-Tier: af-critic PASS / af-cross-review PASS / af-test-runner PASS
+
+---
 
 ### 🔍 C follow-up 후속 리뷰 (2026-05-20) — 4건 적용 완료, 교차검증 대기
 
