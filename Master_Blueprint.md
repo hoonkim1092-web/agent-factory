@@ -83,7 +83,7 @@
 | `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
 | `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write, `_MAX_LEVEL=5`, success 시 level/attempts 리셋) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
 | `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()`, `record_role_batch()` |
-| `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 | `auto_configure_cli_provider()` |
+| `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 (API 키 유무 기반 우선순위 정렬) | `auto_configure_cli_provider()`, `_has_required_credentials()` |
 | `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
 | `core/executor.py` | 태스크 실행 래퍼 | — |
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
@@ -876,7 +876,7 @@ Control-plane(Lilith, Evaluator)용 LLM 인터페이스.
 
 > **설계 결정: 프로바이더 우선순위 분리**
 > - Control-plane (`ControlPlaneLLM`): Claude 우선 — 정확한 JSON 판정이 핵심
-> - FSA 일반 실행 (`engine_auth`): Gemini 우선 — 리서치/탐색 작업에 최적화
+> - FSA 일반 실행 (`engine_auth`): API 키 있는 제공사 우선, 동순위 시 gemini → claude → codex 순 (2026-05-21 R4 fix: API 키 없는 gemini를 claude보다 먼저 시도해 3초 낭비하는 문제 해소)
 > - 이 분리는 의도적이며 통합하지 않는다
 
 ### §3.8.2 FailureClassifier (`core/failure_classifier.py`)
@@ -1558,8 +1558,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, engine_auth.py, interview.py, run_factory_cli.py, meta.yaml (+3) |
+| 2026-05-21 | v1.2.28 | fix(R4-provider-priority): `core/engine_auth.py` — API 키 없는 gemini_cli가 claude_cli보다 먼저 시도되어 3초 낭비하는 문제 수정. `_PROVIDER_KEY_ENVS` 상수 + `_has_required_credentials()` 헬퍼 추가. `auto_configure_cli_provider()` 정렬 키를 1차: API 키 유무(없으면 후순위), 2차: 고정 우선순위로 변경. `tests/test_engine_auth_provider_priority.py` 10건 신규. §0+§3.8.1+§12 갱신. 3-Tier af-critic PASS / af-cross-review WARN(advisory) / af-test-runner PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, interview.py, run_factory_cli.py, meta.yaml (+2) |
-| 2026-05-21 | v1.2.28 | feat(interview): 숨겨져 있던 clarification 엔진을 사용자-facing `af interview` 서브커맨드로 노출. `core/interview.py` 신규 — 질문 생성, 번호/기본값 답변 수집, `planning/interview_brief.json` 저장, `--non-interactive` 기본값 적용 지원. `run_factory_cli.py` STAGE1 dispatch/usage에 `interview` 추가, `af.spec` hiddenimports `core.interview` 추가, `tests/test_interview.py` 3건 추가. |
+| 2026-05-21 | v1.2.28 | feat(interview): 숨겨져 있던 clarification 엔진을 사용자-facing `af interview` 서브커맨드로 노출. `core/interview.py` 신규 — 질문 생성, 번호/기본값 답변 수집, `planning/interview_brief.json` 저장, `--non-interactive`/`--deep-skip` 기본값 적용 지원(질문/기본값은 LLM 생성, 하드코딩 fallback 없음). JSON write는 고유 tmp 파일 + `os.replace` atomic 패턴 사용. 저장 payload에 `auto_answered`/`deep_skip`/`interview_mode`를 분리 기록. `run_factory_cli.py` STAGE1 dispatch/usage에 `interview` 추가, `af.spec` hiddenimports `core.interview` 추가, `tests/test_interview.py` 5건 추가. |
 | 2026-05-21 | v1.2.28 | fix(G8/G7/G1): dogfooding 인프라 정합화 — G8: `check_design_pending.py` docstring+print를 "af-cross-review 1개만" 정책으로 정정. G7: `check_pending_review._agents_for_tier()` review-first 순서(`af-critic→af-cross-review→af-test-runner`)로 정합. G1: `MAX_ROUNDS 2→5` CLAUDE.md 기준으로 갱신 + `review_gate.py:282` 리터럴 동반 정합. 전파 표면 4곳(pre-commit/review_gate/hook_runner display strings, Blueprint §3) 동시 갱신. tests 41 PASS(test_review_gate_phase0 T8 fixture 5로 갱신). |
 | 2026-05-21 | v1.2.28 | docs(blueprint-review-gate-sync): §0에 `scripts/review_gate.py` / `scripts/t3_classifier.py` / `scripts/enqueue_agent_review.py` 빠른 참조 행 추가. §3 3-Tier Review-Gate에 deterministic T3 skip 조건, af-critic `t3_required` advisory, classifier version 단일 원천(`scripts.t3_classifier.CLASSIFIER_VERSION`), annotation semantic 정책, `--t3-required` CLI 동작을 실제 구현 기준으로 명시. 근거: `docs/reviews/2026-05-20-190212-2026-05-20-af-dogfooding-review-safety-followups-design-review.md` Blueprint §0/§3 갱신 지적. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md |

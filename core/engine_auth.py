@@ -29,10 +29,29 @@ _CLI_BOOTSTRAP_PROVIDERS = {
     "codex_cli",
 }
 
+# Provider → required API key env vars. Absence → deprioritize in auto-sort.
+# Providers absent here (e.g. claude_cli) use CLI-native auth and are always assumed available.
+_PROVIDER_KEY_ENVS: dict[str, tuple[str, ...]] = {
+    "gemini_cli": ("GOOGLE_API_KEY", "GEMINI_API_KEY"),
+    "codex_cli": ("OPENAI_API_KEY",),
+}
+
 
 def _truthy_env(name: str) -> bool:
     value = str(os.getenv(name, "") or "").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def _has_required_credentials(provider_id: str) -> bool:
+    """Return True if the provider's required API key env vars are present.
+
+    Providers not in _PROVIDER_KEY_ENVS use CLI-native auth (e.g. claude_cli)
+    and are always considered available.
+    """
+    required_envs = _PROVIDER_KEY_ENVS.get(provider_id)
+    if not required_envs:
+        return True
+    return any(os.getenv(e, "").strip() for e in required_envs)
 
 
 def _config_value(name: str, env_keys: tuple[str, ...]) -> str:
@@ -87,7 +106,7 @@ def auto_configure_cli_provider() -> str | None:
 
     AGENT_CHAT_PROVIDER 환경변수를 직접 쓰지 않는다.
     이미 런타임 레지스트리 또는 환경변수로 설정된 경우 건드리지 않는다.
-    탐색 우선순위: gemini_cli → claude_cli → codex_cli
+    탐색 우선순위: API 키 있는 제공사 먼저, 그 다음 gemini_cli → claude_cli → codex_cli
 
     반환값: 자동 선택된 프로바이더 ID (예: "gemini_cli") 또는 None
     """
@@ -121,8 +140,15 @@ def auto_configure_cli_provider() -> str | None:
         return None
 
     # 설치된 모든 프로바이더를 등록 (우선순위 순 정렬)
+    # 1차 키: API 키 환경변수 유무 (없으면 1 → 후순위), 2차 키: 고정 우선순위
     _PRIORITY = ["gemini_cli", "claude_cli", "codex_cli"]
-    sorted_installed = sorted(installed, key=lambda p: _PRIORITY.index(p) if p in _PRIORITY else len(_PRIORITY))
+    sorted_installed = sorted(
+        installed,
+        key=lambda p: (
+            0 if _has_required_credentials(p) else 1,
+            _PRIORITY.index(p) if p in _PRIORITY else len(_PRIORITY),
+        ),
+    )
     primary = sorted_installed[0]
 
     # 환경변수 대신 런타임 레지스트리에 설정 — 전체 등록
