@@ -1558,6 +1558,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, code-review.md, run_factory_cli.py, meta.yaml (+2) |
+| 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, run_factory_cli.py, meta.yaml, skill-spec.yaml (+1) |
+| 2026-05-21 | v1.2.28 | feat(interview-deep-skip): `--deep-skip` 플래그 추가 — `run_interview()` `deep_skip` 파라미터, `should_auto_answer` 통합, payload `auto_answered`/`deep_skip`/`interview_mode` 필드. `_write_json` tempfile.mkstemp + 예외 cleanup 안전화. `run_factory_cli.py` usage 1줄. `tests/test_interview.py` 3케이스 신규. 3-Tier PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, engine_auth.py, interview.py, run_factory_cli.py, meta.yaml (+3) |
 | 2026-05-21 | v1.2.28 | fix(R4-provider-priority): `core/engine_auth.py` — API 키 없는 gemini_cli가 claude_cli보다 먼저 시도되어 3초 낭비하는 문제 수정. `_PROVIDER_KEY_ENVS` 상수 + `_has_required_credentials()` 헬퍼 추가. `auto_configure_cli_provider()` 정렬 키를 1차: API 키 유무(없으면 후순위), 2차: 고정 우선순위로 변경. `tests/test_engine_auth_provider_priority.py` 10건 신규. §0+§3.8.1+§12 갱신. 3-Tier af-critic PASS / af-cross-review WARN(advisory) / af-test-runner PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, interview.py, run_factory_cli.py, meta.yaml (+2) |

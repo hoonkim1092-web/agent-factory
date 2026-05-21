@@ -66,6 +66,67 @@ def test_run_interview_non_interactive_applies_defaults(tmp_path):
     assert result["ok"] is True
     assert result["answers"] == ["웹"]
     assert result["project_brief"]["architecture_style"] == "웹"
+    assert result["auto_answered"] is True
+    assert result["deep_skip"] is False
+    assert result["interview_mode"] == "non_interactive"
+
+
+def test_run_interview_deep_skip_applies_llm_defaults_without_prompting(tmp_path):
+    from core.interview import run_interview
+
+    questions = [
+        {
+            "id": "Q1",
+            "category": "scope",
+            "question": "우선 범위?",
+            "options": ["목록만", "목록+상세"],
+            "default": "목록+상세",
+        }
+    ]
+
+    def fail_input(_prompt):
+        raise AssertionError("deep-skip must not prompt for input")
+
+    with patch("core.interview.generate_clarification_questions", return_value=questions):
+        result = run_interview(
+            "팟캐스트 라이브러리 만들기",
+            workspace=str(tmp_path),
+            deep_skip=True,
+            input_fn=fail_input,
+        )
+
+    assert result["ok"] is True
+    assert result["answers"] == ["목록+상세"]
+    assert result["auto_answered"] is True
+    assert result["deep_skip"] is True
+    assert result["interview_mode"] == "deep_skip"
+    assert "목록+상세" in result["project_brief"]["deliverables"]
+
+
+def test_run_interview_interactive_records_mode(tmp_path):
+    from core.interview import run_interview
+
+    questions = [
+        {
+            "id": "Q1",
+            "category": "ui",
+            "question": "UI 형태?",
+            "options": ["웹", "CLI"],
+            "default": "웹",
+        }
+    ]
+
+    with patch("core.interview.generate_clarification_questions", return_value=questions):
+        result = run_interview(
+            "설정 화면 만들기",
+            workspace=str(tmp_path),
+            input_fn=lambda _prompt: "",
+            print_fn=lambda _text: None,
+        )
+
+    assert result["auto_answered"] is False
+    assert result["deep_skip"] is False
+    assert result["interview_mode"] == "interactive"
 
 
 def test_cli_main_requires_task(capsys):

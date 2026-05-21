@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from typing import Any, Callable
 
 from core.clarification import (
@@ -29,11 +30,18 @@ def _write_json(path: str, payload: dict[str, Any]) -> None:
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    tmp_path = f"{path}.tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp_path, path)
+    fd, tmp_path = tempfile.mkstemp(dir=directory or ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def collect_answers(
@@ -93,6 +101,7 @@ def run_interview(
     run_id: str = "",
     output_path: str | None = None,
     non_interactive: bool = False,
+    deep_skip: bool = False,
     input_fn: InputFn = input,
     print_fn: PrintFn = print,
 ) -> dict[str, Any]:
@@ -112,7 +121,8 @@ def run_interview(
         workspace=target_workspace,
         run_id=run_id,
     )
-    if non_interactive:
+    should_auto_answer = bool(non_interactive or deep_skip)
+    if should_auto_answer:
         enriched = auto_apply_defaults(base_brief, questions)
         answers = [entry.get("answer", "") for entry in enriched.get("clarification_log", [])]
     else:
@@ -126,6 +136,11 @@ def run_interview(
         "task_input": task,
         "questions": questions,
         "answers": answers,
+        "auto_answered": should_auto_answer,
+        "deep_skip": bool(deep_skip),
+        "interview_mode": (
+            "deep_skip" if deep_skip else "non_interactive" if non_interactive else "interactive"
+        ),
         "project_brief": enriched,
     }
     path = output_path or _default_output_path(target_workspace)
@@ -143,6 +158,7 @@ def cli_main(argv: list[str] | None = None) -> None:
     parser.add_argument("--workspace", "-w", default=None, help="결과를 저장할 workspace")
     parser.add_argument("--out", default=None, help="interview JSON 출력 경로")
     parser.add_argument("--non-interactive", action="store_true", help="질문 기본값을 자동 적용")
+    parser.add_argument("--deep-skip", action="store_true", help="LLM이 생성한 질문의 기본값으로 알아서 진행")
     args = parser.parse_args(argv)
 
     task = " ".join(args.task).strip()
@@ -154,6 +170,7 @@ def cli_main(argv: list[str] | None = None) -> None:
         workspace=args.workspace,
         output_path=args.out,
         non_interactive=args.non_interactive,
+        deep_skip=args.deep_skip,
     )
     if not result.get("ok"):
         raise SystemExit(1)

@@ -669,7 +669,7 @@ _STAGE1_USAGE = {
     "warning-override": "usage: af warning-override --workspace PATH --slug SLUG --rule RULE --reason TEXT [--remove]   # P2 false-positive override",
     "warning-stats":    "usage: af warning-stats --workspace PATH [--slug SLUG] [--rule RULE] [--top N] [--phase PHASE]    # P3 workspace 전체 분포 통계",
     "warning-export":   "usage: af warning-export --workspace PATH --format {csv,json} [--slug SLUG] [--rule RULE] [--phase PHASE] [--mode {records,summary}] [--out PATH]    # P3 회의용 산출물 추출",
-    "interview":         "usage: af interview [--workspace PATH] [--out PATH] [--non-interactive] TASK...    # 요구사항 딥 인터뷰",
+    "interview":         "usage: af interview [--workspace PATH] [--out PATH] [--non-interactive|--deep-skip] TASK...    # 요구사항 딥 인터뷰",
 }
 
 

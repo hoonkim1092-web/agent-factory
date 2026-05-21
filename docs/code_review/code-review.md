@@ -6240,3 +6240,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (8)**: `Master_Blueprint.md, core/engine_auth.py, core/interview.py, run_factory_cli.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, tests/test_engine_auth_provider_priority.py, tests/test_interview.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-21 18:31 — `2026-05-20-research-coverage-gate` (5e8d9ce0)
+
+**Context**: Claude Code edit session
+
+**Changed (6)**: `Master_Blueprint.md, core/interview.py, run_factory_cli.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, tests/test_interview.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
