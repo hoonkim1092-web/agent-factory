@@ -316,7 +316,7 @@ def _pre_bash_review_gate(payload: dict) -> int:
         if blocked:
             print(
                 f"\n⛔ [review-gate] 교차검증 미완료: {reason}\n"
-                "   af-test-runner → af-critic → af-cross-review 순서로 Agent 실행 후 재시도.\n"
+                "   af-critic → af-cross-review → af-test-runner 순서로 Agent 실행 후 재시도.\n"
                 "   우회: AF_SKIP_REVIEW_GATE=1",
                 file=sys.stderr,
             )

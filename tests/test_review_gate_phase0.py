@@ -276,7 +276,7 @@ def test_t7_clear_resets_round_metadata(ws):
 
 
 def test_t8_block_verdict_checked_even_when_rounds_capped(ws):
-    """round_count >= 2이고 stale이어도 BLOCK verdict는 차단되어야 한다.
+    """round_count >= MAX_ROUNDS(5)이고 stale이어도 BLOCK verdict는 차단되어야 한다.
 
     Critical #2: rounds-capped 분기가 BLOCK 검사를 우회하면 안 됨.
     """
@@ -287,7 +287,7 @@ def test_t8_block_verdict_checked_even_when_rounds_capped(ws):
         "created_at": completed - 200,
         "updated_at": time.time(),  # stale (재편집 발생)
         "blast_tier": 2,
-        "round_count": 2,  # cap 도달
+        "round_count": 5,  # cap 도달 (MAX_ROUNDS=5)
         "reviews": {
             "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": files, "completed_at": completed},
             "af-critic": {"tier": 2, "verdict": "block", "files_snapshot": files, "completed_at": completed + 1},

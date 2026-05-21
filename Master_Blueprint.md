@@ -1205,7 +1205,7 @@ invalidate() → execution_open: false (재승인 필요)
 ### 3-Tier Review-Gate (§9)
 <!-- last_updated: 2026-05-21 -->
 
-`.py` 파일을 포함한 커밋은 **af-test-runner → af-critic → af-cross-review** 순서로 3단계 교차검증을 완료해야 한다.
+`.py` 파일을 포함한 커밋은 **af-critic → af-cross-review → af-test-runner** 순서로 3단계 교차검증을 완료해야 한다. (review-first pattern)
 
 **Phase 1 blast_tier/verdict/routing_state 3-개념 분리 (2026-05-01):**
 - `blast_tier` — 변경 영향 범위. 결정 주체: `blast_radius.py` + `enqueue_agent_review.py:109` max-merge만. **enqueue 이후 불변**.
@@ -1557,6 +1557,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | fix(G8/G7/G1): dogfooding 인프라 정합화 — G8: `check_design_pending.py` docstring+print를 "af-cross-review 1개만" 정책으로 정정. G7: `check_pending_review._agents_for_tier()` review-first 순서(`af-critic→af-cross-review→af-test-runner`)로 정합. G1: `MAX_ROUNDS 2→5` CLAUDE.md 기준으로 갱신 + `review_gate.py:282` 리터럴 동반 정합. 전파 표면 4곳(pre-commit/review_gate/hook_runner display strings, Blueprint §3) 동시 갱신. tests 41 PASS(test_review_gate_phase0 T8 fixture 5로 갱신). |
 | 2026-05-21 | v1.2.28 | docs(blueprint-review-gate-sync): §0에 `scripts/review_gate.py` / `scripts/t3_classifier.py` / `scripts/enqueue_agent_review.py` 빠른 참조 행 추가. §3 3-Tier Review-Gate에 deterministic T3 skip 조건, af-critic `t3_required` advisory, classifier version 단일 원천(`scripts.t3_classifier.CLASSIFIER_VERSION`), annotation semantic 정책, `--t3-required` CLI 동작을 실제 구현 기준으로 명시. 근거: `docs/reviews/2026-05-20-190212-2026-05-20-af-dogfooding-review-safety-followups-design-review.md` Blueprint §0/§3 갱신 지적. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py |

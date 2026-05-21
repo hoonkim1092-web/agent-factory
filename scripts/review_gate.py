@@ -279,7 +279,7 @@ def is_gate_blocked(workspace: str) -> tuple[bool, str]:
     if updated_at > min_completed:
         # Phase 0: max_rounds 도달 후엔 stale 차단만 건너뛰고 BLOCK 검사로 fall-through
         # (Critical fix: BLOCK verdict는 무조건 검사되어야 함 — AF_SKIP_REVIEW_GATE 외 우회 금지)
-        if int(state.get("round_count", 0)) < 2:
+        if int(state.get("round_count", 0)) < 5:
             return True, "stale-review"
 
     # 6. 신규 파일 추가 체크: 가장 높은 필수 tier의 snapshot 기준
@@ -533,7 +533,7 @@ def _cli(argv: list[str] | None = None) -> int:
         if blocked:
             print(f"⛔ [review-gate] BLOCK: {reason}", file=sys.stderr)
             print(
-                "   af-test-runner → af-critic → af-cross-review 순서로 Agent 실행 후 재시도.",
+                "   af-critic → af-cross-review → af-test-runner 순서로 Agent 실행 후 재시도.",
                 file=sys.stderr,
             )
             print("   우회: AF_SKIP_REVIEW_GATE=1 git commit ...", file=sys.stderr)

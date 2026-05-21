@@ -6,8 +6,8 @@ UserPromptSubmit hook에서 호출.
 편집된 .py 파일이 교차검증 대기 중인지 확인하고,
 대기 중이면 Claude Code에 에이전트 실행을 지시하는 메시지를 출력한다.
 
-Phase 0 정책 (2026-04-30 — Proof-Carrying Review 도입 전 단계):
-- max_rounds=2 캡: round_count >= 2면 더 이상 발화 안 함
+Phase 0 정책 (2026-04-30 ~):
+- max_rounds=5 캡: round_count >= 5면 더 이상 발화 안 함
 - WARN-only no-fire: 직전 라운드에 BLOCK이 없었으면 (전부 WARN/PASS) 재발화 안 함
 - Tier 1 경량화: blast_tier == 1 이면 af-test-runner만 실행 권고
 
@@ -26,8 +26,8 @@ MARKER_PATH = os.path.join(".af_review_queue", "pending_agent_review.json")
 # updated_at 기준으로 계산 → 재편집 시 타이머 리셋
 MIN_BATCH_INTERVAL_SEC = 90
 
-# Phase 0: 한 큐가 발화될 수 있는 최대 라운드 수 — 무한루프 차단
-MAX_ROUNDS = 2
+# Phase 0 → 현재: 한 큐가 발화될 수 있는 최대 라운드 수 — 무한루프 차단
+MAX_ROUNDS = 5
 
 
 def _detect_workspace() -> str:
@@ -53,11 +53,11 @@ def _agents_for_tier(tier: int, t3_skip_allowed: bool = False) -> tuple[str, str
         )
     if t3_skip_allowed:
         return (
-            "af-test-runner → af-critic",
+            "af-critic → af-test-runner",
             "Tier 2 cosmetic-only — deterministic classifier가 Tier 3를 생략했습니다.",
         )
     return (
-        "af-test-runner → af-critic → af-cross-review",
+        "af-critic → af-cross-review → af-test-runner",
         "Tier 2~3 — 위 3개 에이전트를 순서대로 실행하세요.",
     )
 

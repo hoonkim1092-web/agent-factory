@@ -6,7 +6,7 @@ UserPromptSubmit hook에서 호출.
 설계 문서 교차검증 큐(.af_review_queue/pending/design/)를 확인하고,
 새 항목이 있으면 [af-design-review-pending] 메시지를 출력한다.
 
-Claude Code는 이 출력을 보고 af-critic + af-cross-review를 병렬 실행한다.
+Claude Code는 이 출력을 보고 af-cross-review를 실행한다.
 
 debounce 메커니즘:
   - 큐 파일은 enqueue() 호출마다 덮어써져 mtime이 갱신되므로 mtime 사용 금지.
@@ -150,7 +150,7 @@ def main() -> None:
         file_list += f" ... (+{n - 10})"
 
     print(f"[af-design-review-pending] {n}개 설계문서가 교차검증 대기 중입니다: {file_list}")
-    print(f"[af-design-review-pending] af-critic + af-cross-review 에이전트를 병렬 실행해주세요.")
+    print(f"[af-design-review-pending] af-cross-review 에이전트를 실행해주세요. (af-critic은 설계문서에 효과 없음 — 2026-05-01 정책)")
 
     # 발화 기록 (모든 candidate에 대해 — 같은 턴에 한 번에 다 처리됨)
     for _, fname, _ in candidates:

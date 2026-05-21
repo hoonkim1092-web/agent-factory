@@ -62,7 +62,7 @@ if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
     if [ $GATE_EXIT -ne 0 ]; then
         echo ""
         echo "⛔ [pre-commit] 교차검증 미완료."
-        echo "   af-test-runner → af-critic → af-cross-review 순서로 Agent 툴 실행 후 재시도."
+        echo "   af-critic → af-cross-review → af-test-runner 순서로 Agent 툴 실행 후 재시도."
         echo "   우회: AF_SKIP_REVIEW_GATE=1 git commit ..."
         echo ""
         exit 1
