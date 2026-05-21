@@ -94,6 +94,7 @@ a = Analysis(
         'core.ingestion_pipeline',
         'core.install_candidate_utils',
         'core.intent',
+        'core.interview',
         'core.interactive_chat',
         # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
         'core.ise_analyzer',

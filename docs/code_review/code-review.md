@@ -6220,3 +6220,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, NEXT_STEPS.md, core/work_item_generator.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-21 16:55 — `2026-05-20-research-coverage-gate` (39b527ce)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `Master_Blueprint.md, af.spec, core/interview.py, run_factory_cli.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, tests/test_interview.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

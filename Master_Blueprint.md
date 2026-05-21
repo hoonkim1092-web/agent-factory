@@ -147,6 +147,7 @@
 | `core/agent_reservation.py` | agent reservation | `AgentLease`, `AgentReservationManager` |
 | `core/capability_intent.py` | capability intent | — |
 | `core/clarification.py` | clarification | `generate_clarification_questions()`, `should_skip_clarification()`, `merge_clarification()` |
+| `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1557,6 +1558,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, interview.py, run_factory_cli.py, meta.yaml (+2) |
+| 2026-05-21 | v1.2.28 | feat(interview): 숨겨져 있던 clarification 엔진을 사용자-facing `af interview` 서브커맨드로 노출. `core/interview.py` 신규 — 질문 생성, 번호/기본값 답변 수집, `planning/interview_brief.json` 저장, `--non-interactive` 기본값 적용 지원. `run_factory_cli.py` STAGE1 dispatch/usage에 `interview` 추가, `af.spec` hiddenimports `core.interview` 추가, `tests/test_interview.py` 3건 추가. |
 | 2026-05-21 | v1.2.28 | fix(G8/G7/G1): dogfooding 인프라 정합화 — G8: `check_design_pending.py` docstring+print를 "af-cross-review 1개만" 정책으로 정정. G7: `check_pending_review._agents_for_tier()` review-first 순서(`af-critic→af-cross-review→af-test-runner`)로 정합. G1: `MAX_ROUNDS 2→5` CLAUDE.md 기준으로 갱신 + `review_gate.py:282` 리터럴 동반 정합. 전파 표면 4곳(pre-commit/review_gate/hook_runner display strings, Blueprint §3) 동시 갱신. tests 41 PASS(test_review_gate_phase0 T8 fixture 5로 갱신). |
 | 2026-05-21 | v1.2.28 | docs(blueprint-review-gate-sync): §0에 `scripts/review_gate.py` / `scripts/t3_classifier.py` / `scripts/enqueue_agent_review.py` 빠른 참조 행 추가. §3 3-Tier Review-Gate에 deterministic T3 skip 조건, af-critic `t3_required` advisory, classifier version 단일 원천(`scripts.t3_classifier.CLASSIFIER_VERSION`), annotation semantic 정책, `--t3-required` CLI 동작을 실제 구현 기준으로 명시. 근거: `docs/reviews/2026-05-20-190212-2026-05-20-af-dogfooding-review-safety-followups-design-review.md` Blueprint §0/§3 갱신 지적. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md |
