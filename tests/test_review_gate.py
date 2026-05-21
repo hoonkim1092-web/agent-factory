@@ -439,6 +439,64 @@ def test_no_py_files_pass(ws):
     assert reason == "no-py-files"
 
 
+def test_staged_py_not_queued_no_queue(ws):
+    """큐 없음 + staged core/*.py → BLOCK(staged-py-not-queued). git add 경로 누락 버그 대응."""
+    blocked, reason = is_gate_blocked(ws, staged_py=["core/interview.py"])
+    assert blocked
+    assert reason == "staged-py-not-queued"
+
+
+def test_staged_py_not_queued_empty_py_in_queue(ws):
+    """큐에 .py 없음 + staged core/*.py → BLOCK(staged-py-not-queued)."""
+    _write_state(ws, {"files": ["README.md"], "updated_at": time.time()})
+    blocked, reason = is_gate_blocked(ws, staged_py=["core/foo.py"])
+    assert blocked
+    assert reason == "staged-py-not-queued"
+
+
+def test_staged_non_review_py_no_queue_passes(ws):
+    """큐 없음 + staged_py=None (비대상 파일은 _staged_review_py_files가 필터 → 빈 리스트) → PASS(no-queue)."""
+    # tests/*.py는 리뷰 비대상 → _staged_review_py_files()가 걸러내 [] → None 전달
+    blocked, reason = is_gate_blocked(ws, staged_py=None)
+    assert not blocked
+    assert reason == "no-queue"
+
+
+def test_staged_py_not_in_snap_blocks_even_if_queue_fully_reviewed(ws):
+    """큐에 .py 있고 3-tier 리뷰 PASS 완료 + 새 staged core/*.py가 snap에 없음 → BLOCK(staged-py-not-queued).
+
+    git add로 추가한 신규 파일이 큐에 없는 상태에서 all-tiers-passed로 우회되는 버그 차단.
+    """
+    now = time.time()
+    reviewed_file = "core/old.py"
+    _write_state(ws, {
+        "files": [reviewed_file],
+        "created_at": now - 100,
+        "updated_at": now - 50,
+        "reviews": _full_reviews([reviewed_file], now - 40),
+        "blast_tier": 3,
+    })
+    # core/new.py는 staged됐지만 큐에 없고 snap에도 없음
+    blocked, reason = is_gate_blocked(ws, staged_py=["core/new.py"])
+    assert blocked
+    assert reason == "staged-py-not-queued"
+
+
+def test_staged_skills_skill_py_blocks(ws):
+    """큐 없음 + skills/foo/skill.py staged → BLOCK(staged-py-not-queued). skills/ 패턴 동형 확인."""
+    blocked, reason = is_gate_blocked(ws, staged_py=["skills/foo/skill.py"])
+    assert blocked
+    assert reason == "staged-py-not-queued"
+
+
+def test_staged_skills_nested_not_review_target(ws):
+    """skills/foo/bar/skill.py는 1-depth가 아니므로 리뷰 비대상 → PASS(no-queue)."""
+    # _STAGED_SKILLS_RE = r"^skills/[^/]+/skill\.py$" → 2-depth 이상 미매칭
+    blocked, reason = is_gate_blocked(ws, staged_py=None)  # 비대상은 staged_py에 포함 안 됨
+    assert not blocked
+    assert reason == "no-queue"
+
+
 # ── Round 2 (2026-05-15): stale 누적 시나리오 ────────────────────────────────
 
 def test_clear_stale_reset_when_round_passed_and_idle(ws):

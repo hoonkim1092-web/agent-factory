@@ -231,8 +231,54 @@ def _required_tiers_for(state: dict) -> list[int]:
     return [1, 2, 3]
 
 
-def is_gate_blocked(workspace: str) -> tuple[bool, str]:
+_STAGED_REVIEW_PREFIXES = ("core/", "scripts/")
+_STAGED_REVIEW_EXACT = frozenset(("model_utils.py", "run_factory_cli.py"))
+_STAGED_SKILLS_RE = re.compile(r"^skills/[^/]+/skill\.py$")
+
+
+def _is_staged_review_target(path: str) -> bool:
+    """staged .py 파일이 리뷰 대상인지 판단 (enqueue_agent_review._is_review_target 동형).
+
+    대상: core/*, scripts/*, skills/*/skill.py, model_utils.py, run_factory_cli.py
+    """
+    if not path.endswith(".py"):
+        return False
+    for prefix in _STAGED_REVIEW_PREFIXES:
+        if path.startswith(prefix):
+            return True
+    if _STAGED_SKILLS_RE.match(path):
+        return True
+    return os.path.basename(path) in _STAGED_REVIEW_EXACT
+
+
+def _staged_review_py_files(workspace: str) -> list[str]:
+    """git diff --cached에서 리뷰 대상 .py 파일 목록 반환. 오류 시 빈 리스트 (fail-open)."""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            capture_output=True, text=True, timeout=5, cwd=workspace,
+        )
+        if r.returncode != 0:
+            return []
+        return [
+            line.strip().replace("\\", "/")
+            for line in r.stdout.splitlines()
+            if _is_staged_review_target(line.strip().replace("\\", "/"))
+        ]
+    except Exception:
+        return []
+
+
+def is_gate_blocked(
+    workspace: str,
+    staged_py: list[str] | None = None,
+) -> tuple[bool, str]:
     """BLOCK 여부 + reason 반환. 게이트 자체 오류는 fail-open (PASS + stderr 경고).
+
+    staged_py: 리뷰 대상 staged .py 파일 목록.
+               None(기본)이면 _staged_review_py_files()로 자동 감지 — pre-commit hook /
+               hook_runner / --check 경로 모두 커버.
 
     [Phase 1 invariant] 이 함수가 보는 상태는 다음 3가지다:
     - state.reviews[]      : 각 agent의 verdict (결정 주체: 해당 agent)
@@ -245,6 +291,10 @@ def is_gate_blocked(workspace: str) -> tuple[bool, str]:
         _log_event(workspace, "[gate-skipped-env]")
         return False, "gate-skipped-env"
 
+    # staged_py 자동 감지 (None → 실제 staged 파일 확인, fail-open)
+    if staged_py is None:
+        staged_py = _staged_review_py_files(workspace) or None
+
     # 2. 상태 로드 (fail-open)
     try:
         state = _load_state(workspace)
@@ -253,11 +303,17 @@ def is_gate_blocked(workspace: str) -> tuple[bool, str]:
         return False, "load-error"
 
     if state is None:
+        # staged_py 교차검증: 큐가 없어도 staged review-target .py 존재하면 BLOCK
+        if staged_py:
+            return True, "staged-py-not-queued"
         return False, "no-queue"
 
     # 3. .py 파일 유무 확인 (없으면 PASS)
     py_files = [f for f in state.get("files", []) if f.endswith(".py")]
     if not py_files:
+        # staged_py 교차검증: 큐에 .py 없어도 staged review-target .py 존재하면 BLOCK
+        if staged_py:
+            return True, "staged-py-not-queued"
         return False, "no-py-files"
 
     reviews: dict = state.get("reviews") or {}
@@ -289,6 +345,12 @@ def is_gate_blocked(workspace: str) -> tuple[bool, str]:
     new_files = [f for f in py_files if f not in snap]
     if new_files:
         return True, "new-files-added"
+
+    # staged_py 교차검증 (큐에 .py 있는 경로): snap에 없는 staged .py는 미리뷰
+    if staged_py:
+        unreviewed_staged = [f for f in staged_py if f not in snap]
+        if unreviewed_staged:
+            return True, "staged-py-not-queued"
 
     # 7. verdict=block|fail 체크 (FAIL도 BLOCK과 동등하게 차단)
     if not os.environ.get("AF_GATE_ALLOW_VERDICT_BLOCK"):
