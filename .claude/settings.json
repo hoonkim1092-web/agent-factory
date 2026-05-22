@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_pending_review.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_pending_review.py"
           }
         ]
       },
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_design_pending.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_design_pending.py"
           }
         ]
       },
@@ -84,7 +84,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py check_model_escalation.py"
+            "command": "sh scripts/hookpy.sh scripts/run.py check_model_escalation.py"
           }
         ]
       }
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_enqueue",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_enqueue",
             "timeout": 10
           }
         ]
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_edit_design_review",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
             "timeout": 10
           }
         ]
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/run.py post_agent_record",
+            "command": "sh scripts/hookpy.sh scripts/run.py post_agent_record",
             "timeout": 60
           }
         ]
