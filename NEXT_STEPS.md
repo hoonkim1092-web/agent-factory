@@ -185,15 +185,26 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 `reuse_decision: decision.to_dict()` 이미 포함됨 → `skill_manifest.json`에 capability_gap/confidence/rationale 기록 중.
 `exact_match`는 `decide_reuse()` 미호출이므로 없는 게 정상.
 
-### 🔜 다음 세션 진입 순서 (2026-05-22 분석 기반)
+### 🔜 다음 세션 진입 순서 (2026-05-22 갱신)
 
-> 근거: 두 dogfooding 문서(`gap-analysis` + `deep-interview-pipeline`) 분석 결과.
-> Phase 4 게이트(commits_with_t3 >= 10, span_days >= 7) 수집 기간 동안 병렬 진행.
+> **구조 결정 (2026-05-22 세션)**:
+> - `deep-interview-pipeline.md` → 북극성 epic (AF가 AF를 개발하는 완성 루프 정의)
+> - `af-dogfooding-infrastructure-gap-analysis.md` → epic 구현 제약/검수 체크리스트로 흡수 (grep 증거·라인 좌표 보존)
+> - Phase 3.5 runbook → sidecar 운영 문서 (epic과 별도)
+>
+> **팩트 확인 결과 (코드 직접 grep)**:
+> - G7/G8/G1 → 2026-05-21 `fix(G8/G7/G1)` 커밋에서 이미 해소됨. blocker 아님.
+> - `blast_radius.required_agents()` → CLI 출력 전용, 실행 경로 미사용. minor.
+> - R1 → `docs/dogfooding/2026-05-21-r1-selfrun-result.md` PASS. 최소 증명 완료.
+>   단, docstring 1줄 수준 — skills/ 격리 미완(BASE_DIR 기반 57개 스킬 로드) 잔존.
+>
+> **실행 게이트**: R1 복합 증명 → 신규 모듈 최소 단위 착공 (6개 동시 착공 금지)
 
-1. **Phase 3.5 runbook 문서화** — `review_metrics_logger` 실행·판독 절차 + 판정 기준 문서화 (~1시간)
-2. **`core/interview.py` artifact shape 확장** — `research_questions/risk_hints/assumptions` 필드 추가. `deep-interview-pipeline.md §17 Step 1`의 실제 전제조건. 현재 artifact는 이 필드 없음.
-3. **R3 scope guard 최소 구현** — `allowed_paths` report-only → enforce. dogfooding isolation §14의 실제 자동화 단계.
-4. 위 3개 완료 후 `deep-interview-pipeline.md §17 Step 3~4` (Research Brief 연결) 진입.
+1. **Phase 3.5 runbook 문서화** (sidecar) — `review_metrics_logger` 실행·판독 절차 + Phase 4 진입 판정 기준
+2. **R1 복합 증명** — multi-file 또는 실제 기능 변경 시나리오 1회. skills/ 격리 미완 해소 포함.
+3. **`core/interview.py` artifact shape 확장** — `research_questions/risk_hints/assumptions` 필드 추가. `deep-interview-pipeline.md §17 Step 1` 전제조건.
+4. **R3 scope guard enforce** — report-only → allowlist 실제 검사.
+5. 위 완료 후 `deep-interview-pipeline.md §17 Step 3~4` (Research Brief 연결) 진입.
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
