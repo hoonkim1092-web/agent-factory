@@ -40,14 +40,6 @@
             "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
-          }
-        ]
       }
     ],
     "SessionStart": [
@@ -56,14 +48,6 @@
           {
             "type": "command",
             "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
           }
         ]
       }
@@ -92,14 +76,6 @@
             "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
-          }
-        ]
       }
     ],
     "Stop": [
@@ -108,14 +84,6 @@
           {
             "type": "command",
             "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/hook_runner.py cli_hook_bridge --provider claude --workspace . --run-id claude_cli_run --repo-root ."
           }
         ]
       }

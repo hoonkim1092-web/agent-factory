@@ -20,6 +20,7 @@ _QUEUE_DIR = ".af_review_queue"
 _PENDING_FILE = "pending_agent_review.json"
 _LOCK_FILE = "pending_agent_review.json.lock"
 _LOG_FILE = "hook_events.log"
+_MAX_ROUNDS = 5  # check_pending_review.MAX_ROUNDS와 동기화 유지
 
 # verdict 파싱: 구조화 헤더("Verdict: BLOCK" / "판정: WARN" / "### BLOCK")만 인식
 _VERDICT_RE = re.compile(
@@ -335,7 +336,7 @@ def is_gate_blocked(
     if updated_at > min_completed:
         # Phase 0: max_rounds 도달 후엔 stale 차단만 건너뛰고 BLOCK 검사로 fall-through
         # (Critical fix: BLOCK verdict는 무조건 검사되어야 함 — AF_SKIP_REVIEW_GATE 외 우회 금지)
-        if int(state.get("round_count", 0)) < 5:
+        if int(state.get("round_count", 0)) < _MAX_ROUNDS:
             return True, "stale-review"
 
     # 6. 신규 파일 추가 체크: 가장 높은 필수 tier의 snapshot 기준
