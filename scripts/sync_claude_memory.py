@@ -178,6 +178,14 @@ def _write_atomic(path: Path, content: str) -> None:
             pass
         raise
 
+def _print_json(payload: dict) -> None:
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        safe = text.encode(enc, errors="replace").decode(enc, errors="replace")
+        print(safe)
 
 # ---------------------------------------------------------------------------
 # Push (local → Supabase)
@@ -319,10 +327,10 @@ def main() -> None:
     else:
         memory_dir = _find_memory_dir(args.project_id, REPO_ROOT)
         if not memory_dir:
-            print(json.dumps({
+            _print_json({
                 "ok": False,
                 "error": f"memory dir not found for '{args.project_id}' under ~/.claude/projects/",
-            }, ensure_ascii=False, indent=2))
+            })
             sys.exit(1)
 
     print(f"[claude-memory] mode={args.mode}  dir={memory_dir}  project={args.project_id}")
@@ -333,10 +341,10 @@ def main() -> None:
         else:
             result = _pull(memory_dir, args.project_id, args.dry_run, args.overwrite)
     except Exception as e:
-        print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False, indent=2))
+        _print_json({"ok": False, "error": str(e)})
         sys.exit(1)
 
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    _print_json(result)
     if not result.get("ok"):
         sys.exit(1)
 
