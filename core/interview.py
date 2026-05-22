@@ -94,6 +94,47 @@ def collect_answers(
     return answers
 
 
+def _build_assumptions(clarification_log: list[dict[str, Any]], source: str) -> list[dict[str, Any]]:
+    """Derive assumption records from auto-answered clarification log entries."""
+    assumptions = []
+    count = 0
+    for entry in clarification_log:
+        q = str(entry.get("question", "")).strip()
+        a = str(entry.get("answer", "")).strip()
+        if q and a:
+            count += 1
+            assumptions.append({
+                "id": f"A{count}",
+                "statement": f"{q} → {a}",
+                "source": source,
+                "confidence": "medium",
+            })
+    return assumptions
+
+
+def _ensure_artifact_shape(enriched: dict[str, Any], *, deep_skip: bool) -> dict[str, Any]:
+    """Ensure required artifact fields exist on the brief (§17 Step 1 prerequisite).
+
+    research_questions / risk_hints are populated by §17 Step 3~4 (Research Brief
+    connection). For now they default to [] so downstream consumers can rely on
+    the keys being present.
+
+    assumptions: only deep_skip mode records auto-answers as assumptions (design doc §17:
+    "Deep Skip = LLM generates reasonable defaults and records assumptions"). non_interactive
+    is batch-interactive — no LLM inference, so no assumption recording.
+    """
+    enriched.setdefault("research_questions", [])
+    enriched.setdefault("risk_hints", [])
+    if "assumptions" not in enriched:
+        if deep_skip:
+            enriched["assumptions"] = _build_assumptions(
+                enriched.get("clarification_log", []), source="deep_skip"
+            )
+        else:
+            enriched["assumptions"] = []
+    return enriched
+
+
 def run_interview(
     task_input: str,
     *,
@@ -131,6 +172,8 @@ def run_interview(
             **base_brief,
             "clarification_log": [],
         }
+
+    enriched = _ensure_artifact_shape(enriched, deep_skip=deep_skip)
 
     payload = {
         "task_input": task,

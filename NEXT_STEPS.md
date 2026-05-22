@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-22 KST** — P1-D + CRLF renormalize 완료. 두 dogfooding 문서 분석 완료. 다음 세션 진입점: Phase 3.5 측정 runbook 문서화 → interview.py artifact shape 확장 → R3 scope guard.
+> 마지막 업데이트: **2026-05-22 KST** — Phase 3.5 runbook 문서화 완료. interview.py artifact shape 확장 완료 (3-Tier PASS). 다음 세션 진입점: R1 복합 증명 → R3 scope guard enforce.
 
 ---
 
@@ -200,9 +200,9 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 >
 > **실행 게이트**: R1 복합 증명 → 신규 모듈 최소 단위 착공 (6개 동시 착공 금지)
 
-1. **Phase 3.5 runbook 문서화** (sidecar) — `review_metrics_logger` 실행·판독 절차 + Phase 4 진입 판정 기준
-2. **R1 복합 증명** — multi-file 또는 실제 기능 변경 시나리오 1회. skills/ 격리 미완 해소 포함.
-3. **`core/interview.py` artifact shape 확장** — `research_questions/risk_hints/assumptions` 필드 추가. `deep-interview-pipeline.md §17 Step 1` 전제조건.
+1. ✅ **Phase 3.5 runbook 문서화** (sidecar) — `docs/2026-05-22-review-metrics-phase35-runbook.md` 작성. 실행 절차·Phase 4 진입 기준 수록.
+2. ✅ **`core/interview.py` artifact shape 확장** — `research_questions/`risk_hints`/`assumptions` 필드 추가. `_build_assumptions()` + `_ensure_artifact_shape()` 신설. 테스트 5개 신규. 3-Tier PASS.
+3. **R1 복합 증명** — multi-file 또는 실제 기능 변경 시나리오 1회. skills/ 격리 미완 해소 포함.
 4. **R3 scope guard enforce** — report-only → allowlist 실제 검사.
 5. 위 완료 후 `deep-interview-pipeline.md §17 Step 3~4` (Research Brief 연결) 진입.
 

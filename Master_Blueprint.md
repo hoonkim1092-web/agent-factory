@@ -147,7 +147,7 @@
 | `core/agent_reservation.py` | agent reservation | `AgentLease`, `AgentReservationManager` |
 | `core/capability_intent.py` | capability intent | — |
 | `core/clarification.py` | clarification | `generate_clarification_questions()`, `should_skip_clarification()`, `merge_clarification()` |
-| `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()` |
+| `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1558,6 +1558,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-22 | v1.2.28 | feat(interview-artifact-shape): `_build_assumptions()` + `_ensure_artifact_shape()` 추가 — `research_questions`/`risk_hints`/`assumptions` 3필드 artifact 보장 (§17 Step 1). deep_skip 모드에서 clarification_log → assumptions 파생. 테스트 5개 신규. 3-Tier PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, code-review.md, run_factory_cli.py, meta.yaml (+2) |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, run_factory_cli.py, meta.yaml, skill-spec.yaml (+1) |
 | 2026-05-21 | v1.2.28 | feat(interview-deep-skip): `--deep-skip` 플래그 추가 — `run_interview()` `deep_skip` 파라미터, `should_auto_answer` 통합, payload `auto_answered`/`deep_skip`/`interview_mode` 필드. `_write_json` tempfile.mkstemp + 예외 cleanup 안전화. `run_factory_cli.py` usage 1줄. `tests/test_interview.py` 3케이스 신규. 3-Tier PASS. |
