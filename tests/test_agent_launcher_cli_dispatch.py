@@ -118,6 +118,7 @@ class TestIsolateProjectRootForSelfRun:
 
         monkeypatch.delenv("AGENT_PROJECT_ROOT", raising=False)
         monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
+        monkeypatch.delenv("AF_SELF_RUN", raising=False)
         monkeypatch.setattr(sys, "argv", ["agent_launcher.py", "free-form task"])
         _maybe_isolate_project_root_for_self_run()
         assert "AGENT_PROJECT_ROOT" in os.environ
@@ -126,6 +127,7 @@ class TestIsolateProjectRootForSelfRun:
         assert proj_root.startswith(tempfile.gettempdir())
         assert "af_self_run_" in os.path.basename(proj_root)
         assert os.environ.get("AF_DISABLE_REGISTRY_WRITE") == "1"
+        assert os.environ.get("AF_SELF_RUN") == "1"
 
     def test_respects_explicit_project_root(self, monkeypatch):
         """사용자가 AGENT_PROJECT_ROOT 명시 설정한 경우 격리 함수가 무위.

@@ -203,7 +203,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -637,6 +637,7 @@ evaluate_and_promote(skill_name, code_path, ...) → dict
 **Self-run isolation env flags (P4.5x/F12, 2026-05-15):**
 - `AGENT_PROJECT_ROOT` (system): ad-hoc CLI 진입(`python agent_launcher.py "task..."`) 시 `agent_launcher._maybe_isolate_project_root_for_self_run()` 가 `tempfile.gettempdir()/af_self_run_<ts>_<pid>/` 로 자동 set. `core.config_paths` 가 import-time 에 frozen 하므로 **모든 core.* import 이전** 에 set 됨. 사용자 명시 설정은 존중.
 - `AF_DISABLE_REGISTRY_WRITE` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): `RegistryManager._write_registry` + `RegistryManager.workflow_apply` + `RegistryManager._install_skill_file` + `RegistryManager.register_built` + `PreflightEvaluator._update_registry_status` 다섯 곳 가드. Round 4/4b dogfooding 에서 발견된 `skills/registry.yaml` 글로벌 leak 차단의 second line of defense. AGENT_PROJECT_ROOT 격리 시 자동 set. (2026-05-17: `workflow_apply` 가드 추가 — F9 WARN #2/#3 해소. 2026-05-17: `_install_skill_file` 최상단 가드 추가 — os.makedirs/shutil.copy*/meta.yaml/lock write 전체 차단. 2026-05-17: `register_built` 최상단 가드 추가 — lock_skill_state 미보호 BONUS High 해소)
+- `AF_SELF_RUN` (canonical via `core/file_io._env_flag`, truthy=1/true/yes/on/y): AGENT_PROJECT_ROOT 격리 시 자동 set. `core/utils.py:get_external_skill_roots()` 가 BASE_DIR/skills(SKILLS_DIR) 를 제외 — 목표 프로젝트 스킬만 탐색. R3 scope guard baseline 캡처 신호로도 사용. (2026-05-23 신규)
 - `workspace` vs `runtime_workspace` (F17, 2026-05-15): ad-hoc self-run 에서 `workspace=os.getcwd()` 는 provider cwd/user file edit 대상, `runtime_workspace=PROJECT_ROOT` 는 runs/data/artifacts/agent state 대상. `AgentFactory._invoke_runner()` 와 `AgentRunner.run()` 이 `runtime_workspace` 를 optional로 전달/수용한다. Round 4e strict smoke 기준: real repo 문서 1건만 변경, `projects/default/*`, `skills/registry.yaml`, `data/skill-usage.jsonl`, `agents/general.yaml` 추가 변경 0.
 
 ---
@@ -1558,6 +1559,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-23 | v1.2.28 | feat(r3-scope-guard+skills-isolation): R3 scope guard enforce + skills/ 격리 fix — `agent_launcher._git_modified_files()` + `_scope_guard_report(cwd, allowed, baseline)` 신규. `_maybe_isolate_project_root_for_self_run()`에 `AF_SELF_RUN=1` 추가. `__main__` 블록에 baseline 기반 atexit scope guard 등록. `core/utils.get_external_skill_roots()` — AF_SELF_RUN 시 SKILLS_DIR 제외(`_env_flag` 표준 사용). 테스트 3건 신규(monkeypatch 가드 4건 + `test_get_external_skill_roots_self_run_excludes_skills_dir` + `test_isolates_ad_hoc_text` AF_SELF_RUN 검증). 3-Tier PASS. |
 | 2026-05-22 | v1.2.28 | feat(interview-artifact-shape): `_build_assumptions()` + `_ensure_artifact_shape()` 추가 — `research_questions`/`risk_hints`/`assumptions` 3필드 artifact 보장 (§17 Step 1). deep_skip 모드에서 clarification_log → assumptions 파생. 테스트 5개 신규. 3-Tier PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, code-review.md, run_factory_cli.py, meta.yaml (+2) |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, run_factory_cli.py, meta.yaml, skill-spec.yaml (+1) |

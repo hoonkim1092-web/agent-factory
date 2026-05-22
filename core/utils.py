@@ -286,7 +286,8 @@ def get_external_skill_roots(extra_roots: list[str] | None = None) -> list[str]:
         os.path.join(home_dir, ".codex", "skills"),
         os.path.join(home_dir, ".agents", "skills"),
         # 2순위: project (SKILLS_DIR = BASE_DIR/skills, 레포 루트 직속 skills/)
-        SKILLS_DIR,
+        # AF_SELF_RUN 격리 모드에서는 BASE_DIR/skills 제외 (목표 프로젝트 스킬만 탐색)
+        *([SKILLS_DIR] if not _env_flag("AF_SELF_RUN") else []),
         os.path.join(PROJECT_ROOT, "skills"),
         os.path.join(PROJECT_ROOT, ".claude", "skills"),
         os.path.join(PROJECT_ROOT, ".codex", "skills"),

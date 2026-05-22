@@ -31,6 +31,67 @@ import getpass
 _KNOWN_SUBCOMMANDS = {"project"}
 
 
+def _git_modified_files(cwd: str) -> list[str]:
+    """현재 git working tree에서 수정된 파일 목록 반환 (staged + unstaged vs HEAD)."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            capture_output=True, text=True, cwd=cwd, timeout=10,
+        )
+        if result.returncode == 0:
+            return [f.strip() for f in result.stdout.splitlines() if f.strip()]
+        # HEAD 없는 초기 커밋 환경 — unstaged + staged 모두 수집
+        r_unstaged = subprocess.run(
+            ["git", "diff", "--name-only"],
+            capture_output=True, text=True, cwd=cwd, timeout=10,
+        )
+        r_staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True, text=True, cwd=cwd, timeout=10,
+        )
+        seen: set[str] = set()
+        files: list[str] = []
+        for line in r_unstaged.stdout.splitlines() + r_staged.stdout.splitlines():
+            f = line.strip()
+            if f and f not in seen:
+                seen.add(f)
+                files.append(f)
+        return files
+    except Exception:
+        return []
+
+
+def _scope_guard_report(cwd: str, allowed: list | None, baseline: frozenset | None = None) -> None:
+    """FSA 실행 후 scope leak 자동 검사 (R3 scope guard enforce).
+
+    allowed=None   : report-only (AF_SCOPE_GUARD_PATHS 미설정 시 변경 파일 목록 출력)
+    allowed=[...]  : allowlist 대조 후 PASS/WARN 출력
+    baseline       : FSA 실행 전 이미 수정된 파일 집합 — 제외 후 FSA 순 변경만 검사
+    """
+    all_modified = _git_modified_files(cwd)
+    pre = baseline or frozenset()
+    modified = [f for f in all_modified if f not in pre]
+
+    if not modified:
+        print("[Scope Guard] PASS - FSA 실행 중 변경 파일 없음")
+        return
+
+    if allowed is None:
+        print(f"[Scope Guard] REPORT - FSA 변경 파일 {len(modified)}개 (AF_SCOPE_GUARD_PATHS 미설정):")
+        for f in modified:
+            print(f"  {f}")
+        return
+
+    allowed_norm = {os.path.normpath(p) for p in allowed}
+    leaked = [f for f in modified if os.path.normpath(f) not in allowed_norm]
+    if leaked:
+        print(f"[Scope Guard] WARN - scope leak {len(leaked)}개: {leaked}")
+        print(f"  허용: {sorted(allowed_norm)}")
+        print(f"  FSA 변경: {modified}")
+    else:
+        print(f"[Scope Guard] PASS - 허용 파일 {len(modified)}개만 변경됨: {modified}")
+
+
 def _maybe_isolate_project_root_for_self_run():
     """ad-hoc CLI 진입 시 isolated PROJECT_ROOT + 글로벌 registry write 차단 flag set.
 
@@ -53,11 +114,19 @@ def _maybe_isolate_project_root_for_self_run():
     )
     os.environ["AGENT_PROJECT_ROOT"] = isolated
     os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
+    os.environ.setdefault("AF_SELF_RUN", "1")  # skills/ 격리 신호 (core/utils.py 참조)
     atexit.register(shutil.rmtree, isolated, True)
 
 
 if __name__ == "__main__":
     _maybe_isolate_project_root_for_self_run()
+    # R3 scope guard: __main__ 경로에서만 등록 (test import 시 atexit 오염 방지)
+    if os.getenv("AF_SELF_RUN"):
+        _sg_raw = os.getenv("AF_SCOPE_GUARD_PATHS", "").strip()
+        _sg_allowed = [p.strip() for p in _sg_raw.split(",") if p.strip()] if _sg_raw else None
+        _sg_cwd = os.getcwd()
+        _sg_baseline = frozenset(_git_modified_files(_sg_cwd))  # FSA 실행 전 baseline
+        atexit.register(_scope_guard_report, _sg_cwd, _sg_allowed, _sg_baseline)
 
 from config.schema import factory_config
 
