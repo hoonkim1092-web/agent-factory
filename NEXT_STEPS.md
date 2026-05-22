@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-22 KST** — P2-F 완료 (`99498b1b`). 다음: P1-D (self-run 체크리스트 문서화) → CRLF renormalize (별도 커밋).
+> 마지막 업데이트: **2026-05-22 KST** — P1-D + CRLF renormalize 완료 (`1fcc8275`, `43f0fc50`). 다음: A Phase 4 (1주 실측 데이터 수집 후), cli_hook_bridge 미커밋 정리 (선택).
 
 ---
 
