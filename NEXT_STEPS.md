@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-22 KST** — P1-D + CRLF renormalize 완료 (`1fcc8275`, `43f0fc50`). 다음: A Phase 4 (1주 실측 데이터 수집 후), cli_hook_bridge 미커밋 정리 (선택).
+> 마지막 업데이트: **2026-05-22 KST** — P1-D + CRLF renormalize 완료. 두 dogfooding 문서 분석 완료. 다음 세션 진입점: Phase 3.5 측정 runbook 문서화 → interview.py artifact shape 확장 → R3 scope guard.
 
 ---
 
@@ -184,6 +184,20 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 `skill_procurer.py` 루프 내 모든 decision mode (ranked_reuse/enhance/shadow_reuse/external_install/forge)에
 `reuse_decision: decision.to_dict()` 이미 포함됨 → `skill_manifest.json`에 capability_gap/confidence/rationale 기록 중.
 `exact_match`는 `decide_reuse()` 미호출이므로 없는 게 정상.
+
+### 🔜 다음 세션 진입 순서 (2026-05-22 분석 기반)
+
+> 근거: 두 dogfooding 문서(`gap-analysis` + `deep-interview-pipeline`) 분석 결과.
+> Phase 4 게이트(commits_with_t3 >= 10, span_days >= 7) 수집 기간 동안 병렬 진행.
+
+1. **Phase 3.5 runbook 문서화** — `review_metrics_logger` 실행·판독 절차 + 판정 기준 문서화 (~1시간)
+2. **`core/interview.py` artifact shape 확장** — `research_questions/risk_hints/assumptions` 필드 추가. `deep-interview-pipeline.md §17 Step 1`의 실제 전제조건. 현재 artifact는 이 필드 없음.
+3. **R3 scope guard 최소 구현** — `allowed_paths` report-only → enforce. dogfooding isolation §14의 실제 자동화 단계.
+4. 위 3개 완료 후 `deep-interview-pipeline.md §17 Step 3~4` (Research Brief 연결) 진입.
+
+**보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
+
+---
 
 ### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 
