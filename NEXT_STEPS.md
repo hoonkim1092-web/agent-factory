@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-21 KST** — R4 fix 완료 (`cf4754b9`). 다음: A Phase 4(데이터 수집 후) 또는 backlog(G2/G4/G5) 중 선택.
+> 마지막 업데이트: **2026-05-22 KST** — P2-F 완료 (`99498b1b`). 다음: P1-D (self-run 체크리스트 문서화) → CRLF renormalize (별도 커밋).
 
 ---
 
@@ -164,6 +164,26 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 - `required_capabilities` 비면 점수기반 enhance 유지 (regression)
 
 **진입 순서:** step 1~3+3b 한 묶음 (step 2 단독은 무음 no-op). step 4 후행 분리. 설계 Opus, 구현 Sonnet. **첫 작업은 코딩이 아니라 grep 좌표·payload 계약 재캡처.**
+
+### ✅ P2-F 루프 정합 (2026-05-22) — DONE (`99498b1b`)
+
+- `scripts/review_gate.py`: `_MAX_ROUNDS = 5` 상수 추가, 하드코딩 `< 5` → `< _MAX_ROUNDS`
+- `.codex/hooks.json`: PreCompact/SessionStart/UserPromptSubmit/Stop 각 이벤트의 `hook_runner.py` 직접 호출 제거 (run.py가 위임하므로 2중 실행 방지)
+- 3-Tier: af-critic WARN(advisory) / af-cross-review PASS / af-test-runner PASS (68 tests)
+
+### ✅ G2/G4/G5 — 이미 구현 완료 확인 (2026-05-22)
+
+코드 탐색 결과 `core/review_report.py` + `core/review_runner.py`에 **이미 모두 구현됨**:
+- G2 (`review_report.py:308`): `len(providers) >= 2` → cross/judge 실행
+- G4 (`review_report.py:283`): provider 0개 → `SKIP` 반환 (PASS와 메트릭 분리)
+- G5 (`review_report.py:273`): `AUTH_EXPIRED` → 즉시 `BLOCK` + 재인증 안내
+- 구현 커밋: `86e3ed83` (2026-05-07)
+
+### ✅ P2-E manifest projection — 이미 구현 완료 확인 (2026-05-22)
+
+`skill_procurer.py` 루프 내 모든 decision mode (ranked_reuse/enhance/shadow_reuse/external_install/forge)에
+`reuse_decision: decision.to_dict()` 이미 포함됨 → `skill_manifest.json`에 capability_gap/confidence/rationale 기록 중.
+`exact_match`는 `decide_reuse()` 미호출이므로 없는 게 정상.
 
 ### A Phase 4: 스마트 라우팅 (데이터 수집 후)
 
