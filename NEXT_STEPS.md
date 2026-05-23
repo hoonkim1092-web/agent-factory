@@ -206,7 +206,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
-7. 다음: §17 Step 6 (Plan generation from Spec + Premortem — `core/planner.py`) 또는 dogfood state machine 착공.
+7. ✅ **§17 Step 6** — `core/planner.py` 신규. `CompiledSpec`+`PremortomResult` → `ExecutablePlan`. investigation→implementation→verification 단계 순서. `PlanStep.commands` 추가. 36 tests PASS. 3-Tier PASS. (`c6406218`, 2026-05-24)
+8. 다음: §17 Step 7 (Dogfood state machine — `core/dogfood.py`) 또는 §17 Step 8 (Verify/Review/Retry loop).
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
