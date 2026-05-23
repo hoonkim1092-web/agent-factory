@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 7 완료 (dogfood state machine, 49 tests, 3-Tier PASS). 다음 세션 진입점: §17 Step 8 (Verify/Review/Retry loop).
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 8 완료 (Verify/Review/Retry loop, 63 tests, 3-Tier PASS). 다음 세션 진입점: §17 Step 9 (IMPLEMENT phase 실 구현 — agent_launcher 또는 cli 연동).
 
 ---
 
@@ -208,7 +208,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
 7. ✅ **§17 Step 6** — `core/planner.py` 신규. `CompiledSpec`+`PremortomResult` → `ExecutablePlan`. investigation→implementation→verification 단계 순서. `PlanStep.commands` 추가. 36 tests PASS. 3-Tier PASS. (`c6406218`, 2026-05-24)
 8. ✅ **§17 Step 7** — `core/dogfood.py` 신규. `DogfoodPhase` enum(11단계+BLOCKED), `DogfoodState` 영속화(`.af_runtime/dogfood/<run_id>/dogfood_state.json`), `create_run()`/`advance_phase()`/`block_run()`/`run_phase()` 공개 API. 각 phase runner가 Step 3~6 모듈에 위임; implement/verify/review는 Step 8 stub. atomic write(`tmp.replace`), `_premortem_from_dict` 방어 코드 적용. 49 tests PASS. 3-Tier PASS.
-9. 다음: §17 Step 8 (Verify/Review/Retry loop — `core/dogfood.py` 확장 또는 `core/dogfood_runner.py` 신규).
+9. ✅ **§17 Step 8** — `core/dogfood.py` 확장. `VerifyResult`/`ReviewDecision` dataclass, `MAX_VERIFY_ATTEMPTS=3`, `_command_runner` injectable, `retry_run()` 신설. `_run_verify_phase`/`_run_review_phase` stub → 실 구현. pass/retry/block 경계 조건 완전 커버. 63 tests PASS(+14). 3-Tier PASS.
+10. 다음: §17 Step 9 (IMPLEMENT phase 실 구현 — `agent_launcher` 연동 또는 worktree 기반 실행).
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
