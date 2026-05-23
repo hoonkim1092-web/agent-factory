@@ -1,6 +1,7 @@
 """Dogfood state machine: orchestrate the deep-interview pipeline.
 
 §17 Step 7 — Add Dogfood state machine.
+§17 Step 8 — Verify/Review/Retry loop.
 
 Manages persistent run state and coordinates the pipeline phases:
   interview → research_brief → research → spec → premortem → plan →
@@ -13,12 +14,13 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +123,51 @@ class DogfoodState:
 
 
 # ---------------------------------------------------------------------------
+# Verify/Review constants and result types (§17 Step 8)
+# ---------------------------------------------------------------------------
+
+MAX_VERIFY_ATTEMPTS = 3
+
+
+@dataclass
+class VerifyResult:
+    passed: bool
+    commands_run: list[str]
+    failures: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "passed": self.passed,
+            "commands_run": self.commands_run,
+            "failures": self.failures,
+        }
+
+
+@dataclass
+class ReviewDecision:
+    decision: str  # "pass" | "retry" | "block"
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"decision": self.decision, "reason": self.reason}
+
+
+def _default_command_runner(cmd: str, cwd: str) -> Tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            cmd, shell=True, cwd=cwd,
+            capture_output=True, text=True, timeout=60,
+        )
+        return result.returncode == 0, (result.stdout + result.stderr).strip()
+    except Exception as exc:
+        return False, str(exc)
+
+
+# Injectable for tests: monkeypatch core.dogfood._command_runner
+_command_runner: Callable[[str, str], Tuple[bool, str]] = _default_command_runner
+
+
+# ---------------------------------------------------------------------------
 # State persistence
 # ---------------------------------------------------------------------------
 
@@ -202,6 +249,15 @@ def block_run(state: DogfoodState, reason: str) -> None:
     """Transition to BLOCKED terminal phase."""
     state.phase = DogfoodPhase.BLOCKED
     state.last_failure = reason
+
+
+def retry_run(state: DogfoodState) -> None:
+    """Reset to IMPLEMENT for a retry and increment the attempts counter.
+
+    Caller must call save_state() after this to persist the new state.
+    """
+    state.phase = DogfoodPhase.IMPLEMENT
+    state.attempts += 1
 
 
 # ---------------------------------------------------------------------------
@@ -291,13 +347,59 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
 
 
 def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
-    """Verification — stub for Step 8."""
-    return context
+    """Run verification commands and return a VerifyResult dict.
+
+    Commands are taken from context["commands"] first; if absent, falls back to
+    context["plan_dict"]["verification_requirements"].  Empty command list → pass.
+    """
+    commands: list[str] = list(context.get("commands") or [])
+    if not commands:
+        plan_dict = context.get("plan_dict", {})
+        commands = list(plan_dict.get("verification_requirements", []))
+
+    failures: list[str] = []
+    for cmd in commands:
+        ok, _ = _command_runner(cmd, state.workspace)
+        if not ok:
+            failures.append(cmd)
+
+    return VerifyResult(
+        passed=len(failures) == 0,
+        commands_run=list(commands),
+        failures=failures,
+    ).to_dict()
 
 
 def _run_review_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
-    """Review — stub for Step 8."""
-    return context
+    """Inspect verify result and decide: pass / retry / block.
+
+    Decision logic:
+      - verify passed           → "pass"
+      - failed, attempts < MAX  → "retry"  (caller should call retry_run())
+      - failed, attempts >= MAX → "block"  (caller should call block_run())
+    """
+    verify_result = context.get("verify_result", {})
+    passed = verify_result.get("passed", True)
+
+    if passed:
+        return ReviewDecision(
+            decision="pass",
+            reason="all verification checks passed",
+        ).to_dict()
+
+    if state.attempts < MAX_VERIFY_ATTEMPTS - 1:
+        return ReviewDecision(
+            decision="retry",
+            reason=(
+                f"attempt {state.attempts + 1}/{MAX_VERIFY_ATTEMPTS};"
+                " retrying implementation"
+            ),
+        ).to_dict()
+
+    return ReviewDecision(
+        decision="block",
+        reason=f"max attempts ({MAX_VERIFY_ATTEMPTS}) reached without passing verification",
+    ).to_dict()
 
 
 # ---------------------------------------------------------------------------

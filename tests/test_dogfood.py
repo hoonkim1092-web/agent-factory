@@ -7,8 +7,11 @@ from pathlib import Path
 import pytest
 
 from core.dogfood import (
+    MAX_VERIFY_ATTEMPTS,
     DogfoodPhase,
     DogfoodState,
+    ReviewDecision,
+    VerifyResult,
     _PHASE_ORDER,
     _TERMINAL_PHASES,
     _premortem_from_dict,
@@ -18,6 +21,7 @@ from core.dogfood import (
     block_run,
     create_run,
     load_state,
+    retry_run,
     run_phase,
     save_state,
 )
@@ -436,7 +440,7 @@ def test_run_plan_returns_dict_with_intent(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# run_phase — IMPLEMENT / VERIFY / REVIEW (stubs)
+# run_phase — IMPLEMENT (stub — still passes context through)
 # ---------------------------------------------------------------------------
 
 def test_run_implement_stub(tmp_path):
@@ -446,18 +450,162 @@ def test_run_implement_stub(tmp_path):
     assert result == ctx
 
 
-def test_run_verify_stub(tmp_path):
+# ---------------------------------------------------------------------------
+# VerifyResult / ReviewDecision dataclasses
+# ---------------------------------------------------------------------------
+
+def test_verify_result_to_dict():
+    vr = VerifyResult(passed=True, commands_run=["pytest"], failures=[])
+    d = vr.to_dict()
+    assert d == {"passed": True, "commands_run": ["pytest"], "failures": []}
+
+
+def test_review_decision_to_dict():
+    rd = ReviewDecision(decision="retry", reason="first attempt")
+    d = rd.to_dict()
+    assert d == {"decision": "retry", "reason": "first attempt"}
+
+
+# ---------------------------------------------------------------------------
+# run_phase — VERIFY (Step 8)
+# ---------------------------------------------------------------------------
+
+def _make_runner(results: dict[str, bool]):
+    """Return a fake command runner using a {cmd: ok} map."""
+    def _runner(cmd: str, cwd: str):
+        return results.get(cmd, True), ""
+    return _runner
+
+
+def test_run_verify_no_commands_passes(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
-    ctx = {"step": "verify"}
-    result = run_phase(state, context=ctx)
-    assert result == ctx
+    result = run_phase(state, context={})
+    assert result["passed"] is True
+    assert result["commands_run"] == []
+    assert result["failures"] == []
 
 
-def test_run_review_stub(tmp_path):
+def test_run_verify_all_commands_pass(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"pytest": True, "py_compile x.py": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    result = run_phase(state, context={"commands": ["pytest", "py_compile x.py"]})
+    assert result["passed"] is True
+    assert result["failures"] == []
+    assert result["commands_run"] == ["pytest", "py_compile x.py"]
+
+
+def test_run_verify_partial_failure(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"pytest": True, "bad_cmd": False}))
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    result = run_phase(state, context={"commands": ["pytest", "bad_cmd"]})
+    assert result["passed"] is False
+    assert result["failures"] == ["bad_cmd"]
+
+
+def test_run_verify_commands_from_plan_dict(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"pytest tests/": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    plan = {"verification_requirements": ["pytest tests/"]}
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["passed"] is True
+    assert result["commands_run"] == ["pytest tests/"]
+
+
+def test_run_verify_context_commands_takes_priority(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"ctx_cmd": True, "plan_cmd": False}))
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    plan = {"verification_requirements": ["plan_cmd"]}
+    result = run_phase(state, context={"commands": ["ctx_cmd"], "plan_dict": plan})
+    assert result["commands_run"] == ["ctx_cmd"]
+
+
+# ---------------------------------------------------------------------------
+# run_phase — REVIEW (Step 8)
+# ---------------------------------------------------------------------------
+
+def _verify_passed_ctx(passed: bool = True) -> dict:
+    return {"verify_result": {"passed": passed, "commands_run": [], "failures": []}}
+
+
+def test_run_review_passed_returns_pass(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    ctx = {"step": "review"}
-    result = run_phase(state, context=ctx)
-    assert result == ctx
+    result = run_phase(state, context=_verify_passed_ctx(True))
+    assert result["decision"] == "pass"
+
+
+def test_run_review_failed_first_attempt_returns_retry(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    state.attempts = 0  # first attempt
+    result = run_phase(state, context=_verify_passed_ctx(False))
+    assert result["decision"] == "retry"
+    assert "1/" in result["reason"]
+
+
+def test_run_review_failed_last_attempt_returns_block(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    state.attempts = MAX_VERIFY_ATTEMPTS - 1
+    result = run_phase(state, context=_verify_passed_ctx(False))
+    assert result["decision"] == "block"
+    assert str(MAX_VERIFY_ATTEMPTS) in result["reason"]
+
+
+def test_run_review_missing_verify_result_assumes_passed(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    result = run_phase(state, context={})
+    assert result["decision"] == "pass"
+
+
+def test_run_review_retry_boundary(tmp_path):
+    """attempts == MAX-2 still retries; attempts == MAX-1 blocks."""
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    state.attempts = MAX_VERIFY_ATTEMPTS - 2
+    r1 = run_phase(state, context=_verify_passed_ctx(False))
+    assert r1["decision"] == "retry"
+
+    state.attempts = MAX_VERIFY_ATTEMPTS - 1
+    r2 = run_phase(state, context=_verify_passed_ctx(False))
+    assert r2["decision"] == "block"
+
+
+# ---------------------------------------------------------------------------
+# retry_run
+# ---------------------------------------------------------------------------
+
+def test_retry_run_resets_to_implement(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    retry_run(state)
+    assert state.phase == DogfoodPhase.IMPLEMENT
+
+
+def test_retry_run_increments_attempts(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    assert state.attempts == 0
+    retry_run(state)
+    assert state.attempts == 1
+
+
+def test_retry_run_multiple(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
+    retry_run(state)
+    advance_phase(state)  # IMPLEMENT → VERIFY
+    advance_phase(state)  # VERIFY → REVIEW
+    retry_run(state)
+    assert state.attempts == 2
+    assert state.phase == DogfoodPhase.IMPLEMENT
+
+
+def test_retry_run_does_not_persist(tmp_path):
+    """retry_run mutates state in-memory only; save_state must be called explicitly."""
+    state = _state(tmp_path)
+    save_state(state)
+    state.phase = DogfoodPhase.REVIEW
+    retry_run(state)
+    loaded = load_state(state.runtime_workspace, state.run_id)
+    assert loaded.phase == DogfoodPhase.PENDING  # not persisted yet
 
 
 # ---------------------------------------------------------------------------
