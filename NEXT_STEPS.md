@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-23 KST** — R3 scope guard enforce + skills/ 격리 fix 완료 (3-Tier PASS). 다음 세션 진입점: R1 복합 증명 (worktree에서 AF multi-file 자기실행 실험) → deep-interview-pipeline §17 Step 3~4.
+> 마지막 업데이트: **2026-05-23 KST** — §17 Step 3~4 완료 (research_brief + spec_compiler, 24 tests, 3-Tier PASS). 다음 세션 진입점: §17 Step 5 (Premortem) 또는 dogfood state machine 착공.
 
 ---
 
@@ -204,7 +204,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 2. ✅ **`core/interview.py` artifact shape 확장** — `research_questions/`risk_hints`/`assumptions` 필드 추가. `_build_assumptions()` + `_ensure_artifact_shape()` 신설. 테스트 5개 신규. 3-Tier PASS.
 3. **R1 복합 증명** — multi-file 또는 실제 기능 변경 시나리오 1회. ✅ skills/ 격리 미완 해소 완료 (AF_SELF_RUN + SKILLS_DIR 제외). 실제 실험: worktree 생성 후 `python agent_launcher.py --fsa` 실행.
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
-5. 위 완료 후 `deep-interview-pipeline.md §17 Step 3~4` (Research Brief 연결) 진입.
+5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
+6. 다음: §17 Step 5 (Premortem — repo-aware 실패 예측 → 검증 요건 변환) 또는 dogfood state machine 착공.
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
