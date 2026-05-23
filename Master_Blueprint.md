@@ -152,7 +152,7 @@
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7+8+9+10 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase + end-to-end run_all() | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()` |
+| `core/dogfood.py` | §17 Step 7+8+9+10 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase + end-to-end run_all() | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `_validate_run_id()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
