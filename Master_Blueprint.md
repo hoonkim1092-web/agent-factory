@@ -150,6 +150,7 @@
 | `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
+| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1561,6 +1562,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-24 | v1.2.29 | feat(premortem): §17 Step 5 구현 — `core/premortem.py` 신규(`PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`). `CompiledSpec`을 입력받아 5종 detector(blueprint_sync/packaging/workspace/approval/assumption/research_gap)로 repo-aware 리스크 탐지 후 구체적 검증 요건 생성. assumption(R5+) vs gap(R20+) ID 충돌 방지 동적 오프셋. `af.spec` hiddenimports 추가. 테스트 39건 신규. 3-Tier PASS. |
 | 2026-05-23 | v1.2.28 | feat(research-brief+spec-compiler): §17 Step 3~4 구현 — `core/research_brief.py` 신규(`ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()`) + `core/spec_compiler.py` 신규(`CompiledSpec`, `compile_spec()`, `_detect_gaps()`). interview artifact → ResearchBrief 변환, 증거 on-brief/supplemental 분리, 미답변 questions gap 탐지, CompiledSpec 직렬화. `af.spec` hiddenimports 추가. 테스트 24건 신규. 3-Tier PASS. |
 | 2026-05-23 | v1.2.28 | fix(claude-hooks-windows): `.claude/settings*.json` hook 명령을 `sh scripts/hookpy.sh ...`에서 `python scripts/run.py ...`로 전환해 Windows Claude `/usr/bin/sh` 실행 실패를 제거. `scripts/cli_hook_bridge.py` stdout UTF-8/backslashreplace 설정 + ASCII-safe JSON 출력. `core/providers/session_adapter.py` hook payload lone surrogate sanitize 및 JSONL/state ASCII-safe 저장. `tests/test_cli_session_adapter.py` surrogate payload 회귀 테스트 추가. |
 | 2026-05-23 | v1.2.28 | feat(r3-scope-guard+skills-isolation): R3 scope guard enforce + skills/ 격리 fix — `agent_launcher._git_modified_files()` + `_scope_guard_report(cwd, allowed, baseline)` 신규. `_maybe_isolate_project_root_for_self_run()`에 `AF_SELF_RUN=1` 추가. `__main__` 블록에 baseline 기반 atexit scope guard 등록. `core/utils.get_external_skill_roots()` — AF_SELF_RUN 시 SKILLS_DIR 제외(`_env_flag` 표준 사용). 테스트 3건 신규(monkeypatch 가드 4건 + `test_get_external_skill_roots_self_run_excludes_skills_dir` + `test_isolates_ad_hoc_text` AF_SELF_RUN 검증). 3-Tier PASS. |
