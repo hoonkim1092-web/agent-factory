@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-21 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-23 | version: v1.2.28 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -109,7 +109,7 @@
 | `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | `SpecGenerator`, `AdrGenerator`, `TraceabilityGenerator`, `_call_llm_raw`, `SPEC_FILENAMES` |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입 | `execute_cli_chat()`, `_progress_printer()`, `_compose_prompt()`, `_collect_git_context()`, `_detect_repo_root()` |
-| `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행) | `prepare_cli_session()`, `handle_hook_event()` |
+| `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize | `prepare_cli_session()`, `handle_hook_event()` |
 | `core/provider_detect.py` | 3-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. ThreadPool race condition 수정: installed_set을 ThreadPool 전 1회 계산 후 각 worker에 frozenset 전달. codex_cli ping: --version (exec stdin hang 수정) | `ProviderState`, `ProviderProbeResult`, `detect_provider_states()`, `invalidate_cache()`, `_resolve_ping_cmd()`, `_probe_one(provider_id, installed)` |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()`, `_installed_cli_cache_lock` |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
@@ -148,6 +148,8 @@
 | `core/capability_intent.py` | capability intent | — |
 | `core/clarification.py` | clarification | `generate_clarification_questions()`, `should_skip_clarification()`, `merge_clarification()` |
 | `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
+| `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
+| `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1559,6 +1561,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-23 | v1.2.28 | feat(research-brief+spec-compiler): §17 Step 3~4 구현 — `core/research_brief.py` 신규(`ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()`) + `core/spec_compiler.py` 신규(`CompiledSpec`, `compile_spec()`, `_detect_gaps()`). interview artifact → ResearchBrief 변환, 증거 on-brief/supplemental 분리, 미답변 questions gap 탐지, CompiledSpec 직렬화. `af.spec` hiddenimports 추가. 테스트 24건 신규. 3-Tier PASS. |
+| 2026-05-23 | v1.2.28 | fix(claude-hooks-windows): `.claude/settings*.json` hook 명령을 `sh scripts/hookpy.sh ...`에서 `python scripts/run.py ...`로 전환해 Windows Claude `/usr/bin/sh` 실행 실패를 제거. `scripts/cli_hook_bridge.py` stdout UTF-8/backslashreplace 설정 + ASCII-safe JSON 출력. `core/providers/session_adapter.py` hook payload lone surrogate sanitize 및 JSONL/state ASCII-safe 저장. `tests/test_cli_session_adapter.py` surrogate payload 회귀 테스트 추가. |
 | 2026-05-23 | v1.2.28 | feat(r3-scope-guard+skills-isolation): R3 scope guard enforce + skills/ 격리 fix — `agent_launcher._git_modified_files()` + `_scope_guard_report(cwd, allowed, baseline)` 신규. `_maybe_isolate_project_root_for_self_run()`에 `AF_SELF_RUN=1` 추가. `__main__` 블록에 baseline 기반 atexit scope guard 등록. `core/utils.get_external_skill_roots()` — AF_SELF_RUN 시 SKILLS_DIR 제외(`_env_flag` 표준 사용). 테스트 3건 신규(monkeypatch 가드 4건 + `test_get_external_skill_roots_self_run_excludes_skills_dir` + `test_isolates_ad_hoc_text` AF_SELF_RUN 검증). 3-Tier PASS. |
 | 2026-05-22 | v1.2.28 | feat(interview-artifact-shape): `_build_assumptions()` + `_ensure_artifact_shape()` 추가 — `research_questions`/`risk_hints`/`assumptions` 3필드 artifact 보장 (§17 Step 1). deep_skip 모드에서 clarification_log → assumptions 파생. 테스트 5개 신규. 3-Tier PASS. |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, interview.py, code-review.md, run_factory_cli.py, meta.yaml (+2) |
