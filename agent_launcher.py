@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood"}
 
 
 def _git_modified_files(cwd: str) -> list[str]:
@@ -899,6 +899,18 @@ def _build_arg_parser(ad_hoc_mode):
         sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
         sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
         sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+
+        dogfood_parser = subparsers.add_parser("dogfood", help="Dogfood 파이프라인 실행")
+        dogfood_sub = dogfood_parser.add_subparsers(dest="dogfood_cmd", required=True)
+
+        df_run = dogfood_sub.add_parser("run", help="파이프라인 전체 실행 (PENDING → COMPLETE)")
+        df_run.add_argument("task", help="태스크 설명 (자연어)")
+        df_run.add_argument("--workspace", default=None, help="작업 디렉토리 (기본: CWD)")
+        df_run.add_argument("--run-id", default=None, dest="run_id", help="런 ID (기본: 자동 생성)")
+
+        df_status = dogfood_sub.add_parser("status", help="런 상태 조회")
+        df_status.add_argument("run_id", help="런 ID")
+        df_status.add_argument("--workspace", default=None, help="작업 디렉토리 (기본: CWD)")
     return parser
 
 
@@ -932,6 +944,33 @@ if __name__ == "__main__":
                 prefix = "[sync]" if ok else "[sync] ERROR:"
                 print(f"{prefix} {msg}")
             sys.exit(0)
+        elif args.subcommand == "dogfood":
+            from core.dogfood import run_all, load_state, _default_runtime_workspace
+            workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
+            if args.dogfood_cmd == "run":
+                print(f"[dogfood] task     : {args.task}")
+                print(f"[dogfood] workspace: {workspace}")
+                state = run_all(args.task, workspace, run_id=args.run_id)
+                print(f"[dogfood] run_id   : {state.run_id}")
+                print(f"[dogfood] phase    : {state.phase.value}")
+                if state.last_failure:
+                    print(f"[dogfood] failure  : {state.last_failure}")
+                sys.exit(0 if state.phase.value == "complete" else 1)
+            elif args.dogfood_cmd == "status":
+                workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
+                rt_ws = _default_runtime_workspace(workspace)
+                try:
+                    state = load_state(rt_ws, args.run_id)
+                except FileNotFoundError:
+                    print(f"[dogfood] run_id '{args.run_id}' 를 찾을 수 없음 (workspace: {workspace})")
+                    sys.exit(1)
+                print(f"run_id  : {state.run_id}")
+                print(f"phase   : {state.phase.value}")
+                print(f"task    : {state.task}")
+                print(f"attempts: {state.attempts}")
+                if state.last_failure:
+                    print(f"failure : {state.last_failure}")
+                sys.exit(0)
         else:
             parser.print_help()
             sys.exit(1)

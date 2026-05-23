@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -22,6 +23,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Tuple
+
+# run_id must be alphanumeric + hyphens — no path separators or dots
+_RUN_ID_RE = re.compile(r'^[\w\-]+$')
+
+
+def _validate_run_id(run_id: str) -> None:
+    """Raise ValueError if run_id contains path traversal characters."""
+    if not _RUN_ID_RE.fullmatch(run_id):
+        raise ValueError(
+            f"Invalid run_id {run_id!r}: only alphanumerics, underscores, and hyphens are allowed."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +199,7 @@ def save_state(state: DogfoodState) -> None:
 
 def load_state(runtime_workspace: str, run_id: str) -> DogfoodState:
     """Load state from disk."""
+    _validate_run_id(run_id)
     path = Path(runtime_workspace) / "dogfood" / run_id / "dogfood_state.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     return DogfoodState.from_dict(data)
@@ -212,6 +225,7 @@ def create_run(
 ) -> DogfoodState:
     """Create a new DogfoodState and persist it."""
     rid = run_id or f"{int(time.time())}-{uuid.uuid4().hex[:8]}"
+    _validate_run_id(rid)
     rws = runtime_workspace or _default_runtime_workspace(workspace)
     state = DogfoodState(
         run_id=rid,
