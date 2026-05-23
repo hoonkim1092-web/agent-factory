@@ -440,14 +440,108 @@ def test_run_plan_returns_dict_with_intent(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# run_phase — IMPLEMENT (stub — still passes context through)
+# run_phase — IMPLEMENT (§17 Step 9)
 # ---------------------------------------------------------------------------
 
-def test_run_implement_stub(tmp_path):
+def _plan_dict(steps: list[dict] | None = None) -> dict:
+    return {
+        "intent": "test",
+        "steps": steps or [],
+        "completion_criteria": [],
+        "approval_points": [],
+        "verification_requirements": [],
+        "unresolved_risks": [],
+    }
+
+
+def _step(sid: str, commands: list[str] | None = None, target: str = "file.py") -> dict:
+    return {"id": sid, "action": f"Implement {target}", "target": target, "commands": commands or []}
+
+
+def test_run_implement_empty_plan_ok(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
-    ctx = {"step": "impl"}
-    result = run_phase(state, context=ctx)
-    assert result == ctx
+    result = run_phase(state, context={"plan_dict": _plan_dict()})
+    assert result["ok"] is True
+    assert result["executed"] == []
+    assert result["failures"] == []
+    assert result["skipped_no_commands"] == []
+
+
+def test_run_implement_steps_without_commands_are_skipped(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([_step("S1"), _step("S2")])
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["ok"] is True
+    assert result["skipped_no_commands"] == ["S1", "S2"]
+    assert result["executed"] == []
+
+
+def test_run_implement_commands_all_pass(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"echo ok": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([_step("S1", commands=["echo ok"])])
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["ok"] is True
+    assert result["failures"] == []
+    assert result["executed"] == [{"step": "S1", "command": "echo ok", "ok": True, "output": ""}]
+
+
+def test_run_implement_command_failure(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"bad": False}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([_step("S1", commands=["bad"])])
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["ok"] is False
+    assert result["failures"] == ["S1: bad"]
+
+
+def test_run_implement_loads_plan_from_disk(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"pytest": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    # write plan to disk at state.plan_path location
+    plan = _plan_dict([_step("S1", commands=["pytest"])])
+    plan_file = tmp_path / "runtime" / "dogfood" / "test-run-001" / "plan.json"
+    plan_file.parent.mkdir(parents=True, exist_ok=True)
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+    result = run_phase(state, context={})
+    assert result["ok"] is True
+    assert result["executed"][0]["command"] == "pytest"
+
+
+def test_run_implement_context_plan_dict_takes_priority(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"ctx_cmd": True, "disk_cmd": False}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    # disk plan has failing command
+    disk_plan = _plan_dict([_step("S1", commands=["disk_cmd"])])
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(disk_plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+    # context plan has passing command — should win
+    ctx_plan = _plan_dict([_step("S1", commands=["ctx_cmd"])])
+    result = run_phase(state, context={"plan_dict": ctx_plan})
+    assert result["ok"] is True
+    assert result["executed"][0]["command"] == "ctx_cmd"
+
+
+def test_run_implement_mixed_steps(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"run.sh": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([
+        _step("S1"),               # no commands → skipped
+        _step("S2", commands=["run.sh"]),  # has command → executed
+        _step("S3"),               # no commands → skipped
+    ])
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["ok"] is True
+    assert result["skipped_no_commands"] == ["S1", "S3"]
+    assert len(result["executed"]) == 1
+    assert result["executed"][0]["step"] == "S2"
 
 
 # ---------------------------------------------------------------------------

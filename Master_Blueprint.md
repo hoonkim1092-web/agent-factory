@@ -152,7 +152,7 @@
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7+8 — Dogfood state machine + Verify/Review/Retry loop | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `save_state()`, `load_state()` |
+| `core/dogfood.py` | §17 Step 7+8+9 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `save_state()`, `load_state()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1564,6 +1564,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-24 | v1.2.33 | feat(dogfood): §17 Step 9 구현 — `_run_implement_phase` stub 제거, 실 구현. plan steps 순회: commands 있는 step은 `_command_runner` 실행(executed 수집), 없는 step(AI-coded)은 `skipped_no_commands` 기록. `context["plan_dict"]` 없으면 `state.plan_path`에서 disk 로드. 반환: {executed, failures, skipped_no_commands, ok}. stub test 1개 → 실 구현 테스트 7개 교체 (63→69 tests PASS). 3-Tier: af-critic PASS / af-cross-review PASS / af-test-runner PASS. |
 | 2026-05-24 | v1.2.32 | feat(dogfood): §17 Step 8 구현 — `core/dogfood.py` 확장. `VerifyResult`/`ReviewDecision` dataclass 추가. `_command_runner` injectable(monkeypatch 가능). `retry_run()` 신설 — IMPLEMENT 리셋 + attempts 증가. `_run_verify_phase` 실 구현: context["commands"] or plan_dict["verification_requirements"] 실행, VerifyResult 반환. `_run_review_phase` 실 구현: verify passed→"pass", attempts<MAX-1→"retry", 이상→"block". MAX_VERIFY_ATTEMPTS=3. 테스트 49→63건(+14). af-critic WARN / af-cross-review SKIP(세션한도) / af-test-runner PASS. |
 | 2026-05-24 | v1.2.31 | feat(dogfood): §17 Step 7 구현 — `core/dogfood.py` 신규(`DogfoodPhase`, `DogfoodState`, `create_run()`, `advance_phase()`, `block_run()`, `run_phase()`, `save_state()`, `load_state()`). interview→research_brief→research→spec→premortem→plan→implement→verify→review→complete 11단계 상태 머신. JSON 영속화(`.af_runtime/dogfood/<run_id>/`). 각 phase runner가 Step 3~6 모듈에 위임, implement/verify/review는 Step 8 stub. `af.spec` hiddenimports 추가. 테스트 49건 신규. 3-Tier PASS. |
 | 2026-05-24 | v1.2.30 | feat(planner): §17 Step 6 구현 — `core/planner.py` 신규(`ExecutablePlan`, `PlanStep`, `build_plan()`). `CompiledSpec`+`PremortomResult` → investigation(gap)→implementation(scope)→verification(premortem) 순서 실행 계획. `PlanStep.commands`에 verification 명령어 저장. boilerplate 토큰 false-negative 수정(`removeprefix` 적용). `af.spec` hiddenimports 추가. 테스트 36건 신규. 3-Tier PASS. |

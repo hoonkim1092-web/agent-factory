@@ -2,6 +2,7 @@
 
 §17 Step 7 — Add Dogfood state machine.
 §17 Step 8 — Verify/Review/Retry loop.
+§17 Step 9 — IMPLEMENT phase: execute plan step commands.
 
 Manages persistent run state and coordinates the pipeline phases:
   interview → research_brief → research → spec → premortem → plan →
@@ -342,8 +343,43 @@ def _run_plan_phase(
 
 
 def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
-    """Implementation execution — stub for Step 8."""
-    return context
+    """Execute plan step commands and return impl_result dict.
+
+    Loads the plan from state.plan_path when context["plan_dict"] is absent.
+    Steps without commands are skipped (AI-coded steps need external invocation);
+    their IDs are collected in "skipped_no_commands".
+
+    context keys:
+      plan_dict — ExecutablePlan dict (overrides disk load)
+    """
+    plan_dict: dict[str, Any] = context.get("plan_dict") or {}
+    if not plan_dict and state.plan_path:
+        plan_path = Path(state.plan_path)
+        if plan_path.exists():
+            plan_dict = json.loads(plan_path.read_text(encoding="utf-8"))
+
+    executed: list[dict[str, Any]] = []
+    failures: list[str] = []
+    skipped: list[str] = []
+
+    for step in plan_dict.get("steps", []):
+        commands: list[str] = step.get("commands") or []
+        step_id: str = step.get("id", "?")
+        if not commands:
+            skipped.append(step_id)
+            continue
+        for cmd in commands:
+            ok, output = _command_runner(cmd, state.workspace)
+            executed.append({"step": step_id, "command": cmd, "ok": ok, "output": output})
+            if not ok:
+                failures.append(f"{step_id}: {cmd}")
+
+    return {
+        "executed": executed,
+        "failures": failures,
+        "skipped_no_commands": skipped,
+        "ok": len(failures) == 0,
+    }
 
 
 def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
