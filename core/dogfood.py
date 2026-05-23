@@ -442,6 +442,78 @@ def _run_review_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
 # Public orchestration API
 # ---------------------------------------------------------------------------
 
+def run_all(
+    task: str,
+    workspace: str,
+    *,
+    interview_artifact: dict[str, Any] | None = None,
+    run_id: str | None = None,
+    runtime_workspace: str | None = None,
+) -> "DogfoodState":
+    """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
+
+    Phases execute sequentially. The IMPLEMENT → VERIFY → REVIEW loop repeats
+    on retry until verification passes or max attempts are exhausted (BLOCKED).
+
+    interview_artifact: pre-built interview data; defaults to {goal: task}.
+    Returns the final DogfoodState (phase COMPLETE or BLOCKED).
+    """
+    state = create_run(task, workspace, run_id=run_id, runtime_workspace=runtime_workspace)
+
+    interview: dict[str, Any] = interview_artifact or {"goal": task}
+    research_brief: dict[str, Any] = {}
+    research: dict[str, Any] = {}
+    spec: dict[str, Any] = {}
+    premortem: dict[str, Any] = {}
+    plan_dict: dict[str, Any] = {}
+    verify_result: dict[str, Any] = {}
+
+    while not state.is_terminal():
+        phase = state.phase
+
+        if phase == DogfoodPhase.PENDING:
+            advance_phase(state)
+            save_state(state)
+            continue
+
+        if phase == DogfoodPhase.INTERVIEW:
+            interview = run_phase(state, artifact=interview)
+        elif phase == DogfoodPhase.RESEARCH_BRIEF:
+            research_brief = run_phase(state, artifact=interview)
+        elif phase == DogfoodPhase.RESEARCH:
+            research = run_phase(state, context=research_brief)
+        elif phase == DogfoodPhase.SPEC:
+            spec = run_phase(
+                state,
+                interview_artifact=interview,
+                research_artifact=research,
+            )
+        elif phase == DogfoodPhase.PREMORTEM:
+            premortem = run_phase(state, spec_dict=spec)
+        elif phase == DogfoodPhase.PLAN:
+            plan_dict = run_phase(state, spec_dict=spec, premortem_dict=premortem)
+        elif phase == DogfoodPhase.IMPLEMENT:
+            run_phase(state, context={})
+        elif phase == DogfoodPhase.VERIFY:
+            verify_result = run_phase(state, context={"plan_dict": plan_dict})
+        elif phase == DogfoodPhase.REVIEW:
+            review = run_phase(state, context={"verify_result": verify_result})
+            decision = review.get("decision", "pass")
+            if decision == "retry":
+                retry_run(state)
+            elif decision == "block":
+                block_run(state, review.get("reason", ""))
+            else:
+                advance_phase(state)  # → COMPLETE
+            save_state(state)
+            continue
+
+        advance_phase(state)
+        save_state(state)
+
+    return state
+
+
 def run_phase(state: DogfoodState, **kwargs: Any) -> dict[str, Any]:
     """Execute the current phase and return the resulting artifact dict.
 

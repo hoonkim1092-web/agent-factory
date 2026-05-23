@@ -22,6 +22,7 @@ from core.dogfood import (
     create_run,
     load_state,
     retry_run,
+    run_all,
     run_phase,
     save_state,
 )
@@ -737,3 +738,190 @@ def test_premortem_from_dict_roundtrip():
     assert len(restored.risks) == 1
     assert restored.risks[0].id == "R1"
     assert restored.risks[0].verification[0].command == "py_compile x.py"
+
+
+# ---------------------------------------------------------------------------
+# run_all — end-to-end orchestration (§17 Step 10)
+# ---------------------------------------------------------------------------
+
+def _patch_all_runners(monkeypatch, verify_seq=None):
+    """Stub all phase runners. verify_seq controls verify passed values (default [True])."""
+    import core.dogfood as df
+
+    _verify_it = iter(verify_seq if verify_seq is not None else [True])
+
+    monkeypatch.setattr(df, "_run_interview_phase",
+        lambda s, artifact: artifact or {"goal": "stub"})
+    monkeypatch.setattr(df, "_run_research_brief_phase",
+        lambda s, artifact: {"questions": []})
+    monkeypatch.setattr(df, "_run_research_phase",
+        lambda s, context: context)
+    monkeypatch.setattr(df, "_run_spec_phase",
+        lambda s, interview_artifact, research_artifact: {
+            "intent": interview_artifact.get("goal", ""),
+            "scope": [], "success_criteria": [], "constraints": [],
+            "approval_policy": "", "research_findings": [],
+            "supplemental": [], "gaps": [], "risk_hints": [], "assumptions": [],
+        })
+    monkeypatch.setattr(df, "_run_premortem_phase",
+        lambda s, spec_dict: {"spec_intent": spec_dict.get("intent", ""), "risks": []})
+    monkeypatch.setattr(df, "_run_plan_phase",
+        lambda s, spec_dict, premortem_dict: {
+            "intent": spec_dict.get("intent", ""),
+            "steps": [], "completion_criteria": [],
+            "approval_points": [], "verification_requirements": [],
+            "unresolved_risks": [],
+        })
+    monkeypatch.setattr(df, "_run_implement_phase",
+        lambda s, context: {"executed": [], "failures": [], "skipped_no_commands": [], "ok": True})
+
+    def _fake_verify(s, context):
+        passed = next(_verify_it, True)
+        return {"passed": passed, "commands_run": [], "failures": [] if passed else ["fail"]}
+
+    monkeypatch.setattr(df, "_run_verify_phase", _fake_verify)
+
+
+def test_run_all_returns_complete(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch)
+    state = run_all(
+        "test task", str(tmp_path),
+        interview_artifact={"goal": "test task"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert state.phase == DogfoodPhase.COMPLETE
+
+
+def test_run_all_persists_complete_state(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch)
+    state = run_all(
+        "test task", str(tmp_path),
+        interview_artifact={"goal": "test task"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    loaded = load_state(state.runtime_workspace, state.run_id)
+    assert loaded.phase == DogfoodPhase.COMPLETE
+
+
+def test_run_all_retry_then_pass_returns_complete(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch, verify_seq=[False, True])
+    state = run_all(
+        "retry task", str(tmp_path),
+        interview_artifact={"goal": "retry task"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert state.phase == DogfoodPhase.COMPLETE
+    assert state.attempts == 1
+
+
+def test_run_all_max_retries_returns_blocked(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch, verify_seq=[False] * MAX_VERIFY_ATTEMPTS)
+    state = run_all(
+        "blocked task", str(tmp_path),
+        interview_artifact={"goal": "blocked task"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert state.phase == DogfoodPhase.BLOCKED
+    assert state.attempts == MAX_VERIFY_ATTEMPTS - 1
+
+
+def test_run_all_blocked_persists_state(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch, verify_seq=[False] * MAX_VERIFY_ATTEMPTS)
+    state = run_all(
+        "blocked", str(tmp_path),
+        interview_artifact={"goal": "blocked"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    loaded = load_state(state.runtime_workspace, state.run_id)
+    assert loaded.phase == DogfoodPhase.BLOCKED
+    assert loaded.last_failure != ""
+
+
+def test_run_all_default_interview_uses_task_as_goal(tmp_path, monkeypatch):
+    import core.dogfood as df
+    captured: dict = {}
+
+    def _capture_interview(s, artifact):
+        captured.update(artifact)
+        return artifact
+
+    _patch_all_runners(monkeypatch)
+    monkeypatch.setattr(df, "_run_interview_phase", _capture_interview)
+
+    run_all("my task", str(tmp_path), runtime_workspace=str(tmp_path / "rt"))
+    assert captured.get("goal") == "my task"
+
+
+def test_run_all_returns_dogfood_state(tmp_path, monkeypatch):
+    _patch_all_runners(monkeypatch)
+    state = run_all(
+        "t", str(tmp_path),
+        interview_artifact={"goal": "t"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert isinstance(state, DogfoodState)
+    assert state.task == "t"
+
+
+def test_run_all_verify_uses_plan_verification_requirements(tmp_path, monkeypatch):
+    """VERIFY must receive plan_dict so verification_requirements are not silently skipped."""
+    import core.dogfood as df
+
+    received_contexts: list[dict] = []
+
+    def _capture_verify(s, context):
+        received_contexts.append(dict(context))
+        return {"passed": True, "commands_run": [], "failures": []}
+
+    _patch_all_runners(monkeypatch)
+    monkeypatch.setattr(df, "_run_plan_phase",
+        lambda s, spec_dict, premortem_dict: {
+            "intent": "t", "steps": [], "completion_criteria": [],
+            "approval_points": [], "verification_requirements": ["pytest -q"],
+            "unresolved_risks": [],
+        })
+    monkeypatch.setattr(df, "_run_verify_phase", _capture_verify)
+
+    run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
+            runtime_workspace=str(tmp_path / "rt"))
+
+    assert len(received_contexts) == 1
+    plan = received_contexts[0].get("plan_dict", {})
+    assert plan.get("verification_requirements") == ["pytest -q"]
+
+
+def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
+    import core.dogfood as df
+    visited: list[str] = []
+
+    def _track(phase_name, orig_fn):
+        def _wrapper(*args, **kwargs):
+            visited.append(phase_name)
+            return orig_fn(*args, **kwargs)
+        return _wrapper
+
+    _patch_all_runners(monkeypatch)
+
+    for attr, name in [
+        ("_run_interview_phase", "interview"),
+        ("_run_research_brief_phase", "research_brief"),
+        ("_run_research_phase", "research"),
+        ("_run_spec_phase", "spec"),
+        ("_run_premortem_phase", "premortem"),
+        ("_run_plan_phase", "plan"),
+        ("_run_implement_phase", "implement"),
+        ("_run_verify_phase", "verify"),
+        ("_run_review_phase", "review"),
+    ]:
+        orig = getattr(df, attr)
+        monkeypatch.setattr(df, attr, _track(name, orig))
+
+    run_all(
+        "track test", str(tmp_path),
+        interview_artifact={"goal": "track test"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert visited == [
+        "interview", "research_brief", "research", "spec",
+        "premortem", "plan", "implement", "verify", "review",
+    ]
