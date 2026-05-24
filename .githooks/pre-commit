@@ -9,7 +9,9 @@ _PRE_CODE=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.p
 if [ -n "$_PRE_CODE" ]; then
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
     VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-    [ -x "$VENV_PYTHON" ] && _BPY="$VENV_PYTHON" || _BPY="python3"
+    if [ -x "$VENV_PYTHON" ]; then _BPY="$VENV_PYTHON"
+    elif command -v python3 >/dev/null 2>&1; then _BPY="python3"
+    else _BPY="python"; fi
     "$_BPY" "${REPO_ROOT}/scripts/blueprint_updater.py" --no-llm 2>/dev/null || true
     if git diff --name-only 2>/dev/null | grep -q "^${BLUEPRINT}$"; then
         git add "${BLUEPRINT}" 2>/dev/null || true
@@ -82,11 +84,9 @@ if [ "${AF_PRE_COMMIT_VERIFY:-1}" != "0" ]; then
     if [ "$HAS_VERIFY" -gt 0 ]; then
         REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
         VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-        if [ -x "$VENV_PYTHON" ]; then
-            VERIFY_PY="$VENV_PYTHON"
-        else
-            VERIFY_PY="python3"
-        fi
+        if [ -x "$VENV_PYTHON" ]; then VERIFY_PY="$VENV_PYTHON"
+        elif command -v python3 >/dev/null 2>&1; then VERIFY_PY="python3"
+        else VERIFY_PY="python"; fi
 
         "$VERIFY_PY" "${REPO_ROOT}/scripts/verify_handoff_checker.py" 2>&1
         VERIFY_EXIT=$?

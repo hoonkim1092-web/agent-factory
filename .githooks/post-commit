@@ -11,7 +11,9 @@ CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
 if [ -n "$CHANGED" ]; then
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
     VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-    [ -x "$VENV_PYTHON" ] && CLEAR_PY="$VENV_PYTHON" || CLEAR_PY="python3"
+    if [ -x "$VENV_PYTHON" ]; then CLEAR_PY="$VENV_PYTHON"
+    elif command -v python3 >/dev/null 2>&1; then CLEAR_PY="python3"
+    else CLEAR_PY="python"; fi
     COMMITTED=$(echo "$CHANGED" | tr '\n' ',' | sed 's/,$//')
     "$CLEAR_PY" "${REPO_ROOT}/scripts/review_gate.py" --clear --files "$COMMITTED" >/dev/null 2>&1 || true
 fi

@@ -16,6 +16,13 @@ import sys
 import tempfile
 import time
 
+# Windows cp949 터미널에서 유니코드 이모지 출력 실패 방지
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[attr-defined]
+except Exception:
+    pass
+
 _QUEUE_DIR = ".af_review_queue"
 _PENDING_FILE = "pending_agent_review.json"
 _LOCK_FILE = "pending_agent_review.json.lock"
