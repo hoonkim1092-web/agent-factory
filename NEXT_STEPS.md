@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 15 완료 (`8ad5a3ac`). 다음 세션 진입점: Triad 실 에이전트 연결 (현재 injectable stub → 실제 claude-cli 서브프로세스 호출) 또는 Step 16 worktree 격리.
+> 마지막 업데이트: **2026-05-25 KST** — dogfood 격리+auto-merge 설계문서 v2 완료 (`docs/2026-05-25-dogfood-isolation-auto-merge-design.md`). 다음 세션 진입점: §17 Step 16 worktree 격리 구현 (설계 v2 기반).
 
 ---
 
@@ -216,10 +216,22 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 14. ✅ **§17 Step 13** — `_build_interview_fn()` + `_run_interview_phase(_interview_fn)` injectable + `run_phase` passthrough + `run_all(non_interactive, _interview_fn)`. TTY 감지(`sys.stdin.isatty()` False → non_interactive). `dogfood run --non-interactive` 파서 추가. 기존 monkeypatch 스텁 `**kw` 수정(af-cross-review BLOCK 해소). 테스트 30→37건(+7). 3-Tier PASS. (`0dbd4800`, 2026-05-24)
 15. ✅ **§17 Step 14** — `tests/test_dogfood_integration.py` 8 smoke tests. 실제 모듈(research_brief, spec_compiler, premortem, planner) 체이닝 + _command_runner mock. PENDING→COMPLETE/BLOCKED 두 경로 모두 검증. 3-Tier PASS. (`5d8ec8b8`, 2026-05-24)
 16. ✅ **§17 Step 15** — `core/triad.py` 正反合 Triad 오케스트레이션. TriadCriticFinding/Report/Decision/Result dataclass. run_triad() injectable executor 설계. evidence 계약 강제(_validate_findings). Critical finding 미해소 → TriadBlockedError. dogfood._run_plan_phase 연결. af-triad-critic.md 스킬 파일. 25 tests. 3-Tier WARN-only PASS. (`8ad5a3ac`, 2026-05-24)
-17. 다음 옵션:
-    - **A** Triad 실 에이전트 연결: _critic_executor/_architect_executor에 claude-cli 서브프로세스 호출 배선
-    - **B** worktree 격리 (Step 10): dogfood run이 격리된 git worktree에서 실행
-    - **C** RESEARCH stub 실 구현: 실제 researcher.py 연결
+17. ✅ **설계 v2 완료** — `docs/2026-05-25-dogfood-isolation-auto-merge-design.md` v2. 8라운드 분석 후 12개 합의 항목 반영:
+    - Triad PLAN-only 정리, post-REVIEW Triad 표현 제거
+    - runtime root: `%USERPROFILE%\.af-dogfood` (CWD 독립)
+    - `_default_runtime_workspace(run_id)` — workspace 인자 없음
+    - `require_plan_triad_pass` (rename + opt-out 의미)
+    - MERGE: mutex → is-ancestor crash recovery → reset --merge → actual merge
+    - `TriadContractError` 신규 예외 타입, Architect read-only 계약
+    - active run registry: pid+started_at, heartbeat 없음
+    - `isolate_attempts` 상태 필드 없음 — 내부 1-retry loop만
+18. **다음: §17 Step 16 — worktree 격리 구현** (설계 v2 §15 구현 순서 따라)
+    - Step 1: DogfoodState 필드 추가 + workspace 프로퍼티 호환
+    - Step 2: `_default_runtime_workspace(run_id)` 전환
+    - Step 3: CLI merge mode 파싱
+    - Step 4: `prepare_isolated_worktree()` — 1-retry 내부 루프
+    - Step 5: IMPLEMENT/VERIFY/REVIEW cwd를 worktree_workspace로 라우팅
+    - Step 6~9: FINALIZE, 정책 체크, MERGE 단계 추가
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
