@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-23 | version: v1.2.28 -->
+<!-- last_updated: 2026-05-24 | version: v1.2.31 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -209,6 +209,7 @@
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
 | `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/triad.py` | triad | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision` |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -1564,6 +1565,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-24 | v1.2.31 | chore(.claude): code update — af-triad-critic.md, af.spec, dogfood.py, triad.py, test_dogfood.py (+1) |
 | 2026-05-24 | v1.2.35 | fix(encoding): Windows lone-surrogate/cp949 stdout 인코딩 버그 픽스 — `session_adapter.py` `_hook_json_dumps(ensure_ascii=True)` + `_sanitize_hook_value()` 추가, `cli_hook_bridge.py` stdout reconfigure utf-8/backslashreplace, `.claude/settings.json` hook 커맨드 단순화(sh hookpy.sh 제거). 테스트 1건 신규. |
 | 2026-05-24 | v1.2.35 | feat(dogfood-cli): §17 Step 12 — `agent_launcher.py`에 `dogfood interview <task>` 서브커맨드 추가 + `dogfood run --from-file <path>` 옵션 추가. `dogfood interview`는 `core.interview.run_interview()` 래핑(--non-interactive / --deep-skip / --out / --workspace 지원). `dogfood run --from-file`은 interview artifact JSON을 로드해 `run_all(interview_artifact=...)` 에 전달. `_build_arg_parser()` + `__main__` 디스패치 양쪽 수정. `tests/test_dogfood_cli.py` 10건 → 30건(+10: parser 5건, interview dispatch 2건, from-file 3건). 3-Tier PASS. |
 | 2026-05-24 | v1.2.34 | feat(dogfood): §17 Step 10 구현 — `run_all()` 신규. PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. PLAN 반환값을 `plan_dict`로 보존 후 VERIFY에 `context={"plan_dict": plan_dict}` 전달(verification_requirements 우회 버그 수정). REVIEW retry/block/pass 분기 처리. 테스트 69→78건(+9: 정상 완주·persist·retry·max-block·block persist·default artifact·반환 타입·plan_dict 전달·전 단계 방문 순서). 3-Tier: af-critic PASS / af-cross-review PASS(BLOCK→수정→재검증 PASS) / af-test-runner PASS. |

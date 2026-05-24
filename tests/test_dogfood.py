@@ -766,7 +766,7 @@ def _patch_all_runners(monkeypatch, verify_seq=None):
     monkeypatch.setattr(df, "_run_premortem_phase",
         lambda s, spec_dict: {"spec_intent": spec_dict.get("intent", ""), "risks": []})
     monkeypatch.setattr(df, "_run_plan_phase",
-        lambda s, spec_dict, premortem_dict: {
+        lambda s, spec_dict, premortem_dict, **kw: {
             "intent": spec_dict.get("intent", ""),
             "steps": [], "completion_criteria": [],
             "approval_points": [], "verification_requirements": [],
@@ -875,7 +875,7 @@ def test_run_all_verify_uses_plan_verification_requirements(tmp_path, monkeypatc
 
     _patch_all_runners(monkeypatch)
     monkeypatch.setattr(df, "_run_plan_phase",
-        lambda s, spec_dict, premortem_dict: {
+        lambda s, spec_dict, premortem_dict, **kw: {
             "intent": "t", "steps": [], "completion_criteria": [],
             "approval_points": [], "verification_requirements": ["pytest -q"],
             "unresolved_risks": [],
@@ -925,3 +925,24 @@ def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
         "interview", "research_brief", "research", "spec",
         "premortem", "plan", "implement", "verify", "review",
     ]
+
+
+def test_run_all_triad_blocked_transitions_to_blocked(tmp_path, monkeypatch):
+    """TriadBlockedError from _run_plan_phase → run_all() reaches BLOCKED state."""
+    import core.dogfood as df
+    from core.triad import TriadBlockedError
+
+    _patch_all_runners(monkeypatch)
+
+    def _raise_triad(s, spec_dict, premortem_dict, **kw):
+        raise TriadBlockedError("Critical: core.triad missing from af.spec")
+
+    monkeypatch.setattr(df, "_run_plan_phase", _raise_triad)
+
+    state = run_all(
+        "t", str(tmp_path),
+        interview_artifact={"goal": "t"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert state.phase == DogfoodPhase.BLOCKED
+    assert "Critical" in state.last_failure

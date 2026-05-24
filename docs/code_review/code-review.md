@@ -6250,3 +6250,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (6)**: `Master_Blueprint.md, core/interview.py, run_factory_cli.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, tests/test_interview.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-24 23:35 — `2026-05-20-research-coverage-gate` (908727c7)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `.claude/agents/af-triad-critic.md, Master_Blueprint.md, af.spec, core/dogfood.py, core/triad.py, tests/test_dogfood.py, tests/test_triad.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

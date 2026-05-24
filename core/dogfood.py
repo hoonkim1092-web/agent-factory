@@ -378,17 +378,44 @@ def _run_plan_phase(
     state: DogfoodState,
     spec_dict: dict[str, Any],
     premortem_dict: dict[str, Any],
+    *,
+    _triad_critic_fn: Any | None = None,
+    _triad_architect_fn: Any | None = None,
 ) -> dict[str, Any]:
-    """Generate executable plan from spec + premortem."""
-    from core.premortem import PremortomResult, PremortomRisk, VerificationStep
+    """Generate executable plan via 正反合 Triad review.
+
+    1. 正 Planner: deterministic plan from spec+premortem (build_plan)
+    2. 反 Critic: attack the plan — finds evidence-backed flaws
+    3. 合 Architect: resolves findings → final plan
+
+    Raises TriadBlockedError when unresolved Critical findings remain.
+    Injectable _triad_critic_fn / _triad_architect_fn for tests.
+    """
     from core.planner import build_plan
+    from core.triad import TriadBlockedError, run_triad  # noqa: F401 (re-raised by caller)
+
     spec = _spec_from_dict(spec_dict)
     premortem = _premortem_from_dict(premortem_dict)
     plan = build_plan(spec, premortem)
+
+    context = {
+        "workspace": state.workspace,
+        "spec": spec_dict,
+        "premortem": premortem_dict,
+    }
+    triad_kwargs: dict[str, Any] = {}
+    if _triad_critic_fn is not None:
+        triad_kwargs["_critic_fn"] = _triad_critic_fn
+    if _triad_architect_fn is not None:
+        triad_kwargs["_architect_fn"] = _triad_architect_fn
+
+    # TriadBlockedError propagates to run_all() which catches it → block_run()
+    result = run_triad(plan.to_dict(), context, **triad_kwargs)
+
     path = _artifact_path(state, "plan.json")
-    _write_json(path, plan.to_dict())
+    _write_json(path, result.final_plan)
     state.plan_path = str(path)
-    return plan.to_dict()
+    return result.final_plan
 
 
 def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
@@ -552,7 +579,13 @@ def run_all(
         elif phase == DogfoodPhase.PREMORTEM:
             premortem = run_phase(state, spec_dict=spec)
         elif phase == DogfoodPhase.PLAN:
-            plan_dict = run_phase(state, spec_dict=spec, premortem_dict=premortem)
+            from core.triad import TriadBlockedError
+            try:
+                plan_dict = run_phase(state, spec_dict=spec, premortem_dict=premortem)
+            except TriadBlockedError as exc:
+                block_run(state, str(exc))
+                save_state(state)
+                continue
         elif phase == DogfoodPhase.IMPLEMENT:
             run_phase(state, context={})
         elif phase == DogfoodPhase.VERIFY:
@@ -607,6 +640,8 @@ def run_phase(state: DogfoodState, **kwargs: Any) -> dict[str, Any]:
             state,
             kwargs.get("spec_dict", {}),
             kwargs.get("premortem_dict", {}),
+            _triad_critic_fn=kwargs.get("_triad_critic_fn"),
+            _triad_architect_fn=kwargs.get("_triad_architect_fn"),
         )
     if phase == DogfoodPhase.IMPLEMENT:
         return _run_implement_phase(state, kwargs.get("context", {}))
