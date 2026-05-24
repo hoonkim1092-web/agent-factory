@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-24 | version: v1.2.31 -->
+<!-- last_updated: 2026-05-25 | version: v1.2.31 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1565,6 +1565,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.31 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, code-review.md, test_dogfood.py (+3) |
+| 2026-05-25 | v1.2.31 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, code-review.md, test_dogfood.py (+3) |
+| 2026-05-25 | v1.2.31 | chore(agent_launcher): code update — agent_launcher.py, dogfood.py, test_dogfood.py, test_dogfood_cli.py, test_dogfood_integration.py (+1) |
 | 2026-05-24 | v1.2.32 | feat(triad): §17 Step 15 — 正反合 Triad 오케스트레이션. core/triad.py 신규(TriadCriticFinding/Report/Decision/Result + run_triad()). evidence 계약 강제(_validate_findings). Critical+REJECT→resolved, HOLD/ACCEPT→TriadBlockedError. dogfood._run_plan_phase → run_triad() 연결. run_all() TriadBlockedError→block_run(). af-triad-critic.md 스킬 파일. af.spec core.triad 추가. 25 triad tests. 3-Tier WARN-only PASS. |
 | 2026-05-24 | v1.2.31 | chore(.claude): code update — af-triad-critic.md, af.spec, dogfood.py, triad.py, test_dogfood.py (+1) |
 | 2026-05-24 | v1.2.35 | fix(encoding): Windows lone-surrogate/cp949 stdout 인코딩 버그 픽스 — `session_adapter.py` `_hook_json_dumps(ensure_ascii=True)` + `_sanitize_hook_value()` 추가, `cli_hook_bridge.py` stdout reconfigure utf-8/backslashreplace, `.claude/settings.json` hook 커맨드 단순화(sh hookpy.sh 제거). 테스트 1건 신규. |

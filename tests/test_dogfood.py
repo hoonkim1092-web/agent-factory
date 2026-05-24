@@ -10,6 +10,7 @@ from core.dogfood import (
     MAX_VERIFY_ATTEMPTS,
     DogfoodPhase,
     DogfoodState,
+    MergePolicy,
     ReviewDecision,
     VerifyResult,
     _PHASE_ORDER,
@@ -42,7 +43,7 @@ def _state(
         run_id=run_id,
         task=task,
         phase=phase,
-        workspace=str(tmp_path),
+        source_workspace=str(tmp_path),
         runtime_workspace=str(tmp_path / "runtime"),
     )
 
@@ -107,7 +108,12 @@ def test_state_to_dict_keys(tmp_path):
     state = _state(tmp_path)
     d = state.to_dict()
     required = {
-        "run_id", "task", "phase", "workspace", "runtime_workspace",
+        "run_id", "task", "phase",
+        "source_workspace", "workspace",  # workspace is a backward-compat alias
+        "runtime_workspace",
+        "source_branch", "base_ref", "worktree_workspace", "dogfood_branch",
+        "isolation_status", "merge_status", "merge_mode",
+        "dogfood_commit", "merged_commit",
         "interview_path", "research_brief_path", "spec_path", "plan_path",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria",
@@ -239,13 +245,13 @@ def test_advance_from_pending(tmp_path):
 def test_advance_from_plan(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.PLAN)
     new = advance_phase(state)
-    assert new == DogfoodPhase.IMPLEMENT
+    assert new == DogfoodPhase.ISOLATE
 
 
 def test_advance_from_review(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
     new = advance_phase(state)
-    assert new == DogfoodPhase.COMPLETE
+    assert new == DogfoodPhase.FINALIZE
 
 
 def test_advance_from_complete_raises(tmp_path):
@@ -772,6 +778,8 @@ def _patch_all_runners(monkeypatch, verify_seq=None):
             "approval_points": [], "verification_requirements": [],
             "unresolved_risks": [],
         })
+    monkeypatch.setattr(df, "_run_isolate_phase",
+        lambda s: {"isolation_status": "ready"})
     monkeypatch.setattr(df, "_run_implement_phase",
         lambda s, context: {"executed": [], "failures": [], "skipped_no_commands": [], "ok": True})
 
@@ -780,6 +788,18 @@ def _patch_all_runners(monkeypatch, verify_seq=None):
         return {"passed": passed, "commands_run": [], "failures": [] if passed else ["fail"]}
 
     monkeypatch.setattr(df, "_run_verify_phase", _fake_verify)
+    monkeypatch.setattr(df, "_run_finalize_phase",
+        lambda s: {"merge_status": "ready"})
+    monkeypatch.setattr(df, "_run_merge_phase",
+        lambda s, merge_mode="auto_policy": _stub_merge(s))
+
+
+def _stub_merge(state):
+    """Stub merge that immediately completes."""
+    import core.dogfood as df
+    state.phase = df.DogfoodPhase.COMPLETE
+    state.merge_status = "merged"
+    return {"merge_status": "merged"}
 
 
 def test_run_all_returns_complete(tmp_path, monkeypatch):
@@ -909,9 +929,12 @@ def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
         ("_run_spec_phase", "spec"),
         ("_run_premortem_phase", "premortem"),
         ("_run_plan_phase", "plan"),
+        ("_run_isolate_phase", "isolate"),
         ("_run_implement_phase", "implement"),
         ("_run_verify_phase", "verify"),
         ("_run_review_phase", "review"),
+        ("_run_finalize_phase", "finalize"),
+        ("_run_merge_phase", "merge"),
     ]:
         orig = getattr(df, attr)
         monkeypatch.setattr(df, attr, _track(name, orig))
@@ -923,7 +946,8 @@ def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
     )
     assert visited == [
         "interview", "research_brief", "research", "spec",
-        "premortem", "plan", "implement", "verify", "review",
+        "premortem", "plan", "isolate", "implement", "verify", "review",
+        "finalize", "merge",
     ]
 
 

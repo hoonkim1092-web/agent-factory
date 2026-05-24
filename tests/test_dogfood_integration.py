@@ -55,14 +55,48 @@ def _failing_runner(cmd: str, cwd: str):
     return False, f"fail: {cmd}"
 
 
+def _noop_isolate(state):
+    """Stub isolation: mark ready without creating a real worktree."""
+    state.isolation_status = "ready"
+    state.source_branch = "main"
+    state.base_ref = "abc1234"
+    state.worktree_workspace = state.source_workspace  # no actual worktree
+    return {"isolation_status": "ready"}
+
+
+def _noop_finalize(state):
+    """Stub finalize: record a fake dogfood_commit."""
+    state.dogfood_commit = "deadbeef"
+    state.merge_status = "ready"
+    return {"merge_status": "ready"}
+
+
+def _noop_merge(state, merge_mode="auto_policy"):
+    """Stub merge: immediately complete."""
+    state.merge_status = "merged"
+    state.merged_commit = "feedcafe"
+    state.phase = dogfood_mod.DogfoodPhase.COMPLETE
+    return {"merge_status": "merged"}
+
+
 # ---------------------------------------------------------------------------
 # End-to-end smoke: PENDING → COMPLETE
 # ---------------------------------------------------------------------------
 
+def _smoke_patches(dogfood_mod):
+    """Return context managers that stub isolation/finalize/merge for smoke tests."""
+    return (
+        patch.object(dogfood_mod, "_run_isolate_phase", side_effect=_noop_isolate),
+        patch.object(dogfood_mod, "_run_finalize_phase", side_effect=_noop_finalize),
+        patch.object(dogfood_mod, "_run_merge_phase", side_effect=_noop_merge),
+    )
+
+
 def test_run_all_reaches_complete(tmp_path):
     """Full pipeline completes when all commands succeed."""
     artifact = _minimal_interview()
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -76,7 +110,8 @@ def test_run_all_reaches_complete(tmp_path):
 def test_run_all_persists_state_json(tmp_path):
     """Final state is written to disk at the expected path."""
     artifact = _minimal_interview()
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -93,7 +128,8 @@ def test_run_all_persists_state_json(tmp_path):
 def test_run_all_artifacts_written(tmp_path):
     """interview.json, research_brief.json, spec.json, plan.json all created."""
     artifact = _minimal_interview()
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -110,7 +146,8 @@ def test_run_all_artifacts_written(tmp_path):
 def test_run_all_spec_contains_intent(tmp_path):
     """Compiled spec preserves the goal from the interview artifact."""
     artifact = _minimal_interview(goal="My specific task goal")
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="My specific task goal",
             workspace=str(tmp_path),
@@ -125,7 +162,8 @@ def test_run_all_spec_contains_intent(tmp_path):
 def test_run_all_plan_contains_steps(tmp_path):
     """Planner produces at least one step."""
     artifact = _minimal_interview()
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -144,19 +182,16 @@ def test_run_all_plan_contains_steps(tmp_path):
 
 def test_run_all_blocks_after_max_verify_failures(tmp_path):
     """When verification commands always fail, pipeline reaches BLOCKED."""
-    # Plan must have verification_requirements for the verify phase to run commands.
     artifact = _minimal_interview()
 
     call_count = {"n": 0}
 
     def _selective_runner(cmd: str, cwd: str):
-        # IMPLEMENT succeeds; VERIFY always fails so retry loop triggers.
         call_count["n"] += 1
         if "verify" in cmd.lower() or "pytest" in cmd.lower():
             return False, "test failed"
         return True, "ok"
 
-    # Patch planner to inject a verification_requirement so VERIFY has a command.
     from core import planner as planner_mod
     original_build = planner_mod.build_plan
 
@@ -165,8 +200,10 @@ def test_run_all_blocks_after_max_verify_failures(tmp_path):
         plan.verification_requirements = ["pytest --verify-step"]
         return plan
 
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
     with patch.object(dogfood_mod, "_command_runner", side_effect=_selective_runner), \
-         patch.object(planner_mod, "build_plan", side_effect=_patched_build_plan):
+         patch.object(planner_mod, "build_plan", side_effect=_patched_build_plan), \
+         p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -191,8 +228,10 @@ def test_run_all_attempts_incremented_on_retry(tmp_path):
         plan.verification_requirements = ["fail-command"]
         return plan
 
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
     with patch.object(dogfood_mod, "_command_runner", side_effect=_failing_runner), \
-         patch.object(planner_mod, "build_plan", side_effect=_patched_build_plan):
+         patch.object(planner_mod, "build_plan", side_effect=_patched_build_plan), \
+         p1, p2, p3:
         state = run_all(
             task="Add a utility helper",
             workspace=str(tmp_path),
@@ -202,7 +241,6 @@ def test_run_all_attempts_incremented_on_retry(tmp_path):
         )
 
     assert state.phase == DogfoodPhase.BLOCKED
-    # MAX_VERIFY_ATTEMPTS = 3; attempts counter reflects retry cycles fired.
     from core.dogfood import MAX_VERIFY_ATTEMPTS
     assert state.attempts >= MAX_VERIFY_ATTEMPTS - 1
 
@@ -220,7 +258,8 @@ def test_run_all_injectable_interview_fn(tmp_path):
         called["n"] += 1
         return {"ok": True, "project_brief": artifact}
 
-    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner):
+    p1, p2, p3 = _smoke_patches(dogfood_mod)
+    with patch.object(dogfood_mod, "_command_runner", side_effect=_noop_runner), p1, p2, p3:
         state = run_all(
             task="injectable goal",
             workspace=str(tmp_path),

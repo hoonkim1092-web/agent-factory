@@ -915,6 +915,11 @@ def _build_arg_parser(ad_hoc_mode):
             "--non-interactive", action="store_true", dest="non_interactive",
             help="인터뷰를 자동으로 진행 (TTY 없는 환경에서 자동 활성)",
         )
+        df_run.add_argument(
+            "--merge", default="auto-policy", dest="merge_mode",
+            choices=["auto-policy", "manual", "never"],
+            help="머지 정책 (기본: auto-policy)",
+        )
 
         df_interview = dogfood_sub.add_parser("interview", help="인터랙티브 인터뷰 실행 후 artifact 저장")
         df_interview.add_argument("task", nargs="+", help="요구사항을 구체화할 작업 설명")
@@ -929,9 +934,12 @@ def _build_arg_parser(ad_hoc_mode):
             help="LLM이 기본값을 생성하고 가정(assumptions)으로 기록",
         )
 
-        df_status = dogfood_sub.add_parser("status", help="런 상태 조회")
+        df_status = dogfood_sub.add_parser("status", help="런 상태 조회 (CWD 무관)")
         df_status.add_argument("run_id", help="런 ID")
-        df_status.add_argument("--workspace", default=None, help="작업 디렉토리 (기본: CWD)")
+
+        df_merge = dogfood_sub.add_parser("merge", help="manual 머지 실행")
+        df_merge.add_argument("run_id", help="런 ID")
+        df_merge.add_argument("--workspace", default=None, help="소스 작업 디렉토리 (기본: CWD)")
     return parser
 
 
@@ -966,7 +974,10 @@ if __name__ == "__main__":
                 print(f"{prefix} {msg}")
             sys.exit(0)
         elif args.subcommand == "dogfood":
-            from core.dogfood import run_all, load_state, _default_runtime_workspace
+            from core.dogfood import (
+                run_all, load_state, merge_dogfood_branch,
+                MergePolicy, _default_runtime_workspace,
+            )
             workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
             if args.dogfood_cmd == "interview":
                 from core.interview import run_interview
@@ -998,35 +1009,69 @@ if __name__ == "__main__":
                     except (OSError, ValueError) as exc:
                         print(f"[dogfood] ERROR: --from-file 로드 실패: {exc}")
                         sys.exit(1)
-                print(f"[dogfood] task     : {args.task}")
-                print(f"[dogfood] workspace: {workspace}")
+                # Normalize CLI merge mode: "auto-policy" → "auto_policy"
+                raw_mode = getattr(args, "merge_mode", "auto-policy")
+                merge_mode = raw_mode.replace("-", "_")
+                print(f"[dogfood] task      : {args.task}")
+                print(f"[dogfood] workspace : {workspace}")
+                print(f"[dogfood] merge     : {merge_mode}")
                 if from_file:
-                    print(f"[dogfood] from-file: {from_file}")
+                    print(f"[dogfood] from-file : {from_file}")
                 state = run_all(
                     args.task, workspace, run_id=args.run_id,
                     interview_artifact=interview_artifact,
                     non_interactive=getattr(args, "non_interactive", False),
+                    merge_mode=merge_mode,
                 )
-                print(f"[dogfood] run_id   : {state.run_id}")
-                print(f"[dogfood] phase    : {state.phase.value}")
+                print(f"[dogfood] run_id    : {state.run_id}")
+                print(f"[dogfood] phase     : {state.phase.value}")
+                print(f"[dogfood] isolation : {state.isolation_status}")
+                print(f"[dogfood] merge     : {state.merge_status}")
+                if state.merged_commit:
+                    print(f"[dogfood] merged_at : {state.merged_commit[:8]}")
                 if state.last_failure:
-                    print(f"[dogfood] failure  : {state.last_failure}")
+                    print(f"[dogfood] failure   : {state.last_failure}")
                 sys.exit(0 if state.phase.value == "complete" else 1)
             elif args.dogfood_cmd == "status":
-                workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
-                rt_ws = _default_runtime_workspace(workspace)
+                # CWD-independent: resolve runtime workspace from run_id only
+                rt_ws = _default_runtime_workspace(args.run_id)
                 try:
                     state = load_state(rt_ws, args.run_id)
                 except FileNotFoundError:
-                    print(f"[dogfood] run_id '{args.run_id}' 를 찾을 수 없음 (workspace: {workspace})")
+                    print(f"[dogfood] run_id '{args.run_id}' 를 찾을 수 없음")
                     sys.exit(1)
-                print(f"run_id  : {state.run_id}")
-                print(f"phase   : {state.phase.value}")
-                print(f"task    : {state.task}")
-                print(f"attempts: {state.attempts}")
+                print(f"run_id            : {state.run_id}")
+                print(f"phase             : {state.phase.value}")
+                print(f"task              : {state.task}")
+                print(f"source_branch     : {state.source_branch}")
+                print(f"dogfood_branch    : {state.dogfood_branch}")
+                print(f"base_ref          : {state.base_ref[:8] if state.base_ref else ''}")
+                print(f"dogfood_commit    : {state.dogfood_commit[:8] if state.dogfood_commit else ''}")
+                print(f"merge_mode        : {state.merge_mode}")
+                print(f"merge_status      : {state.merge_status}")
+                print(f"isolation_status  : {state.isolation_status}")
+                print(f"worktree_workspace: {state.worktree_workspace}")
+                print(f"runtime_workspace : {state.runtime_workspace}")
+                print(f"attempts          : {state.attempts}")
                 if state.last_failure:
-                    print(f"failure : {state.last_failure}")
+                    print(f"last_failure      : {state.last_failure}")
                 sys.exit(0)
+            elif args.dogfood_cmd == "merge":
+                rt_ws = _default_runtime_workspace(args.run_id)
+                try:
+                    state = load_state(rt_ws, args.run_id)
+                except FileNotFoundError:
+                    print(f"[dogfood] run_id '{args.run_id}' 를 찾을 수 없음")
+                    sys.exit(1)
+                merge_dogfood_branch(state)
+                from core.dogfood import save_state
+                save_state(state)
+                print(f"[dogfood] merge_status: {state.merge_status}")
+                if state.merged_commit:
+                    print(f"[dogfood] merged_at  : {state.merged_commit[:8]}")
+                if state.last_failure:
+                    print(f"[dogfood] failure    : {state.last_failure}")
+                sys.exit(0 if state.merge_status == "merged" else 1)
         else:
             parser.print_help()
             sys.exit(1)

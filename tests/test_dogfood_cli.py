@@ -107,20 +107,18 @@ def test_cli_dogfood_run_blocked(tmp_path):
 def test_cli_dogfood_status_found(tmp_path):
     """dogfood status succeeds for an existing run."""
     state = _make_state(tmp_path, phase="complete", task="hello task")
-
-    from core.dogfood import load_state, _default_runtime_workspace
-    rt_ws = _default_runtime_workspace(str(tmp_path))
-    loaded = load_state(rt_ws, state.run_id)
+    # load directly from the state's own runtime_workspace (bypasses _default_runtime_workspace)
+    from core.dogfood import load_state
+    loaded = load_state(state.runtime_workspace, state.run_id)
     assert loaded.phase == DogfoodPhase.COMPLETE
     assert loaded.task == "hello task"
 
 
 def test_cli_dogfood_status_not_found(tmp_path):
     """dogfood status raises FileNotFoundError for unknown run_id."""
-    from core.dogfood import load_state, _default_runtime_workspace
-    rt_ws = _default_runtime_workspace(str(tmp_path))
+    from core.dogfood import load_state
     with pytest.raises(FileNotFoundError):
-        load_state(rt_ws, "nonexistent-run-id")
+        load_state(str(tmp_path / ".af_runtime"), "nonexistent-run-id")
 
 
 # ---------------------------------------------------------------------------
@@ -150,10 +148,9 @@ def test_run_id_traversal_rejected_create(tmp_path, bad_id):
 ])
 def test_run_id_traversal_rejected_load(tmp_path, bad_id):
     """load_state() rejects run_id with path-separator or dot characters."""
-    from core.dogfood import load_state, _default_runtime_workspace
-    rt_ws = _default_runtime_workspace(str(tmp_path))
+    from core.dogfood import load_state
     with pytest.raises(ValueError, match="Invalid run_id"):
-        load_state(rt_ws, bad_id)
+        load_state(str(tmp_path / ".af_runtime"), bad_id)
 
 
 # ---------------------------------------------------------------------------

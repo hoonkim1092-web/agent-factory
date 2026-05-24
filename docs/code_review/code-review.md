@@ -6260,3 +6260,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (7)**: `.claude/agents/af-triad-critic.md, Master_Blueprint.md, af.spec, core/dogfood.py, core/triad.py, tests/test_dogfood.py, tests/test_triad.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-25 01:43 — `2026-05-20-research-coverage-gate` (037c442b)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `Master_Blueprint.md, agent_launcher.py, core/dogfood.py, tests/test_dogfood.py, tests/test_dogfood_cli.py, tests/test_dogfood_integration.py, tests/test_dogfood_isolation.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
