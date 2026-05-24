@@ -429,6 +429,98 @@ Mediator:
 
 If the runtime cannot invoke named skills directly, the dogfood runner must inject equivalent skill instructions into each role prompt. The requirement is role capability separation, not a specific implementation mechanism.
 
+### 8.1 Mediator as Architect Agent
+
+The Mediator in the Triad is not a generic tie-breaker. It is an Architect Agent: an agent that holds the full system design context and synthesizes from architectural insight rather than from vote counting.
+
+The distinction matters because vote counting and trade-off negotiation can produce locally rational decisions that violate the system's overall design intent. The Architect Agent prevents this by grounding every synthesis decision in the existing architecture.
+
+Mandatory context for the Architect Agent:
+
+```text
+Master_Blueprint.md:
+  The entire Blueprint, not a summary. The agent must know the current
+  §0 file map, §3 subsystem dependencies, §10 blast-radius table,
+  §11 known bugs, and §12 change history before making any decision.
+
+ADR history (docs/decisions/):
+  All accepted ADRs. Prior decisions constrain current synthesis.
+  The Architect Agent must not reverse an accepted ADR without
+  explicitly superseding it.
+
+Active git diff:
+  What is actually changing in this dogfood run. The synthesis must
+  be grounded in the specific change, not in abstract principles.
+```
+
+The Architect Agent's synthesis process:
+
+```text
+1. Read the Planner's proposed path.
+2. Read the Critic's evidence-backed blockers.
+3. Cross-reference both against Master_Blueprint.md and ADR history.
+4. Determine which Critic findings are genuine architecture violations
+   vs. which are implementation preferences.
+5. Determine which Planner decisions fit the existing design intent
+   vs. which require an ADR before proceeding.
+6. Emit the final plan with explicit decision rationale for each
+   accepted or rejected Critic finding.
+```
+
+The Architect Agent must answer these questions in its output:
+
+```text
+- Does the proposed plan fit the current architecture, or does it
+  require a Blueprint section update?
+- Are any Critic findings symptoms of a deeper design gap that should
+  produce an ADR rather than a point fix?
+- What is the minimum change that satisfies both the task goal and
+  the architecture constraints?
+- Are there unresolved risks that require user approval before
+  proceeding?
+```
+
+What the Architect Agent must not do:
+
+```text
+- Synthesize by averaging Planner and Critic positions without
+  examining the Blueprint.
+- Override a Critic's evidence-backed finding without naming the
+  architectural reason.
+- Accept a plan step that touches a §10 blast-radius dependency
+  without checking the propagation surface.
+- Produce a final plan that contradicts an accepted ADR without
+  explicitly superseding it.
+```
+
+The Architect Agent is the only role permitted to emit `approval_points` in the Triad output. If a decision exceeds the run's approval_policy scope, the Architect Agent must mark it as a required approval point rather than proceeding autonomously.
+
+Required output additions for the Architect Agent beyond the base Mediator format:
+
+```json
+{
+  "mediator_decisions": [
+    {
+      "decision": "...",
+      "reason": "...",
+      "source": "planner|architect|user|repo_context",
+      "blueprint_section": "§3.1",
+      "adr_ref": "ADR-20260513-225000-domain-gate-verdict-parser.md or null"
+    }
+  ],
+  "blueprint_impact": {
+    "sections_affected": ["§0", "§3.1", "§12"],
+    "update_required": true
+  },
+  "approval_points": [
+    {
+      "item": "...",
+      "reason": "exceeds approval_policy scope"
+    }
+  ]
+}
+```
+
 ## 9. Completion Driver
 
 AF should drive to completion, not only run a build.
@@ -939,6 +1031,7 @@ Recommended order:
 9. Add skill-specialized 3-tier review routing.
 10. Add worktree/runtime isolation.
 11. Add Express Router to avoid overhead on trivial tasks.
+12. Implement Architect Agent (합/Synthesis) for Triad: Blueprint-aware synthesis role with Master_Blueprint.md + ADR context injection.
 
 ## 18. AF-On-AF Required Work Checklist
 
@@ -955,6 +1048,9 @@ Critical path:
 - Premortem converts repo-specific risks into verification requirements.
 - Planner creates an executable plan from Spec + Premortem.
 - Triad review is mandatory for self-modifying AF work.
+- Triad Mediator is an Architect Agent: Master_Blueprint.md and all accepted ADRs are injected as mandatory context before synthesis.
+- Architect Agent synthesis is grounded in Blueprint section references and ADR history, not in vote counting.
+- Architect Agent is the only role permitted to emit approval_points in the Triad output.
 - Dogfood state machine persists phase, attempts, failures, and next action.
 - Implementation executes in a git worktree connected to `agent-factory`.
 - Runtime state is separated from source edits.
@@ -992,6 +1088,11 @@ core/express_router.py:
 
 core/review_skill_router.py:
   tier-specific skill profile routing for af-test-runner, af-critic, and af-cross-review
+
+core/architect_agent.py (planned):
+  Architect Agent context builder — loads Master_Blueprint.md + accepted ADRs + active
+  git diff, injects as structured context into the Mediator role prompt, validates that
+  final Triad decisions reference blueprint sections and do not contradict accepted ADRs
 
 run_factory_cli.py:
   af interview and af dogfood command dispatch
