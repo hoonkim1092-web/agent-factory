@@ -907,6 +907,23 @@ def _build_arg_parser(ad_hoc_mode):
         df_run.add_argument("task", help="태스크 설명 (자연어)")
         df_run.add_argument("--workspace", default=None, help="작업 디렉토리 (기본: CWD)")
         df_run.add_argument("--run-id", default=None, dest="run_id", help="런 ID (기본: 자동 생성)")
+        df_run.add_argument(
+            "--from-file", default=None, dest="from_file", metavar="PATH",
+            help="사전 생성한 interview artifact JSON 경로 (지정 시 interview 단계 건너뜀)",
+        )
+
+        df_interview = dogfood_sub.add_parser("interview", help="인터랙티브 인터뷰 실행 후 artifact 저장")
+        df_interview.add_argument("task", nargs="+", help="요구사항을 구체화할 작업 설명")
+        df_interview.add_argument("--workspace", default=None, help="작업 디렉토리 (기본: CWD)")
+        df_interview.add_argument("--out", default=None, help="artifact JSON 저장 경로")
+        df_interview.add_argument(
+            "--non-interactive", action="store_true", dest="non_interactive",
+            help="질문 기본값을 자동 적용 (배치 모드)",
+        )
+        df_interview.add_argument(
+            "--deep-skip", action="store_true", dest="deep_skip",
+            help="LLM이 기본값을 생성하고 가정(assumptions)으로 기록",
+        )
 
         df_status = dogfood_sub.add_parser("status", help="런 상태 조회")
         df_status.add_argument("run_id", help="런 ID")
@@ -947,10 +964,44 @@ if __name__ == "__main__":
         elif args.subcommand == "dogfood":
             from core.dogfood import run_all, load_state, _default_runtime_workspace
             workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
-            if args.dogfood_cmd == "run":
+            if args.dogfood_cmd == "interview":
+                from core.interview import run_interview
+                task = " ".join(args.task).strip()
+                print(f"[interview] task      : {task}")
+                print(f"[interview] workspace : {workspace}")
+                result = run_interview(
+                    task,
+                    workspace=workspace,
+                    output_path=args.out,
+                    non_interactive=args.non_interactive,
+                    deep_skip=args.deep_skip,
+                )
+                if not result.get("ok"):
+                    print(f"[interview] ERROR: {result.get('reason', 'unknown')}")
+                    sys.exit(1)
+                print(f"[interview] questions : {len(result.get('questions', []))}")
+                print(f"[interview] saved     : {result.get('output_path')}")
+                sys.exit(0)
+            elif args.dogfood_cmd == "run":
+                interview_artifact = None
+                from_file = getattr(args, "from_file", None)
+                if from_file:
+                    import json as _json
+                    try:
+                        interview_artifact = _json.loads(
+                            open(os.path.abspath(from_file), encoding="utf-8").read()
+                        )
+                    except (OSError, ValueError) as exc:
+                        print(f"[dogfood] ERROR: --from-file 로드 실패: {exc}")
+                        sys.exit(1)
                 print(f"[dogfood] task     : {args.task}")
                 print(f"[dogfood] workspace: {workspace}")
-                state = run_all(args.task, workspace, run_id=args.run_id)
+                if from_file:
+                    print(f"[dogfood] from-file: {from_file}")
+                state = run_all(
+                    args.task, workspace, run_id=args.run_id,
+                    interview_artifact=interview_artifact,
+                )
                 print(f"[dogfood] run_id   : {state.run_id}")
                 print(f"[dogfood] phase    : {state.phase.value}")
                 if state.last_failure:

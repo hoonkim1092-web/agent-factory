@@ -168,3 +168,146 @@ def test_detect_mode_dogfood():
 def test_detect_mode_ad_hoc_not_dogfood():
     import agent_launcher as al
     assert al._detect_mode(["do something with AI"]) == "ad_hoc"
+
+
+# ---------------------------------------------------------------------------
+# §17 Step 12 — dogfood interview subcommand parser
+# ---------------------------------------------------------------------------
+
+def test_parser_dogfood_interview_basic():
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "interview", "add", "logging"])
+    assert args.subcommand == "dogfood"
+    assert args.dogfood_cmd == "interview"
+    assert args.task == ["add", "logging"]
+    assert args.non_interactive is False
+    assert args.deep_skip is False
+    assert args.out is None
+
+
+def test_parser_dogfood_interview_flags():
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args([
+        "dogfood", "interview", "my task",
+        "--non-interactive", "--out", "/tmp/out.json", "--workspace", "/tmp/ws",
+    ])
+    assert args.non_interactive is True
+    assert args.out == "/tmp/out.json"
+    assert args.workspace == "/tmp/ws"
+
+
+def test_parser_dogfood_interview_deep_skip():
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "interview", "task", "--deep-skip"])
+    assert args.deep_skip is True
+
+
+def test_parser_dogfood_run_from_file():
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "run", "task", "--from-file", "/tmp/interview.json"])
+    assert args.from_file == "/tmp/interview.json"
+
+
+def test_parser_dogfood_run_no_from_file_default():
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "run", "task"])
+    assert args.from_file is None
+
+
+# ---------------------------------------------------------------------------
+# §17 Step 12 — dogfood interview dispatch (mocked run_interview)
+# ---------------------------------------------------------------------------
+
+def test_cli_dogfood_interview_dispatch(tmp_path):
+    """dogfood interview calls run_interview and exits 0 on success."""
+    import agent_launcher as al
+
+    fake_result = {
+        "ok": True,
+        "questions": [{"question": "q1"}],
+        "output_path": str(tmp_path / "interview.json"),
+    }
+
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "interview", "add logging"])
+
+    with patch("core.interview.run_interview", return_value=fake_result) as mock_iv:
+        with pytest.raises(SystemExit) as exc:
+            import os
+            workspace = os.path.abspath(getattr(args, "workspace", None) or os.getcwd())
+            from core.interview import run_interview
+            result = run_interview(
+                " ".join(args.task).strip(),
+                workspace=workspace,
+                output_path=args.out,
+                non_interactive=args.non_interactive,
+                deep_skip=args.deep_skip,
+            )
+            sys.exit(0 if result.get("ok") else 1)
+
+        assert exc.value.code == 0
+
+
+def test_cli_dogfood_interview_failure(tmp_path):
+    """dogfood interview exits 1 when run_interview returns ok=False."""
+    fake_result = {"ok": False, "reason": "empty_task"}
+
+    with patch("core.interview.run_interview", return_value=fake_result):
+        from core.interview import run_interview
+        result = run_interview("", workspace=str(tmp_path))
+        exit_code = 0 if result.get("ok") else 1
+        assert exit_code == 1
+
+
+# ---------------------------------------------------------------------------
+# §17 Step 12 — dogfood run --from-file dispatch
+# ---------------------------------------------------------------------------
+
+def test_cli_dogfood_run_from_file_success(tmp_path):
+    """dogfood run --from-file loads interview artifact and passes to run_all."""
+    interview_file = tmp_path / "interview.json"
+    artifact = {"goal": "add logging", "intent": "add logging"}
+    interview_file.write_text(json.dumps(artifact), encoding="utf-8")
+
+    final_state = create_run("add logging", str(tmp_path), runtime_workspace=str(tmp_path / ".af_runtime"))
+    final_state.phase = DogfoodPhase.COMPLETE
+
+    with patch("core.dogfood.run_all", return_value=final_state) as mock_run:
+        import agent_launcher as al, os
+        parser = al._build_arg_parser(ad_hoc_mode=False)
+        args = parser.parse_args(["dogfood", "run", "add logging", "--from-file", str(interview_file)])
+
+        loaded = json.loads(open(os.path.abspath(args.from_file), encoding="utf-8").read())
+        workspace = os.path.abspath(getattr(args, "workspace", None) or str(tmp_path))
+
+        with pytest.raises(SystemExit) as exc:
+            from core.dogfood import run_all
+            state = run_all(args.task, workspace, run_id=args.run_id, interview_artifact=loaded)
+            sys.exit(0 if state.phase.value == "complete" else 1)
+
+        assert exc.value.code == 0
+        mock_run.assert_called_once_with(
+            "add logging", workspace, run_id=None, interview_artifact=artifact
+        )
+
+
+def test_cli_dogfood_run_from_file_missing(tmp_path):
+    """dogfood run --from-file exits 1 when file is not found."""
+    missing = str(tmp_path / "nonexistent.json")
+    with pytest.raises((OSError, FileNotFoundError)):
+        open(missing, encoding="utf-8").read()
+
+
+def test_cli_dogfood_run_from_file_bad_json(tmp_path):
+    """dogfood run --from-file exits 1 on JSON parse error."""
+    bad_file = tmp_path / "bad.json"
+    bad_file.write_text("{not valid json}", encoding="utf-8")
+
+    import json as _json
+    with pytest.raises(ValueError):
+        _json.loads(bad_file.read_text(encoding="utf-8"))

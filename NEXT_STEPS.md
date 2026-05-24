@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 11 완료 (`af dogfood run/status` CLI 진입점, 88 tests, 3-Tier PASS). 다음 세션 진입점: §17 Step 12 — Interview phase 인터랙티브 CLI (질문 프롬프트 또는 `--from-file` 옵션).
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 12 완료 (`af dogfood interview` 서브커맨드 + `dogfood run --from-file`, 30 tests, 3-Tier WARN-only PASS). 다음 세션 진입점: §17 Step 13 — `dogfood run` 실제 인터랙티브 인터뷰 통합 (interview phase에서 `run_interview()` 인터랙티브 모드 호출).
 
 ---
 
@@ -212,7 +212,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 10. ✅ **§17 Step 9** — `_run_implement_phase` stub → 실 구현. plan steps 순회: commands 있는 step은 `_command_runner` 실행(`executed` 수집), 없는 step(AI-coded)은 `skipped_no_commands` 기록. `context["plan_dict"]` 없으면 `state.plan_path`에서 disk 로드. 반환: `{executed, failures, skipped_no_commands, ok}`. stub test 1개 → 7개 실 구현 테스트 (63→69 PASS). 3-Tier PASS. (`cec821c1`, 2026-05-24)
 11. ✅ **§17 Step 10** — `run_all()` 신규. PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. PLAN 반환값 보존 후 VERIFY에 plan_dict 전달(verification_requirements 우회 버그 수정). 테스트 69→78건(+9). 3-Tier PASS. (`e3bb321b`, 2026-05-24)
 12. ✅ **§17 Step 11** — `agent_launcher.py`에 `dogfood` 서브커맨드 추가. `_KNOWN_SUBCOMMANDS` 등록, `dogfood run <task>` + `dogfood status <run_id>` 파서. `__main__` 분기: `run_all()` 호출 후 exit 0(COMPLETE)/1(BLOCKED). `tests/test_dogfood_cli.py` 10건 신규. 3-Tier PASS. (2026-05-24)
-13. 다음: §17 Step 12 — Interview phase 인터랙티브 CLI (질문 프롬프트 또는 `--from-file` 옵션).
+13. ✅ **§17 Step 12** — `dogfood interview <task>` 서브커맨드 + `dogfood run --from-file <path>` 옵션 추가. `dogfood interview`는 `core.interview.run_interview()` 래핑(--non-interactive/--deep-skip/--out/--workspace). `dogfood run --from-file`은 JSON 로드 후 `run_all(interview_artifact=...)` 전달. 테스트 20→30건(+10). 3-Tier WARN-only PASS. (2026-05-24)
+14. 다음: §17 Step 13 — `dogfood run` 실제 인터랙티브 인터뷰 통합. 현재 `run_all()`은 `interview_artifact` 없으면 `{"goal": task}`를 기본값으로 쓴다. Step 13에서는 `_run_interview_phase`가 터미널에서 `run_interview()` 인터랙티브 모드를 직접 호출하도록 연결 (TTY 감지, `--non-interactive` 자동 적용 등).
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
