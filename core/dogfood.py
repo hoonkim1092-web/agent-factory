@@ -17,6 +17,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -279,8 +280,42 @@ def retry_run(state: DogfoodState) -> None:
 # Phase runners — wire Steps 3~6; stubs for later steps
 # ---------------------------------------------------------------------------
 
-def _run_interview_phase(state: DogfoodState, artifact: dict[str, Any]) -> dict[str, Any]:
-    """Record interview artifact path and return artifact unchanged."""
+def _build_interview_fn(
+    non_interactive: bool,
+) -> Callable[[str, str], dict[str, Any]]:
+    """Return a run_interview wrapper with TTY-aware non_interactive flag."""
+    from core.interview import run_interview as _run_iv
+    effective = non_interactive or not sys.stdin.isatty()
+
+    def _fn(task: str, workspace: str) -> dict[str, Any]:
+        return _run_iv(task, workspace=workspace, non_interactive=effective)
+
+    return _fn
+
+
+def _run_interview_phase(
+    state: DogfoodState,
+    artifact: dict[str, Any],
+    *,
+    _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Record interview artifact path and return artifact.
+
+    When _interview_fn is provided it is called to obtain the artifact via
+    an interactive (or non-interactive) interview session.
+    """
+    if _interview_fn is not None:
+        result = _interview_fn(state.task, state.workspace)
+        if not result.get("ok"):
+            raise RuntimeError(f"Interview failed: {result.get('reason', 'unknown')}")
+        if "project_brief" not in result:
+            import warnings
+            warnings.warn(
+                "_interview_fn result missing 'project_brief'; using minimal fallback",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        artifact = result.get("project_brief", {"goal": state.task})
     if artifact and "intent" not in artifact and "goal" not in artifact:
         raise ValueError("Interview artifact must contain 'intent' or 'goal'")
     path = _artifact_path(state, "interview.json")
@@ -461,20 +496,32 @@ def run_all(
     workspace: str,
     *,
     interview_artifact: dict[str, Any] | None = None,
+    non_interactive: bool = False,
     run_id: str | None = None,
     runtime_workspace: str | None = None,
+    _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
 ) -> "DogfoodState":
     """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
 
     Phases execute sequentially. The IMPLEMENT → VERIFY → REVIEW loop repeats
     on retry until verification passes or max attempts are exhausted (BLOCKED).
 
-    interview_artifact: pre-built interview data; defaults to {goal: task}.
+    interview_artifact: pre-built interview data; when None the INTERVIEW phase
+        calls run_interview() interactively (TTY-detected) or non-interactively.
+    non_interactive: force non-interactive interview (skip TTY detection).
+    _interview_fn: injectable for tests; overrides the default run_interview wrapper.
     Returns the final DogfoodState (phase COMPLETE or BLOCKED).
     """
     state = create_run(task, workspace, run_id=run_id, runtime_workspace=runtime_workspace)
 
-    interview: dict[str, Any] = interview_artifact or {"goal": task}
+    # Build interview callable only when no pre-built artifact is provided.
+    effective_interview_fn: Callable[[str, str], dict[str, Any]] | None
+    if interview_artifact is None:
+        effective_interview_fn = _interview_fn or _build_interview_fn(non_interactive)
+    else:
+        effective_interview_fn = None
+
+    interview: dict[str, Any] = interview_artifact if interview_artifact is not None else {"goal": task}
     research_brief: dict[str, Any] = {}
     research: dict[str, Any] = {}
     spec: dict[str, Any] = {}
@@ -491,7 +538,7 @@ def run_all(
             continue
 
         if phase == DogfoodPhase.INTERVIEW:
-            interview = run_phase(state, artifact=interview)
+            interview = run_phase(state, artifact=interview, _interview_fn=effective_interview_fn)
         elif phase == DogfoodPhase.RESEARCH_BRIEF:
             research_brief = run_phase(state, artifact=interview)
         elif phase == DogfoodPhase.RESEARCH:
@@ -539,7 +586,10 @@ def run_phase(state: DogfoodState, **kwargs: Any) -> dict[str, Any]:
         # Nothing to execute in PENDING — caller should advance first.
         return {}
     if phase == DogfoodPhase.INTERVIEW:
-        return _run_interview_phase(state, kwargs.get("artifact", {}))
+        return _run_interview_phase(
+            state, kwargs.get("artifact", {}),
+            _interview_fn=kwargs.get("_interview_fn"),
+        )
     if phase == DogfoodPhase.RESEARCH_BRIEF:
         return _run_research_brief_phase(state, kwargs.get("artifact", {}))
     if phase == DogfoodPhase.RESEARCH:

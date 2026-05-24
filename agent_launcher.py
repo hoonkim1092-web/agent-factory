@@ -911,6 +911,10 @@ def _build_arg_parser(ad_hoc_mode):
             "--from-file", default=None, dest="from_file", metavar="PATH",
             help="사전 생성한 interview artifact JSON 경로 (지정 시 interview 단계 건너뜀)",
         )
+        df_run.add_argument(
+            "--non-interactive", action="store_true", dest="non_interactive",
+            help="인터뷰를 자동으로 진행 (TTY 없는 환경에서 자동 활성)",
+        )
 
         df_interview = dogfood_sub.add_parser("interview", help="인터랙티브 인터뷰 실행 후 artifact 저장")
         df_interview.add_argument("task", nargs="+", help="요구사항을 구체화할 작업 설명")
@@ -1001,6 +1005,7 @@ if __name__ == "__main__":
                 state = run_all(
                     args.task, workspace, run_id=args.run_id,
                     interview_artifact=interview_artifact,
+                    non_interactive=getattr(args, "non_interactive", False),
                 )
                 print(f"[dogfood] run_id   : {state.run_id}")
                 print(f"[dogfood] phase    : {state.phase.value}")

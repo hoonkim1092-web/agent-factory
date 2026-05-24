@@ -311,3 +311,113 @@ def test_cli_dogfood_run_from_file_bad_json(tmp_path):
     import json as _json
     with pytest.raises(ValueError):
         _json.loads(bad_file.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# §17 Step 13 — _run_interview_phase injectable + run_all TTY integration
+# ---------------------------------------------------------------------------
+
+def test_run_interview_phase_calls_interview_fn(tmp_path):
+    """`_run_interview_phase` calls _interview_fn and uses returned project_brief."""
+    from core.dogfood import DogfoodPhase, _run_interview_phase, create_run
+
+    state = create_run("my task", str(tmp_path), runtime_workspace=str(tmp_path / ".rt"))
+    state.phase = DogfoodPhase.INTERVIEW
+
+    fake_brief = {"goal": "my task", "intent": "do the thing"}
+    calls: list[tuple[str, str]] = []
+
+    def mock_fn(task: str, workspace: str) -> dict:
+        calls.append((task, workspace))
+        return {"ok": True, "project_brief": fake_brief}
+
+    result = _run_interview_phase(state, {"goal": "my task"}, _interview_fn=mock_fn)
+    assert result == fake_brief
+    assert calls == [("my task", str(tmp_path))]
+    assert state.interview_path.endswith("interview.json")
+
+
+def test_run_interview_phase_raises_on_fn_failure(tmp_path):
+    """`_run_interview_phase` raises RuntimeError when _interview_fn returns ok=False."""
+    from core.dogfood import DogfoodPhase, _run_interview_phase, create_run
+
+    state = create_run("t", str(tmp_path), runtime_workspace=str(tmp_path / ".rt"))
+    state.phase = DogfoodPhase.INTERVIEW
+
+    def bad_fn(task: str, workspace: str) -> dict:
+        return {"ok": False, "reason": "empty_task"}
+
+    with pytest.raises(RuntimeError, match="Interview failed"):
+        _run_interview_phase(state, {"goal": "t"}, _interview_fn=bad_fn)
+
+
+def test_run_interview_phase_no_fn_uses_artifact(tmp_path):
+    """`_run_interview_phase` without _interview_fn writes the artifact as-is."""
+    from core.dogfood import DogfoodPhase, _run_interview_phase, create_run
+
+    state = create_run("t", str(tmp_path), runtime_workspace=str(tmp_path / ".rt"))
+    state.phase = DogfoodPhase.INTERVIEW
+    artifact = {"goal": "t", "intent": "do it"}
+
+    result = _run_interview_phase(state, artifact)
+    assert result == artifact
+
+
+def test_run_phase_passes_interview_fn(tmp_path):
+    """`run_phase` threads _interview_fn kwarg through to _run_interview_phase."""
+    from core.dogfood import DogfoodPhase, create_run, run_phase
+
+    state = create_run("task", str(tmp_path), runtime_workspace=str(tmp_path / ".rt"))
+    state.phase = DogfoodPhase.INTERVIEW
+
+    fake_brief = {"goal": "task", "intent": "intent"}
+    called: list[bool] = []
+
+    def mock_fn(task: str, workspace: str) -> dict:
+        called.append(True)
+        return {"ok": True, "project_brief": fake_brief}
+
+    result = run_phase(state, artifact={"goal": "task"}, _interview_fn=mock_fn)
+    assert result == fake_brief
+    assert called
+
+
+def test_run_all_calls_interview_fn_when_no_artifact(tmp_path):
+    """`run_all` invokes _interview_fn when interview_artifact=None."""
+    from core.dogfood import run_all
+
+    brief = {"goal": "g", "intent": "i"}
+    calls: list[str] = []
+
+    def mock_fn(task: str, workspace: str) -> dict:
+        calls.append(task)
+        return {"ok": True, "project_brief": brief}
+
+    state = run_all("g", str(tmp_path), _interview_fn=mock_fn)
+    assert calls == ["g"]
+    assert state.phase.value in ("complete", "blocked")
+
+
+def test_run_all_skips_interview_fn_when_artifact_provided(tmp_path):
+    """`run_all` does NOT invoke _interview_fn when interview_artifact is given."""
+    from core.dogfood import run_all
+
+    calls: list[str] = []
+
+    def mock_fn(task: str, workspace: str) -> dict:
+        calls.append(task)
+        return {"ok": True, "project_brief": {"goal": task}}
+
+    artifact = {"goal": "g", "intent": "i"}
+    state = run_all("g", str(tmp_path), interview_artifact=artifact, _interview_fn=mock_fn)
+    assert calls == []
+    assert state.phase.value in ("complete", "blocked")
+
+
+def test_parser_dogfood_run_non_interactive():
+    """dogfood run parser accepts --non-interactive flag."""
+    import agent_launcher as al
+    parser = al._build_arg_parser(ad_hoc_mode=False)
+    args = parser.parse_args(["dogfood", "run", "my task", "--non-interactive"])
+    assert args.non_interactive is True
+    assert args.task == "my task"

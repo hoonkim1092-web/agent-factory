@@ -751,7 +751,7 @@ def _patch_all_runners(monkeypatch, verify_seq=None):
     _verify_it = iter(verify_seq if verify_seq is not None else [True])
 
     monkeypatch.setattr(df, "_run_interview_phase",
-        lambda s, artifact: artifact or {"goal": "stub"})
+        lambda s, artifact, **kw: artifact or {"goal": "stub"})
     monkeypatch.setattr(df, "_run_research_brief_phase",
         lambda s, artifact: {"questions": []})
     monkeypatch.setattr(df, "_run_research_phase",
@@ -841,7 +841,7 @@ def test_run_all_default_interview_uses_task_as_goal(tmp_path, monkeypatch):
     import core.dogfood as df
     captured: dict = {}
 
-    def _capture_interview(s, artifact):
+    def _capture_interview(s, artifact, **kw):
         captured.update(artifact)
         return artifact
 
