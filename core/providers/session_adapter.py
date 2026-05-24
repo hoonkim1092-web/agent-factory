@@ -64,13 +64,34 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _save_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(_hook_json_dumps(payload, indent=2), encoding="utf-8")
+
+
+def _hook_json_dumps(payload: Any, *, indent: int | None = None) -> str:
+    # Claude hook payloads can contain lone surrogate codepoints on Windows.
+    # ASCII escaping keeps JSON writable and stdout-safe even under cp949.
+    return json.dumps(payload, ensure_ascii=True, indent=indent)
+
+
+def _sanitize_hook_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return value.encode("utf-8", errors="backslashreplace").decode("utf-8")
+    if isinstance(value, list):
+        return [_sanitize_hook_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [_sanitize_hook_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(_sanitize_hook_value(key)): _sanitize_hook_value(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        handle.write(_hook_json_dumps(payload) + "\n")
 
 
 def _now_iso() -> str:
@@ -629,6 +650,7 @@ def handle_hook_event(
     run_id: str,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any] | None:
+    payload = _sanitize_hook_value(payload)
     workspace_path = Path(workspace).resolve()
     repo_root_path = Path(repo_root).resolve() if repo_root else _repo_root()
     provider_id = f"{provider_base}_cli"

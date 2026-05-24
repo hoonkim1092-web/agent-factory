@@ -2,7 +2,7 @@
   "_comment": [
     "settings.local.json is machine-local and gitignored.",
     "Copy this file to settings.local.json — no OS-specific changes needed.",
-    "hooks use 'sh scripts/hookpy.sh' which auto-detects python3 or python."
+    "hooks use 'python scripts/run.py' to avoid shell-path ambiguity on Windows."
   ],
   "permissions": {
     "allow": [
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -34,23 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py check_pending_review.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py check_design_pending.py"
+            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -60,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -70,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -80,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
+            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
           }
         ]
       }
@@ -91,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_code_review",
+            "command": "python scripts/run.py post_edit_code_review",
             "timeout": 30
           }
         ]
@@ -101,7 +85,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh scripts/hookpy.sh scripts/run.py post_edit_design_review",
+            "command": "python scripts/run.py post_edit_design_review",
             "timeout": 10
           }
         ]
@@ -111,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hook_runner.py post_agent_record",
+            "command": "python scripts/run.py post_agent_record",
             "timeout": 60
           }
         ]

@@ -20,7 +20,15 @@ _spec.loader.exec_module(_mod)
 handle_hook_event = _mod.handle_hook_event
 
 
+def _configure_stdout() -> None:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+    except Exception:
+        pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _configure_stdout()
     parser = argparse.ArgumentParser(description="Bridge CLI hook events into agent-factory continuity.")
     parser.add_argument("--provider", required=True, choices=("claude", "gemini"))
     parser.add_argument("--workspace", default="")
@@ -40,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=args.repo_root,
     )
     if result:
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=True))
     return 0
 
 

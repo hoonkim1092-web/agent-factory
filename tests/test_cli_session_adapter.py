@@ -313,6 +313,34 @@ def test_handle_hook_event_returns_context_and_runs_bridge(monkeypatch, tmp_path
     assert bridge_calls[-1]["sessions_root"].endswith(str(Path("sessions") / "claude"))
 
 
+def test_handle_hook_event_writes_surrogate_payload_safely(tmp_path: Path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    output = handle_hook_event(
+        "claude",
+        {
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "session-1",
+            "message": "한글-ok bad-surrogate-\udcec",
+        },
+        workspace=str(workspace),
+        run_id="run_claude_surrogate",
+        repo_root=str(tmp_path / "repo"),
+    )
+
+    events_path = (
+        workspace
+        / ".af_runtime"
+        / "cli_sessions"
+        / "claude_cli_run_claude_surrogate_events.jsonl"
+    )
+    assert output is not None
+    assert events_path.exists()
+    assert "\\udcec" in events_path.read_text(encoding="utf-8")
+    assert "한글-ok" in (workspace / "resume_brief.md").read_text(encoding="utf-8")
+
+
 def test_handle_hook_event_skips_gemini_context_in_headless_mode(tmp_path: Path):
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
