@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — dogfood 격리+auto-merge 설계문서 v2 완료 (`docs/2026-05-25-dogfood-isolation-auto-merge-design.md`). 다음 세션 진입점: §17 Step 16 worktree 격리 구현 (설계 v2 기반).
+> 마지막 업데이트: **2026-05-25 KST** — §17 Step 16 worktree 격리 + auto-merge lifecycle 구현 완료 (174 tests PASS, commit f975c2ce). 다음 세션 진입점: §17 Step 17 이후 작업 확인 또는 research coverage gate 브랜치 통합.
 
 ---
 
@@ -225,13 +225,14 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
     - `TriadContractError` 신규 예외 타입, Architect read-only 계약
     - active run registry: pid+started_at, heartbeat 없음
     - `isolate_attempts` 상태 필드 없음 — 내부 1-retry loop만
-18. **다음: §17 Step 16 — worktree 격리 구현** (설계 v2 §15 구현 순서 따라)
-    - Step 1: DogfoodState 필드 추가 + workspace 프로퍼티 호환
-    - Step 2: `_default_runtime_workspace(run_id)` 전환
-    - Step 3: CLI merge mode 파싱
-    - Step 4: `prepare_isolated_worktree()` — 1-retry 내부 루프
-    - Step 5: IMPLEMENT/VERIFY/REVIEW cwd를 worktree_workspace로 라우팅
-    - Step 6~9: FINALIZE, 정책 체크, MERGE 단계 추가
+18. ✅ **§17 Step 16 — worktree 격리 + auto-merge lifecycle** (2026-05-25 완료, commit f975c2ce)
+    - DogfoodState 3-path(source/worktree/runtime_workspace), `workspace` @property backward-compat
+    - ISOLATE/FINALIZE/MERGE 3 신규 단계, `_cwd()` 라우팅
+    - `prepare_isolated_worktree()` / `finalize_dogfood_result()` / `merge_dogfood_branch()`
+    - `MergePolicy` 8-gate dataclass, CLI `--merge` + `dogfood merge` 서브커맨드
+    - `tests/test_dogfood_isolation.py` 25건 신규, 총 174 tests PASS
+    - 3-Tier: af-critic BLOCK→fixed / af-cross-review WARN-only / af-test-runner PASS
+19. **다음: §17 Step 17 이후** — NEXT_STEPS 확인 또는 브랜치 통합 계획 수립
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 

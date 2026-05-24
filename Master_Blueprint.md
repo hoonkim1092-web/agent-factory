@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-25 | version: v1.2.31 -->
+<!-- last_updated: 2026-05-25 | version: v1.2.32 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -152,7 +152,7 @@
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7+8+9+10+13+15 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase + end-to-end run_all() + 인터뷰 연결(TTY 감지) + _run_plan_phase → run_triad() 연결(正反合), TriadBlockedError → block_run() | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `_validate_run_id()`, `_build_interview_fn()` |
+| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. last_updated: 2026-05-25 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1565,7 +1565,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
-| 2026-05-25 | v1.2.31 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, code-review.md, test_dogfood.py (+3) |
+| 2026-05-25 | v1.2.32 | feat(dogfood): §17 Step 16 — worktree isolation + auto-merge lifecycle. DogfoodState 3-path 분리(source/worktree/runtime_workspace), `workspace` @property backward-compat. ISOLATE/FINALIZE/MERGE 3 신규 단계. `prepare_isolated_worktree()`/`finalize_dogfood_result()`/`merge_dogfood_branch()`. `MergePolicy` 8-gate dataclass. `_cwd()` 라우팅. CLI `--merge auto-policy/manual/never` + `dogfood merge` 서브커맨드. `_default_runtime_workspace(run_id)` CWD 독립. `tests/test_dogfood_isolation.py` 25건 신규. 174 tests PASS. 3-Tier: af-critic BLOCK→fixed / af-cross-review WARN-only / af-test-runner PASS. |
 | 2026-05-25 | v1.2.31 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, code-review.md, test_dogfood.py (+3) |
 | 2026-05-25 | v1.2.31 | chore(agent_launcher): code update — agent_launcher.py, dogfood.py, test_dogfood.py, test_dogfood_cli.py, test_dogfood_integration.py (+1) |
 | 2026-05-24 | v1.2.32 | feat(triad): §17 Step 15 — 正反合 Triad 오케스트레이션. core/triad.py 신규(TriadCriticFinding/Report/Decision/Result + run_triad()). evidence 계약 강제(_validate_findings). Critical+REJECT→resolved, HOLD/ACCEPT→TriadBlockedError. dogfood._run_plan_phase → run_triad() 연결. run_all() TriadBlockedError→block_run(). af-triad-critic.md 스킬 파일. af.spec core.triad 추가. 25 triad tests. 3-Tier WARN-only PASS. |
