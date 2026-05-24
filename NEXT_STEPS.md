@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 13 완료 (`0dbd4800`). 다음 세션 진입점: §17 Step 14 — `dogfood run` end-to-end 실험 (실제 터미널 인터뷰 → 전 단계 통과 검증).
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 13 완료 + 인코딩 버그 픽스 (`dbdefc3d`). 다음 세션 진입점: §17 Step 14 — `tests/test_dogfood_integration.py` smoke test (real core modules 체이닝 검증).
 
 ---
 
