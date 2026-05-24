@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 14 완료 (`5d8ec8b8`). 다음 세션 진입점: dogfood 파이프라인 RESEARCH/IMPLEMENT 단계 실 구현 연결 (현재 stub) 또는 Phase 3.5 측정 데이터 수집.
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 15 완료 (`8ad5a3ac`). 다음 세션 진입점: Triad 실 에이전트 연결 (현재 injectable stub → 실제 claude-cli 서브프로세스 호출) 또는 Step 16 worktree 격리.
 
 ---
 
@@ -215,7 +215,11 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 13. ✅ **§17 Step 12** — `dogfood interview <task>` 서브커맨드 + `dogfood run --from-file <path>` 옵션 추가. `dogfood interview`는 `core.interview.run_interview()` 래핑(--non-interactive/--deep-skip/--out/--workspace). `dogfood run --from-file`은 JSON 로드 후 `run_all(interview_artifact=...)` 전달. 테스트 20→30건(+10). 3-Tier WARN-only PASS. (2026-05-24)
 14. ✅ **§17 Step 13** — `_build_interview_fn()` + `_run_interview_phase(_interview_fn)` injectable + `run_phase` passthrough + `run_all(non_interactive, _interview_fn)`. TTY 감지(`sys.stdin.isatty()` False → non_interactive). `dogfood run --non-interactive` 파서 추가. 기존 monkeypatch 스텁 `**kw` 수정(af-cross-review BLOCK 해소). 테스트 30→37건(+7). 3-Tier PASS. (`0dbd4800`, 2026-05-24)
 15. ✅ **§17 Step 14** — `tests/test_dogfood_integration.py` 8 smoke tests. 실제 모듈(research_brief, spec_compiler, premortem, planner) 체이닝 + _command_runner mock. PENDING→COMPLETE/BLOCKED 두 경로 모두 검증. 3-Tier PASS. (`5d8ec8b8`, 2026-05-24)
-16. 다음: RESEARCH/IMPLEMENT 단계 실 구현 연결 (현재 pass-through stub) 또는 Phase 3.5 측정 데이터 수집.
+16. ✅ **§17 Step 15** — `core/triad.py` 正反合 Triad 오케스트레이션. TriadCriticFinding/Report/Decision/Result dataclass. run_triad() injectable executor 설계. evidence 계약 강제(_validate_findings). Critical finding 미해소 → TriadBlockedError. dogfood._run_plan_phase 연결. af-triad-critic.md 스킬 파일. 25 tests. 3-Tier WARN-only PASS. (`8ad5a3ac`, 2026-05-24)
+17. 다음 옵션:
+    - **A** Triad 실 에이전트 연결: _critic_executor/_architect_executor에 claude-cli 서브프로세스 호출 배선
+    - **B** worktree 격리 (Step 10): dogfood run이 격리된 git worktree에서 실행
+    - **C** RESEARCH stub 실 구현: 실제 researcher.py 연결
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
