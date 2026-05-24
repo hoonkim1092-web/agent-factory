@@ -56,7 +56,13 @@ fi
 if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
     VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-    [ -x "$VENV_PYTHON" ] && GATE_PY="$VENV_PYTHON" || GATE_PY="python3"
+    if [ -x "$VENV_PYTHON" ]; then
+        GATE_PY="$VENV_PYTHON"
+    elif command -v python3 >/dev/null 2>&1; then
+        GATE_PY="python3"
+    else
+        GATE_PY="python"
+    fi
     "$GATE_PY" "${REPO_ROOT}/scripts/review_gate.py" --check
     GATE_EXIT=$?
     if [ $GATE_EXIT -ne 0 ]; then
