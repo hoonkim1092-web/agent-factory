@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 12 완료 (`af dogfood interview` 서브커맨드 + `dogfood run --from-file`, 30 tests, 3-Tier WARN-only PASS). 다음 세션 진입점: §17 Step 13 — `dogfood run` 실제 인터랙티브 인터뷰 통합 (interview phase에서 `run_interview()` 인터랙티브 모드 호출).
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 12 완료 + 북극성 문서 §8.1 Architect Agent 정의 추가 (`48d8d445`). 다음 세션 진입점: §17 Step 13 — `dogfood run` 실제 인터랙티브 인터뷰 통합.
 
 ---
 
