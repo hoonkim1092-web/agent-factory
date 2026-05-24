@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-24 KST** — §17 Step 13 완료 + 인코딩 버그 픽스 (`dbdefc3d`). 다음 세션 진입점: §17 Step 14 — `tests/test_dogfood_integration.py` smoke test (real core modules 체이닝 검증).
+> 마지막 업데이트: **2026-05-24 KST** — §17 Step 14 완료 (`5d8ec8b8`). 다음 세션 진입점: dogfood 파이프라인 RESEARCH/IMPLEMENT 단계 실 구현 연결 (현재 stub) 또는 Phase 3.5 측정 데이터 수집.
 
 ---
 
@@ -214,7 +214,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 12. ✅ **§17 Step 11** — `agent_launcher.py`에 `dogfood` 서브커맨드 추가. `_KNOWN_SUBCOMMANDS` 등록, `dogfood run <task>` + `dogfood status <run_id>` 파서. `__main__` 분기: `run_all()` 호출 후 exit 0(COMPLETE)/1(BLOCKED). `tests/test_dogfood_cli.py` 10건 신규. 3-Tier PASS. (2026-05-24)
 13. ✅ **§17 Step 12** — `dogfood interview <task>` 서브커맨드 + `dogfood run --from-file <path>` 옵션 추가. `dogfood interview`는 `core.interview.run_interview()` 래핑(--non-interactive/--deep-skip/--out/--workspace). `dogfood run --from-file`은 JSON 로드 후 `run_all(interview_artifact=...)` 전달. 테스트 20→30건(+10). 3-Tier WARN-only PASS. (2026-05-24)
 14. ✅ **§17 Step 13** — `_build_interview_fn()` + `_run_interview_phase(_interview_fn)` injectable + `run_phase` passthrough + `run_all(non_interactive, _interview_fn)`. TTY 감지(`sys.stdin.isatty()` False → non_interactive). `dogfood run --non-interactive` 파서 추가. 기존 monkeypatch 스텁 `**kw` 수정(af-cross-review BLOCK 해소). 테스트 30→37건(+7). 3-Tier PASS. (`0dbd4800`, 2026-05-24)
-15. 다음: §17 Step 14 — `dogfood run` end-to-end 실험. `--non-interactive` 또는 `--deep-skip` 모드로 실제 파이프라인 전 단계 통과 검증. 현재 RESEARCH/IMPLEMENT/VERIFY는 stub — 실제 연결 또는 테스트용 mock으로 smoke test.
+15. ✅ **§17 Step 14** — `tests/test_dogfood_integration.py` 8 smoke tests. 실제 모듈(research_brief, spec_compiler, premortem, planner) 체이닝 + _command_runner mock. PENDING→COMPLETE/BLOCKED 두 경로 모두 검증. 3-Tier PASS. (`5d8ec8b8`, 2026-05-24)
+16. 다음: RESEARCH/IMPLEMENT 단계 실 구현 연결 (현재 pass-through stub) 또는 Phase 3.5 측정 데이터 수집.
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 
