@@ -431,9 +431,9 @@ If the runtime cannot invoke named skills directly, the dogfood runner must inje
 
 ### 8.1 Mediator as Architect Agent
 
-The Mediator in the Triad is not a generic tie-breaker. It is an Architect Agent: an agent that holds the full system design context and synthesizes from architectural insight rather than from vote counting.
+The Mediator in the Triad is not a generic tie-breaker. It is an Architect Agent: an agent whose job is to look at the full system picture and answer one question with facts and logic — **is this correct when viewed against the whole architecture?**
 
-The distinction matters because vote counting and trade-off negotiation can produce locally rational decisions that violate the system's overall design intent. The Architect Agent prevents this by grounding every synthesis decision in the existing architecture.
+The core distinction: the Planner and Critic argue from their respective scopes. The Architect Agent steps back and asks whether the outcome holds up at the system level. That judgment must be grounded in evidence, not in personal preference or surface-level compromise.
 
 Mandatory context for the Architect Agent:
 
@@ -446,51 +446,60 @@ Master_Blueprint.md:
 ADR history (docs/decisions/):
   All accepted ADRs. Prior decisions constrain current synthesis.
   The Architect Agent must not reverse an accepted ADR without
-  explicitly superseding it.
+  explicitly superseding it with a new ADR and a stated reason.
 
 Active git diff:
-  What is actually changing in this dogfood run. The synthesis must
-  be grounded in the specific change, not in abstract principles.
+  What is actually changing in this dogfood run. Every conclusion must
+  be traceable to specific lines, files, or system boundaries — not to
+  abstract architectural principles alone.
 ```
 
 The Architect Agent's synthesis process:
 
 ```text
 1. Read the Planner's proposed path.
-2. Read the Critic's evidence-backed blockers.
-3. Cross-reference both against Master_Blueprint.md and ADR history.
-4. Determine which Critic findings are genuine architecture violations
-   vs. which are implementation preferences.
-5. Determine which Planner decisions fit the existing design intent
-   vs. which require an ADR before proceeding.
-6. Emit the final plan with explicit decision rationale for each
-   accepted or rejected Critic finding.
+2. Read the Critic's evidence-backed findings.
+3. For each finding, ask: does the whole system still make sense if
+   we accept this plan? If not, what specifically breaks and why?
+4. Ground the answer in facts: file references, dependency edges from
+   §10, prior failures in §11, or accepted decisions from ADR history.
+5. Reach a conclusion that is logically consistent across the full
+   system — not just locally correct within the scope of the change.
+6. Emit the final plan with explicit, fact-backed rationale for each
+   accepted or rejected finding. Every decision must cite its evidence.
 ```
 
 The Architect Agent must answer these questions in its output:
 
 ```text
-- Does the proposed plan fit the current architecture, or does it
-  require a Blueprint section update?
-- Are any Critic findings symptoms of a deeper design gap that should
-  produce an ADR rather than a point fix?
-- What is the minimum change that satisfies both the task goal and
-  the architecture constraints?
-- Are there unresolved risks that require user approval before
-  proceeding?
+- When the full system is in view, does this plan hold together?
+  What facts support or contradict that judgment?
+- Is each Critic finding backed by a concrete system-level problem,
+  or does the evidence not survive scrutiny at the architectural level?
+- Is each Planner decision logically consistent with the existing
+  dependency graph, blast-radius table, and prior decisions?
+- What is the minimum change that is correct at the system level —
+  not the minimum the Planner wants, not the maximum the Critic demands?
+- Are there unresolved contradictions that require user judgment
+  rather than agent synthesis?
 ```
 
 What the Architect Agent must not do:
 
 ```text
-- Synthesize by averaging Planner and Critic positions without
-  examining the Blueprint.
-- Override a Critic's evidence-backed finding without naming the
-  architectural reason.
+- Synthesize by splitting the difference between Planner and Critic
+  without checking the full system picture.
+- Accept or reject a finding based on intuition or general principle
+  without citing a specific fact: file, line, ADR, prior failure, or
+  dependency edge.
+- Override an evidence-backed Critic finding without providing
+  stronger counter-evidence at the system level.
 - Accept a plan step that touches a §10 blast-radius dependency
-  without checking the propagation surface.
+  without tracing the propagation surface.
 - Produce a final plan that contradicts an accepted ADR without
   explicitly superseding it.
+- Confuse "this seems architecturally wrong" with "I can show
+  specifically why the system breaks if we do this."
 ```
 
 The Architect Agent is the only role permitted to emit `approval_points` in the Triad output. If a decision exceeds the run's approval_policy scope, the Architect Agent must mark it as a required approval point rather than proceeding autonomously.
