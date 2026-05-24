@@ -152,7 +152,7 @@
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7+8+9+10+13 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase + end-to-end run_all() + 실제 인터뷰 연결(TTY 감지) | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `_validate_run_id()`, `_build_interview_fn()` |
+| `core/dogfood.py` | §17 Step 7+8+9+10+13+15 — Dogfood state machine + Verify/Review/Retry loop + IMPLEMENT phase + end-to-end run_all() + 인터뷰 연결(TTY 감지) + _run_plan_phase → run_triad() 연결(正反合), TriadBlockedError → block_run() | `DogfoodPhase`, `DogfoodState`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `_validate_run_id()`, `_build_interview_fn()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -209,7 +209,7 @@
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
 | `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
-| `core/triad.py` | triad | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision` |
+| `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -1565,6 +1565,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-24 | v1.2.32 | feat(triad): §17 Step 15 — 正反合 Triad 오케스트레이션. core/triad.py 신규(TriadCriticFinding/Report/Decision/Result + run_triad()). evidence 계약 강제(_validate_findings). Critical+REJECT→resolved, HOLD/ACCEPT→TriadBlockedError. dogfood._run_plan_phase → run_triad() 연결. run_all() TriadBlockedError→block_run(). af-triad-critic.md 스킬 파일. af.spec core.triad 추가. 25 triad tests. 3-Tier WARN-only PASS. |
 | 2026-05-24 | v1.2.31 | chore(.claude): code update — af-triad-critic.md, af.spec, dogfood.py, triad.py, test_dogfood.py (+1) |
 | 2026-05-24 | v1.2.35 | fix(encoding): Windows lone-surrogate/cp949 stdout 인코딩 버그 픽스 — `session_adapter.py` `_hook_json_dumps(ensure_ascii=True)` + `_sanitize_hook_value()` 추가, `cli_hook_bridge.py` stdout reconfigure utf-8/backslashreplace, `.claude/settings.json` hook 커맨드 단순화(sh hookpy.sh 제거). 테스트 1건 신규. |
 | 2026-05-24 | v1.2.35 | feat(dogfood-cli): §17 Step 12 — `agent_launcher.py`에 `dogfood interview <task>` 서브커맨드 추가 + `dogfood run --from-file <path>` 옵션 추가. `dogfood interview`는 `core.interview.run_interview()` 래핑(--non-interactive / --deep-skip / --out / --workspace 지원). `dogfood run --from-file`은 interview artifact JSON을 로드해 `run_all(interview_artifact=...)` 에 전달. `_build_arg_parser()` + `__main__` 디스패치 양쪽 수정. `tests/test_dogfood_cli.py` 10건 → 30건(+10: parser 5건, interview dispatch 2건, from-file 3건). 3-Tier PASS. |
