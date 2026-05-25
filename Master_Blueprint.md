@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(core): code update — cli.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — utils.py, code-review.md, run_output.txt, AGENTS.md, LOG_COMMANDS.md (+7) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |

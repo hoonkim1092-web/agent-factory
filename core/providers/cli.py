@@ -246,8 +246,8 @@ def _progress_printer(
         mins, secs = divmod(elapsed, 60)
         rem_mins, rem_secs = divmod(remaining, 60)
         print(
-            f"  ⏳ [{provider_id}] 실행 중... "
-            f"{mins}분 {secs}초 경과 (남은 시간: {rem_mins}분 {rem_secs}초)",
+            f"  [{provider_id}] running... "
+            f"{mins}m {secs}s elapsed (remaining: {rem_mins}m {rem_secs}s)",
             flush=True,
         )
 
@@ -603,9 +603,9 @@ def _collect_git_context(workspace: str) -> str:
     lines = []
     try:
         h = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+                           cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3, check=False)
         b = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+                           cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3, check=False)
         head = h.stdout.strip() if h.returncode == 0 else ""
         branch = b.stdout.strip() if b.returncode == 0 else ""
         if head and branch:
@@ -618,7 +618,7 @@ def _collect_git_context(workspace: str) -> str:
         pass
     try:
         r = subprocess.run(["git", "log", "-5", "--oneline"],
-                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+                           cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3, check=False)
         if r.returncode == 0 and r.stdout.strip():
             lines.append("Recent commits:")
             for line in r.stdout.strip().splitlines():
@@ -627,7 +627,7 @@ def _collect_git_context(workspace: str) -> str:
         pass
     try:
         r = subprocess.run(["git", "status", "-sb"],
-                           cwd=repo_root, capture_output=True, text=True, timeout=3, check=False)
+                           cwd=repo_root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3, check=False)
         if r.returncode == 0 and r.stdout.strip():
             lines.append("Working tree:")
             for line in r.stdout.strip().splitlines():
@@ -779,7 +779,7 @@ def execute_cli_chat(
     effective_timeout = int(request.effective_timeout_sec)
     display_name = _CLI_SPECS.get(request.provider_id, spec).provider_id
     print(
-        f"  🚀 [{display_name}] CLI 실행 시작 (timeout: {effective_timeout}초)",
+        f"  [{display_name}] CLI start (timeout: {effective_timeout}s)",
         flush=True,
     )
     started = time.monotonic()
@@ -873,7 +873,7 @@ def execute_cli_chat(
         elapsed = int(time.monotonic() - started)
         mins, secs = divmod(elapsed, 60)
         print(
-            f"  ❌ [{display_name}] 타임아웃 ({mins}분 {secs}초 경과, 제한: {effective_timeout}초)",
+            f"  [{display_name}] timeout ({mins}m {secs}s elapsed, limit: {effective_timeout}s)",
             flush=True,
         )
         result = {
@@ -903,10 +903,10 @@ def execute_cli_chat(
     mins, secs = divmod(elapsed, 60)
     if ok:
         failure_reason = request.provider_id
-        print(f"  ✅ [{display_name}] 완료 ({mins}분 {secs}초)", flush=True)
+        print(f"  [{display_name}] done ({mins}m {secs}s)", flush=True)
     else:
         failure_reason = f"{request.provider_id}_{issue}" if issue else f"{request.provider_id}_failed"
-        print(f"  ❌ [{display_name}] 실패: {failure_reason} ({mins}분 {secs}초)", flush=True)
+        print(f"  [{display_name}] failed: {failure_reason} ({mins}m {secs}s)", flush=True)
     result = {
         "ok": ok,
         "provider_id": request.provider_id,
