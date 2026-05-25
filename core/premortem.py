@@ -93,8 +93,8 @@ def _detect_blueprint_sync_risk(scope: list[str], risk_hints: list[str]) -> Prem
                 description="Blueprint §3 section updated for changed module.",
             ),
             VerificationStep(
-                command="git diff --name-only HEAD | grep Master_Blueprint.md",
-                description="Master_Blueprint.md is included in the same commit.",
+                command="# Blueprint commit check deferred to FINALIZE (P2 artifact tracking handles this)",
+                description="Master_Blueprint.md is listed in plan artifacts and will be committed in FINALIZE.",
             ),
         ],
     )

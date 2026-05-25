@@ -474,13 +474,16 @@ def test_run_implement_empty_plan_ok(tmp_path):
     assert result["skipped_no_commands"] == []
 
 
-def test_run_implement_steps_without_commands_are_skipped(tmp_path):
+def test_run_implement_steps_without_commands_use_ai_executor(tmp_path, monkeypatch):
+    import core.dogfood as df
+    monkeypatch.setattr(df, "_ai_executor", lambda task, cwd, run_id: {"ok": True, "text": "done"})
     state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
     plan = _plan_dict([_step("S1"), _step("S2")])
     result = run_phase(state, context={"plan_dict": plan})
     assert result["ok"] is True
-    assert result["skipped_no_commands"] == ["S1", "S2"]
-    assert result["executed"] == []
+    assert result["skipped_no_commands"] == []
+    assert len(result["executed"]) == 2
+    assert all(e["command"].startswith("[AI]") for e in result["executed"])
 
 
 def test_run_implement_commands_all_pass(tmp_path, monkeypatch):
@@ -538,17 +541,20 @@ def test_run_implement_context_plan_dict_takes_priority(tmp_path, monkeypatch):
 def test_run_implement_mixed_steps(tmp_path, monkeypatch):
     import core.dogfood as df
     monkeypatch.setattr(df, "_command_runner", _make_runner({"run.sh": True}))
+    monkeypatch.setattr(df, "_ai_executor", lambda task, cwd, run_id: {"ok": True, "text": "done"})
     state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
     plan = _plan_dict([
-        _step("S1"),               # no commands → skipped
-        _step("S2", commands=["run.sh"]),  # has command → executed
-        _step("S3"),               # no commands → skipped
+        _step("S1"),               # no commands → AI executor
+        _step("S2", commands=["run.sh"]),  # has command → executed via runner
+        _step("S3"),               # no commands → AI executor
     ])
     result = run_phase(state, context={"plan_dict": plan})
     assert result["ok"] is True
-    assert result["skipped_no_commands"] == ["S1", "S3"]
-    assert len(result["executed"]) == 1
-    assert result["executed"][0]["step"] == "S2"
+    assert result["skipped_no_commands"] == []
+    assert len(result["executed"]) == 3
+    assert result["executed"][0]["step"] == "S1"
+    assert result["executed"][1]["step"] == "S2"
+    assert result["executed"][2]["step"] == "S3"
 
 
 # ---------------------------------------------------------------------------
@@ -994,13 +1000,13 @@ def test_run_all_triad_blocked_transitions_to_blocked(tmp_path, monkeypatch):
     assert "Critical" in state.last_failure
 
 
-def test_run_all_implement_blocked_when_all_steps_skipped(tmp_path, monkeypatch):
-    """P1: run_all() reaches BLOCKED when IMPLEMENT returns no executed steps and skipped_no_commands."""
+def test_run_all_implement_blocked_when_no_steps_executed(tmp_path, monkeypatch):
+    """P1: run_all() reaches BLOCKED when IMPLEMENT returns ok=False and no executed steps."""
     import core.dogfood as df
 
     _patch_all_runners(monkeypatch)
     monkeypatch.setattr(df, "_run_implement_phase",
-        lambda s, context: {"executed": [], "failures": [], "skipped_no_commands": ["S1", "S2"], "ok": True})
+        lambda s, context: {"executed": [], "failures": ["S1: AI execution failed"], "skipped_no_commands": [], "ok": False})
 
     state = run_all(
         "t", str(tmp_path),
@@ -1008,4 +1014,4 @@ def test_run_all_implement_blocked_when_all_steps_skipped(tmp_path, monkeypatch)
         runtime_workspace=str(tmp_path / "rt"),
     )
     assert state.phase == DogfoodPhase.BLOCKED
-    assert "AI executor" in state.last_failure
+    assert "no executed steps" in state.last_failure

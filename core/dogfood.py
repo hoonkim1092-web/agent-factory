@@ -271,6 +271,43 @@ def _default_command_runner(cmd: str, cwd: str) -> Tuple[bool, str]:
 _command_runner: Callable[[str, str], Tuple[bool, str]] = _default_command_runner
 
 
+def _build_ai_task(step: dict[str, Any], plan_intent: str) -> str:
+    """Build a task description for the AI executor from a plan step."""
+    parts = [f"Plan intent: {plan_intent}", "", f"Step {step.get('id', '?')}: {step.get('action', '')}"]
+    if step.get("target"):
+        parts.append(f"Target: {step['target']}")
+    artifacts = step.get("artifacts") or []
+    if artifacts:
+        parts.append(f"Files to create/modify: {', '.join(artifacts)}")
+    tests = step.get("tests_required") or []
+    if tests:
+        parts.append(f"Tests required: {', '.join(tests)}")
+    parts.append("\nImplement this step. Write production-quality code. Do not modify files outside the listed artifacts.")
+    return "\n".join(parts)
+
+
+def _default_ai_executor(task: str, *, cwd: str, run_id: str) -> dict[str, Any]:
+    """Call claude_cli to execute an AI-coded plan step in the worktree."""
+    from core.providers.cli import CliChatRequest, execute_cli_chat  # noqa: PLC0415
+    request = CliChatRequest(
+        provider_id="claude_cli",
+        model="",
+        system_prompt=(
+            "You are implementing a software task inside a git worktree. "
+            "Make only the changes described. Do not modify files outside the listed artifacts."
+        ),
+        task_input=task,
+        workspace=cwd,
+        run_id=run_id,
+        auto_approve=True,
+    )
+    return execute_cli_chat(request)
+
+
+# Injectable for tests: monkeypatch core.dogfood._ai_executor
+_ai_executor: Callable[..., dict[str, Any]] = _default_ai_executor
+
+
 # ---------------------------------------------------------------------------
 # Runtime root helpers
 # ---------------------------------------------------------------------------
@@ -600,7 +637,20 @@ def merge_dogfood_branch(
     Updates state.merge_status, state.merged_commit, state.phase.
     """
     if policy is None:
-        policy = MergePolicy(mode=state.merge_mode)  # type: ignore[arg-type]
+        allowed: list[str] = []
+        if state.plan_path:
+            _pp = Path(state.plan_path)
+            if _pp.exists():
+                try:
+                    _pd = json.loads(_pp.read_text(encoding="utf-8"))
+                    for _s in _pd.get("steps", []):
+                        for _f in (_s.get("artifacts") or []):
+                            allowed.append(_f.replace("\\", "/"))
+                        for _f in (_s.get("tests_required") or []):
+                            allowed.append(_f.replace("\\", "/"))
+                except Exception:
+                    pass
+        policy = MergePolicy(mode=state.merge_mode, allowed_paths=list(dict.fromkeys(allowed)))  # type: ignore[arg-type]
 
     src = state.source_workspace
 
@@ -835,15 +885,27 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
             plan_dict = json.loads(plan_path.read_text(encoding="utf-8"))
 
     cwd = state._cwd()
+
+    # P5: capture baseline SHA before any changes (SHA-based to survive AI commits advancing HEAD)
+    _pre_sha = _git(["rev-parse", "HEAD"], cwd=cwd, check=False).stdout.strip()
+
     executed: list[dict[str, Any]] = []
     failures: list[str] = []
     skipped: list[str] = []
 
+    plan_intent: str = plan_dict.get("intent", "")
     for step in plan_dict.get("steps", []):
         commands: list[str] = step.get("commands") or []
         step_id: str = step.get("id", "?")
         if not commands:
-            skipped.append(step_id)
+            # P6: delegate to AI executor instead of skipping
+            ai_task = _build_ai_task(step, plan_intent)
+            ai_result = _ai_executor(ai_task, cwd=cwd, run_id=state.run_id)
+            ok = ai_result.get("ok", False)
+            output = ai_result.get("text", "") or ai_result.get("error", "")
+            executed.append({"step": step_id, "command": f"[AI] {step.get('action', '')}", "ok": ok, "output": output})
+            if not ok:
+                failures.append(f"{step_id}: AI execution failed")
             continue
         for cmd in commands:
             ok, output = _command_runner(cmd, cwd)
@@ -851,10 +913,21 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
             if not ok:
                 failures.append(f"{step_id}: {cmd}")
 
+    # P5: compute actual file changes since baseline SHA (includes AI-committed files)
+    if _pre_sha:
+        _post = _git(["diff", "--name-only", f"{_pre_sha}..HEAD"], cwd=cwd, check=False)
+        _unstaged = _git(["diff", "--name-only", "HEAD"], cwd=cwd, check=False)
+        actual_changed = sorted({
+            f for f in (_post.stdout + "\n" + _unstaged.stdout).splitlines() if f
+        })
+    else:
+        actual_changed = []
+
     return {
         "executed": executed,
         "failures": failures,
         "skipped_no_commands": skipped,
+        "actual_changed": actual_changed,
         "ok": len(failures) == 0,
     }
 
@@ -1045,9 +1118,8 @@ def run_all(
                 continue
         elif phase == DogfoodPhase.IMPLEMENT:
             impl_result = run_phase(state, context={})
-            if (not impl_result.get("executed")
-                    and impl_result.get("skipped_no_commands")):
-                block_run(state, "all implementation steps skipped (no commands); AI executor not connected")
+            if not impl_result.get("ok") and not impl_result.get("executed"):
+                block_run(state, "implementation phase produced no executed steps")
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.VERIFY:

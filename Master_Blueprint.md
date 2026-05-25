@@ -46,7 +46,7 @@
 |------|------|----------------|
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
-| `core/agent_worker.py` | PyInstaller worker 진입점 | `main()` |
+| `core/agent_worker.py` | PyInstaller worker 진입점. stdout/stderr `errors=replace`로 Windows/macOS 콘솔 인코딩 차이로 인한 worker 조기 종료를 방지. | `main()` |
 | `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` + `_read_block_cause()` (P5), `initialize(status, execution_open)` (v4), DomainVerdict 매트릭스 `_HIGH_BLAST_RADIUS` (P5) |
 | `core/control/verdicts.py` | Stage 0 verdict/route/cause enum 단일 원천 | `QuestionRoute`, `DomainVerdict`, `BlockCause` |
 | `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass | `ContextScanArtifact`, `ProjectGoalArtifact`, `DomainReviewArtifact`, `AssumptionLedgerEntry`, `PausedHitlArtifact`, `PausedHitlQuestion` |
@@ -57,7 +57,7 @@
 | `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
 | `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
 | `core/warning_registry.py` | WARN 기록 SoT + summarize + decision 트리거 | `WarningRecord`, `WarningRegistry`, `_build_summary()`, `_write_minimal_block_decision()` |
-| `core/warning_stats.py` | P3 read-only 분석 도구 — workspace fan-out + 분포 통계 | `iter_warning_records()`, `collect_workspace_stats()`, `_load_index()`, `_compute_distribution()` |
+| `core/warning_stats.py` | P3 read-only 분석 도구 — workspace fan-out + 분포 통계. malformed JSONL 경고 경로는 OS와 무관하게 `/` 포맷으로 출력. | `iter_warning_records()`, `collect_workspace_stats()`, `_load_index()`, `_compute_distribution()` |
 | `core/ast_engine.py` | AST 분석 엔진 (ast-grep-py wrapper) | `search()`, `replace()`, `search_file()` |
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
 | `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | `build_full()`, `save_full()`, `build()`, `save()`, `load()` |
@@ -208,7 +208,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1568,6 +1568,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, dogfood.py, premortem.py, utils.py (+11) |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, dogfood.py, premortem.py, utils.py (+11) |
+| 2026-05-25 | v1.2.34 | feat(utils): `truncate_text(text, max_len, suffix)` 신설 — max_len 글자 이하로 자르고 suffix 접미 제어. suffix보다 max_len이 작으면 suffix 없이 자름. `tests/test_utils.py` 9건 신규. |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, premortem.py, utils.py, run_output.txt (+8) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, planner.py, code-review.md (+3) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, planner.py, test_dogfood.py (+2) |
 | 2026-05-25 | v1.2.34 | fix(dogfood): P1+P2+P3 복합 증명 구조적 수정. P1: IMPLEMENT no-op guard — all steps skipped(no commands) → BLOCKED. P2: planner core/*.py artifacts에 Master_Blueprint.md 자동 추가. P3: finalize selective staging — git add -A → plan allowlist 교집합. scope_violations 기록. 5 신규 테스트. 3-Tier PASS. |
