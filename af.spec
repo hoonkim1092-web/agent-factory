@@ -101,6 +101,7 @@ a = Analysis(
         'core.planner',
         'core.triad',
         'core.dogfood',
+        'core.review_skill_router',
         'core.interactive_chat',
         # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
         'core.ise_analyzer',
