@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-26 KST** — R1 3차 복합 증명 PARTIAL(P6 동작 확인, VERIFY BLOCKED). F-SCOPE-CLARIFICATION + F-VERIFY-EMPTY + P5 fix 완료. 다음: R1 4차 — end-to-end COMPLETE 검증.
+> 마지막 업데이트: **2026-05-26 KST** — R1 4차 시도 중 F-CMD-RUNNER-WINDOWS 발견·수정. clamp() + median() AI 작성 확인. 다음: R1 4차 재실행 (median 태스크, VERIFY PASS 예상).
 
 ---
 
@@ -226,6 +226,13 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
      - P5 fix: SHA 캡처 `OSError/FileNotFoundError` guard
    - 결과 문서: `docs/dogfooding/2026-05-26-r1-complex-proof-r3-result.md`
    - **다음: R1 4차** — F-SCOPE + F-VERIFY 수정 후 end-to-end COMPLETE 검증
+
+   **R1 4차 (2026-05-26) — BLOCKED (F-CMD-RUNNER-WINDOWS 발견)**
+   - ✅ AI executor: `median()` + `TestMedian` 워크트리에 작성 확인
+   - ❌ VERIFY BLOCKED — 새 버그 발견:
+     - F-CMD-RUNNER-WINDOWS: `_default_command_runner`가 Windows `cmd.exe` 사용 → `grep -n '<module>'`의 `<`를 stdin redirect로 해석 → rc=1 반환 → VERIFY 항상 실패
+     - ✅ 수정 완료 (`fa4714c4`): PowerShell `try { & { cmd } } catch { exit 1 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }` 패턴
+   - **다음: R1 5차** — `python agent_launcher.py dogfood run "core/utils.py에 median(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. tests/test_utils.py에 TestMedian 테스트 클래스 신규 작성." --non-interactive --merge never`
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
