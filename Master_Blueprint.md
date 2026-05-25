@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.34 | chore(core): code update — spec_compiler.py, test_spec_compiler.py |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, code-review.md |
 | 2026-05-25 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, test_dogfood.py |

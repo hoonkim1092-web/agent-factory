@@ -15,6 +15,7 @@ from typing import Any
 from core.research_brief import ResearchBrief, split_evidence, _tokenize
 
 _PATH_RE = re.compile(r"[/\\]")
+_PATH_TOKEN_RE = re.compile(r'[\w.\-/\\]+\.(?:py|json|js|ts|md|yaml|yml|txt|sh|toml|cfg|ini)')
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +98,17 @@ def _detect_gaps(questions: list[str], on_brief: list[dict[str, Any]]) -> list[s
     return gaps
 
 
+def _scope_from_intent(intent: str) -> list[str]:
+    """Extract file-path tokens from the task intent string as a last-resort scope fallback.
+
+    Used when neither explicit scope nor clarification_log entries are present
+    (e.g. --non-interactive runs that provide the task as a single string).
+    Only tokens with a known file extension and a path separator are accepted.
+    """
+    matches = _PATH_TOKEN_RE.findall(intent)
+    return [m for m in dict.fromkeys(matches) if _PATH_RE.search(m) and not m.startswith("//")]
+
+
 def _scope_from_clarification_log(src: dict[str, Any]) -> list[str]:
     """Extract file-path scope items from clarification_log entries with category 'scope'.
 
@@ -143,7 +155,11 @@ def compile_spec(
     intent = str(src.get("goal") or src.get("task_input") or "").strip()
     # merge_clarification maps scope-category answers to "deliverables"; fall back to
     # clarification_log to avoid picking up functional descriptions from other pipelines.
-    scope = _str_list(src.get("scope")) or _scope_from_clarification_log(src)
+    scope = (
+        _str_list(src.get("scope"))
+        or _scope_from_clarification_log(src)
+        or _scope_from_intent(intent)
+    )
     success_criteria = _str_list(src.get("success_criteria"))
     constraints = _str_list(src.get("constraints"))
     approval_policy = str(src.get("approval_policy") or "").strip()

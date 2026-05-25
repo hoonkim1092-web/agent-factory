@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from core.research_brief import ResearchBrief
-from core.spec_compiler import CompiledSpec, compile_spec, _detect_gaps, _str_list, _scope_from_clarification_log
+from core.spec_compiler import CompiledSpec, compile_spec, _detect_gaps, _str_list, _scope_from_clarification_log, _scope_from_intent
 
 
 # ---------------------------------------------------------------------------
@@ -232,3 +232,35 @@ def test_detect_gaps_unanswered():
 
 def test_detect_gaps_empty_questions():
     assert _detect_gaps([], [{"content": "anything"}]) == []
+
+
+# ---------------------------------------------------------------------------
+# _scope_from_intent
+# ---------------------------------------------------------------------------
+
+def test_scope_from_intent_extracts_paths():
+    result = _scope_from_intent(
+        "Add clamp() function to core/utils.py + create tests/test_clamp_utils.py"
+    )
+    assert result == ["core/utils.py", "tests/test_clamp_utils.py"]
+
+
+def test_scope_from_intent_no_paths():
+    result = _scope_from_intent("Refactor the authentication module for better clarity")
+    assert result == []
+
+
+def test_scope_from_intent_deduplicates():
+    result = _scope_from_intent("Modify core/utils.py then verify core/utils.py tests pass")
+    assert result.count("core/utils.py") == 1
+
+
+def test_scope_from_intent_excludes_urls():
+    result = _scope_from_intent("See https://example.com/docs/guide.md for reference")
+    assert not any(m.startswith("//") for m in result)
+
+
+def test_scope_from_intent_json_extension_not_truncated():
+    result = _scope_from_intent("update core/config.json with new settings")
+    assert "core/config.json" in result
+    assert "core/config.js" not in result
