@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — §17 Step 17 review_skill_router 구현 완료 (35 tests PASS, commit 38451a42). 다음 세션 진입점: §17 Step 18 express_router.py 또는 §17 Step 19 architect_agent.py.
+> 마지막 업데이트: **2026-05-25 KST** — §17 Step 18 express_router 구현 완료 (46 tests PASS). 다음 세션 진입점: §17 Step 19 architect_agent.py (Triad 合 역할).
 
 ---
 
@@ -233,7 +233,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
     - `tests/test_dogfood_isolation.py` 25건 신규, 총 174 tests PASS
     - 3-Tier: af-critic BLOCK→fixed / af-cross-review WARN-only / af-test-runner PASS
 19. ✅ **§17 Step 17** — `core/review_skill_router.py` 신규. `ReviewContext`/`TierSkillProfile`/`ReviewSkillPlan` + `route_review_skills()`. changed-file paths·blast tier·work kind·risk tokens 기반 결정적 라우팅. Tier 1→af-test-runner만, Tier 2/3→3-tier. blueprint_impact·worktree_work·tier3 분기. 35 tests PASS. 3-Tier WARN-only/PASS/PASS. (`38451a42`, 2026-05-25)
-20. **다음: §17 Step 18** — `core/express_router.py` (direct/light/full/dogfood 4-경로 라우터) 또는 §17 Step 19 `core/architect_agent.py` (Triad 合 역할)
+20. ✅ **§17 Step 18** — `core/express_router.py` 신규. `RouteDecision` + `route_task()`. direct/light/full/dogfood 4-경로 결정적 라우팅. Windows 경로 정규화. word-boundary trivial guard. 46 tests PASS. 3-Tier BLOCK→fixed / BLOCK→fixed / PASS. (2026-05-25)
+21. **다음: §17 Step 19** — `core/architect_agent.py` (Triad 合(Synthesis) 역할, Blueprint+ADR context 주입)
 
 **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
 

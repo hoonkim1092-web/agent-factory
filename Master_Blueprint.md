@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-25 | version: v1.2.33 -->
+<!-- last_updated: 2026-05-25 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -211,6 +211,7 @@
 | `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `strip_code_fences()`, `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
+| `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
 ### 서브디렉토리
 
 | 디렉토리 | 역할 |
@@ -1566,6 +1567,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, express_router.py, code-review.md (+2) |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, express_router.py, test_express_router.py (+1) |
+| 2026-05-25 | v1.2.34 | feat(express-router): §17 Step 18 — `core/express_router.py` 신규. `RouteDecision` dataclass + `route_task()`. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). `_SELF_MOD`(core/·af.spec·master_blueprint·dogfood·self-modifying) 매칭 → dogfood; risk/research/complexity → full; trivial(word-boundary regex) → direct; 기본 light. Windows 백슬래시 경로 정규화(`combine.replace("\\", "/")`). `_trivial_found()` word-boundary guard(helper→help 오탐 방지). complexity 토큰 존재 시 trivial 분기 차단. `force_route` 오버라이드, `hints` 추가 시그널. `af.spec` hiddenimport 추가. Blueprint §0 갱신. 46 tests PASS. 3-Tier: af-critic BLOCK→fixed(2건) / af-cross-review BLOCK→fixed(2건) / af-test-runner PASS. |
 | 2026-05-25 | v1.2.33 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, review_skill_router.py, test_review_skill_router.py, version.py |
 | 2026-05-25 | v1.2.33 | feat(review-skill-router): §17 Step 17 — `core/review_skill_router.py` 신규. `ReviewContext`/`TierSkillProfile`/`ReviewSkillPlan` dataclass + `route_review_skills()`. changed-file paths·blast tier·work kind·risk tokens 기반 결정적 라우팅: Tier 1→af-test-runner만, Tier 2/3→3-tier 전부. blueprint_impact(core/*.py·Master_Blueprint.md·af.spec)→af-blueprint-sync 추가, worktree_work(dogfood·self_modifying·risk_token)→using-git-worktrees+context-degradation 추가, Tier 3→verification-before-completion+context-optimization+multi-agent-patterns 추가. `af.spec` hiddenimport 추가. Blueprint §0 갱신. 35 tests PASS. 3-Tier: af-critic WARN-only / af-cross-review PASS / af-test-runner PASS. |
 | 2026-05-25 | v1.2.32 | feat(dogfood): §17 Step 16 — worktree isolation + auto-merge lifecycle. DogfoodState 3-path 분리(source/worktree/runtime_workspace), `workspace` @property backward-compat. ISOLATE/FINALIZE/MERGE 3 신규 단계. `prepare_isolated_worktree()`/`finalize_dogfood_result()`/`merge_dogfood_branch()`. `MergePolicy` 8-gate dataclass. `_cwd()` 라우팅. CLI `--merge auto-policy/manual/never` + `dogfood merge` 서브커맨드. `_default_runtime_workspace(run_id)` CWD 독립. `tests/test_dogfood_isolation.py` 25건 신규. 174 tests PASS. 3-Tier: af-critic BLOCK→fixed / af-cross-review WARN-only / af-test-runner PASS. |
