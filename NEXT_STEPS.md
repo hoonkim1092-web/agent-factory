@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — §17 Step 20 완료. `_run_plan_phase` 에 `architect_fn` 자동 배선 + 통합 테스트 3건 (147 tests PASS). 다음 세션 진입점: §17 미구현 항목 확인 또는 dogfood pipeline 실 사용 실험.
+> 마지막 업데이트: **2026-05-25 KST** — R1 복합 증명 실험 완료. 형식적 COMPLETE + 기능적 FAIL (plan 공백, scope leak). 발견 버그: F-DIRTY(수정됨), F-PLAN-EMPTY, F-SCOPE-LEAK, F-PHASE-COMPLETE. 다음: F-PLAN-EMPTY 진단 → 복합 증명 재시도.
 
 ---
 
@@ -202,7 +202,13 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 1. ✅ **Phase 3.5 runbook 문서화** (sidecar) — `docs/2026-05-22-review-metrics-phase35-runbook.md` 작성. 실행 절차·Phase 4 진입 기준 수록.
 2. ✅ **`core/interview.py` artifact shape 확장** — `research_questions/`risk_hints`/`assumptions` 필드 추가. `_build_assumptions()` + `_ensure_artifact_shape()` 신설. 테스트 5개 신규. 3-Tier PASS.
-3. **R1 복합 증명** — multi-file 또는 실제 기능 변경 시나리오 1회. ✅ skills/ 격리 미완 해소 완료 (AF_SELF_RUN + SKILLS_DIR 제외). 실제 실험: worktree 생성 후 `python agent_launcher.py --fsa` 실행.
+3. **R1 복합 증명** — ⚠️ 실험 완료, 기능적 FAIL (2026-05-25). 형식적 pipeline COMPLETE 달성했으나 task 미완성 + scope leak 발생.
+   - ✅ F-DIRTY: `planning/interview_brief.json` gitignore 추가 (`f896eeb9`)
+   - ❌ F-PLAN-EMPTY: research_brief/spec/plan 모두 빈 구조 — LLM 호출 경로 검증 필요
+   - ❌ F-SCOPE-LEAK: VERIFY 단계에서 `syncCompyne/` scope leak
+   - ❌ F-PHASE-COMPLETE: 빈 plan으로도 COMPLETE 달성 (완료 기준 부재)
+   - 결과 문서: `docs/dogfooding/2026-05-25-r1-complex-proof-result.md`
+   - **다음**: F-PLAN-EMPTY 진단 (LLM 호출이 실제로 이루어지는지 grep 확인) → 복합 증명 재시도
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
