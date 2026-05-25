@@ -270,3 +270,110 @@ def test_run_all_injectable_interview_fn(tmp_path):
 
     assert state.phase == DogfoodPhase.COMPLETE
     assert called["n"] == 1
+
+
+# ---------------------------------------------------------------------------
+# §17 Step 20: architect_agent wired into _run_plan_phase
+# ---------------------------------------------------------------------------
+
+def _minimal_state(tmp_path) -> "dogfood_mod.DogfoodState":
+    """Minimal DogfoodState sufficient for _run_plan_phase."""
+    return dogfood_mod.DogfoodState(
+        run_id="arch-test-001",
+        task="test task",
+        phase=dogfood_mod.DogfoodPhase.PLAN,
+        source_workspace=str(tmp_path),
+        runtime_workspace=str(tmp_path / ".af_runtime"),
+    )
+
+
+def _minimal_spec() -> dict:
+    return {
+        "intent": "test task",
+        "scope": ["core/utils.py"],
+        "success_criteria": ["tests pass"],
+        "constraints": [],
+        "approval_policy": "auto",
+        "research_findings": [],
+        "supplemental": [],
+        "gaps": [],
+        "risk_hints": [],
+        "assumptions": [],
+    }
+
+
+def test_plan_phase_wires_real_architect_fn(tmp_path):
+    """_run_plan_phase auto-wires core.architect_agent.architect_fn when no stub given."""
+    import core.architect_agent as arch_mod
+
+    called = {}
+    original = arch_mod.architect_fn
+
+    def _spy(plan_dict, critic_report, context, **kw):
+        called["invoked"] = True
+        return original(plan_dict, critic_report, context, **kw)
+
+    state = _minimal_state(tmp_path)
+    with patch.object(arch_mod, "architect_fn", side_effect=_spy):
+        dogfood_mod._run_plan_phase(state, _minimal_spec(), {})
+
+    assert called.get("invoked"), "architect_fn was not called by _run_plan_phase"
+
+
+def test_plan_phase_accept_finding_surfaces_in_plan(tmp_path):
+    """A Critic finding with no blueprint/ADR match is ACCEPTed and lands in unresolved_risks.
+
+    Uses empty blueprint and ADR dir so no REJECT is possible — any finding must
+    be ACCEPTed and surface in final_plan["unresolved_risks"].
+    """
+    import core.architect_agent as arch_mod
+    from core.triad import TriadCriticFinding, TriadCriticReport
+
+    accept_finding = TriadCriticFinding(
+        severity="High",
+        title="Missing input guard",
+        evidence_type="file_line",
+        evidence="core/utils.py:12 — no None check",
+        affected_plan_step="implementation",
+        why_it_breaks="None input causes AttributeError",
+        required_fix="Add `if value is None: raise ValueError`",
+    )
+
+    def _critic_with_accept(plan_dict, context):
+        return TriadCriticReport(verdict="WARN", findings=[accept_finding])
+
+    # Empty blueprint + empty ADR dir → architect has no grounds to REJECT
+    empty_bp = tmp_path / "empty_blueprint.md"
+    empty_bp.write_text("")
+    empty_adr_dir = tmp_path / "empty_adrs"
+    empty_adr_dir.mkdir()
+
+    def _architect_no_refs(plan_dict, critic_report, context):
+        return arch_mod.architect_fn(
+            plan_dict, critic_report, context,
+            _blueprint_path=empty_bp,
+            _adr_dir=empty_adr_dir,
+        )
+
+    state = _minimal_state(tmp_path)
+    plan = dogfood_mod._run_plan_phase(
+        state, _minimal_spec(), {},
+        _triad_critic_fn=_critic_with_accept,
+        _triad_architect_fn=_architect_no_refs,
+    )
+
+    risks = plan.get("unresolved_risks", [])
+    assert any("Missing input guard" in r for r in risks), (
+        f"ACCEPT finding not in unresolved_risks: {risks}"
+    )
+
+
+def test_plan_phase_e2e_runs_complete(tmp_path):
+    """_run_plan_phase with no injected fns completes and writes plan.json."""
+    state = _minimal_state(tmp_path)
+    plan = dogfood_mod._run_plan_phase(state, _minimal_spec(), {})
+
+    assert isinstance(plan, dict), "plan dict not returned"
+    assert "steps" in plan, "plan missing 'steps' key"
+    assert state.plan_path, "state.plan_path not set"
+    assert Path(state.plan_path).exists(), "plan.json not written to disk"

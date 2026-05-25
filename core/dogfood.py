@@ -765,6 +765,9 @@ def _run_plan_phase(
         triad_kwargs["_critic_fn"] = _triad_critic_fn
     if _triad_architect_fn is not None:
         triad_kwargs["_architect_fn"] = _triad_architect_fn
+    else:
+        from core.architect_agent import architect_fn as _real_architect_fn
+        triad_kwargs["_architect_fn"] = _real_architect_fn
 
     result = run_triad(plan.to_dict(), context, **triad_kwargs)
 

@@ -6300,3 +6300,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (5)**: `Master_Blueprint.md, NEXT_STEPS.md, af.spec, core/architect_agent.py, tests/test_architect_agent.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-25 16:22 — `2026-05-20-research-coverage-gate` (d423ff71)
+
+**Context**: Claude Code edit session
+
+**Changed (4)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dogfood.py, tests/test_dogfood_integration.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
