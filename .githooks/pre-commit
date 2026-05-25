@@ -1,98 +1,93 @@
 #!/bin/sh
-# pre-commit hook: Blueprint 스테이징 체크 + 교차검증 결과 확인
+# pre-commit hook: review-gate first, then generated docs sync.
+#
+# Intended pipeline:
+#   1. Implementation is staged.
+#   2. Review agents / test runner have already passed.
+#   3. review-gate verifies that state.
+#   4. Blueprint/code-review docs are refreshed for the final commit.
+#   5. Commit proceeds.
 
 BLUEPRINT="Master_Blueprint.md"
 STAGED=$(git diff --cached --name-only)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
 
-# ── Blueprint 자동 동기화 (pre-commit, 동기, --no-llm) ──
-_PRE_CODE=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
-if [ -n "$_PRE_CODE" ]; then
-    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-    if [ -x "$VENV_PYTHON" ]; then _BPY="$VENV_PYTHON"
-    elif command -v python3 >/dev/null 2>&1; then _BPY="python3"
-    else _BPY="python"; fi
-    "$_BPY" "${REPO_ROOT}/scripts/blueprint_updater.py" --no-llm 2>/dev/null || true
+if [ -x "$VENV_PYTHON" ]; then
+    HOOK_PY="$VENV_PYTHON"
+elif command -v python3 >/dev/null 2>&1; then
+    HOOK_PY="python3"
+else
+    HOOK_PY="python"
+fi
+
+CODE_CHANGED=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
+
+# Block machine-local files before any generated-doc side effects.
+if git diff --cached --diff-filter=ACMRT --name-only | grep -q "^\.claude/settings\.local\.json$"; then
+    echo ""
+    echo "❌ [pre-commit] .claude/settings.local.json is machine-local."
+    echo "   Unstage it with: git restore --staged .claude/settings.local.json"
+    echo ""
+    exit 1
+fi
+
+# Review gate must pass before Blueprint/code-review updater changes anything.
+if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
+    "$HOOK_PY" "${REPO_ROOT}/scripts/review_gate.py" --check
+    GATE_EXIT=$?
+    if [ $GATE_EXIT -ne 0 ]; then
+        echo ""
+        echo "⛔ [pre-commit] review-gate is not complete."
+        echo "   Run af-critic → af-cross-review → af-test-runner, fix findings, then retry."
+        echo "   Bypass: AF_SKIP_REVIEW_GATE=1 git commit ..."
+        echo ""
+        exit 1
+    fi
+fi
+
+# Generated docs belong after review-gate PASS, as final commit preparation.
+if [ -n "$CODE_CHANGED" ]; then
+    "$HOOK_PY" "${REPO_ROOT}/scripts/blueprint_updater.py" --no-llm 2>/dev/null || true
     if git diff --name-only 2>/dev/null | grep -q "^${BLUEPRINT}$"; then
         git add "${BLUEPRINT}" 2>/dev/null || true
     fi
-    # ── code-review.md 자동 동기화 (pre-commit, --no-llm) ──
-    "$_BPY" "${REPO_ROOT}/scripts/code_review_updater.py" --no-llm 2>/dev/null || true
+
+    "$HOOK_PY" "${REPO_ROOT}/scripts/code_review_updater.py" --no-llm 2>/dev/null || true
     if git diff --name-only 2>/dev/null | grep -q "^docs/code_review/code-review\.md$"; then
         git add "docs/code_review/code-review.md" 2>/dev/null || true
     fi
+
     STAGED=$(git diff --cached --name-only)
 fi
 
-# ── 기존: Blueprint 스테이징 체크 ──
-CODE_CHANGED=$(echo "$STAGED" | grep -E "^(core/|model_utils\.py|run_factory_cli\.py|version\.py|af\.spec|install-af\.ps1)" | head -1)
-
+# Code commits must include Blueprint after the post-gate updater step.
 if [ -n "$CODE_CHANGED" ]; then
     BLUEPRINT_STAGED=$(echo "$STAGED" | grep "^$BLUEPRINT$")
     if [ -z "$BLUEPRINT_STAGED" ]; then
         echo ""
-        echo "⚠️  [pre-commit] 코드 변경 감지: $CODE_CHANGED"
-        echo "   Master_Blueprint.md 가 스테이지되지 않았습니다."
+        echo "⚠️  [pre-commit] code changed: $CODE_CHANGED"
+        echo "   Master_Blueprint.md is not staged."
         echo ""
-        echo "   업데이트 후 커밋하려면:"
+        echo "   Retry after staging Blueprint:"
         echo "     git add Master_Blueprint.md && git commit"
         echo ""
-        echo "   Blueprint 업데이트 없이 강제 커밋하려면:"
+        echo "   Force without Blueprint:"
         echo "     git commit --no-verify"
         echo ""
         exit 1
     fi
 fi
 
-# ── machine-local 파일 커밋 차단 ──
-if git diff --cached --diff-filter=ACMRT --name-only | grep -q "^\.claude/settings\.local\.json$"; then
-    echo ""
-    echo "❌ [pre-commit] .claude/settings.local.json 은 machine-local 파일입니다."
-    echo "   이 파일은 각 PC가 독립적으로 관리합니다. git에 올리지 마세요."
-    echo "   staged 해제: git restore --staged .claude/settings.local.json"
-    echo ""
-    exit 1
-fi
-
-# ── 신규: review-gate fast-path ──
-if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
-    REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-    VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-    if [ -x "$VENV_PYTHON" ]; then
-        GATE_PY="$VENV_PYTHON"
-    elif command -v python3 >/dev/null 2>&1; then
-        GATE_PY="python3"
-    else
-        GATE_PY="python"
-    fi
-    "$GATE_PY" "${REPO_ROOT}/scripts/review_gate.py" --check
-    GATE_EXIT=$?
-    if [ $GATE_EXIT -ne 0 ]; then
-        echo ""
-        echo "⛔ [pre-commit] 교차검증 미완료."
-        echo "   af-critic → af-cross-review → af-test-runner 순서로 Agent 툴 실행 후 재시도."
-        echo "   우회: AF_SKIP_REVIEW_GATE=1 git commit ..."
-        echo ""
-        exit 1
-    fi
-fi
-
-# ── 신규: verify-handoff 검증 ──
-# verification-report.md staged 시 e2e_command + verdict BLOCK 검사
+# verify-handoff check for staged verification reports.
 if [ "${AF_PRE_COMMIT_VERIFY:-1}" != "0" ]; then
     HAS_VERIFY=$(echo "$STAGED" | grep -c "verification-report\.md$" || true)
     if [ "$HAS_VERIFY" -gt 0 ]; then
-        REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-        VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
-        if [ -x "$VENV_PYTHON" ]; then VERIFY_PY="$VENV_PYTHON"
-        elif command -v python3 >/dev/null 2>&1; then VERIFY_PY="python3"
-        else VERIFY_PY="python"; fi
-
-        "$VERIFY_PY" "${REPO_ROOT}/scripts/verify_handoff_checker.py" 2>&1
+        "$HOOK_PY" "${REPO_ROOT}/scripts/verify_handoff_checker.py" 2>&1
         VERIFY_EXIT=$?
         if [ $VERIFY_EXIT -ne 0 ]; then
             echo ""
-            echo "   건너뛰려면: AF_PRE_COMMIT_VERIFY=0 git commit"
+            echo "   Bypass: AF_PRE_COMMIT_VERIFY=0 git commit"
             echo ""
             exit 1
         fi
