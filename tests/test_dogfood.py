@@ -992,3 +992,20 @@ def test_run_all_triad_blocked_transitions_to_blocked(tmp_path, monkeypatch):
     )
     assert state.phase == DogfoodPhase.BLOCKED
     assert "Critical" in state.last_failure
+
+
+def test_run_all_implement_blocked_when_all_steps_skipped(tmp_path, monkeypatch):
+    """P1: run_all() reaches BLOCKED when IMPLEMENT returns no executed steps and skipped_no_commands."""
+    import core.dogfood as df
+
+    _patch_all_runners(monkeypatch)
+    monkeypatch.setattr(df, "_run_implement_phase",
+        lambda s, context: {"executed": [], "failures": [], "skipped_no_commands": ["S1", "S2"], "ok": True})
+
+    state = run_all(
+        "t", str(tmp_path),
+        interview_artifact={"goal": "t"},
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    assert state.phase == DogfoodPhase.BLOCKED
+    assert "AI executor" in state.last_failure

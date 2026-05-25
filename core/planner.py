@@ -160,12 +160,15 @@ def _build_implementation_steps(
     steps: list[PlanStep] = []
     for item in scope:
         test = _test_file_for(item)
+        artifacts = [item]
+        if re.match(r"core/[^/]+\.py$", item):
+            artifacts.append("Master_Blueprint.md")
         steps.append(PlanStep(
             id=f"S{counter[0]}",
             action=f"Implement {item}",
             target=item,
             tests_required=[test] if test else [],
-            artifacts=[item],
+            artifacts=artifacts,
             depends_on=list(investigation_ids),
         ))
         counter[0] += 1

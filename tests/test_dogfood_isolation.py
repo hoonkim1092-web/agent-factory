@@ -241,6 +241,84 @@ def test_finalize_records_dogfood_commit(tmp_path):
     assert state.merge_status in ("ready", "no_changes")
 
 
+def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
+    """P3: finalize stages only files present in plan artifacts + tests_required."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+
+    plan = {
+        "steps": [
+            {"id": "S1", "artifacts": ["core/utils.py", "Master_Blueprint.md"], "tests_required": ["tests/test_utils.py"]},
+        ]
+    }
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    staged: list[list] = []
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "diff" in args and "--name-only" in args:
+            # Report both an allowed and a scope-violation file
+            r.stdout = "core/utils.py\nrun_output.txt"
+        elif "ls-files" in args:
+            r.stdout = ""
+        elif args[0] == "add":
+            staged.append(list(args))
+        elif "rev-parse" in args:
+            r.stdout = "deadbeef"
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        report = finalize_dogfood_result(state)
+
+    # Only the allowed file should be staged
+    assert any("core/utils.py" in " ".join(a) for a in staged)
+    assert not any("run_output.txt" in " ".join(a) for a in staged)
+    assert report["changed_files"] == ["core/utils.py"]
+    assert "run_output.txt" in report["scope_violations"]
+
+
+def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
+    """P3: when plan_path is absent, all changed files are staged (old behavior)."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.plan_path = ""  # no plan
+
+    staged: list[list] = []
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "diff" in args and "--name-only" in args:
+            r.stdout = "core/utils.py\nrun_output.txt"
+        elif "ls-files" in args:
+            r.stdout = ""
+        elif args[0] == "add":
+            staged.append(list(args))
+        elif "rev-parse" in args:
+            r.stdout = "deadbeef"
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        report = finalize_dogfood_result(state)
+
+    assert report["scope_violations"] == []
+    assert set(report["changed_files"]) == {"core/utils.py", "run_output.txt"}
+
+
 # ---------------------------------------------------------------------------
 # §16 Tests 5-9: Merge policy checks
 # ---------------------------------------------------------------------------

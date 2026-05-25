@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — 복합 증명 2차 실험 완료. plan 3 steps 생성 달성. 신규 F-IMPL-NO-COMMANDS + F-VERIFY-PREGIT 발견. 다음: implement phase AI executor 연결.
+> 마지막 업데이트: **2026-05-25 KST** — P1+P2+P3 완료. IMPLEMENT no-op guard(P1) + planner Blueprint artifacts(P2) + FINALIZE selective staging(P3). 171 tests PASS. 다음: P4(allowed_paths wiring) + P5(baseline diff) + P6(AI executor).
 
 ---
 
@@ -208,10 +208,12 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - ✅ F-PLAN-EMPTY-SCOPE: `_scope_from_intent()` fallback 추가 (`fb4df6ff`) — intent 문자열에서 파일 경로 추출
    - ✅ F-PHASE-COMPLETE: `_run_verify_phase` guard 추가 (`9b07276a`) — steps 있는데 commands=[] → fail
    - ✅ F-SCOPE-LEAK: 2차 실험에서 미발생 — AI 미호출이므로 syncCompyne/ 수정 없음
-   - ⚠️ F-IMPL-NO-COMMANDS: impl steps에 실행 가능한 commands 없음 → `_run_implement_phase` no-op. AI executor 미연결.
+   - ✅ F-IMPL-NO-COMMANDS (P1): IMPLEMENT no-op guard 추가 — `skipped_no_commands` 비어있지 않고 `executed=[]`이면 BLOCKED. (이번 세션)
+   - ✅ F-SCOPE-LEAK (P3): FINALIZE selective staging — `git add -A` → plan allowlist 교집합. `scope_violations` 기록. (이번 세션)
+   - ✅ P2: `_build_implementation_steps` core/*.py artifacts에 `Master_Blueprint.md` 자동 추가. (이번 세션)
    - ⚠️ F-VERIFY-PREGIT: premortem이 `git diff --name-only HEAD | grep Master_Blueprint.md` 생성 — commit 전 verify 단계에서 항상 실패 (finalize가 verify 후임)
    - 결과 문서: `docs/dogfooding/2026-05-25-r1-complex-proof-result.md`
-   - **다음**: F-IMPL-NO-COMMANDS 해결 — implement phase에 AI executor 연결 (claude_cli `dogfood run` 서브커맨드에서 FSA 호출) 또는 F-VERIFY-PREGIT 해결 — premortem verification command를 pre-commit 컨텍스트에 맞게 조정
+   - **다음**: P4(allowed_paths wiring) + P5(baseline diff) + P6(AI executor 연결)
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)

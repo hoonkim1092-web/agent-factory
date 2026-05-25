@@ -211,6 +211,24 @@ def test_build_plan_no_test_for_root_py():
     assert impl_step.tests_required == []
 
 
+def test_build_plan_core_py_includes_blueprint_in_artifacts():
+    """P2: core/*.py scope items must include Master_Blueprint.md in artifacts."""
+    spec = _spec(scope=["core/utils.py"])
+    plan = build_plan(spec, _premortem())
+    impl_step = next(s for s in plan.steps if "core/utils.py" in s.target)
+    assert "core/utils.py" in impl_step.artifacts
+    assert "Master_Blueprint.md" in impl_step.artifacts
+
+
+def test_build_plan_non_core_py_excludes_blueprint():
+    """P2: files outside core/ do not get Master_Blueprint.md injected."""
+    spec = _spec(scope=["run_factory_cli.py", "scripts/build.py"])
+    plan = build_plan(spec, _premortem())
+    for step in plan.steps:
+        if step.target in ("run_factory_cli.py", "scripts/build.py"):
+            assert "Master_Blueprint.md" not in step.artifacts
+
+
 # ---------------------------------------------------------------------------
 # build_plan — investigation steps (gaps)
 # ---------------------------------------------------------------------------

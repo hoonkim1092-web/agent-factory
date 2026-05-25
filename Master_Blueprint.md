@@ -151,8 +151,8 @@
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
-| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. last_updated: 2026-05-25 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()` |
+| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. | `ExecutablePlan`, `PlanStep`, `build_plan()` |
+| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. last_updated: 2026-05-25 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1568,6 +1568,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, planner.py, code-review.md (+3) |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, planner.py, test_dogfood.py (+2) |
+| 2026-05-25 | v1.2.34 | fix(dogfood): P1+P2+P3 복합 증명 구조적 수정. P1: IMPLEMENT no-op guard — all steps skipped(no commands) → BLOCKED. P2: planner core/*.py artifacts에 Master_Blueprint.md 자동 추가. P3: finalize selective staging — git add -A → plan allowlist 교집합. scope_violations 기록. 5 신규 테스트. 3-Tier PASS. |
 | 2026-05-25 | v1.2.34 | chore(core): code update — spec_compiler.py, test_spec_compiler.py |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, code-review.md |
 | 2026-05-25 | v1.2.34 | chore(core): code update — dogfood.py |

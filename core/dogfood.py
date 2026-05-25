@@ -494,11 +494,34 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
     changed_files = [
         f for f in (diff.stdout.strip() + "\n" + untracked.stdout.strip()).splitlines() if f
     ]
+    scope_violations: list[str] = []
 
     if changed_files:
-        _git(["add", "-A"], cwd=wt)
-        task_summary = state.task[:72].replace('"', "'")
-        _git(["commit", "-m", f"dogfood: {task_summary}"], cwd=wt)
+        # Build allowlist from plan artifacts + tests_required
+        plan_allowlist: set[str] = set()
+        if state.plan_path:
+            _plan_path = Path(state.plan_path)
+            if _plan_path.exists():
+                _plan_data = json.loads(_plan_path.read_text(encoding="utf-8"))
+                for _step in _plan_data.get("steps", []):
+                    for _f in (_step.get("artifacts") or []):
+                        plan_allowlist.add(_f.replace("\\", "/"))
+                    for _f in (_step.get("tests_required") or []):
+                        plan_allowlist.add(_f.replace("\\", "/"))
+
+        if plan_allowlist:
+            stage_files = [f for f in changed_files if f.replace("\\", "/") in plan_allowlist]
+            scope_violations = [f for f in changed_files if f not in stage_files]
+        else:
+            stage_files = list(changed_files)
+            scope_violations = []
+
+        if stage_files:
+            _git(["add", "--"] + stage_files, cwd=wt)
+            task_summary = state.task[:72].replace('"', "'")
+            _git(["commit", "-m", f"dogfood: {task_summary}"], cwd=wt)
+
+        changed_files = stage_files
 
     # Record dogfood commit
     head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
@@ -514,6 +537,7 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
         "base_ref": state.base_ref,
         "dogfood_commit": head,
         "changed_files": changed_files,
+        "scope_violations": scope_violations,  # logged only; merge gate enforcement in later phase
         "denied_path_hits": [],
         "policy_checks": {},
         "merge_status": "ready" if changed_files else "no_changes",
@@ -1020,7 +1044,12 @@ def run_all(
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.IMPLEMENT:
-            run_phase(state, context={})
+            impl_result = run_phase(state, context={})
+            if (not impl_result.get("executed")
+                    and impl_result.get("skipped_no_commands")):
+                block_run(state, "all implementation steps skipped (no commands); AI executor not connected")
+                save_state(state)
+                continue
         elif phase == DogfoodPhase.VERIFY:
             verify_result = run_phase(state, context={"plan_dict": plan_dict})
         elif phase == DogfoodPhase.REVIEW:
