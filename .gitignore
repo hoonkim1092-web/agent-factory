@@ -109,3 +109,6 @@ tmp*/
 
 # --- 🎯 Developer Context Rules (DO NOT DEPLOY) ---
 .gemini_dev_rules.md
+
+# --- Dogfood interview artifact (auto-generated per run, not source) ---
+planning/interview_brief.json
