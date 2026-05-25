@@ -8,10 +8,13 @@ interview with evidence organised by the Research Brief.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from core.research_brief import ResearchBrief, split_evidence, _tokenize
+
+_PATH_RE = re.compile(r"[/\\]")
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +97,29 @@ def _detect_gaps(questions: list[str], on_brief: list[dict[str, Any]]) -> list[s
     return gaps
 
 
+def _scope_from_clarification_log(src: dict[str, Any]) -> list[str]:
+    """Extract file-path scope items from clarification_log entries with category 'scope'.
+
+    merge_clarification() writes scope-category answers to 'deliverables' but the
+    clarification_log always records the raw answer with its category. Using the log
+    avoids conflating functional deliverable descriptions (researcher.py:1310 contract)
+    with file-path scope items.
+
+    Only entries whose answer contains a path character (./\\) are accepted so that
+    descriptive boundary answers ("관리자 화면 포함") never reach planner as targets.
+    """
+    _EXCLUDE = ("불필요", "없", "제외")
+    items = []
+    for entry in (src.get("clarification_log") or []):
+        if entry.get("category") == "scope":
+            answer = str(entry.get("answer", "")).strip()
+            if (answer
+                    and not any(kw in answer for kw in _EXCLUDE)
+                    and _PATH_RE.search(answer)):
+                items.append(answer)
+    return items
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -115,7 +141,9 @@ def compile_spec(
     src = interview_artifact.get("project_brief") or interview_artifact
 
     intent = str(src.get("goal") or src.get("task_input") or "").strip()
-    scope = _str_list(src.get("scope"))
+    # merge_clarification maps scope-category answers to "deliverables"; fall back to
+    # clarification_log to avoid picking up functional descriptions from other pipelines.
+    scope = _str_list(src.get("scope")) or _scope_from_clarification_log(src)
     success_criteria = _str_list(src.get("success_criteria"))
     constraints = _str_list(src.get("constraints"))
     approval_policy = str(src.get("approval_policy") or "").strip()

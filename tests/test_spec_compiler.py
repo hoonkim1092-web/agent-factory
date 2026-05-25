@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from core.research_brief import ResearchBrief
-from core.spec_compiler import CompiledSpec, compile_spec, _detect_gaps, _str_list
+from core.spec_compiler import CompiledSpec, compile_spec, _detect_gaps, _str_list, _scope_from_clarification_log
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +109,77 @@ def test_compile_spec_empty_brief_no_split():
     spec = compile_spec(_interview_artifact(), _evidence_bundle(), research_brief=brief)
     assert len(spec.research_findings) == 3  # all evidence on-brief
     assert spec.supplemental == []
+
+
+# ---------------------------------------------------------------------------
+# compile_spec — clarification_log fallback (F-PLAN-EMPTY fix)
+# ---------------------------------------------------------------------------
+
+def test_compile_spec_clarification_log_fallback_when_scope_absent():
+    """merge_clarification writes scope-category answers to 'deliverables', not 'scope'.
+
+    compile_spec falls back to clarification_log entries with category='scope' so that
+    the planner receives scope items without conflating functional deliverable descriptions.
+    """
+    artifact = {
+        "task_input": "add clamp()",
+        "project_brief": {
+            "goal": "add clamp() to core/utils.py",
+            "clarification_log": [
+                {"category": "scope", "question": "어느 파일?", "answer": "core/utils.py"},
+                {"category": "scope", "question": "테스트?", "answer": "tests/test_clamp_utils.py"},
+                {"category": "deployment", "question": "배포?", "answer": "pip"},
+            ],
+        },
+    }
+    spec = compile_spec(artifact, evidence_bundle=None)
+    assert spec.scope == ["core/utils.py", "tests/test_clamp_utils.py"]
+
+
+def test_compile_spec_explicit_scope_takes_priority_over_clarification_log():
+    """Explicit scope key wins over clarification_log."""
+    artifact = {
+        "project_brief": {
+            "goal": "add clamp()",
+            "scope": ["core/utils.py"],
+            "clarification_log": [
+                {"category": "scope", "question": "Q", "answer": "other/file.py"},
+            ],
+        },
+    }
+    spec = compile_spec(artifact, evidence_bundle=None)
+    assert spec.scope == ["core/utils.py"]
+
+
+def test_scope_from_clarification_log_excludes_non_goals():
+    """Answers containing 불필요/없/제외 are treated as non-goals and excluded."""
+    src = {
+        "clarification_log": [
+            {"category": "scope", "question": "Q1", "answer": "core/utils.py"},
+            {"category": "scope", "question": "Q2", "answer": "UI는 불필요"},
+            {"category": "scope", "question": "Q3", "answer": "DB 없음"},
+        ]
+    }
+    result = _scope_from_clarification_log(src)
+    assert result == ["core/utils.py"]
+
+
+def test_scope_from_clarification_log_excludes_descriptive_answers():
+    """Descriptive boundary answers without path characters are excluded."""
+    src = {
+        "clarification_log": [
+            {"category": "scope", "question": "Q1", "answer": "core/utils.py"},
+            {"category": "scope", "question": "Q2", "answer": "관리자 화면 포함"},
+            {"category": "scope", "question": "Q3", "answer": "MVP만"},
+        ]
+    }
+    result = _scope_from_clarification_log(src)
+    assert result == ["core/utils.py"]
+
+
+def test_scope_from_clarification_log_empty():
+    assert _scope_from_clarification_log({}) == []
+    assert _scope_from_clarification_log({"clarification_log": []}) == []
 
 
 # ---------------------------------------------------------------------------
