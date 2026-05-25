@@ -430,8 +430,8 @@ def prepare_isolated_worktree(state: DogfoodState) -> None:
     """
     src = state.source_workspace
 
-    # Refuse dirty source workspace
-    dirty = _git(["status", "--porcelain"], cwd=src)
+    # Refuse dirty source workspace (tracked changes only — untracked files are not copied to worktree)
+    dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=src)
     if dirty.stdout.strip():
         state.isolation_status = "failed"
         raise GitWorktreeError(
@@ -538,7 +538,7 @@ def _check_merge_policy(
     """Return (ok, reason). ok=False means policy rejected."""
     # Dirty source check
     if policy.require_clean_source:
-        dirty = _git(["status", "--porcelain"], cwd=state.source_workspace, check=False)
+        dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=state.source_workspace, check=False)
         if dirty.stdout.strip():
             return False, "source_workspace is dirty"
 
