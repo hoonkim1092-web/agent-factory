@@ -100,6 +100,7 @@ a = Analysis(
         'core.premortem',
         'core.planner',
         'core.triad',
+        'core.architect_agent',
         'core.dogfood',
         'core.review_skill_router',
         'core.express_router',
