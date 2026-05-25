@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-26 | v1.2.34 | feat(utils): `clamp(value, min_val, max_val)` 신설 — value를 [min_val, max_val] 범위로 제한. min_val > max_val이면 ValueError. `tests/test_utils.py` TestClamp 7건 신규(총 26 PASS). §0 갱신. |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, planner.py, provider_detect.py (+6) |

@@ -258,11 +258,30 @@ class ReviewDecision:
 
 def _default_command_runner(cmd: str, cwd: str) -> Tuple[bool, str]:
     try:
-        result = subprocess.run(
-            cmd, shell=True, cwd=cwd,
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=60, env=_utf8_subprocess_env(),
-        )
+        # On Windows, cmd.exe treats < > as redirect metacharacters, breaking
+        # commands like `grep -n '<module>'`. PowerShell handles single-quoted
+        # strings and < correctly, matching Unix shell conventions.
+        if os.name == "nt":
+            # catch{exit 1} converts CommandNotFoundException (grep not on PATH)
+            # to rc=1 so VERIFY does not silently pass on bare Windows. The
+            # if($LASTEXITCODE) block propagates native-exe exit codes; when
+            # $LASTEXITCODE is null (pure-PS success) we fall through and exit 0.
+            ps_cmd = (
+                f"try {{ & {{ {cmd} }} }} catch {{ exit 1 }}; "
+                f"if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}"
+            )
+            args = ["powershell.exe", "-NonInteractive", "-Command", ps_cmd]
+            result = subprocess.run(
+                args, cwd=cwd,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=60, env=_utf8_subprocess_env(),
+            )
+        else:
+            result = subprocess.run(
+                cmd, shell=True, cwd=cwd,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=60, env=_utf8_subprocess_env(),
+            )
         return result.returncode == 0, (result.stdout + result.stderr).strip()
     except Exception as exc:
         return False, str(exc)
