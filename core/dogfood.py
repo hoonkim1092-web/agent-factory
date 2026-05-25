@@ -840,12 +840,22 @@ def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
 
     Execution cwd: worktree_workspace when isolation is ready, else source_workspace.
     Commands are taken from context["commands"] first; if absent, falls back to
-    context["plan_dict"]["verification_requirements"].  Empty command list → pass.
+    context["plan_dict"]["verification_requirements"].  Empty command list with a
+    non-trivial plan fails (F-PHASE-COMPLETE guard).
     """
+    plan_dict: dict[str, Any] = context.get("plan_dict") or {}
     commands: list[str] = list(context.get("commands") or [])
     if not commands:
-        plan_dict = context.get("plan_dict", {})
         commands = list(plan_dict.get("verification_requirements", []))
+
+    # F-PHASE-COMPLETE guard: a plan with no verification commands has no
+    # completion proof. Fail so the pipeline does not trivially reach COMPLETE.
+    if not commands and plan_dict.get("steps"):
+        return VerifyResult(
+            passed=False,
+            commands_run=[],
+            failures=["no verification commands defined; add verification_requirements to plan or premortem risks"],
+        ).to_dict()
 
     cwd = state._cwd()
     failures: list[str] = []

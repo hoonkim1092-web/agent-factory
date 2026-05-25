@@ -6320,3 +6320,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/spec_compiler.py, tests/test_spec_compiler.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-25 18:10 — `2026-05-20-research-coverage-gate` (73339f1c)
+
+**Context**: Claude Code edit session
+
+**Changed (3)**: `Master_Blueprint.md, core/dogfood.py, tests/test_dogfood.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

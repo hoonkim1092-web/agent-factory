@@ -624,6 +624,28 @@ def test_run_verify_context_commands_takes_priority(tmp_path, monkeypatch):
     assert result["commands_run"] == ["ctx_cmd"]
 
 
+def test_run_verify_no_commands_no_steps_passes(tmp_path):
+    """Empty plan (steps=[]) + no commands → trivially pass (nothing to verify)."""
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    result = run_phase(state, context={"plan_dict": {"steps": [], "verification_requirements": []}})
+    assert result["passed"] is True
+
+
+def test_run_verify_no_commands_with_steps_fails(tmp_path):
+    """F-PHASE-COMPLETE guard: non-empty plan + no verification commands → fail."""
+    state = _state(tmp_path, phase=DogfoodPhase.VERIFY)
+    plan = {
+        "steps": [{"id": "S1", "action": "Implement core/utils.py", "target": "core/utils.py",
+                   "commands": []}],
+        "verification_requirements": [],
+    }
+    result = run_phase(state, context={"plan_dict": plan})
+    assert result["passed"] is False
+    assert result["commands_run"] == []
+    assert "no verification commands" in result["failures"][0]
+    assert "completion_criteria" not in result["failures"][0]
+
+
 # ---------------------------------------------------------------------------
 # run_phase — REVIEW (Step 8)
 # ---------------------------------------------------------------------------
