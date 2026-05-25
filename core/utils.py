@@ -71,6 +71,16 @@ def safe_optional_id(text: str | None) -> str:
     return t[:60]
 
 
+def truncate_text(text: str | None, max_len: int, suffix: str = "...") -> str:
+    """문자열을 max_len 글자 이하로 자른다. 초과 시 suffix를 뒤에 붙인다."""
+    s = text or ""
+    if len(s) <= max_len:
+        return s
+    if max_len <= len(suffix):
+        return s[:max_len]
+    return s[: max_len - len(suffix)] + suffix
+
+
 def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 

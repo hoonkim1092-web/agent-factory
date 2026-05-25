@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-25 | version: v1.2.34 -->
+<!-- last_updated: 2026-05-26 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(core): code update — utils.py, code-review.md, run_output.txt, AGENTS.md, LOG_COMMANDS.md (+7) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, run_output.txt (+9) |

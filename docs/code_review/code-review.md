@@ -6370,3 +6370,23 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (13)**: `Master_Blueprint.md, core/dogfood.py, core/premortem.py, core/utils.py, run_output.txt, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py, tests/test_dogfood.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-25 23:23 — `2026-05-20-research-coverage-gate` (ea3afeba)
+
+**Context**: Claude Code edit session
+
+**Changed (14)**: `Master_Blueprint.md, core/agent_worker.py, core/utils.py, core/warning_stats.py, run_output.txt, scripts/test_gap_analyzer.py, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-26 01:03 — `2026-05-20-research-coverage-gate` (6ae99a08)
+
+**Context**: Claude Code edit session
+
+**Changed (12)**: `Master_Blueprint.md, core/utils.py, docs/code_review/code-review.md, run_output.txt, syncCompyne/AGENTS.md, syncCompyne/LOG_COMMANDS.md, syncCompyne/PROJECT_LOG.md, syncCompyne/WORKSPACE_CONTEXT.md, syncCompyne/memory_store.py, syncCompyne/project_log_cli.py, syncCompyne/workspace_context_cli.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
