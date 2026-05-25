@@ -32,7 +32,21 @@ import tempfile
 import traceback
 
 
+def _configure_text_streams() -> None:
+    """Avoid worker crashes from platform-specific console encodings."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(errors="replace")
+        except Exception:
+            pass
+
+
 def main():
+    _configure_text_streams()
+
     parser = argparse.ArgumentParser(description="Agent Factory Worker")
     parser.add_argument("--task-file", required=True, help="task.json 경로")
     parser.add_argument("--result-file", required=True, help="result.json 출력 경로")
@@ -51,7 +65,7 @@ def main():
                 json.dump(err_result, fh, ensure_ascii=False)
         except Exception:
             pass
-        print(f"[Worker] task.json 로드 실패: {exc}")
+        print(f"[Worker] task.json load failed: {exc}")
         sys.exit(1)
 
     project_root = task.get("project_root", "")
@@ -66,7 +80,7 @@ def main():
     task_id = task.get("task_id", "")
     agent_data = task.get("agent_data", {})
 
-    print(f"[Worker:{role}] 시작 — {subtask[:80]}...")
+    print(f"[Worker:{role}] start - {subtask[:80]}...")
 
     result = {"ok": False, "reason": "worker_unknown_error"}
     try:
@@ -102,10 +116,10 @@ def main():
             tmp_name = tmp.name
         os.replace(tmp_name, result_path)
     except Exception as exc:
-        print(f"[Worker:{role}] result.json 쓰기 실패: {exc}")
+        print(f"[Worker:{role}] result.json write failed: {exc}")
 
-    status = "성공" if result.get("ok") else f"실패: {result.get('reason', '')[:100]}"
-    print(f"[Worker:{role}] 완료 — {status}")
+    status = "ok" if result.get("ok") else f"failed: {result.get('reason', '')[:100]}"
+    print(f"[Worker:{role}] done - {status}")
 
 
 if __name__ == "__main__":

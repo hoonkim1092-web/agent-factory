@@ -132,7 +132,7 @@ def iter_warning_records(
                         record = json.loads(line)
                         yield (slug_name, record, None)
                     except json.JSONDecodeError:
-                        rel = os.path.join(slug_name, f"{rule_id}.jsonl")
+                        rel = f"{slug_name}/{rule_id}.jsonl"
                         yield (slug_name, None, f"malformed line in {rel}:{lineno}")
         except OSError:
             continue

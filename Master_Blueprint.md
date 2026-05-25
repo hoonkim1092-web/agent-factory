@@ -1568,6 +1568,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, code-review.md (+9) |
+| 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, utils.py, warning_stats.py, run_output.txt (+9) |
+| 2026-05-25 | v1.2.35 | fix(cross-platform-worker-stats): `core/agent_worker.py` worker 시작 시 stdout/stderr `errors=replace` 설정 및 ASCII 상태 로그로 Windows CP949/macOS UTF-8 콘솔 차이에서 result.json 작성 전 조기 종료 방지. `core/warning_stats.py` malformed JSONL 경고 경로를 `slug/rule.jsonl:line` POSIX 포맷으로 고정. `scripts/test_gap_analyzer.py` git subprocess decode를 UTF-8/errors=replace로 고정해 Windows 로케일 디코딩 예외 차단. 회귀: py_compile 3파일, test-gap PASS, related pytest 21 PASS. |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, dogfood.py, premortem.py, utils.py (+11) |
 | 2026-05-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_worker.py, dogfood.py, premortem.py, utils.py (+11) |
 | 2026-05-25 | v1.2.34 | feat(utils): `truncate_text(text, max_len, suffix)` 신설 — max_len 글자 이하로 자르고 suffix 접미 제어. suffix보다 max_len이 작으면 suffix 없이 자름. `tests/test_utils.py` 9건 신규. |

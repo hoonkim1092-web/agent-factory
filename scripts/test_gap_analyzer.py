@@ -118,6 +118,8 @@ def _git(args: list[str], cwd: str, timeout: int = 10) -> str:
             cwd=cwd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
         )
         return result.stdout if result.returncode == 0 else ""
@@ -132,6 +134,8 @@ def _is_git_tracked(workspace: str, rel_path: str) -> bool:
             cwd=workspace,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
         )
         return result.returncode == 0
@@ -146,6 +150,8 @@ def _is_git_ignored(workspace: str, rel_path: str) -> bool:
             cwd=workspace,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
         )
         return result.returncode == 0
