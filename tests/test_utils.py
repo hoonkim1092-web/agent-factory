@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text
+from core.utils import truncate_text, clamp
 from core.utils import test_file_for as _test_file_for
 
 
@@ -45,6 +45,30 @@ class TestTruncateText:
         result = truncate_text(s, 5)
         assert len(result) == 5
         assert result == "안녕..."
+
+
+class TestClamp:
+    def test_범위_내_값은_그대로(self):
+        assert clamp(5, 0, 10) == 5
+
+    def test_min_미만은_min_반환(self):
+        assert clamp(-1, 0, 10) == 0
+
+    def test_max_초과는_max_반환(self):
+        assert clamp(11, 0, 10) == 10
+
+    def test_min과_동일(self):
+        assert clamp(0, 0, 10) == 0
+
+    def test_max와_동일(self):
+        assert clamp(10, 0, 10) == 10
+
+    def test_부동소수점(self):
+        assert clamp(0.5, 0.0, 1.0) == 0.5
+
+    def test_잘못된_범위는_ValueError(self):
+        with pytest.raises(ValueError):
+            clamp(5, 10, 0)
 
 
 class TestTestFileFor:

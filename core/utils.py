@@ -81,6 +81,13 @@ def truncate_text(text: str | None, max_len: int, suffix: str = "...") -> str:
     return s[: max_len - len(suffix)] + suffix
 
 
+def clamp(value: int | float, min_val: int | float, max_val: int | float) -> int | float:
+    """value를 [min_val, max_val] 범위로 제한한다. min_val > max_val이면 ValueError."""
+    if min_val > max_val:
+        raise ValueError(f"잘못된 범위: min_val({min_val}) > max_val({max_val})")
+    return max(min_val, min(value, max_val))
+
+
 def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 

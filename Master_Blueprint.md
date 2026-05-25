@@ -208,7 +208,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환, 그 외 None), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1568,8 +1568,11 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py |
+| 2026-05-26 | v1.2.34 | feat(utils): `clamp(value, min_val, max_val)` 신설 — value를 [min_val, max_val] 범위로 제한. min_val > max_val이면 ValueError. `tests/test_utils.py` TestClamp 7건 신규(총 26 PASS). §0 갱신. |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, planner.py, provider_detect.py (+6) |
 | 2026-05-26 | v1.2.35 | fix(dogfood-utf8-output): `agent_launcher.py` CLI 진입 시 stdin/stdout/stderr + child env UTF-8 기본값 설정. `core/dogfood.py` shell/git subprocess에 `PYTHONIOENCODING=utf-8` env와 `encoding="utf-8", errors="replace"` 적용. `core/provider_detect.py` CLI ping subprocess 디코딩도 UTF-8/errors=replace로 고정. `tests/test_dogfood_cli.py` UTF-8 env/runner 회귀 추가. 검증: py_compile 3파일, dogfood status 한글 출력 정상, `tests/test_dogfood_cli.py` 39 PASS, `tests/test_provider_detect.py tests/test_dogfood_cli.py` 61 PASS, `tests/test_cli_providers.py` 37 PASS(기존 cp949 thread warning 3건 잔존). |
+| 2026-05-26 | v1.2.34 | feat(utils): `test_file_for` shell-safe stem 검증 추가 — `_SAFE_STEM_RE` 정규식으로 shell 메타문자 포함 stem을 None 반환. `tests/test_utils.py` 4건 추가(세미콜론/파이프/달러/대시·점 케이스), 총 19 PASS. §0 갱신. |
 | 2026-05-26 | v1.2.34 | feat(utils): `test_file_for(target)` 헬퍼 신설 — core/ 또는 scripts/ 하위 .py 파일에 대응하는 tests/test_*.py 관례 경로 반환, 그 외 None. `tests/test_utils.py` TestTestFileFor 6건 신규(총 15 PASS). §0 갱신. |
 | 2026-05-26 | v1.2.34 | chore(core): code update — cli.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — utils.py, code-review.md, run_output.txt, AGENTS.md, LOG_COMMANDS.md (+7) |
