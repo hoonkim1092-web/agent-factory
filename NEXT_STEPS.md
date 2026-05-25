@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — F-PLAN-EMPTY(`81c1cc60`) + F-PHASE-COMPLETE(`9b07276a`) 수정 완료. 다음: 복합 증명 재시도 → F-SCOPE-LEAK 재현 여부 확인.
+> 마지막 업데이트: **2026-05-25 KST** — 복합 증명 2차 실험 완료. plan 3 steps 생성 달성. 신규 F-IMPL-NO-COMMANDS + F-VERIFY-PREGIT 발견. 다음: implement phase AI executor 연결.
 
 ---
 
@@ -202,13 +202,16 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 1. ✅ **Phase 3.5 runbook 문서화** (sidecar) — `docs/2026-05-22-review-metrics-phase35-runbook.md` 작성. 실행 절차·Phase 4 진입 기준 수록.
 2. ✅ **`core/interview.py` artifact shape 확장** — `research_questions/`risk_hints`/`assumptions` 필드 추가. `_build_assumptions()` + `_ensure_artifact_shape()` 신설. 테스트 5개 신규. 3-Tier PASS.
-3. **R1 복합 증명** — ⚠️ 실험 완료, 기능적 FAIL (2026-05-25). 형식적 pipeline COMPLETE 달성했으나 task 미완성 + scope leak 발생.
+3. **R1 복합 증명** — ⚠️ 2차 실험 완료 (2026-05-25). plan 생성 달성, BLOCKED(정확). 2개 신규 구조 버그 발견.
    - ✅ F-DIRTY: `planning/interview_brief.json` gitignore 추가 (`f896eeb9`)
-   - ✅ F-PLAN-EMPTY: `compile_spec()` scope fallback 수정 (`81c1cc60`)
+   - ✅ F-DIRTY-UNTRACKED: dirty check `--untracked-files=no` 수정 (`07f5c95c`)
+   - ✅ F-PLAN-EMPTY-SCOPE: `_scope_from_intent()` fallback 추가 (`fb4df6ff`) — intent 문자열에서 파일 경로 추출
    - ✅ F-PHASE-COMPLETE: `_run_verify_phase` guard 추가 (`9b07276a`) — steps 있는데 commands=[] → fail
-   - ⚠️ F-SCOPE-LEAK: `syncCompyne/`이 repo에 tracked되어 dogfood worktree에 포함됨. pipeline 수정 후 재실험에서 재현 여부 확인 필요
+   - ✅ F-SCOPE-LEAK: 2차 실험에서 미발생 — AI 미호출이므로 syncCompyne/ 수정 없음
+   - ⚠️ F-IMPL-NO-COMMANDS: impl steps에 실행 가능한 commands 없음 → `_run_implement_phase` no-op. AI executor 미연결.
+   - ⚠️ F-VERIFY-PREGIT: premortem이 `git diff --name-only HEAD | grep Master_Blueprint.md` 생성 — commit 전 verify 단계에서 항상 실패 (finalize가 verify 후임)
    - 결과 문서: `docs/dogfooding/2026-05-25-r1-complex-proof-result.md`
-   - **다음**: 복합 증명 재시도 (F-PLAN-EMPTY+F-PHASE-COMPLETE 수정 반영) → F-SCOPE-LEAK 재현 여부 관찰
+   - **다음**: F-IMPL-NO-COMMANDS 해결 — implement phase에 AI executor 연결 (claude_cli `dogfood run` 서브커맨드에서 FSA 호출) 또는 F-VERIFY-PREGIT 해결 — premortem verification command를 pre-commit 컨텍스트에 맞게 조정
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
