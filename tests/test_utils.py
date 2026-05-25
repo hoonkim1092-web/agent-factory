@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp
+from core.utils import truncate_text, clamp, median, chunks
 from core.utils import test_file_for as _test_file_for
 
 
@@ -69,6 +69,51 @@ class TestClamp:
     def test_잘못된_범위는_ValueError(self):
         with pytest.raises(ValueError):
             clamp(5, 10, 0)
+
+
+class TestMedian:
+    def test_단일_요소(self):
+        assert median([5]) == 5.0
+
+    def test_홀수_개_정렬됨(self):
+        assert median([1, 3, 5]) == 3.0
+
+    def test_홀수_개_비정렬(self):
+        assert median([5, 1, 3]) == 3.0
+
+    def test_짝수_개(self):
+        assert median([1, 2, 3, 4]) == 2.5
+
+    def test_음수_포함(self):
+        assert median([-3, -1, 1, 3]) == 0.0
+
+    def test_부동소수점(self):
+        assert median([1.5, 2.5, 3.5]) == 2.5
+
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            median([])
+
+    def test_중복_값(self):
+        assert median([2, 2, 2]) == 2.0
+
+
+class TestChunks:
+    def test_빈_리스트(self):
+        assert chunks([], 3) == []
+
+    def test_균등_분할(self):
+        assert chunks([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]
+
+    def test_나머지_발생(self):
+        assert chunks([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+
+    def test_n이_리스트보다_크면_단일_청크(self):
+        assert chunks([1, 2], 10) == [[1, 2]]
+
+    def test_n_1이면_ValueError(self):
+        with pytest.raises(ValueError):
+            chunks([1, 2, 3], 0)
 
 
 class TestTestFileFor:

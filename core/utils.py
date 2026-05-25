@@ -88,6 +88,24 @@ def clamp(value: int | float, min_val: int | float, max_val: int | float) -> int
     return max(min_val, min(value, max_val))
 
 
+def median(values: list[int | float]) -> float:
+    """정렬된 중앙값을 반환한다. 빈 리스트이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 중앙값을 계산할 수 없습니다.")
+    s = sorted(values)
+    m = len(s) // 2
+    if len(s) % 2 == 1:
+        return float(s[m])
+    return (s[m - 1] + s[m]) / 2.0
+
+
+def chunks(lst: list, n: int) -> list[list]:
+    """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
+    if n < 1:
+        raise ValueError(f"청크 크기는 1 이상이어야 합니다: {n}")
+    return [lst[i:i + n] for i in range(0, len(lst), n)]
+
+
 def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 
