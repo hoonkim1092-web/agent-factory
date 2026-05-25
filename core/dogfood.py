@@ -260,7 +260,8 @@ def _default_command_runner(cmd: str, cwd: str) -> Tuple[bool, str]:
     try:
         result = subprocess.run(
             cmd, shell=True, cwd=cwd,
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=60, env=_utf8_subprocess_env(),
         )
         return result.returncode == 0, (result.stdout + result.stderr).strip()
     except Exception as exc:
@@ -306,6 +307,16 @@ def _default_ai_executor(task: str, *, cwd: str, run_id: str) -> dict[str, Any]:
 
 # Injectable for tests: monkeypatch core.dogfood._ai_executor
 _ai_executor: Callable[..., dict[str, Any]] = _default_ai_executor
+
+
+def _utf8_subprocess_env() -> dict[str, str]:
+    """Environment for subprocesses that must not depend on OS locale."""
+    env = os.environ.copy()
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("LANG", "C.UTF-8")
+    env.setdefault("LC_ALL", "C.UTF-8")
+    return env
 
 
 # ---------------------------------------------------------------------------
@@ -434,7 +445,8 @@ def _git(args: list[str], cwd: str, check: bool = True) -> subprocess.CompletedP
     """Run a git command and return the result."""
     return subprocess.run(
         ["git"] + args, cwd=cwd,
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env=_utf8_subprocess_env(),
         check=check,
     )
 
@@ -887,7 +899,10 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
     cwd = state._cwd()
 
     # P5: capture baseline SHA before any changes (SHA-based to survive AI commits advancing HEAD)
-    _pre_sha = _git(["rev-parse", "HEAD"], cwd=cwd, check=False).stdout.strip()
+    try:
+        _pre_sha = _git(["rev-parse", "HEAD"], cwd=cwd, check=False).stdout.strip()
+    except (OSError, FileNotFoundError):
+        _pre_sha = ""
 
     executed: list[dict[str, Any]] = []
     failures: list[str] = []

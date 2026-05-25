@@ -1,4 +1,4 @@
-"""core.utils.truncate_text 단위 테스트."""
+"""core.utils 단위 테스트."""
 from __future__ import annotations
 
 import os
@@ -6,6 +6,7 @@ os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
 from core.utils import truncate_text
+from core.utils import test_file_for as _test_file_for
 
 
 class TestTruncateText:
@@ -44,3 +45,23 @@ class TestTruncateText:
         result = truncate_text(s, 5)
         assert len(result) == 5
         assert result == "안녕..."
+
+
+class TestTestFileFor:
+    def test_core_모듈(self):
+        assert _test_file_for("core/dogfood.py") == "tests/test_dogfood.py"
+
+    def test_scripts_모듈(self):
+        assert _test_file_for("scripts/review_gate.py") == "tests/test_review_gate.py"
+
+    def test_비파이썬_파일은_None(self):
+        assert _test_file_for("docs/README.md") is None
+
+    def test_루트_py는_None(self):
+        assert _test_file_for("run_factory_cli.py") is None
+
+    def test_중첩_경로는_None(self):
+        assert _test_file_for("core/sub/foo.py") is None
+
+    def test_백슬래시_경로(self):
+        assert _test_file_for("core\\utils.py") == "tests/test_utils.py"

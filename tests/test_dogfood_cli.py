@@ -33,6 +33,18 @@ def test_dogfood_subcommand_registered():
     assert "dogfood" in al._KNOWN_SUBCOMMANDS
 
 
+def test_agent_launcher_utf8_env_defaults():
+    """CLI entrypoint provides UTF-8 defaults for child process output."""
+    import agent_launcher as al
+
+    env = al._utf8_subprocess_env()
+
+    assert env["PYTHONUTF8"] == "1"
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert "UTF-8" in env["LANG"].upper()
+    assert "UTF-8" in env["LC_ALL"].upper()
+
+
 def test_parser_dogfood_run_parses():
     import agent_launcher as al
     parser = al._build_arg_parser(ad_hoc_mode=False)
@@ -98,6 +110,27 @@ def test_cli_dogfood_run_blocked(tmp_path):
         state = run_all("task", str(tmp_path))
         exit_code = 0 if state.phase.value == "complete" else 1
         assert exit_code == 1
+
+
+def test_dogfood_command_runner_uses_utf8_subprocess_env(monkeypatch):
+    """Dogfood shell verification output should not depend on Windows locale."""
+    import core.dogfood as dogfood
+
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(args=args[0], returncode=0, stdout="한글", stderr="")
+
+    monkeypatch.setattr(dogfood.subprocess, "run", fake_run)
+
+    ok, output = dogfood._default_command_runner("echo ok", cwd=".")
+
+    assert ok is True
+    assert output == "한글"
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"
+    assert captured["env"]["PYTHONIOENCODING"] == "utf-8"
 
 
 # ---------------------------------------------------------------------------

@@ -264,3 +264,26 @@ def test_scope_from_intent_json_extension_not_truncated():
     result = _scope_from_intent("update core/config.json with new settings")
     assert "core/config.json" in result
     assert "core/config.js" not in result
+
+
+def test_scope_from_clarification_log_slash_in_type_hint_excluded():
+    # "(int/float)" contains "/" but is NOT a file path — must not be included as scope.
+    src = {
+        "clarification_log": [
+            {"question": "커버리지 범위?", "answer": "경계값 + 타입(int/float) + 잘못된 범위 전체", "category": "scope"},
+        ]
+    }
+    result = _scope_from_clarification_log(src)
+    assert result == []
+
+
+def test_scope_from_clarification_log_real_path_included():
+    src = {
+        "clarification_log": [
+            {"question": "파일?", "answer": "core/utils.py", "category": "scope"},
+            {"question": "테스트?", "answer": "tests/test_utils.py", "category": "scope"},
+        ]
+    }
+    result = _scope_from_clarification_log(src)
+    assert "core/utils.py" in result
+    assert "tests/test_utils.py" in result

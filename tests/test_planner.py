@@ -279,12 +279,15 @@ def test_build_plan_verification_step_depends_on_impl():
     assert impl_step.id in verify.depends_on
 
 
-def test_build_plan_no_verification_step_when_only_comment_risks():
+def test_build_plan_fallback_pytest_when_only_comment_risks():
+    # Comment-only premortem → fallback derives pytest cmd from scope file path.
     risks = [_risk("R5", "assumption", "assumption", ["# Validate assumption"])]
     spec = _spec(scope=["core/foo.py"])
     plan = build_plan(spec, _premortem(risks))
     verify = next((s for s in plan.steps if s.target == "verification"), None)
-    assert verify is None
+    assert verify is not None
+    assert any("test_foo" in cmd for cmd in verify.commands)
+    assert any("test_foo" in cmd for cmd in plan.verification_requirements)
 
 
 def test_build_plan_verification_requirements_populated():

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9]+")
+_SAFE_STEM_RE = re.compile(r"^[\w\-\.]+$")
 
 from core.spec_compiler import CompiledSpec
 from core.premortem import PremortomResult
@@ -76,7 +77,8 @@ def _test_file_for(target: str) -> str | None:
     """Return a conventional test file path for a Python source target."""
     p = Path(target)
     if p.suffix == ".py" and p.parent.name in ("core", "scripts"):
-        return f"tests/test_{p.stem}.py"
+        if _SAFE_STEM_RE.match(p.stem):  # block shell metachar in synthesized command
+            return f"tests/test_{p.stem}.py"
     return None
 
 
@@ -215,6 +217,12 @@ def build_plan(spec: CompiledSpec, premortem: PremortomResult) -> ExecutablePlan
     impl_ids = [s.id for s in implementation]
 
     verify_cmds = _collect_verification_commands(premortem)
+    # Fallback: if premortem produced no commands, derive pytest runs from scope file paths.
+    if not verify_cmds:
+        for item in spec.scope:
+            test = _test_file_for(item)
+            if test:
+                verify_cmds.append(f"python -m pytest {test} -v")
     verify_step = _build_verification_step(verify_cmds, impl_ids, counter)
 
     steps = investigation + implementation

@@ -85,6 +85,23 @@ def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 
 
+_SAFE_STEM_RE = re.compile(r"^[\w\-\.]+$")
+
+
+def test_file_for(target: str) -> str | None:
+    """소스 파일 경로에 대응하는 관례적 테스트 파일 경로를 반환한다.
+
+    core/ 또는 scripts/ 하위 .py 파일에만 대응하며, 그 외는 None.
+    shell 메타문자를 포함한 stem은 None 반환 (caller가 shell command에 안전하게 사용 가능).
+    """
+    from pathlib import Path
+    p = Path(target)
+    if p.suffix == ".py" and p.parent.name in ("core", "scripts"):
+        if _SAFE_STEM_RE.match(p.stem):
+            return f"tests/test_{p.stem}.py"
+    return None
+
+
 def strip_code_fences(s: str) -> str:
     s = (s or "").strip()
     s = re.sub(r"^```(?:json|python)?\s*", "", s)

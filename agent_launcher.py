@@ -31,23 +31,58 @@ import getpass
 _KNOWN_SUBCOMMANDS = {"project", "dogfood"}
 
 
+def _configure_cli_text_streams() -> None:
+    """Keep CLI text output stable across Windows/macOS/Linux consoles."""
+    os.environ.setdefault("PYTHONUTF8", "1")
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    os.environ.setdefault("LANG", "C.UTF-8")
+    os.environ.setdefault("LC_ALL", "C.UTF-8")
+    for stream_name in ("stdin", "stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            if stream_name == "stdin":
+                reconfigure(encoding="utf-8", errors="replace")
+            else:
+                reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+def _utf8_subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("LANG", "C.UTF-8")
+    env.setdefault("LC_ALL", "C.UTF-8")
+    return env
+
+
+_configure_cli_text_streams()
+
+
 def _git_modified_files(cwd: str) -> list[str]:
     """현재 git working tree에서 수정된 파일 목록 반환 (staged + unstaged vs HEAD)."""
     try:
         result = subprocess.run(
             ["git", "diff", "--name-only", "HEAD"],
-            capture_output=True, text=True, cwd=cwd, timeout=10,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=cwd, timeout=10, env=_utf8_subprocess_env(),
         )
         if result.returncode == 0:
             return [f.strip() for f in result.stdout.splitlines() if f.strip()]
         # HEAD 없는 초기 커밋 환경 — unstaged + staged 모두 수집
         r_unstaged = subprocess.run(
             ["git", "diff", "--name-only"],
-            capture_output=True, text=True, cwd=cwd, timeout=10,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=cwd, timeout=10, env=_utf8_subprocess_env(),
         )
         r_staged = subprocess.run(
             ["git", "diff", "--cached", "--name-only"],
-            capture_output=True, text=True, cwd=cwd, timeout=10,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=cwd, timeout=10, env=_utf8_subprocess_env(),
         )
         seen: set[str] = set()
         files: list[str] = []
@@ -1100,6 +1135,5 @@ if __name__ == "__main__":
         workspace=os.getcwd(),
         runtime_workspace=PROJECT_ROOT,
     )
-
 
 

@@ -117,18 +117,20 @@ def _scope_from_clarification_log(src: dict[str, Any]) -> list[str]:
     avoids conflating functional deliverable descriptions (researcher.py:1310 contract)
     with file-path scope items.
 
-    Only entries whose answer contains a path character (./\\) are accepted so that
-    descriptive boundary answers ("관리자 화면 포함") never reach planner as targets.
+    Only entries whose answer matches a known-extension file token (same rule as
+    _scope_from_intent) are accepted — bare "/" in descriptive answers like
+    "(int/float)" must not be treated as a file path separator.
     """
     _EXCLUDE = ("불필요", "없", "제외")
     items = []
     for entry in (src.get("clarification_log") or []):
         if entry.get("category") == "scope":
             answer = str(entry.get("answer", "")).strip()
-            if (answer
-                    and not any(kw in answer for kw in _EXCLUDE)
-                    and _PATH_RE.search(answer)):
-                items.append(answer)
+            if not answer or any(kw in answer for kw in _EXCLUDE):
+                continue
+            # Extract file-path tokens (must have known extension + path separator, no URLs)
+            tokens = [t for t in _PATH_TOKEN_RE.findall(answer) if _PATH_RE.search(t) and not t.startswith("//")]
+            items.extend(t for t in tokens if t not in items)
     return items
 
 
