@@ -65,3 +65,15 @@ class TestTestFileFor:
 
     def test_백슬래시_경로(self):
         assert _test_file_for("core\\utils.py") == "tests/test_utils.py"
+
+    def test_세미콜론_stem은_None(self):
+        assert _test_file_for("core/evil;cmd.py") is None
+
+    def test_파이프_stem은_None(self):
+        assert _test_file_for("core/a|b.py") is None
+
+    def test_달러_stem은_None(self):
+        assert _test_file_for("core/$var.py") is None
+
+    def test_대시와_점_포함_stem은_허용(self):
+        assert _test_file_for("core/my-module.v2.py") == "tests/test_my-module.v2.py"

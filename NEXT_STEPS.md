@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — F-VERIFY-PREGIT + P4+P5+P6 완료. AI executor 연결(P6), SHA-based baseline diff(P5), allowed_paths 자동 구성(P4). 82 dogfood PASS. 다음: R1 3차 복합 증명 실험.
+> 마지막 업데이트: **2026-05-26 KST** — R1 3차 복합 증명 PARTIAL(P6 동작 확인, VERIFY BLOCKED). F-SCOPE-CLARIFICATION + F-VERIFY-EMPTY + P5 fix 완료. 다음: R1 4차 — end-to-end COMPLETE 검증.
 
 ---
 
@@ -216,7 +216,17 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - ✅ P5(SHA baseline diff): IMPLEMENT 전 git rev-parse HEAD 캡처 → 후 SHA-based diff로 actual_changed. (`788eaa33`)
    - ✅ P6(AI executor): _build_ai_task() + _default_ai_executor(claude_cli) + injectable. commands 없는 step → AI executor 위임. (`788eaa33`)
    - 결과 문서: `docs/dogfooding/2026-05-25-r1-complex-proof-result.md`
-   - **다음**: R1 3차 복합 증명 실험 (P6 연결 후 end-to-end AI 코딩 검증)
+   - **다음**: ~~R1 3차 복합 증명 실험~~ → 완료 (아래 참조)
+
+   **R1 3차 (2026-05-26) — PARTIAL SUCCESS** (`ad9ed9ac`)
+   - ✅ P6 AI executor 동작 확인 — claude_cli 4회 실행, `core/utils.py`에 `clamp()` 실제 작성
+   - ❌ VERIFY BLOCKED — verification_requirements=[] (F-VERIFY-EMPTY) → 3 bugs found & fixed:
+     - F-SCOPE-CLARIFICATION: `_scope_from_clarification_log()` `_PATH_RE` 오탐 (`(int/float)` → 경로 오인식) → `_PATH_TOKEN_RE` 교체
+     - F-VERIFY-EMPTY: `build_plan()` pytest fallback 추가 (scope 파일 → 테스트 파일 파생)
+     - P5 fix: SHA 캡처 `OSError/FileNotFoundError` guard
+   - 결과 문서: `docs/dogfooding/2026-05-26-r1-complex-proof-r3-result.md`
+   - **다음: R1 4차** — F-SCOPE + F-VERIFY 수정 후 end-to-end COMPLETE 검증
+
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
