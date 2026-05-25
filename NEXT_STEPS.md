@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-25 KST** — P1+P2+P3 완료. IMPLEMENT no-op guard(P1) + planner Blueprint artifacts(P2) + FINALIZE selective staging(P3). 171 tests PASS. 다음: P4(allowed_paths wiring) + P5(baseline diff) + P6(AI executor).
+> 마지막 업데이트: **2026-05-25 KST** — F-VERIFY-PREGIT + P4+P5+P6 완료. AI executor 연결(P6), SHA-based baseline diff(P5), allowed_paths 자동 구성(P4). 82 dogfood PASS. 다음: R1 3차 복합 증명 실험.
 
 ---
 
@@ -211,9 +211,12 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - ✅ F-IMPL-NO-COMMANDS (P1): IMPLEMENT no-op guard 추가 — `skipped_no_commands` 비어있지 않고 `executed=[]`이면 BLOCKED. (이번 세션)
    - ✅ F-SCOPE-LEAK (P3): FINALIZE selective staging — `git add -A` → plan allowlist 교집합. `scope_violations` 기록. (이번 세션)
    - ✅ P2: `_build_implementation_steps` core/*.py artifacts에 `Master_Blueprint.md` 자동 추가. (이번 세션)
-   - ⚠️ F-VERIFY-PREGIT: premortem이 `git diff --name-only HEAD | grep Master_Blueprint.md` 생성 — commit 전 verify 단계에서 항상 실패 (finalize가 verify 후임)
+   - ✅ F-VERIFY-PREGIT: premortem R1 git diff check → comment (VERIFY 단계 commit 전; P2 artifact tracking 대체). (`788eaa33`)
+   - ✅ P4(allowed_paths wiring): merge_dogfood_branch 기본 policy에 plan artifacts → allowed_paths 자동 구성. (`788eaa33`)
+   - ✅ P5(SHA baseline diff): IMPLEMENT 전 git rev-parse HEAD 캡처 → 후 SHA-based diff로 actual_changed. (`788eaa33`)
+   - ✅ P6(AI executor): _build_ai_task() + _default_ai_executor(claude_cli) + injectable. commands 없는 step → AI executor 위임. (`788eaa33`)
    - 결과 문서: `docs/dogfooding/2026-05-25-r1-complex-proof-result.md`
-   - **다음**: P4(allowed_paths wiring) + P5(baseline diff) + P6(AI executor 연결)
+   - **다음**: R1 3차 복합 증명 실험 (P6 연결 후 end-to-end AI 코딩 검증)
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
 6. ✅ **§17 Step 5** — `core/premortem.py` 신규. `CompiledSpec` → repo-aware 리스크 + 검증 요건. 5종 detector(R1~R4, R5+assumption, R20+gap), ID 충돌 방지 동적 오프셋. 39 tests PASS. 3-Tier PASS. (`99b01460`, 2026-05-24)
