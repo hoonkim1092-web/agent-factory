@@ -593,10 +593,11 @@ def test_run_implement_ai_output_records_run_budget(tmp_path, monkeypatch):
 def test_strict_contract_blocks_empty_research_brief_and_premortem():
     import core.dogfood as df
 
+    # empty research_brief is allowed — simple tasks produce no research questions
     assert df._strict_contract_failure(
         DogfoodPhase.RESEARCH_BRIEF,
         {"questions": [], "risk_hints": []},
-    ) == "strict_contract: research_brief has no questions/risk_hints"
+    ) == ""
     assert df._strict_contract_failure(
         DogfoodPhase.PREMORTEM,
         {"risks": []},

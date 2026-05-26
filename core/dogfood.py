@@ -1433,10 +1433,6 @@ def _strict_contract_failure(phase: DogfoodPhase, artifact: dict[str, Any]) -> s
         artifact.get("goal") or artifact.get("intent") or artifact.get("project_brief")
     ):
         return "strict_contract: interview artifact missing goal/intent"
-    if phase == DogfoodPhase.RESEARCH_BRIEF and not (
-        artifact.get("questions") or artifact.get("risk_hints")
-    ):
-        return "strict_contract: research_brief has no questions/risk_hints"
     if phase == DogfoodPhase.SPEC:
         if not artifact.get("intent"):
             return "strict_contract: spec missing intent"
