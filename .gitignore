@@ -113,5 +113,8 @@ tmp*/
 # --- Dogfood interview artifact (auto-generated per run, not source) ---
 planning/interview_brief.json
 
+# --- Runtime log output (factory_manager CLI redirect artifact) ---
+run_output.txt
+
 # --- Claude Code runtime artifacts (created by claude_cli AI executor in worktrees) ---
 syncCompyne/
