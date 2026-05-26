@@ -114,7 +114,7 @@ def test_state_to_dict_keys(tmp_path):
         "source_branch", "base_ref", "worktree_workspace", "dogfood_branch",
         "isolation_status", "merge_status", "merge_mode",
         "dogfood_commit", "merged_commit",
-        "interview_path", "research_brief_path", "spec_path", "plan_path",
+        "interview_path", "research_brief_path", "research_path", "spec_path", "plan_path",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria",
     }
@@ -358,14 +358,75 @@ def test_run_research_brief_returns_dict(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# run_phase — RESEARCH (stub)
+# run_phase — RESEARCH (code-context extraction)
 # ---------------------------------------------------------------------------
 
-def test_run_research_returns_context(tmp_path):
+def test_run_research_returns_evidence_bundle(tmp_path):
+    """No interview_path → empty local_refs, but always returns bundle shape."""
     state = _state(tmp_path, phase=DogfoodPhase.RESEARCH)
-    ctx = {"findings": ["fact A"]}
-    result = run_phase(state, context=ctx)
-    assert result == ctx
+    result = run_phase(state, context={})
+    assert "local_refs" in result
+    assert isinstance(result["local_refs"], list)
+    assert state.research_path != ""
+    assert Path(state.research_path).exists()
+
+
+def test_run_research_reads_scope_file(tmp_path):
+    """Scope .py file is included in local_refs."""
+    # Create a fake source file in workspace
+    src = tmp_path / "core" / "utils.py"
+    src.parent.mkdir(parents=True)
+    src.write_text("def foo(): pass\n", encoding="utf-8")
+
+    interview = {"scope": ["core/utils.py"], "goal": "add bar()"}
+    iv_path = tmp_path / "interview.json"
+    iv_path.write_text(json.dumps(interview), encoding="utf-8")
+
+    state = _state(tmp_path, phase=DogfoodPhase.RESEARCH)
+    state.interview_path = str(iv_path)
+    result = run_phase(state, context={})
+
+    paths = [r["path"] for r in result["local_refs"]]
+    assert "core/utils.py" in paths
+    src_ref = next(r for r in result["local_refs"] if r["path"] == "core/utils.py")
+    assert src_ref["kind"] == "source"
+    assert "foo" in src_ref["content"]
+
+
+def test_run_research_includes_companion_test(tmp_path):
+    """Companion test file is appended when it exists."""
+    src = tmp_path / "core" / "utils.py"
+    src.parent.mkdir(parents=True)
+    src.write_text("def foo(): pass\n", encoding="utf-8")
+
+    test_f = tmp_path / "tests" / "test_utils.py"
+    test_f.parent.mkdir(parents=True)
+    test_f.write_text("def test_foo(): assert True\n", encoding="utf-8")
+
+    interview = {"scope": ["core/utils.py"], "goal": "add bar()"}
+    iv_path = tmp_path / "interview.json"
+    iv_path.write_text(json.dumps(interview), encoding="utf-8")
+
+    state = _state(tmp_path, phase=DogfoodPhase.RESEARCH)
+    state.interview_path = str(iv_path)
+    result = run_phase(state, context={})
+
+    kinds = [r["kind"] for r in result["local_refs"]]
+    assert "test" in kinds
+    test_ref = next(r for r in result["local_refs"] if r["kind"] == "test")
+    assert "test_foo" in test_ref["content"]
+
+
+def test_run_research_ignores_nonexistent_scope(tmp_path):
+    """Scope files that don't exist are silently skipped."""
+    interview = {"scope": ["core/nonexistent.py"], "goal": "x"}
+    iv_path = tmp_path / "interview.json"
+    iv_path.write_text(json.dumps(interview), encoding="utf-8")
+
+    state = _state(tmp_path, phase=DogfoodPhase.RESEARCH)
+    state.interview_path = str(iv_path)
+    result = run_phase(state, context={})
+    assert result["local_refs"] == []
 
 
 # ---------------------------------------------------------------------------

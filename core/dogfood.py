@@ -123,6 +123,7 @@ class DogfoodState:
     # artifact paths
     interview_path: str = ""
     research_brief_path: str = ""
+    research_path: str = ""
     spec_path: str = ""
     plan_path: str = ""
 
@@ -166,6 +167,7 @@ class DogfoodState:
             "merged_commit": self.merged_commit,
             "interview_path": self.interview_path,
             "research_brief_path": self.research_brief_path,
+            "research_path": self.research_path,
             "spec_path": self.spec_path,
             "plan_path": self.plan_path,
             "attempts": self.attempts,
@@ -196,6 +198,7 @@ class DogfoodState:
             merged_commit=data.get("merged_commit", ""),
             interview_path=data.get("interview_path", ""),
             research_brief_path=data.get("research_brief_path", ""),
+            research_path=data.get("research_path", ""),
             spec_path=data.get("spec_path", ""),
             plan_path=data.get("plan_path", ""),
             attempts=data.get("attempts", 0),
@@ -914,12 +917,66 @@ def _run_research_brief_phase(
     return brief.to_dict()
 
 
-def _run_research_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
-    """Research execution — stub for future integration.
+_RESEARCH_FILE_CAP = 8_000   # chars per source file
+_RESEARCH_TEST_CAP = 4_000   # chars per test file
 
-    Returns context unchanged; actual research invocation added later.
+
+def _research_load_interview(state: DogfoodState) -> dict[str, Any]:
+    if state.interview_path:
+        try:
+            return json.loads(Path(state.interview_path).read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _research_scope_files(interview: dict[str, Any], workspace: str) -> list[str]:
+    """Return .py files from scope that actually exist in workspace."""
+    src = interview.get("project_brief") or interview
+    scope: list[str] = []
+    for item in src.get("scope") or []:
+        item = str(item).strip()
+        if item.endswith(".py") and Path(workspace, item).exists():
+            scope.append(item)
+    return scope
+
+
+def _research_collect_refs(
+    scope: list[str], workspace: str
+) -> list[dict[str, Any]]:
+    refs: list[dict[str, Any]] = []
+    for filepath in scope:
+        full = Path(workspace, filepath)
+        content = full.read_text(encoding="utf-8", errors="replace")[: _RESEARCH_FILE_CAP]
+        refs.append({"path": filepath, "content": content, "kind": "source"})
+        # Companion test file
+        test_path = Path(workspace, "tests", f"test_{full.name}")
+        if test_path.exists():
+            tc = test_path.read_text(encoding="utf-8", errors="replace")[: _RESEARCH_TEST_CAP]
+            refs.append(
+                {
+                    "path": str(test_path.relative_to(workspace)),
+                    "content": tc,
+                    "kind": "test",
+                }
+            )
+    return refs
+
+
+def _run_research_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
+    """Collect code context for scope files (source + companion tests).
+
+    Returns an evidence bundle {local_refs: [...]} consumed by spec_compiler.
+    Falls back to empty bundle when interview_path is absent or scope is empty.
     """
-    return context
+    interview = _research_load_interview(state)
+    scope = _research_scope_files(interview, state.source_workspace)
+    local_refs = _research_collect_refs(scope, state.source_workspace) if scope else []
+    artifact: dict[str, Any] = {"local_refs": local_refs}
+    path = _artifact_path(state, "research.json")
+    _write_json(path, artifact)
+    state.research_path = str(path)
+    return artifact
 
 
 def _run_spec_phase(

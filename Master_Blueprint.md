@@ -152,7 +152,7 @@
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. | `ExecutablePlan`, `PlanStep`, `build_plan()` |
-| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()` |
+| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
 | `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
@@ -1039,7 +1039,7 @@ run_factory_cli.main()
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
 ### §3.13 Dogfood Pipeline (`core/dogfood.py`)
-<!-- last_updated: 2026-05-26 (P0: phase_trace + RunBudget + strict_contract + static_smoke) -->
+<!-- last_updated: 2026-05-26 (research phase: code-context extraction impl; DogfoodState.research_path 추가) -->
 
 **목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
 
@@ -1089,11 +1089,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-26; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1626,6 +1626,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 clamp_ratio(value: float, lo: float = 0.0, hi: float = 1.0) -> float 함수 추가. value를 [lo, hi] 범위로 클램프. test — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-26 | v1.2.34 | feat(utils): `clamp_ratio(value, lo=0.0, hi=1.0)` 신설 — value를 [lo, hi] 범위로 클램프한 float 반환. lo>hi이면 ValueError. `tests/test_utils.py` TestClampRatio 11건 신규. §0 갱신. |
