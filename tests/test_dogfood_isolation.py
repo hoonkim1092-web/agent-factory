@@ -213,8 +213,9 @@ def test_finalize_records_dogfood_commit(tmp_path):
     state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
     state.worktree_workspace = str(tmp_path / "worktree")
     Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
 
-    commit_hash = "cafef00d1234"
+    rev_count = {"n": 0}
 
     def _git_stub(args, cwd, **kwargs):
         r = MagicMock()
@@ -222,23 +223,24 @@ def test_finalize_records_dogfood_commit(tmp_path):
         r.stdout = ""
         if "branch" in args and "--show-current" in args:
             r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py"
         elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py"  # one changed file
+            r.stdout = "core/utils.py"
         elif "ls-files" in args:
             r.stdout = ""
-        elif "add" in args:
-            pass
-        elif "commit" in args:
-            pass
-        elif "rev-parse" in args and "HEAD" in args:
-            r.stdout = commit_hash
         return r
 
     with patch("core.dogfood._git", side_effect=_git_stub):
         finalize_dogfood_result(state)
 
-    assert state.dogfood_commit == commit_hash
-    assert state.merge_status in ("ready", "no_changes")
+    assert state.dogfood_commit == "newsha"
+    assert state.merge_status == "ready"
 
 
 def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
@@ -247,6 +249,7 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
     state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
     state.worktree_workspace = str(tmp_path / "worktree")
     Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
 
     plan = {
         "steps": [
@@ -258,6 +261,7 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
     state.plan_path = str(plan_file)
 
     staged: list[list] = []
+    rev_count = {"n": 0}
 
     def _git_stub(args, cwd, **kwargs):
         r = MagicMock()
@@ -265,15 +269,19 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
         r.stdout = ""
         if "branch" in args and "--show-current" in args:
             r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py"  # committed file after commit
         elif "diff" in args and "--name-only" in args:
-            # Report both an allowed and a scope-violation file
             r.stdout = "core/utils.py\nrun_output.txt"
         elif "ls-files" in args:
             r.stdout = ""
         elif args[0] == "add":
             staged.append(list(args))
-        elif "rev-parse" in args:
-            r.stdout = "deadbeef"
         return r
 
     with patch("core.dogfood._git", side_effect=_git_stub):
@@ -287,14 +295,16 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
 
 
 def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
-    """P3: when plan_path is absent, all changed files are staged (old behavior)."""
+    """P3: when plan_path is absent, all changed files are staged (no scope violations)."""
     import json
     state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
     state.worktree_workspace = str(tmp_path / "worktree")
     Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
     state.plan_path = ""  # no plan
+    state.base_ref = "base001"
 
     staged: list[list] = []
+    rev_count = {"n": 0}
 
     def _git_stub(args, cwd, **kwargs):
         r = MagicMock()
@@ -302,14 +312,19 @@ def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
         r.stdout = ""
         if "branch" in args and "--show-current" in args:
             r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py\nrun_output.txt"
         elif "diff" in args and "--name-only" in args:
             r.stdout = "core/utils.py\nrun_output.txt"
         elif "ls-files" in args:
             r.stdout = ""
         elif args[0] == "add":
             staged.append(list(args))
-        elif "rev-parse" in args:
-            r.stdout = "deadbeef"
         return r
 
     with patch("core.dogfood._git", side_effect=_git_stub):
@@ -404,6 +419,91 @@ def test_check_merge_policy_denied_path_blocks(tmp_path):
 
     assert ok is False
     assert "denied" in reason
+
+
+def test_check_merge_policy_scope_violations_blocks(tmp_path):
+    """scope_violations (non-CRLF dirty outside plan allowlist) must block merge."""
+    state = _make_merge_state(tmp_path)
+    policy = MergePolicy(mode="auto_policy")
+
+    with patch("core.dogfood._git"):
+        ok, reason = _check_merge_policy(
+            state, policy, changed_files=["core/utils.py"],
+            scope_violations=["run_output.txt"],
+        )
+
+    assert ok is False
+    assert "scope_violations" in reason
+    assert "run_output.txt" in reason
+
+
+def test_check_merge_policy_dogfood_commit_equals_base_ref_blocks(tmp_path):
+    """require_dogfood_commit must reject when dogfood_commit == base_ref (no new commit)."""
+    state = _make_merge_state(tmp_path, dogfood_commit="base001")  # same as base_ref
+    state.base_ref = "base001"
+    # disable other checks so only require_dogfood_commit fires
+    policy = MergePolicy(
+        mode="auto_policy",
+        require_dogfood_commit=True,
+        require_clean_source=False,
+        allow_source_advanced=True,
+    )
+
+    with patch("core.dogfood._git"):
+        ok, reason = _check_merge_policy(state, policy, changed_files=[])
+
+    assert ok is False
+    assert "dogfood_commit" in reason
+
+
+def test_finalize_crlf_only_files_excluded_from_scope_violations(tmp_path):
+    """Files that differ only in CRLF/LF are excluded from scope_violations and not staged."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
+
+    plan = {"steps": [{"id": "S1", "artifacts": ["core/utils.py"], "tests_required": []}]}
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    staged: list[list] = []
+    rev_count = {"n": 0}
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            filepath = args[-1]
+            # core/utils.py has real changes; syncCompyne/foo.py is CRLF-only
+            r.stdout = "" if "syncCompyne" in filepath else "real diff output"
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py"
+        elif "diff" in args and "--name-only" in args:
+            r.stdout = "core/utils.py\nsyncCompyne/foo.py"
+        elif "ls-files" in args:
+            r.stdout = ""
+        elif args[0] == "add":
+            staged.append(list(args))
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        report = finalize_dogfood_result(state)
+
+    # CRLF-only file must not appear in scope_violations or staged
+    assert "syncCompyne/foo.py" not in report["scope_violations"]
+    assert not any("syncCompyne" in " ".join(a) for a in staged)
+    # real change file must be staged and committed
+    assert any("core/utils.py" in " ".join(a) for a in staged)
+    assert report["all_dirty_files"] == ["core/utils.py", "syncCompyne/foo.py"]
 
 
 # ---------------------------------------------------------------------------

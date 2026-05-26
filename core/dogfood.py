@@ -490,6 +490,16 @@ def _git(args: list[str], cwd: str, check: bool = True) -> subprocess.CompletedP
     )
 
 
+def _is_crlf_only_diff(filepath: str, cwd: str) -> bool:
+    """Return True iff the only diff for filepath is CR/LF line-ending noise.
+
+    Uses --ignore-cr-at-eol so whitespace/content changes still produce output.
+    Only suppresses the specific Windows CRLF↔LF mismatch git reports.
+    """
+    r = _git(["diff", "--ignore-cr-at-eol", "--", filepath], cwd=cwd, check=False)
+    return r.returncode == 0 and not r.stdout.strip()
+
+
 def _safe_to_cleanup_partial_isolation(state: DogfoodState) -> bool:
     """True if a partial worktree can be safely removed."""
     wt = Path(state.worktree_workspace)
@@ -576,44 +586,61 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
             f"Worktree is on {cur_branch!r}, expected {state.dogfood_branch!r}"
         )
 
-    # Check for changes to commit
+    pre_finalize_head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
+
+    # Collect all dirty files (unstaged modified + untracked)
     diff = _git(["diff", "--name-only", "HEAD"], cwd=wt)
     untracked = _git(["ls-files", "--others", "--exclude-standard"], cwd=wt)
-    changed_files = [
+    all_dirty = [
         f for f in (diff.stdout.strip() + "\n" + untracked.stdout.strip()).splitlines() if f
     ]
-    scope_violations: list[str] = []
 
-    if changed_files:
-        # Build allowlist from plan artifacts + tests_required
-        plan_allowlist: set[str] = set()
-        if state.plan_path:
-            _plan_path = Path(state.plan_path)
-            if _plan_path.exists():
-                _plan_data = json.loads(_plan_path.read_text(encoding="utf-8"))
-                for _step in _plan_data.get("steps", []):
-                    for _f in (_step.get("artifacts") or []):
-                        plan_allowlist.add(_f.replace("\\", "/"))
-                    for _f in (_step.get("tests_required") or []):
-                        plan_allowlist.add(_f.replace("\\", "/"))
+    # Filter out CRLF-only line-ending noise (Windows ↔ LF mismatch via .gitattributes).
+    # --ignore-cr-at-eol is intentionally narrow: whitespace/content changes still produce
+    # non-empty diff output and are NOT filtered.
+    crlf_only = {f for f in all_dirty if _is_crlf_only_diff(f, wt)}
+    real_dirty = [f for f in all_dirty if f not in crlf_only]
 
-        if plan_allowlist:
-            stage_files = [f for f in changed_files if f.replace("\\", "/") in plan_allowlist]
-            scope_violations = [f for f in changed_files if f not in stage_files]
-        else:
-            stage_files = list(changed_files)
-            scope_violations = []
+    # Build allowlist from plan artifacts + tests_required
+    plan_allowlist: set[str] = set()
+    if state.plan_path:
+        _plan_path = Path(state.plan_path)
+        if _plan_path.exists():
+            _plan_data = json.loads(_plan_path.read_text(encoding="utf-8"))
+            for _step in _plan_data.get("steps", []):
+                for _f in (_step.get("artifacts") or []):
+                    plan_allowlist.add(_f.replace("\\", "/"))
+                for _f in (_step.get("tests_required") or []):
+                    plan_allowlist.add(_f.replace("\\", "/"))
 
-        if stage_files:
-            _git(["add", "--"] + stage_files, cwd=wt)
-            task_summary = state.task[:72].replace('"', "'")
-            _git(["commit", "-m", f"dogfood: {task_summary}"], cwd=wt)
+    if real_dirty and plan_allowlist:
+        stage_files = [f for f in real_dirty if f.replace("\\", "/") in plan_allowlist]
+        scope_violations = [f for f in real_dirty if f not in stage_files]
+    elif real_dirty:
+        stage_files = list(real_dirty)
+        scope_violations = []
+    else:
+        stage_files = []
+        scope_violations = []
 
-        changed_files = stage_files
+    if stage_files:
+        _git(["add", "--"] + stage_files, cwd=wt)
+        task_summary = state.task[:72].replace('"', "'")
+        _git(["commit", "-m", f"dogfood: {task_summary}"], cwd=wt)
 
-    # Record dogfood commit
+    # Record dogfood commit and whether a new commit was actually created
     head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
+    dogfood_commit_created = head != pre_finalize_head
     state.dogfood_commit = head
+
+    # committed_changed: files in base_ref..HEAD (survives AI-commit advances)
+    if dogfood_commit_created and state.base_ref:
+        _committed = _git(
+            ["diff", "--name-only", f"{state.base_ref}..HEAD"], cwd=wt, check=False
+        )
+        committed_changed = [f for f in _committed.stdout.splitlines() if f]
+    else:
+        committed_changed = []
 
     # Generate merge report
     report: dict[str, Any] = {
@@ -624,17 +651,19 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
         "dogfood_branch": state.dogfood_branch,
         "base_ref": state.base_ref,
         "dogfood_commit": head,
-        "changed_files": changed_files,
-        "scope_violations": scope_violations,  # logged only; merge gate enforcement in later phase
+        "dogfood_commit_created": dogfood_commit_created,
+        "changed_files": committed_changed,
+        "all_dirty_files": all_dirty,
+        "scope_violations": scope_violations,
         "denied_path_hits": [],
         "policy_checks": {},
-        "merge_status": "ready" if changed_files else "no_changes",
+        "merge_status": "ready" if committed_changed else "no_changes",
     }
 
     report_path = _artifact_path(state, "merge_report.json")
     _write_json(report_path, report)
 
-    state.merge_status = "ready" if changed_files else "no_changes"
+    state.merge_status = "ready" if committed_changed else "no_changes"
     return report
 
 
@@ -646,8 +675,13 @@ def _check_merge_policy(
     state: DogfoodState,
     policy: MergePolicy,
     changed_files: list[str],
+    scope_violations: list[str] | None = None,
 ) -> tuple[bool, str]:
     """Return (ok, reason). ok=False means policy rejected."""
+    # Scope violation check (CRLF-only files are already filtered by finalize)
+    if scope_violations:
+        return False, f"scope_violations: {', '.join(scope_violations[:3])}"
+
     # Dirty source check
     if policy.require_clean_source:
         dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=state.source_workspace, check=False)
@@ -660,8 +694,10 @@ def _check_merge_policy(
         if cur_ref != state.base_ref:
             return False, f"source branch advanced: {state.base_ref[:8]}→{cur_ref[:8]}"
 
-    # Dogfood commit required
-    if policy.require_dogfood_commit and not state.dogfood_commit:
+    # Dogfood commit required — verify a *new* commit was created, not just any SHA
+    if policy.require_dogfood_commit and (
+        not state.dogfood_commit or state.dogfood_commit == state.base_ref
+    ):
         return False, "dogfood_commit not recorded"
 
     # Denied path check
@@ -718,18 +754,20 @@ def merge_dogfood_branch(
             state.phase = DogfoodPhase.COMPLETE
             return
 
-    # Load changed files from merge_report if available
+    # Load changed files and scope_violations from merge_report if available
     report_path = _artifact_path(state, "merge_report.json")
     changed_files: list[str] = []
+    scope_violations: list[str] = []
     if report_path.exists():
         try:
             report = json.loads(report_path.read_text(encoding="utf-8"))
             changed_files = report.get("changed_files", [])
+            scope_violations = report.get("scope_violations", [])
         except Exception:
             pass
 
     # Policy checks
-    ok, reason = _check_merge_policy(state, policy, changed_files)
+    ok, reason = _check_merge_policy(state, policy, changed_files, scope_violations)
     if not ok:
         state.merge_status = "policy_rejected"
         state.last_failure = reason

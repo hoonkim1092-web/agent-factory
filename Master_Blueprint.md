@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood_isolation.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, architect.yaml, logicdev.yaml, context_schema.yaml, settings.yaml (+2) |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, dogfood.py, architect.yaml (+10) |
 | 2026-05-26 | v1.2.35 | fix(dogfood-cost-guard): `core/dogfood.py`에 phase_trace.jsonl 관측성, production strict_contract, RunBudget accounting, pre-IMPLEMENT static smoke 추가. `agent_launcher.py` dogfood run CLI는 strict_contract=True로 실행. `tests/test_dogfood.py`, `tests/test_dogfood_integration.py`, `tests/test_dogfood_cli.py` 회귀 보강. 검증: py_compile 5파일, dogfood 단위/통합/CLI 135 PASS. |
