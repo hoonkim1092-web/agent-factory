@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, chunks
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, chunks
 from core.utils import test_file_for as _test_file_for
 
 
@@ -136,6 +136,41 @@ class TestMedian:
 
     def test_중복_값(self):
         assert median([2, 2, 2]) == 2.0
+
+
+class TestMode:
+    def test_단일_요소(self):
+        assert mode([5]) == 5.0
+
+    def test_단일_최빈값(self):
+        assert mode([1, 2, 2, 3]) == 2.0
+
+    def test_동률이면_먼저_등장한_값(self):
+        # 1과 2가 각 2번씩 — 1이 먼저 등장
+        assert mode([1, 2, 1, 2, 3]) == 1.0
+
+    def test_동률_두번째가_먼저_등장(self):
+        # 3과 4가 각 2번씩 — 3이 먼저
+        assert mode([5, 3, 4, 3, 4]) == 3.0
+
+    def test_모든_값이_동일_빈도(self):
+        # 1, 2, 3 모두 1번씩 → 가장 먼저 등장한 1
+        assert mode([1, 2, 3]) == 1.0
+
+    def test_부동소수점(self):
+        assert mode([1.5, 2.5, 1.5, 2.5, 1.5]) == 1.5
+
+    def test_음수_포함(self):
+        assert mode([-1, -1, 2, 3]) == -1.0
+
+    def test_정수도_float로_반환(self):
+        result = mode([7, 7, 8])
+        assert result == 7.0
+        assert isinstance(result, float)
+
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            mode([])
 
 
 class TestChunks:
