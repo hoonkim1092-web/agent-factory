@@ -278,13 +278,21 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - CRLF 필터 + scope_violations 게이트 신설, require_dogfood_commit base_ref 동일 SHA 거부
    - FINALIZE git commit 시 review-gate hook 우회 (`e583086d`): `AF_SKIP_REVIEW_GATE=1`
 
+   **이번 세션 작업 (2026-05-26)**:
+   - ✅ `98cd8a62` — `_run_final_docs_sync()` 신규 (dogfood FINALIZE에서 blueprint/code-review 자동 갱신)
+   - ✅ `scripts/blueprint_updater.py` — `_update_section_3_auto_summary()` §3 AUTO 블록 자동 생성 (3-Tier WARN-only PASS)
+   - ✅ `.gitignore` — `syncCompyne/` 제외 (`4436086a`)
+   - merge 검증: `source_workspace is dirty` → `source branch advanced` → `scope_violations(syncCompyne)` 순서로 3개 버그 수정
+
    **잔여 저우선순위**:
    - F-RUN-BUDGET-STATE: run_budget이 state.json에 미저장 (Low)
-   - Blueprint §3 수동 갱신 — core/dogfood.py 5개 신규 함수 반영
+   - Blueprint §3 수동 갱신 — core/dogfood.py 5개 신규 함수 반영 (§3 AUTO 블록으로 부분 해소)
 
-   **다음 진입점**:
-   - R1 merge 검증: `python agent_launcher.py dogfood run "..." --merge auto_policy`
-   - 또는 Blueprint §3 수동 갱신 먼저
+   **다음 진입점 (집에서 이어서)**:
+   - R1 merge 검증 — `scope_violations: run_output.txt` 아직 미해소
+     `run_output.txt`도 `.gitignore` 추가 OR FINALIZE scope 필터에서 제외 후 재실행
+   - `python agent_launcher.py dogfood run "core/utils.py에 clamp_ratio(...) 추가..." --non-interactive --merge auto-policy`
+   - 성공 기준: `[dogfood] phase: complete`, `merge: merged`
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
