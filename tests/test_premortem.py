@@ -109,6 +109,21 @@ def test_blueprint_risk_command_includes_file():
     assert "core/dogfood.py" in risk.verification[0].command
 
 
+def test_blueprint_risk_command_is_comment_when_no_scope_files():
+    """Trigger from risk_hints only → first verification step must be a comment (not executable)."""
+    risk = _detect_blueprint_sync_risk([], ["core/utils.py needs blueprint update"])
+    assert risk is not None
+    assert risk.verification[0].command.startswith("#")
+
+
+def test_blueprint_risk_command_has_no_placeholder_when_scope_files_present():
+    """Trigger from scope → py_compile command must not contain placeholder text."""
+    risk = _detect_blueprint_sync_risk(["core/utils.py"], [])
+    assert risk is not None
+    assert "<changed>" not in risk.verification[0].command
+    assert "py_compile" in risk.verification[0].command
+
+
 # ---------------------------------------------------------------------------
 # _detect_packaging_risk
 # ---------------------------------------------------------------------------

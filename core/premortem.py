@@ -79,16 +79,22 @@ def _detect_blueprint_sync_risk(scope: list[str], risk_hints: list[str]) -> Prem
     if not _any_match(_CORE_PY_RE, scope + risk_hints):
         return None
     files = [s for s in scope if _CORE_PY_RE.search(s)]
-    targets = " ".join(shlex.quote(f) for f in files) if files else "core/<changed>.py"
+    if files:
+        compile_step = VerificationStep(
+            command=f"python -m py_compile {' '.join(shlex.quote(f) for f in files)}",
+            description="No syntax errors in changed core modules.",
+        )
+    else:
+        compile_step = VerificationStep(
+            command="# py_compile: no core/*.py in scope — verify changed modules manually",
+            description="No concrete scope target; confirm core module compiles without errors.",
+        )
     return PremortomRisk(
         id="R1",
         description="core/*.py change may require Master_Blueprint.md synchronization.",
         category="blueprint_sync",
         verification=[
-            VerificationStep(
-                command=f"python -m py_compile {targets}",
-                description="No syntax errors in changed core modules.",
-            ),
+            compile_step,
             VerificationStep(
                 command="grep -n '<module>' Master_Blueprint.md",
                 description="Blueprint §3 section updated for changed module.",
