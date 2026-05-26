@@ -23,6 +23,53 @@ def _make_state(tmp_path: Path, phase: str = "complete", task: str = "test task"
     return state
 
 
+def _noop_isolate(state):
+    state.isolation_status = "ready"
+    state.source_branch = "main"
+    state.base_ref = "abc1234"
+    state.worktree_workspace = state.source_workspace
+    return {"isolation_status": "ready"}
+
+
+def _noop_implement(state, context):
+    return {
+        "executed": [{"step": "S1", "command": "[test]", "ok": True, "output": "ok"}],
+        "failures": [],
+        "skipped_no_commands": [],
+        "ok": True,
+    }
+
+
+def _noop_verify(state, context):
+    return {"passed": True, "commands_run": ["pytest -q"], "failures": []}
+
+
+def _noop_finalize(state):
+    state.dogfood_commit = "deadbeef"
+    state.merge_status = "ready"
+    return {"merge_status": "ready"}
+
+
+def _noop_merge(state, merge_mode="auto_policy"):
+    state.merge_status = "merged"
+    state.merged_commit = "feedcafe"
+    state.phase = DogfoodPhase.COMPLETE
+    return {"merge_status": "merged"}
+
+
+def _run_all_side_effect_patches():
+    return (
+        patch("core.dogfood._run_isolate_phase", side_effect=_noop_isolate),
+        patch.multiple(
+            "core.dogfood",
+            _run_implement_phase=_noop_implement,
+            _run_verify_phase=_noop_verify,
+            _run_finalize_phase=_noop_finalize,
+            _run_merge_phase=_noop_merge,
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # _build_arg_parser — dogfood subcommand registration
 # ---------------------------------------------------------------------------
@@ -423,7 +470,9 @@ def test_run_all_calls_interview_fn_when_no_artifact(tmp_path):
         calls.append(task)
         return {"ok": True, "project_brief": brief}
 
-    state = run_all("g", str(tmp_path), _interview_fn=mock_fn)
+    p1, p2 = _run_all_side_effect_patches()
+    with p1, p2:
+        state = run_all("g", str(tmp_path), _interview_fn=mock_fn)
     assert calls == ["g"]
     assert state.phase.value in ("complete", "blocked")
 
@@ -439,7 +488,9 @@ def test_run_all_skips_interview_fn_when_artifact_provided(tmp_path):
         return {"ok": True, "project_brief": {"goal": task}}
 
     artifact = {"goal": "g", "intent": "i"}
-    state = run_all("g", str(tmp_path), interview_artifact=artifact, _interview_fn=mock_fn)
+    p1, p2 = _run_all_side_effect_patches()
+    with p1, p2:
+        state = run_all("g", str(tmp_path), interview_artifact=artifact, _interview_fn=mock_fn)
     assert calls == []
     assert state.phase.value in ("complete", "blocked")
 

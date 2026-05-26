@@ -557,6 +557,52 @@ def test_run_implement_mixed_steps(tmp_path, monkeypatch):
     assert result["executed"][2]["step"] == "S3"
 
 
+def test_run_implement_preflight_static_blocks_existing_syntax_error(tmp_path, monkeypatch):
+    import core.dogfood as df
+    bad = tmp_path / "bad.py"
+    bad.write_text("def broken(:\n", encoding="utf-8")
+    monkeypatch.setattr(df, "_ai_executor", lambda task, cwd, run_id: {"ok": True, "text": "should not run"})
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([
+        {"id": "S1", "action": "Fix bad.py", "target": "bad.py", "artifacts": ["bad.py"], "commands": []}
+    ])
+
+    result = run_phase(state, context={"plan_dict": plan, "preflight_static": True})
+
+    assert result["ok"] is False
+    assert result["executed"] == []
+    assert "static smoke syntax error" in result["failures"][0]
+
+
+def test_run_implement_ai_output_records_run_budget(tmp_path, monkeypatch):
+    import core.dogfood as df
+    from core.run_budget import get_run_budget, set_run_budget
+
+    set_run_budget(2)
+    monkeypatch.setattr(df, "_ai_executor", lambda task, cwd, run_id: {"ok": True, "text": "x" * 100})
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([_step("S1")])
+
+    result = run_phase(state, context={"plan_dict": plan})
+
+    assert result["ok"] is True
+    assert get_run_budget().is_exhausted() is True
+    set_run_budget(0)
+
+
+def test_strict_contract_blocks_empty_research_brief_and_premortem():
+    import core.dogfood as df
+
+    assert df._strict_contract_failure(
+        DogfoodPhase.RESEARCH_BRIEF,
+        {"questions": [], "risk_hints": []},
+    ) == "strict_contract: research_brief has no questions/risk_hints"
+    assert df._strict_contract_failure(
+        DogfoodPhase.PREMORTEM,
+        {"risks": []},
+    ) == "strict_contract: premortem missing spec_intent"
+
+
 # ---------------------------------------------------------------------------
 # VerifyResult / ReviewDecision dataclasses
 # ---------------------------------------------------------------------------

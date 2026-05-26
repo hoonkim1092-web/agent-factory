@@ -1057,6 +1057,7 @@ if __name__ == "__main__":
                     interview_artifact=interview_artifact,
                     non_interactive=getattr(args, "non_interactive", False),
                     merge_mode=merge_mode,
+                    strict_contract=True,
                 )
                 print(f"[dogfood] run_id    : {state.run_id}")
                 print(f"[dogfood] phase     : {state.phase.value}")
@@ -1135,5 +1136,4 @@ if __name__ == "__main__":
         workspace=os.getcwd(),
         runtime_workspace=PROJECT_ROOT,
     )
-
 

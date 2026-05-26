@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-26 KST** — R1 4차 시도 중 F-CMD-RUNNER-WINDOWS 발견·수정. clamp() + median() AI 작성 확인. 다음: R1 4차 재실행 (median 태스크, VERIFY PASS 예상).
+> 마지막 업데이트: **2026-05-26 KST** — R1 5차 진입 인프라 완료 — dogfood phase trace(10필드) + RunBudget wiring + strict_contract(run_all 기본 False, CLI True) + IMPLEMENT pre-smoke(최소 ast.parse) 단일 PR. 다음: R1 5차 실행으로 trace 데이터 수집 후 strict 세부 정책 결정.
 
 ---
 
@@ -233,6 +233,49 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
      - F-CMD-RUNNER-WINDOWS: `_default_command_runner`가 Windows `cmd.exe` 사용 → `grep -n '<module>'`의 `<`를 stdin redirect로 해석 → rc=1 반환 → VERIFY 항상 실패
      - ✅ 수정 완료 (`fa4714c4`): PowerShell `try { & { cmd } } catch { exit 1 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }` 패턴
    - **다음: R1 5차** — `python agent_launcher.py dogfood run "core/utils.py에 median(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. tests/test_utils.py에 TestMedian 테스트 클래스 신규 작성." --non-interactive --merge never`
+
+   **R1 5차 진입 인프라 (2026-05-26) — DONE (this session, uncommitted)**
+
+   R1 4라운드 누적 ~16h 소비 사후분석 후 합의:
+   - 진단: "품질 게이트 부족"이 아니라 **관측성 부족** — 빈 artifact 원인을 trace 없이 추측만 반복
+   - 처방 (단일 PR): trace + RunBudget + 최소 static smoke 동시 적용
+
+   `core/dogfood.py` 변경 (+239/-4):
+   - `_append_phase_trace()` (line 1398) — 10필드 phase 단위 trace
+     필드: phase / input_keys / output_keys / critical_counts / fallback_used / llm_called / exception_type / blocked_reason / elapsed_ms / estimated_tokens
+     출력: `.af_runtime/dogfood/<run_id>/phase_trace.jsonl`
+   - `_record_run_budget()` + `_run_budget_exhausted()` (line 310, 321) — AI executor 결과 RunBudget.record(), phase loop/AI call 전후 exhausted 체크
+   - `run_all(strict_contract: bool = False)` (line 1113) — direct/unit caller 기본 False
+   - `agent_launcher.py:1060` dogfood CLI는 `strict_contract=True`로 production strict 활성
+   - `_strict_contract_failure()` (line 1431) — 6 phase 조건 (interview/research_brief/spec/premortem/plan/verify)
+   - `_pre_implement_static_smoke()` (line 1475) — IMPLEMENT 직전 .py ast.parse only (LSP/큰 게이트 아님)
+   - `_run_implement_phase` (line 939) — `context["preflight_static"]` flag로 smoke 활성
+
+   테스트:
+   - `tests/test_dogfood.py` (+46)
+   - `tests/test_dogfood_cli.py` (+53/-2)
+   - `tests/test_dogfood_integration.py` (+11/-2)
+
+   검증:
+   - py_compile 5파일 PASS
+   - dogfood 단위/통합/CLI: 135 PASS
+
+   **보류 결정 (trace 1회 run 후 재결정)**:
+   - strict_contract 세부 정책 확장 — CLI production path는 이미 활성. 단, empty artifact 정책을 더 강하게 할지/완화할지는 trace 1회 후 결정
+   - IMPLEMENT 외 다른 phase의 큰 static gate (P0-3 확장판)
+   - cost dashboard (P1-2) — phase_trace.jsonl의 estimated_tokens 합산으로 1차 관측 가능. 별도 UI는 P1
+   - af doctor dogfood (P1-1), skill/context 비용 측정 (P1-3), duplicate signature detection (P1-4)
+   - trace 필드 확장 — `error_message`/`error_excerpt`는 현재 미포함. 1회 run 후 `exception_type` + `blocked_reason`만으로 진단력이 부족하면 추가.
+
+   **다음 진입점 — R1 5차 실행 (trace + smoke 활성)**:
+   ```
+   python agent_launcher.py dogfood run "core/utils.py에 median(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. tests/test_utils.py에 TestMedian 테스트 클래스 신규 작성." --non-interactive --merge never
+   ```
+
+   성공 기준:
+   1. `phase_trace.jsonl`에서 어느 phase가 empty/fallback/exception 만들었는지 식별 가능
+   2. AI executor 비용이 `get_run_budget().consumed`에 반영됨
+   3. 작은 budget fixture run에서 phase BLOCKED(reason=budget_exhausted) 종료 (`budget=0`은 unlimited이므로 사용 금지)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)

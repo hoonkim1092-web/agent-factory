@@ -79,16 +79,25 @@ def _noop_merge(state, merge_mode="auto_policy"):
     return {"merge_status": "merged"}
 
 
+def _noop_ai_executor(task: str, cwd: str, run_id: str):
+    """AI executor stub for smoke tests; never call the real provider CLI."""
+    return {"ok": True, "text": f"ai ok: {run_id}"}
+
+
 # ---------------------------------------------------------------------------
 # End-to-end smoke: PENDING → COMPLETE
 # ---------------------------------------------------------------------------
 
 def _smoke_patches(dogfood_mod):
-    """Return context managers that stub isolation/finalize/merge for smoke tests."""
+    """Return context managers that stub external side effects for smoke tests."""
     return (
         patch.object(dogfood_mod, "_run_isolate_phase", side_effect=_noop_isolate),
         patch.object(dogfood_mod, "_run_finalize_phase", side_effect=_noop_finalize),
-        patch.object(dogfood_mod, "_run_merge_phase", side_effect=_noop_merge),
+        patch.multiple(
+            dogfood_mod,
+            _run_merge_phase=_noop_merge,
+            _ai_executor=_noop_ai_executor,
+        ),
     )
 
 

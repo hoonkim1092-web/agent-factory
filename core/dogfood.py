@@ -17,6 +17,7 @@ Runtime artifacts live in %USERPROFILE%/.af-dogfood/<run_id>/runtime
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -304,6 +305,25 @@ def _build_ai_task(step: dict[str, Any], plan_intent: str) -> str:
         parts.append(f"Tests required: {', '.join(tests)}")
     parts.append("\nImplement this step. Write production-quality code. Do not modify files outside the listed artifacts.")
     return "\n".join(parts)
+
+
+def _record_run_budget(text: str) -> None:
+    """Best-effort dogfood budget accounting for direct CLI executor calls."""
+    if not str(text or "").strip():
+        return
+    try:
+        from core.run_budget import get_run_budget
+        get_run_budget().record(str(text))
+    except Exception:
+        pass
+
+
+def _run_budget_exhausted() -> bool:
+    try:
+        from core.run_budget import get_run_budget
+        return bool(get_run_budget().is_exhausted())
+    except Exception:
+        return False
 
 
 def _default_ai_executor(task: str, *, cwd: str, run_id: str) -> dict[str, Any]:
@@ -916,6 +936,16 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
             plan_dict = json.loads(plan_path.read_text(encoding="utf-8"))
 
     cwd = state._cwd()
+    if context.get("preflight_static"):
+        preflight_failures = _pre_implement_static_smoke(plan_dict, cwd)
+        if preflight_failures:
+            return {
+                "executed": [],
+                "failures": preflight_failures,
+                "skipped_no_commands": [],
+                "actual_changed": [],
+                "ok": False,
+            }
 
     # P5: capture baseline SHA before any changes (SHA-based to survive AI commits advancing HEAD)
     try:
@@ -932,11 +962,15 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
         commands: list[str] = step.get("commands") or []
         step_id: str = step.get("id", "?")
         if not commands:
+            if _run_budget_exhausted():
+                failures.append(f"{step_id}: budget exhausted before AI execution")
+                continue
             # P6: delegate to AI executor instead of skipping
             ai_task = _build_ai_task(step, plan_intent)
             ai_result = _ai_executor(ai_task, cwd=cwd, run_id=state.run_id)
             ok = ai_result.get("ok", False)
             output = ai_result.get("text", "") or ai_result.get("error", "")
+            _record_run_budget(output)
             executed.append({"step": step_id, "command": f"[AI] {step.get('action', '')}", "ok": ok, "output": output})
             if not ok:
                 failures.append(f"{step_id}: AI execution failed")
@@ -1076,6 +1110,7 @@ def run_all(
     run_id: str | None = None,
     runtime_workspace: str | None = None,
     merge_mode: str = "auto_policy",
+    strict_contract: bool = False,
     _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
 ) -> "DogfoodState":
     """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
@@ -1088,6 +1123,8 @@ def run_all(
         calls run_interview() interactively (TTY-detected) or non-interactively.
     non_interactive: force non-interactive interview (skip TTY detection).
     merge_mode: auto_policy | manual | never
+    strict_contract: production-mode artifact contract checks. Direct phase
+        tests remain permissive via run_phase() or strict_contract=False.
     _interview_fn: injectable for tests; overrides the default run_interview wrapper.
     Returns the final DogfoodState (phase COMPLETE or BLOCKED).
     """
@@ -1115,6 +1152,10 @@ def run_all(
 
     while not state.is_terminal():
         phase = state.phase
+        phase_started = time.time()
+        trace_input: Any = {}
+        trace_output: Any = {}
+        phase_llm_called = False
 
         if phase == DogfoodPhase.PENDING:
             advance_phase(state)
@@ -1122,44 +1163,87 @@ def run_all(
             continue
 
         if phase == DogfoodPhase.INTERVIEW:
+            trace_input = interview
             interview = run_phase(state, artifact=interview, _interview_fn=effective_interview_fn)
+            trace_output = interview
         elif phase == DogfoodPhase.RESEARCH_BRIEF:
+            trace_input = interview
             research_brief = run_phase(state, artifact=interview)
+            trace_output = research_brief
         elif phase == DogfoodPhase.RESEARCH:
+            trace_input = research_brief
             research = run_phase(state, context=research_brief)
+            trace_output = research
         elif phase == DogfoodPhase.SPEC:
+            trace_input = {"interview": interview, "research": research}
             spec = run_phase(
                 state,
                 interview_artifact=interview,
                 research_artifact=research,
             )
+            trace_output = spec
         elif phase == DogfoodPhase.PREMORTEM:
+            trace_input = spec
             premortem = run_phase(state, spec_dict=spec)
+            trace_output = premortem
         elif phase == DogfoodPhase.PLAN:
             from core.triad import TriadBlockedError
+            trace_input = {"spec": spec, "premortem": premortem}
             try:
                 plan_dict = run_phase(state, spec_dict=spec, premortem_dict=premortem)
             except TriadBlockedError as exc:
                 block_run(state, str(exc))
+                _append_phase_trace(
+                    state, phase, trace_input, {}, phase_started,
+                    exception_type=type(exc).__name__, blocked_reason=state.last_failure,
+                )
                 save_state(state)
                 continue
+            trace_output = plan_dict
         elif phase == DogfoodPhase.ISOLATE:
             try:
-                run_phase(state)
+                trace_output = run_phase(state)
             except GitWorktreeError as exc:
                 block_run(state, str(exc))
+                _append_phase_trace(
+                    state, phase, trace_input, {}, phase_started,
+                    exception_type=type(exc).__name__, blocked_reason=state.last_failure,
+                )
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.IMPLEMENT:
-            impl_result = run_phase(state, context={})
+            trace_input = plan_dict
+            impl_result = run_phase(state, context={"preflight_static": True})
+            trace_output = impl_result
+            phase_llm_called = any(
+                str(item.get("command", "")).startswith("[AI]")
+                for item in impl_result.get("executed", [])
+                if isinstance(item, dict)
+            )
+            if strict_contract and not impl_result.get("executed"):
+                block_run(state, "strict_contract: implementation produced no executed steps")
+                _append_phase_trace(
+                    state, phase, trace_input, trace_output, phase_started,
+                    llm_called=phase_llm_called, blocked_reason=state.last_failure,
+                )
+                save_state(state)
+                continue
             if not impl_result.get("ok") and not impl_result.get("executed"):
                 block_run(state, "implementation phase produced no executed steps")
+                _append_phase_trace(
+                    state, phase, trace_input, trace_output, phase_started,
+                    llm_called=phase_llm_called, blocked_reason=state.last_failure,
+                )
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.VERIFY:
+            trace_input = plan_dict
             verify_result = run_phase(state, context={"plan_dict": plan_dict})
+            trace_output = verify_result
         elif phase == DogfoodPhase.REVIEW:
+            trace_input = verify_result
             review = run_phase(state, context={"verify_result": verify_result})
+            trace_output = review
             decision = review.get("decision", "pass")
             if decision == "retry":
                 retry_run(state)
@@ -1167,21 +1251,49 @@ def run_all(
                 block_run(state, review.get("reason", ""))
             else:
                 advance_phase(state)  # → FINALIZE
+            _append_phase_trace(state, phase, trace_input, trace_output, phase_started, blocked_reason=state.last_failure)
             save_state(state)
             continue
         elif phase == DogfoodPhase.FINALIZE:
             try:
-                run_phase(state)
+                trace_output = run_phase(state)
             except Exception as exc:
                 block_run(state, f"finalize failed: {exc}")
+                _append_phase_trace(
+                    state, phase, trace_input, {}, phase_started,
+                    exception_type=type(exc).__name__, blocked_reason=state.last_failure,
+                )
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.MERGE:
-            run_phase(state, merge_mode=merge_mode)
+            trace_output = run_phase(state, merge_mode=merge_mode)
             # _run_merge_phase sets state.phase directly for COMPLETE/BLOCKED
+            _append_phase_trace(state, phase, trace_input, trace_output, phase_started, blocked_reason=state.last_failure)
             save_state(state)
             continue
 
+        strict_failure = _strict_contract_failure(phase, trace_output) if strict_contract else ""
+        if strict_failure:
+            block_run(state, strict_failure)
+            _append_phase_trace(
+                state, phase, trace_input, trace_output, phase_started,
+                llm_called=phase_llm_called, blocked_reason=state.last_failure,
+            )
+            save_state(state)
+            continue
+        if _run_budget_exhausted():
+            block_run(state, "budget_exhausted")
+            _append_phase_trace(
+                state, phase, trace_input, trace_output, phase_started,
+                llm_called=phase_llm_called, blocked_reason=state.last_failure,
+            )
+            save_state(state)
+            continue
+
+        _append_phase_trace(
+            state, phase, trace_input, trace_output, phase_started,
+            llm_called=phase_llm_called,
+        )
         advance_phase(state)
         save_state(state)
 
@@ -1250,6 +1362,129 @@ def _artifact_path(state: DogfoodState, filename: str) -> Path:
 def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _estimate_tokens(data: Any) -> int:
+    try:
+        raw = json.dumps(data, ensure_ascii=False, default=str)
+    except Exception:
+        raw = str(data)
+    return max(0, len(raw) // 4)
+
+
+def _keys(data: Any) -> list[str]:
+    return sorted(data.keys()) if isinstance(data, dict) else []
+
+
+def _critical_counts(data: Any) -> dict[str, int]:
+    if not isinstance(data, dict):
+        return {}
+    counts: dict[str, int] = {}
+    for key in (
+        "scope",
+        "steps",
+        "verification_requirements",
+        "risks",
+        "executed",
+        "failures",
+        "commands_run",
+    ):
+        val = data.get(key)
+        if isinstance(val, (list, tuple, set, dict)):
+            counts[f"{key}_len"] = len(val)
+    return counts
+
+
+def _append_phase_trace(
+    state: DogfoodState,
+    phase: DogfoodPhase,
+    input_data: Any,
+    output_data: Any,
+    started_at: float,
+    *,
+    fallback_used: bool = False,
+    llm_called: bool = False,
+    exception_type: str | None = None,
+    blocked_reason: str = "",
+) -> None:
+    record = {
+        "phase": phase.value,
+        "input_keys": _keys(input_data),
+        "output_keys": _keys(output_data),
+        "critical_counts": _critical_counts(output_data),
+        "fallback_used": bool(fallback_used),
+        "llm_called": bool(llm_called),
+        "exception_type": exception_type,
+        "blocked_reason": blocked_reason,
+        "elapsed_ms": int((time.time() - started_at) * 1000),
+        "estimated_tokens": _estimate_tokens(input_data) + _estimate_tokens(output_data),
+    }
+    try:
+        path = _artifact_path(state, "phase_trace.jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _strict_contract_failure(phase: DogfoodPhase, artifact: dict[str, Any]) -> str:
+    if phase == DogfoodPhase.INTERVIEW and not (
+        artifact.get("goal") or artifact.get("intent") or artifact.get("project_brief")
+    ):
+        return "strict_contract: interview artifact missing goal/intent"
+    if phase == DogfoodPhase.RESEARCH_BRIEF and not (
+        artifact.get("questions") or artifact.get("risk_hints")
+    ):
+        return "strict_contract: research_brief has no questions/risk_hints"
+    if phase == DogfoodPhase.SPEC:
+        if not artifact.get("intent"):
+            return "strict_contract: spec missing intent"
+        if not artifact.get("scope"):
+            return "strict_contract: spec missing scope"
+    if phase == DogfoodPhase.PREMORTEM and not artifact.get("spec_intent"):
+        return "strict_contract: premortem missing spec_intent"
+    if phase == DogfoodPhase.PLAN:
+        if not artifact.get("steps"):
+            return "strict_contract: plan has no steps"
+        if not artifact.get("verification_requirements"):
+            return "strict_contract: plan has no verification_requirements"
+    if phase == DogfoodPhase.VERIFY and not artifact.get("commands_run"):
+        return "strict_contract: verify ran no commands"
+    return ""
+
+
+def _plan_python_paths(plan_dict: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for step in plan_dict.get("steps", []):
+        candidates = [
+            step.get("target"),
+            *(step.get("artifacts") or []),
+            *(step.get("tests_required") or []),
+        ]
+        for value in candidates:
+            if (
+                isinstance(value, str)
+                and value.replace("\\", "/").endswith(".py")
+                and value not in paths
+            ):
+                paths.append(value)
+    return paths
+
+
+def _pre_implement_static_smoke(plan_dict: dict[str, Any], cwd: str) -> list[str]:
+    failures: list[str] = []
+    for rel in _plan_python_paths(plan_dict):
+        path = Path(cwd) / rel
+        if not path.exists():
+            continue
+        try:
+            ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except SyntaxError as exc:
+            failures.append(f"static smoke syntax error: {rel}:{exc.lineno}")
+        except OSError as exc:
+            failures.append(f"static smoke read failed: {rel}:{exc}")
+    return failures
 
 
 def _spec_from_dict(d: dict[str, Any]):  # type: ignore[return]
