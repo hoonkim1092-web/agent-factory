@@ -112,3 +112,6 @@ tmp*/
 
 # --- Dogfood interview artifact (auto-generated per run, not source) ---
 planning/interview_brief.json
+
+# --- Claude Code runtime artifacts (created by claude_cli AI executor in worktrees) ---
+syncCompyne/
