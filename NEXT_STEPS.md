@@ -311,8 +311,15 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
      - 7개 신규 테스트 PASS. 기존 39개 회귀 없음. af-test-runner PASS.
    - `planner.py`: research_findings 미사용 현황 확인 — 별도 작업으로 분류 (범위 밖)
 
+   **R1 9.5차 (2026-05-27) — COMPLETE** (`bd54c80f`):
+   - ✅ `_detect_blueprint_sync_risk()` placeholder 버그 수정
+     - `files` 비어있을 때(risk_hints에서만 trigger) → comment step 생성
+     - comment step은 `planner.py:90 startswith("#")` 필터로 실행 경로 차단
+     - 2개 신규 회귀 테스트. 48개 PASS. 3-Tier PASS/PASS/PASS.
+
    **다음 진입점**:
-   - R1 10차 또는 다음 기능 (후보): planner.py에서 research_findings scope 겹침 step에 참조 아티팩트 주입, 또는 R1 dogfooding 10차 end-to-end 실험
+   - R1 10차 dogfooding — research_findings→R10 발화 + R1 placeholder 수정 end-to-end 검증
+   - 또는: planner.py에서 research_findings scope 겹침 step에 참조 아티팩트 주입
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
