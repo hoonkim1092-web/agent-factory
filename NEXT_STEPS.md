@@ -291,10 +291,20 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - F-RUN-BUDGET-STATE: run_budget이 state.json에 미저장 (Low)
    - ✅ Blueprint §3 수동 갱신 — §3.13 Dogfood Pipeline 신규 섹션 추가 (5개 P0 함수 반영)
 
-   **다음 진입점**:
-   - R1 7차 — research phase 실제 code-context 투입 확인 실험
+   **R1 7~8차 (2026-05-27) — COMPLETE** (run_id: 1779810109-8664dd2e, merged `c5f50f19`)
+   - ✅ `_research_scope_files` intent/clarification_log fallback + path traversal containment (`e7a0b523`)
+   - ✅ `_research_collect_refs` scope+companion 중복 제거 (`63ccbd74`)
+   - ✅ CRLF 68파일 정규화 (`0b0da33b`) — 워크트리 scope_violations 근원 제거
+   - ✅ research.json: 2 local_refs (core/utils.py + tests/test_utils.py), spec.json research_findings 2개 투입 확인
+   - mode() 함수 + TestMode 테스트 auto-policy merge COMPLETE
+   - 3-Tier: af-critic WARN(수정) / af-cross-review BLOCK→fixed / af-test-runner PASS (142 tests)
+
+   **잔여 저우선순위**:
+   - F-RUN-BUDGET-STATE: run_budget이 state.json에 미저장 (Low)
    - advisory 보류: scope 문자열 입력 시 문자 단위 순회 (af-cross-review Medium advisory)
-   - `start_db.py` 이후 `projects/agent_factory/` CRLF dirty 재발 가능 → `.gitattributes` text=auto 추가 검토
+
+   **다음 진입점**:
+   - R1 9차 or 다음 기능 — research phase가 planner/premortem에서 research_findings를 활용하는지 확인 (e.g., premortem이 기존 코드 패턴을 리스크 분석에 활용)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
