@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-26 KST** — R1 5+6차 COMPLETE. strict_contract research_brief 체크 제거 + FINALIZE 데이터 모델 분리(all_dirty/scope_violations/committed_changed/dogfood_commit_created) + CRLF 필터 + scope_violations 게이트 + AF_SKIP_REVIEW_GATE worktree hook 우회. 다음: R1 merge 검증 (--merge auto_policy) 또는 Blueprint §3 수동 갱신.
+> 마지막 업데이트: **2026-05-27 KST** — R1 10차 COMPLETE. R10(pattern_consistency) end-to-end 발화 검증 + variance() auto_policy merge 성공. 다음: R1 11차(다중 core/*.py scope) 또는 planner.py research_findings artifact 주입.
 
 ---
 
@@ -317,9 +317,14 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
      - comment step은 `planner.py:90 startswith("#")` 필터로 실행 경로 차단
      - 2개 신규 회귀 테스트. 48개 PASS. 3-Tier PASS/PASS/PASS.
 
+   **R1 10차 (2026-05-27) — COMPLETE** (run_id: 1779838885-d70ad991, merged `3c52a1d9`):
+   - ✅ R10 발화 확인 — research_findings `core/utils.py`+`tests/test_utils.py` ∩ scope → `python -m py_compile core/utils.py tests/test_utils.py` plan 주입
+   - ✅ R1 comment step 필터 확인 — `planner.py:90 startswith("#")` 정상 차단
+   - ✅ variance() 구현 + TestVariance 3개 테스트 → auto_policy merge 성공
+
    **다음 진입점**:
-   - R1 10차 dogfooding — research_findings→R10 발화 + R1 placeholder 수정 end-to-end 검증
-   - 또는: planner.py에서 research_findings scope 겹침 step에 참조 아티팩트 주입
+   - R1 11차: 다른 scope(여러 core/*.py) 태스크로 R10 다중 파일 경로 검증
+   - 또는: planner.py에서 research_findings scope 겹침 step에 참조 아티팩트 주입 (advisory 항목)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
