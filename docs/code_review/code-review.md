@@ -6480,3 +6480,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (2)**: `Master_Blueprint.md, core/dogfood.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-26 18:40 — `2026-05-20-research-coverage-gate` (d53940b4)
+
+**Context**: finalize-time docs sync for dogfood
+
+**Changed (6)**: `.githooks/post-commit, Master_Blueprint.md, core/dogfood.py, scripts/blueprint_updater.py, tests/test_blueprint_updater.py, tests/test_dogfood_isolation.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

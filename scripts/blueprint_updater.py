@@ -25,6 +25,8 @@ BLUEPRINT_REL = "Master_Blueprint.md"
 DIFF_MAX_CHARS = 6000
 DEBOUNCE_FILE = os.path.join(".af_review_queue", ".blueprint_debounce")
 QUIET_PERIOD_SEC = 15
+SECTION3_AUTO_START = "<!-- AUTO:SECTION3_CORE_UPDATES START -->"
+SECTION3_AUTO_END = "<!-- AUTO:SECTION3_CORE_UPDATES END -->"
 
 # Blueprint 업데이트 대상 파일 패턴
 TRIGGER_PREFIXES = ("core/", "scripts/", "skills/")
@@ -251,6 +253,107 @@ def _extract_ast_symbols(filepath: str) -> tuple[list[str], list[str]]:
         return [], []
 
 
+def _module_doc_summary(filepath: str) -> str:
+    """Return a compact module docstring summary for generated Blueprint notes."""
+    try:
+        with open(filepath, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        doc = ast.get_docstring(tree) or ""
+    except Exception:
+        doc = ""
+    doc = re.sub(r"\s+", " ", doc).strip()
+    if not doc:
+        return os.path.splitext(os.path.basename(filepath))[0].replace("_", " ")
+    first = re.split(r"(?<=[.!?])\s+", doc, maxsplit=1)[0].strip()
+    return first[:160]
+
+
+def _changed_core_files(changed: list[str]) -> list[str]:
+    """Normalize changed file list to core/*.py paths."""
+    result: list[str] = []
+    for name in changed:
+        rel = name.replace("\\", "/")
+        if rel.startswith("core/") and rel.endswith(".py") and rel not in result:
+            result.append(rel)
+    return result
+
+
+def _update_section_3_auto_summary(
+    blueprint_path: str,
+    core_files: list[str],
+    workspace: str,
+    entry: str,
+) -> bool:
+    """Update generated §3 core-change summary block.
+
+    This is intentionally deterministic. It does not try to rewrite curated
+    architecture prose; it keeps §3 synchronized enough that hooks do not rely
+    on a manual reminder for every core/*.py commit.
+    """
+    core_files = _changed_core_files(core_files)
+    if not core_files:
+        return False
+
+    try:
+        with open(blueprint_path, encoding="utf-8") as f:
+            content = f.read()
+    except Exception:
+        return False
+
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    rows = []
+    for rel_path in core_files:
+        full_path = os.path.join(workspace, rel_path)
+        if not os.path.exists(full_path):
+            continue
+        classes, funcs = _extract_ast_symbols(full_path)
+        symbols = [f"`{c}`" for c in classes[:4]]
+        symbols.extend(f"`{f}()`" for f in funcs[:6])
+        symbol_text = ", ".join(symbols) if symbols else "—"
+        summary = _module_doc_summary(full_path).replace("|", "\\|")
+        rows.append(f"| `{rel_path}` | {summary} | {symbol_text} |")
+
+    if not rows:
+        return False
+
+    context_line = entry.replace("|", "\\|").strip() or "code update"
+    block = "\n".join([
+        SECTION3_AUTO_START,
+        "### §3.12 자동 Core 변경 요약",
+        f"<!-- last_updated: {date_str}; generated_by: scripts/blueprint_updater.py -->",
+        "",
+        f"최근 자동 갱신 컨텍스트: {context_line}",
+        "",
+        "| 파일 | 역할/계약 요약 | 주요 심볼 |",
+        "|------|----------------|-----------|",
+        *rows,
+        SECTION3_AUTO_END,
+        "",
+    ])
+
+    pattern = re.compile(
+        re.escape(SECTION3_AUTO_START) + r".*?" + re.escape(SECTION3_AUTO_END) + r"\n?",
+        re.DOTALL,
+    )
+    if pattern.search(content):
+        updated = pattern.sub(block, content, count=1)
+    else:
+        section3 = content.find("## §3 핵심 서브시스템")
+        if section3 == -1:
+            return False
+        next_section = re.search(r"\n---\n\n## §4\b", content[section3:])
+        if next_section:
+            insert_pos = section3 + next_section.start()
+            updated = content[:insert_pos] + "\n" + block + content[insert_pos:]
+        else:
+            updated = content.rstrip() + "\n\n" + block
+
+    if updated != content:
+        _atomic_write(blueprint_path, updated)
+        return True
+    return False
+
+
 def _update_section_0(blueprint_path: str, new_core_files: list[str], workspace: str) -> bool:
     """§0 core/ 테이블에 새 파일 행 추가. 추가했으면 True."""
     if not new_core_files:
@@ -428,6 +531,8 @@ def update_blueprint(workspace: str, context: str, no_llm: bool) -> bool:
     new_core = [f for f in new_files if f.startswith("core/") and f.endswith(".py")]
     if new_core:
         _update_section_0(blueprint_path, new_core, workspace)
+
+    _update_section_3_auto_summary(blueprint_path, changed, workspace, entry)
 
     # §0 삭제 감지
     deleted = _deleted_files(workspace)

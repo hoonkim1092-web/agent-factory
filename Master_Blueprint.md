@@ -1038,6 +1038,17 @@ run_factory_cli.main()
 - `af.spec` `hiddenimports`: `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` + `collect_submodules('typer'|'rich'|'nlm')`
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
+<!-- AUTO:SECTION3_CORE_UPDATES START -->
+### §3.12 자동 Core 변경 요약
+<!-- last_updated: 2026-05-26; generated_by: scripts/blueprint_updater.py -->
+
+최근 자동 갱신 컨텍스트: chore(.githooks): code update — post-commit, Master_Blueprint.md, dogfood.py, code-review.md, blueprint_updater.py (+2)
+
+| 파일 | 역할/계약 요약 | 주요 심볼 |
+|------|----------------|-----------|
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+<!-- AUTO:SECTION3_CORE_UPDATES END -->
+
 ---
 
 ## §4 자가진화 루프
@@ -1568,6 +1579,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(.githooks): code update — post-commit, Master_Blueprint.md, dogfood.py, code-review.md, blueprint_updater.py (+2) |
+| 2026-05-26 | v1.2.34 | chore(.githooks): finalize-time docs sync for dogfood — post-commit, dogfood.py, blueprint_updater.py, test_blueprint_updater.py, test_dogfood_isolation.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood_isolation.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, architect.yaml, logicdev.yaml, context_schema.yaml, settings.yaml (+2) |

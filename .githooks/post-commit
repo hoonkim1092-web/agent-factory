@@ -18,11 +18,14 @@ if [ -n "$CHANGED" ]; then
     "$CLEAR_PY" "${REPO_ROOT}/scripts/review_gate.py" --clear --files "$COMMITTED" >/dev/null 2>&1 || true
 fi
 
-# ── §3 수동 갱신 리마인더 ──
+# §3 manual fallback reminder. pre-commit runs blueprint_updater.py and stages
+# Master_Blueprint.md for normal code commits, so only warn when a core change
+# landed without Blueprint in the same commit (for example --no-verify).
 CORE_CHANGED=$(echo "$CHANGED" | grep "^core/.*\.py$" | head -1)
-if [ -n "$CORE_CHANGED" ]; then
+BLUEPRINT_CHANGED=$(echo "$CHANGED" | grep "^Master_Blueprint\.md$" | head -1)
+if [ -n "$CORE_CHANGED" ] && [ -z "$BLUEPRINT_CHANGED" ]; then
     echo ""
-    echo "  [blueprint] §3 서브시스템 내용 수동 확인 필요: $CORE_CHANGED"
-    echo "     클래스·메서드 변경 시 Master_Blueprint.md §3 해당 섹션 갱신"
+    echo "  [blueprint] core change committed without Master_Blueprint.md: $CORE_CHANGED"
+    echo "     Run scripts/blueprint_updater.py or commit the generated Blueprint sync."
     echo ""
 fi

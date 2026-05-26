@@ -294,6 +294,62 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
     assert "run_output.txt" in report["scope_violations"]
 
 
+def test_finalize_runs_final_docs_sync_before_staging(tmp_path):
+    """FINALIZE syncs generated docs after review pass and stages them with code."""
+    import json
+    import core.dogfood as df
+
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
+
+    plan = {"steps": [{"id": "S1", "artifacts": ["core/utils.py"], "tests_required": []}]}
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    staged: list[list] = []
+    rev_count = {"n": 0}
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py\nMaster_Blueprint.md\ndocs/code_review/code-review.md"
+        elif "diff" in args and "--name-only" in args:
+            r.stdout = "core/utils.py\nMaster_Blueprint.md\ndocs/code_review/code-review.md"
+        elif "ls-files" in args:
+            r.stdout = ""
+        elif args[0] == "add":
+            staged.append(list(args))
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub), \
+            patch("core.dogfood._run_final_docs_sync",
+                  return_value=["Master_Blueprint.md", "docs/code_review/code-review.md"]) as sync:
+        report = finalize_dogfood_result(state)
+
+    sync.assert_called_once_with(state)
+    staged_flat = " ".join(" ".join(a) for a in staged)
+    assert "core/utils.py" in staged_flat
+    assert "Master_Blueprint.md" in staged_flat
+    assert "docs/code_review/code-review.md" in staged_flat
+    assert report["scope_violations"] == []
+    assert report["final_docs_synced"] == [
+        "Master_Blueprint.md",
+        "docs/code_review/code-review.md",
+    ]
+
+
 def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
     """P3: when plan_path is absent, all changed files are staged (no scope violations)."""
     import json

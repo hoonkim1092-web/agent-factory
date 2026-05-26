@@ -578,6 +578,39 @@ def prepare_isolated_worktree(state: DogfoodState) -> None:
 # Finalize helpers (Step 16)
 # ---------------------------------------------------------------------------
 
+FINAL_DOC_PATHS = (
+    "Master_Blueprint.md",
+    "docs/code_review/code-review.md",
+)
+
+
+def _run_final_docs_sync(state: DogfoodState) -> list[str]:
+    """Best-effort final documentation sync for dogfood result commits.
+
+    Dogfood semantics treat REVIEW → FINALIZE as the point where a feature is
+    finalized. Running the docs sync here makes Blueprint/code-review updates
+    part of the dogfood result instead of relying only on commit hooks.
+    """
+    workspace = state.worktree_workspace
+    if not workspace:
+        return []
+    context = f"dogfood finalize: {state.task[:120]}"
+    updated: list[str] = []
+    try:
+        from scripts import blueprint_updater
+        if blueprint_updater.update_blueprint(workspace, context, no_llm=True):
+            updated.append("Master_Blueprint.md")
+    except Exception:
+        pass
+    try:
+        from scripts import code_review_updater
+        if code_review_updater.update_code_review_doc(workspace, context, no_llm=True):
+            updated.append("docs/code_review/code-review.md")
+    except Exception:
+        pass
+    return updated
+
+
 def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
     """Commit dogfood result in the worktree and record dogfood_commit.
 
@@ -595,6 +628,7 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
         )
 
     pre_finalize_head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
+    final_docs_synced = _run_final_docs_sync(state)
 
     # Collect all dirty files (unstaged modified + untracked)
     diff = _git(["diff", "--name-only", "HEAD"], cwd=wt)
@@ -620,6 +654,10 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
                     plan_allowlist.add(_f.replace("\\", "/"))
                 for _f in (_step.get("tests_required") or []):
                     plan_allowlist.add(_f.replace("\\", "/"))
+    if plan_allowlist and (
+        final_docs_synced or any(f.replace("\\", "/").startswith("core/") for f in real_dirty)
+    ):
+        plan_allowlist.update(FINAL_DOC_PATHS)
 
     if real_dirty and plan_allowlist:
         stage_files = [f for f in real_dirty if f.replace("\\", "/") in plan_allowlist]
@@ -666,6 +704,7 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
         "dogfood_commit_created": dogfood_commit_created,
         "changed_files": committed_changed,
         "all_dirty_files": all_dirty,
+        "final_docs_synced": final_docs_synced,
         "scope_violations": scope_violations,
         "denied_path_hits": [],
         "policy_checks": {},
@@ -737,6 +776,7 @@ def merge_dogfood_branch(
     """
     if policy is None:
         allowed: list[str] = []
+        has_core_allowed = False
         if state.plan_path:
             _pp = Path(state.plan_path)
             if _pp.exists():
@@ -744,11 +784,17 @@ def merge_dogfood_branch(
                     _pd = json.loads(_pp.read_text(encoding="utf-8"))
                     for _s in _pd.get("steps", []):
                         for _f in (_s.get("artifacts") or []):
-                            allowed.append(_f.replace("\\", "/"))
+                            rel = _f.replace("\\", "/")
+                            allowed.append(rel)
+                            has_core_allowed = has_core_allowed or rel.startswith("core/")
                         for _f in (_s.get("tests_required") or []):
-                            allowed.append(_f.replace("\\", "/"))
+                            rel = _f.replace("\\", "/")
+                            allowed.append(rel)
+                            has_core_allowed = has_core_allowed or rel.startswith("core/")
                 except Exception:
                     pass
+        if has_core_allowed:
+            allowed.extend(FINAL_DOC_PATHS)
         policy = MergePolicy(mode=state.merge_mode, allowed_paths=list(dict.fromkeys(allowed)))  # type: ignore[arg-type]
 
     src = state.source_workspace
