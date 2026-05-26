@@ -14,6 +14,7 @@ from core.premortem import (
     _detect_workspace_risk,
     _detect_destructive_risk,
     _detect_assumption_risks,
+    _detect_existing_pattern_risk,
     _detect_gap_risks,
 )
 
@@ -30,6 +31,7 @@ def _spec(
     approval_policy="",
     assumptions=None,
     gaps=None,
+    research_findings=None,
 ) -> CompiledSpec:
     return CompiledSpec(
         intent=intent,
@@ -39,6 +41,7 @@ def _spec(
         approval_policy=approval_policy,
         assumptions=assumptions or [],
         gaps=gaps or [],
+        research_findings=research_findings or [],
     )
 
 
@@ -335,3 +338,64 @@ def test_gap_start_shifts_when_many_assumptions():
     from core.premortem import _detect_gap_risks
     risks = _detect_gap_risks(["q1", "q2"], start=21)
     assert [r.id for r in risks] == ["R21", "R22"]
+
+
+# ---------------------------------------------------------------------------
+# _detect_existing_pattern_risk
+# ---------------------------------------------------------------------------
+
+def test_pattern_risk_fires_on_scope_overlap():
+    findings = [{"path": "core/utils.py", "content": "def foo(): ...", "kind": "file_snippet"}]
+    risk = _detect_existing_pattern_risk(findings, scope=["core/utils.py"])
+    assert risk is not None
+    assert risk.id == "R10"
+    assert risk.category == "pattern_consistency"
+    assert "core/utils.py" in risk.description
+
+
+def test_pattern_risk_skips_when_no_overlap():
+    findings = [{"path": "core/utils.py", "content": "...", "kind": "file_snippet"}]
+    risk = _detect_existing_pattern_risk(findings, scope=["core/other.py"])
+    assert risk is None
+
+
+def test_pattern_risk_skips_empty_findings():
+    assert _detect_existing_pattern_risk([], scope=["core/utils.py"]) is None
+
+
+def test_pattern_risk_skips_finding_without_path():
+    findings = [{"content": "...", "kind": "web_ref"}]
+    assert _detect_existing_pattern_risk(findings, scope=["core/utils.py"]) is None
+
+
+def test_pattern_risk_has_two_verification_steps():
+    findings = [{"path": "core/utils.py", "content": "...", "kind": "file_snippet"}]
+    risk = _detect_existing_pattern_risk(findings, scope=["core/utils.py"])
+    assert risk is not None
+    assert len(risk.verification) == 2
+
+
+def test_pattern_risk_id_r10_no_collision_with_assumptions():
+    """R10 must not duplicate assumption risk IDs in run_premortem."""
+    assumptions = [{"statement": f"A{i}", "confidence": "low"} for i in range(9)]
+    spec = _spec(
+        scope=["core/utils.py"],
+        research_findings=[{"path": "core/utils.py", "content": "...", "kind": "file_snippet"}],
+        assumptions=assumptions,
+    )
+    result = run_premortem(spec)
+    ids = [r.id for r in result.risks]
+    assert "R10" in ids
+    assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+
+def test_run_premortem_with_research_findings_adds_r10():
+    spec = _spec(
+        scope=["core/utils.py"],
+        research_findings=[{"path": "core/utils.py", "content": "def add(): ...", "kind": "file_snippet"}],
+    )
+    result = run_premortem(spec)
+    categories = [r.category for r in result.risks]
+    assert "pattern_consistency" in categories
+    r10 = next(r for r in result.risks if r.id == "R10")
+    assert "core/utils.py" in r10.description

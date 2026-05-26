@@ -9,6 +9,7 @@ assumptions/gaps rather than on generic heuristics.
 from __future__ import annotations
 
 import re
+import shlex
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -78,7 +79,7 @@ def _detect_blueprint_sync_risk(scope: list[str], risk_hints: list[str]) -> Prem
     if not _any_match(_CORE_PY_RE, scope + risk_hints):
         return None
     files = [s for s in scope if _CORE_PY_RE.search(s)]
-    targets = " ".join(files) if files else "core/<changed>.py"
+    targets = " ".join(shlex.quote(f) for f in files) if files else "core/<changed>.py"
     return PremortomRisk(
         id="R1",
         description="core/*.py change may require Master_Blueprint.md synchronization.",
@@ -161,10 +162,45 @@ def _detect_destructive_risk(approval_policy: str, constraints: list[str]) -> Pr
     )
 
 
-def _detect_assumption_risks(assumptions: list[dict]) -> list[PremortomRisk]:
-    """Low-confidence assumptions become explicit risks (R5, R6, …)."""
+def _detect_existing_pattern_risk(
+    research_findings: list[dict],
+    scope: list[str],
+) -> PremortomRisk | None:
+    """Existing code patterns found in research that overlap with scope files.
+
+    R10 fires when at least one research finding path is also in the implementation
+    scope — the new code must extend those files consistently.
+    """
+    finding_paths = {f.get("path", "") for f in research_findings if f.get("path")}
+    overlap = sorted(finding_paths & set(scope))
+    if not overlap:
+        return None
+    paths_str = " ".join(shlex.quote(p) for p in overlap)
+    return PremortomRisk(
+        id="R10",
+        description=f"Existing code patterns found in scope: {', '.join(overlap)}. New implementation must extend consistently.",
+        category="pattern_consistency",
+        verification=[
+            VerificationStep(
+                command=f"python -m py_compile {paths_str}",
+                description="Scope files still compile after modification.",
+            ),
+            VerificationStep(
+                command=f"# Review patterns in {paths_str} before implementing",
+                description="New code follows naming and style conventions in existing scope files.",
+            ),
+        ],
+    )
+
+
+def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
+    """Low-confidence assumptions become explicit risks (R5, R6, …).
+
+    *start* is the first ID number to use — callers can pass a higher value to
+    guarantee uniqueness when other fixed risks occupy lower IDs.
+    """
     risks: list[PremortomRisk] = []
-    counter = 5
+    counter = start
     for a in assumptions:
         if str(a.get("confidence", "")).lower() in ("low", "unknown", ""):
             stmt = str(a.get("statement") or a.get("id") or "unknown assumption")
@@ -235,9 +271,14 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    assumption_risks = _detect_assumption_risks(spec.assumptions)
+    r = _detect_existing_pattern_risk(spec.research_findings, spec.scope)
+    if r:
+        risks.append(r)
+
+    # R10 is reserved for pattern_consistency; assumptions start at R11 to avoid collision.
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=11)
     risks.extend(assumption_risks)
-    gap_start = max(20, 5 + len(assumption_risks))
+    gap_start = max(20, 11 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

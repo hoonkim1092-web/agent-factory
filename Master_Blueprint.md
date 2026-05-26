@@ -1089,11 +1089,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(NEXT_STEPS): code update — NEXT_STEPS.md, premortem.py, test_premortem.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1626,6 +1626,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-27 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, premortem.py, test_premortem.py |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 mode(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. 값이 여러 개이면 첫 번째 최빈값 반환. tests/test_uti — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-27 | v1.2.34 | feat(utils): `mode(values)` 신설 — 최빈값을 float로 반환. 동률이면 입력 순서상 가장 먼저 등장한 값을 반환. 빈 리스트이면 ValueError. `tests/test_utils.py` TestMode 9건 신규. §0 갱신. |
