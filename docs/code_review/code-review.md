@@ -6490,3 +6490,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (6)**: `.githooks/post-commit, Master_Blueprint.md, core/dogfood.py, scripts/blueprint_updater.py, tests/test_blueprint_updater.py, tests/test_dogfood_isolation.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-26 21:12 — `dogfood/1779797383-fa016088` (b781243a)
+
+**Context**: dogfood finalize: core/utils.py에 clamp_ratio(value: float, lo: float = 0.0, hi: float = 1.0) -> float 함수 추가. value를 [lo, hi] 범위로 클램프. test
+
+**Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

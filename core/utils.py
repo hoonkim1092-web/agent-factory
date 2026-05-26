@@ -88,6 +88,13 @@ def clamp(value: int | float, min_val: int | float, max_val: int | float) -> int
     return max(min_val, min(value, max_val))
 
 
+def clamp_ratio(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    """value를 [lo, hi] 범위로 클램프한 float을 반환한다. lo > hi이면 ValueError."""
+    if lo > hi:
+        raise ValueError(f"잘못된 범위: lo({lo}) > hi({hi})")
+    return float(max(lo, min(value, hi)))
+
+
 def median(values: list[int | float]) -> float:
     """정렬된 중앙값을 반환한다. 빈 리스트이면 ValueError."""
     if not values:

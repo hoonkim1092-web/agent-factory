@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, median, chunks
+from core.utils import truncate_text, clamp, clamp_ratio, median, chunks
 from core.utils import test_file_for as _test_file_for
 
 
@@ -69,6 +69,46 @@ class TestClamp:
     def test_잘못된_범위는_ValueError(self):
         with pytest.raises(ValueError):
             clamp(5, 10, 0)
+
+
+class TestClampRatio:
+    def test_범위_내_값은_float로_반환(self):
+        result = clamp_ratio(0.5)
+        assert result == 0.5
+        assert isinstance(result, float)
+
+    def test_lo_미만은_lo_반환(self):
+        assert clamp_ratio(-0.5) == 0.0
+
+    def test_hi_초과는_hi_반환(self):
+        assert clamp_ratio(1.5) == 1.0
+
+    def test_lo와_동일(self):
+        assert clamp_ratio(0.0) == 0.0
+
+    def test_hi와_동일(self):
+        assert clamp_ratio(1.0) == 1.0
+
+    def test_int_입력도_float로_반환(self):
+        result = clamp_ratio(0)
+        assert result == 0.0
+        assert isinstance(result, float)
+
+    def test_커스텀_범위(self):
+        assert clamp_ratio(5.0, lo=-1.0, hi=10.0) == 5.0
+
+    def test_커스텀_범위_lo_초과(self):
+        assert clamp_ratio(-5.0, lo=-1.0, hi=10.0) == -1.0
+
+    def test_커스텀_범위_hi_초과(self):
+        assert clamp_ratio(20.0, lo=-1.0, hi=10.0) == 10.0
+
+    def test_lo가_hi보다_크면_ValueError(self):
+        with pytest.raises(ValueError):
+            clamp_ratio(0.5, lo=1.0, hi=0.0)
+
+    def test_lo와_hi가_같으면_그_값_반환(self):
+        assert clamp_ratio(0.5, lo=0.3, hi=0.3) == 0.3
 
 
 class TestMedian:
