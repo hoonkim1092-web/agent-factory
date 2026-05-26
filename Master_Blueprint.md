@@ -1038,6 +1038,53 @@ run_factory_cli.main()
 - `af.spec` `hiddenimports`: `nlm.*` 27개 + `typer/rich/shellingham/websocket/annotated_doc/filelock/tavily` + `collect_submodules('typer'|'rich'|'nlm')`
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
+### §3.13 Dogfood Pipeline (`core/dogfood.py`)
+<!-- last_updated: 2026-05-26 (P0: phase_trace + RunBudget + strict_contract + static_smoke) -->
+
+**목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
+
+**핵심 데이터클래스:**
+
+| 클래스 | 역할 |
+|--------|------|
+| `DogfoodPhase` | 14-phase enum (PENDING → COMPLETE / BLOCKED) |
+| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()` |
+| `MergePolicy` | auto_merge / never / auto_policy 8-gate 정책 dataclass |
+| `VerifyResult` / `ReviewDecision` | 검증/리뷰 결과 (passed/retry/block, accept/reject) |
+
+**공개 API:**
+
+| 함수 | 역할 |
+|------|------|
+| `create_run(task, workspace)` | 新 run_id 생성 + PENDING 상태 초기화 |
+| `run_all(task, workspace, *, strict_contract, ...)` | PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. `strict_contract=True`면 6-phase 계약 체크 활성 (CLI production path) |
+| `run_phase(state, phase)` | 단일 phase 실행 |
+| `advance_phase` / `block_run` / `retry_run` | 상태 전이 (retry는 IMPLEMENT→VERIFY 최대 3회) |
+| `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE |
+| `finalize_dogfood_result(state)` | plan allowlist 교집합만 `git add` → `scope_violations` 기록 + `AF_SKIP_REVIEW_GATE=1` commit |
+| `merge_dogfood_branch(state, policy)` | is-ancestor crash recovery → `reset --merge` → actual merge |
+
+**P0 관측성 함수 (2026-05-26 신규):**
+
+| 함수 | 역할 |
+|------|------|
+| `_append_phase_trace(state, phase, input, output, ...)` | phase 단위 10-필드 trace → `.af_runtime/dogfood/<run_id>/phase_trace.jsonl`. 필드: phase/input_keys/output_keys/critical_counts/fallback_used/llm_called/exception_type/blocked_reason/elapsed_ms/estimated_tokens |
+| `_record_run_budget(text)` | AI executor 출력을 `RunBudget.record()`에 best-effort 전달 |
+| `_run_budget_exhausted()` | `RunBudget.is_exhausted()` 래퍼 — phase loop / AI call 전후 예산 소진 체크 |
+| `_strict_contract_failure(phase, artifact)` | INTERVIEW/RESEARCH_BRIEF/SPEC/PREMORTEM/PLAN/VERIFY 6-phase 비어있으면 사유 문자열 반환; 빈 문자열이면 PASS |
+| `_pre_implement_static_smoke(plan_dict, cwd)` | IMPLEMENT 직전 scope .py 파일 `ast.parse` only — SyntaxError 조기 차단 |
+
+**CLI 진입점 (`agent_launcher.py`):**
+- `dogfood run <task> [--non-interactive] [--merge auto_policy|never|auto_merge]` → `run_all(strict_contract=True)`
+- `dogfood status <run_id>` → `load_state()` 출력
+- `dogfood merge <run_id>` → `merge_dogfood_branch()`
+- `dogfood interview <task>` → `core.interview.run_interview()` 래핑
+
+**격리 + 머지 설계:**
+- FINALIZE `scope_violations`: plan artifacts + tests_required 허용 목록 외 변경은 git add 대상 제외 + 기록
+- MERGE `require_dogfood_commit`: source_branch와 동일 SHA면 BLOCKED (no-op 머지 방지)
+- FINALIZE commit: `AF_SKIP_REVIEW_GATE=1` 인라인 env — 워크트리는 이미 3-Tier 통과 경로이므로 이중 발화 방지
+
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-26; generated_by: scripts/blueprint_updater.py -->

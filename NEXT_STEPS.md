@@ -289,10 +289,10 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
    **잔여 저우선순위**:
    - F-RUN-BUDGET-STATE: run_budget이 state.json에 미저장 (Low)
-   - Blueprint §3 수동 갱신 — core/dogfood.py 5개 신규 함수 반영 (§3 AUTO 블록으로 부분 해소)
+   - ✅ Blueprint §3 수동 갱신 — §3.13 Dogfood Pipeline 신규 섹션 추가 (5개 P0 함수 반영)
 
    **다음 진입점**:
-   - Blueprint §3 수동 갱신 OR 다음 dogfood 기능 확장
+   - 다음 dogfood 기능 확장 OR R1 end-to-end 재실험
    - `start_db.py` 이후 `projects/agent_factory/` CRLF dirty 재발 가능 → `.gitattributes` text=auto 추가 검토
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
