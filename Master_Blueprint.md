@@ -1568,6 +1568,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood_isolation.py |
 | 2026-05-26 | v1.2.34 | chore(core): code update — dogfood.py, architect.yaml, logicdev.yaml, context_schema.yaml, settings.yaml (+2) |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_launcher.py, dogfood.py, architect.yaml (+10) |

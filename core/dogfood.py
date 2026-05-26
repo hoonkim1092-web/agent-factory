@@ -480,12 +480,20 @@ def retry_run(state: DogfoodState) -> None:
 # Isolation helpers (Step 16)
 # ---------------------------------------------------------------------------
 
-def _git(args: list[str], cwd: str, check: bool = True) -> subprocess.CompletedProcess:
+def _git(
+    args: list[str],
+    cwd: str,
+    check: bool = True,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
     """Run a git command and return the result."""
+    env = _utf8_subprocess_env()
+    if extra_env:
+        env = {**env, **extra_env}
     return subprocess.run(
         ["git"] + args, cwd=cwd,
         capture_output=True, text=True, encoding="utf-8", errors="replace",
-        env=_utf8_subprocess_env(),
+        env=env,
         check=check,
     )
 
@@ -626,7 +634,11 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
     if stage_files:
         _git(["add", "--"] + stage_files, cwd=wt)
         task_summary = state.task[:72].replace('"', "'")
-        _git(["commit", "-m", f"dogfood: {task_summary}"], cwd=wt)
+        _git(
+            ["commit", "-m", f"dogfood: {task_summary}"],
+            cwd=wt,
+            extra_env={"AF_SKIP_REVIEW_GATE": "1"},
+        )
 
     # Record dogfood commit and whether a new commit was actually created
     head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
