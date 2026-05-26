@@ -106,6 +106,20 @@ def median(values: list[int | float]) -> float:
     return (s[m - 1] + s[m]) / 2.0
 
 
+def mode(values: list[int | float]) -> float:
+    """최빈값을 float로 반환한다. 동률이면 입력 리스트에서 가장 먼저 등장한 값을 반환. 빈 리스트이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 최빈값을 계산할 수 없습니다.")
+    counts: dict = {}
+    for v in values:
+        counts[v] = counts.get(v, 0) + 1
+    max_count = max(counts.values())
+    for v in values:
+        if counts[v] == max_count:
+            return float(v)
+    return float(values[0])
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
