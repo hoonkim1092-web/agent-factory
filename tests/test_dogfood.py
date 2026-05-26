@@ -429,6 +429,48 @@ def test_run_research_ignores_nonexistent_scope(tmp_path):
     assert result["local_refs"] == []
 
 
+def test_research_scope_files_filters_non_py(tmp_path):
+    """Only .py files from explicit scope are included; .md/.json filtered."""
+    from core.dogfood import _research_scope_files
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "utils.py").write_text("x = 1")
+    (tmp_path / "README.md").write_text("# docs")
+    interview = {"scope": ["core/utils.py", "README.md"]}
+    assert _research_scope_files(interview, str(tmp_path)) == ["core/utils.py"]
+
+
+def test_research_scope_files_traversal_rejected(tmp_path):
+    """Path traversal is silently filtered."""
+    from core.dogfood import _research_scope_files
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "safe.py").write_text("x = 1")
+    interview = {"scope": ["core/safe.py", "../outside.py"]}
+    result = _research_scope_files(interview, str(tmp_path))
+    assert result == ["core/safe.py"]
+
+
+def test_research_scope_files_clarification_log_fallback(tmp_path):
+    """Falls back to clarification_log when scope field is absent."""
+    from core.dogfood import _research_scope_files
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "utils.py").write_text("x = 1")
+    interview = {
+        "clarification_log": [
+            {"question": "Scope?", "answer": "core/utils.py", "category": "scope"}
+        ]
+    }
+    assert _research_scope_files(interview, str(tmp_path)) == ["core/utils.py"]
+
+
+def test_research_scope_files_intent_fallback(tmp_path):
+    """Falls back to intent parsing when scope and clarification_log are absent."""
+    from core.dogfood import _research_scope_files
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "utils.py").write_text("x = 1")
+    interview = {"goal": "core/utils.py에 함수 추가"}
+    assert _research_scope_files(interview, str(tmp_path)) == ["core/utils.py"]
+
+
 # ---------------------------------------------------------------------------
 # run_phase — SPEC
 # ---------------------------------------------------------------------------

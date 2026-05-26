@@ -931,14 +931,28 @@ def _research_load_interview(state: DogfoodState) -> dict[str, Any]:
 
 
 def _research_scope_files(interview: dict[str, Any], workspace: str) -> list[str]:
-    """Return .py files from scope that actually exist in workspace."""
+    """Return .py files from scope that actually exist in workspace.
+
+    Resolution order mirrors spec_compiler.compile_spec:
+      1. explicit ``scope`` field
+      2. ``clarification_log`` entries with category='scope' (interactive runs)
+      3. file-path tokens extracted from intent string (non-interactive runs)
+
+    All returned paths are confirmed inside *workspace* (no traversal).
+    """
+    from core.spec_compiler import _scope_from_clarification_log, _scope_from_intent  # lazy import — matches pattern used elsewhere in this file
     src = interview.get("project_brief") or interview
-    scope: list[str] = []
-    for item in src.get("scope") or []:
-        item = str(item).strip()
-        if item.endswith(".py") and Path(workspace, item).exists():
-            scope.append(item)
-    return scope
+    raw_scope: list[str] = [s for i in (src.get("scope") or []) if (s := str(i).strip()).endswith(".py")]
+    if not raw_scope:
+        raw_scope = [p for p in _scope_from_clarification_log(src) if p.endswith(".py")]
+    if not raw_scope:
+        intent = str(src.get("goal") or src.get("task_input") or "").strip()
+        raw_scope = [p for p in _scope_from_intent(intent) if p.endswith(".py")]
+    ws_resolved = Path(workspace).resolve()
+    return [
+        p for p in raw_scope
+        if Path(workspace, p).resolve().is_relative_to(ws_resolved) and Path(workspace, p).exists()
+    ]
 
 
 def _research_collect_refs(

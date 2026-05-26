@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-26 | version: v1.2.34 -->
+<!-- last_updated: 2026-05-27 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1087,9 +1087,9 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-05-26; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, test_dogfood.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1626,6 +1626,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-27 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 clamp_ratio(value: float, lo: float = 0.0, hi: float = 1.0) -> float 함수 추가. value를 [lo, hi] 범위로 클램프. test — Master_Blueprint.md, utils.py, test_utils.py |
