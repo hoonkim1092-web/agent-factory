@@ -1089,7 +1089,7 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, test_dogfood.py
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1626,6 +1626,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-27 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-05-27 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py |
 | 2026-05-26 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |

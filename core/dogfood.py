@@ -959,21 +959,23 @@ def _research_collect_refs(
     scope: list[str], workspace: str
 ) -> list[dict[str, Any]]:
     refs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    scope_set = set(scope)
     for filepath in scope:
+        if filepath in seen:
+            continue
+        seen.add(filepath)
         full = Path(workspace, filepath)
         content = full.read_text(encoding="utf-8", errors="replace")[: _RESEARCH_FILE_CAP]
         refs.append({"path": filepath, "content": content, "kind": "source"})
-        # Companion test file
-        test_path = Path(workspace, "tests", f"test_{full.name}")
-        if test_path.exists():
-            tc = test_path.read_text(encoding="utf-8", errors="replace")[: _RESEARCH_TEST_CAP]
-            refs.append(
-                {
-                    "path": str(test_path.relative_to(workspace)),
-                    "content": tc,
-                    "kind": "test",
-                }
-            )
+        # Companion test file — skip if already in scope (will be read as source above)
+        test_rel = str(Path("tests", f"test_{full.name}"))
+        if test_rel not in scope_set:
+            test_path = Path(workspace, test_rel)
+            if test_path.exists():
+                tc = test_path.read_text(encoding="utf-8", errors="replace")[: _RESEARCH_TEST_CAP]
+                refs.append({"path": test_rel, "content": tc, "kind": "test"})
+                seen.add(test_rel)
     return refs
 
 
