@@ -6560,3 +6560,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/premortem.py, tests/test_premortem.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-27 08:44 — `dogfood/1779838885-d70ad991` (69443656)
+
+**Context**: dogfood finalize: core/utils.py에 variance(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. 분산 공식: sum((x - mean)^2 for x in 
+
+**Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

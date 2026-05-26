@@ -120,6 +120,14 @@ def mode(values: list[int | float]) -> float:
     return float(values[0])
 
 
+def variance(values: list[int | float]) -> float:
+    """모집단 분산을 반환한다. 빈 리스트이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 분산을 계산할 수 없습니다.")
+    mean = sum(values) / len(values)
+    return sum((x - mean) ** 2 for x in values) / len(values)
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
