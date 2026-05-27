@@ -237,3 +237,8 @@ def build_plan(spec: CompiledSpec, premortem: PremortomResult) -> ExecutablePlan
         verification_requirements=verify_cmds,
         unresolved_risks=_unresolved_risks(premortem, spec.scope),
     )
+
+
+def implementation_steps(plan: ExecutablePlan) -> list[PlanStep]:
+    """`id`에 'IMPLEMENT'가 포함된 PlanStep만 반환한다. 없으면 빈 리스트."""
+    return [s for s in plan.steps if "IMPLEMENT" in s.id]

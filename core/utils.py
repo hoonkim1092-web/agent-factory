@@ -14,6 +14,7 @@ core/utils.py
 모든 공개 심볼을 여기서 re-export 합니다.
 """
 
+import math
 import os
 import re
 import json
@@ -126,6 +127,11 @@ def variance(values: list[int | float]) -> float:
         raise ValueError("빈 리스트에서 분산을 계산할 수 없습니다.")
     mean = sum(values) / len(values)
     return sum((x - mean) ** 2 for x in values) / len(values)
+
+
+def std_dev(values: list[int | float]) -> float:
+    """모집단 표준편차를 반환한다. 빈 리스트이면 ValueError."""
+    return math.sqrt(variance(values))
 
 
 def chunks(lst: list, n: int) -> list[list]:

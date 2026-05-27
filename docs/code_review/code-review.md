@@ -6570,3 +6570,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-27 13:35 — `dogfood/1779856158-36f37033` (778b850f)
+
+**Context**: dogfood finalize: core/utils.py에 std_dev(values: list[int | float]) -> float 함수 추가 (빈 리스트면 ValueError, variance() 활용해 math.sqrt 적용). core/
+
+**Changed (5)**: `Master_Blueprint.md, core/planner.py, core/utils.py, tests/test_planner.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

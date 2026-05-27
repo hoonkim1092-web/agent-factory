@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, chunks
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, chunks
 from core.utils import test_file_for as _test_file_for
 
 
@@ -184,6 +184,32 @@ class TestVariance:
     def test_정수_리스트(self):
         # mean = 3.0, squared diffs = 4 + 1 + 0 + 1 + 4 = 10, / 5 = 2.0
         assert variance([1, 2, 3, 4, 5]) == 2.0
+
+
+class TestStdDev:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            std_dev([])
+
+    def test_단일_원소는_0(self):
+        assert std_dev([5]) == 0.0
+
+    def test_정수_리스트(self):
+        # variance = 2.0 → std_dev = sqrt(2.0)
+        import math
+        assert std_dev([1, 2, 3, 4, 5]) == math.sqrt(2.0)
+
+    def test_부동소수점_리스트(self):
+        # mean = 2.0, squared diffs = 1+0+1 = 2, var = 2/3 → std = sqrt(2/3)
+        import math
+        assert std_dev([1.0, 2.0, 3.0]) == math.sqrt(2.0 / 3.0)
+
+    def test_동일_값_리스트는_0(self):
+        assert std_dev([7, 7, 7, 7]) == 0.0
+
+    def test_반환_타입은_float(self):
+        result = std_dev([1, 2, 3])
+        assert isinstance(result, float)
 
 
 class TestChunks:
