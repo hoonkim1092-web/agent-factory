@@ -44,6 +44,7 @@
 
 | 파일 | 역할 | 주요 클래스/함수 |
 |------|------|----------------|
+| `core/string_utils.py` | 문자열 유틸리티 | `truncate(s, max_len, suffix)` |
 | `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점. stdout/stderr `errors=replace`로 Windows/macOS 콘솔 인코딩 차이로 인한 worker 조기 종료를 방지. | `main()` |
@@ -1628,6 +1629,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-28 | v1.2.34 | feat: add core/string_utils.py — truncate() + tests/test_string_utils.py (9 cases) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
