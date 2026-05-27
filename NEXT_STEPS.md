@@ -1,7 +1,25 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — R2-1 `actual_changed` untracked 누락 버그 fix (`c0cf078d`) push 완료. 다음: R2 dogfood run 실행 or 다른 우선순위 작업. 보류 dogfood run 없음.
+> 마지막 업데이트: **2026-05-28 KST (Mac)** — R2-1 untracked fix 완료. R2 dogfood run 미완료(CRLF dirty 블로커). Windows PC 재개.
+
+### Windows PC 재개 시 첫 번째 작업
+
+```powershell
+git pull
+git restore .   # CRLF-only dirty 파일 리셋 (내용 손실 없음)
+git status --short --untracked-files=no   # 깨끗한지 확인
+python agent_launcher.py dogfood run "core/string_utils.py를 신규 파일로 작성하라: truncate(s: str, max_len: int, suffix: str = '...') -> str 함수 구현. max_len이 len(suffix) 미만이면 ValueError. tests/test_string_utils.py도 신규 작성: TestTruncate 클래스에 최소 5개 테스트." --non-interactive --merge auto-policy
+```
+
+> **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST)도 등록됨. 로컬에서 먼저 성공하면 https://claude.ai/code/routines 에서 취소 가능.
+
+### R2 dogfood run 목적
+- `core/string_utils.py` + `tests/test_string_utils.py` 두 신규 파일 생성
+- `actual_changed`에 untracked 신규 파일이 포함되는지 end-to-end 검증 (R2-1 fix 검증)
+
+### 보류 dogfood run
+없음 (R2는 아직 시작 전 — run_id 미발급)
 
 ---
 
