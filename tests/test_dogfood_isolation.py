@@ -788,6 +788,59 @@ def test_merge_policy_defaults():
 
 
 # ---------------------------------------------------------------------------
+# ISOLATE dirty check: CRLF-only filter
+# ---------------------------------------------------------------------------
+
+def test_prepare_isolated_worktree_crlf_only_passes(tmp_path):
+    """CRLF-only diff (Windows↔Mac noise) must not block ISOLATE."""
+    state = _make_state(tmp_path)
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M agents/README.md\n"  # unstaged modified (porcelain v1: XY + space)
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = ""  # CRLF-only — no real content diff
+        elif "branch" in args and "--show-current" in args:
+            r.stdout = "main"
+        elif "rev-parse" in args:
+            r.stdout = "abc1234def5678"
+        elif "worktree" in args and "add" in args:
+            wt = args[-2] if len(args) >= 3 else cwd
+            Path(wt).mkdir(parents=True, exist_ok=True)
+        else:
+            r.stdout = ""
+        return r
+
+    # Should NOT raise GitWorktreeError
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        prepare_isolated_worktree(state)
+
+    assert state.isolation_status == "ready"
+
+
+def test_prepare_isolated_worktree_real_dirty_blocks(tmp_path):
+    """Real content change (non-CRLF) must still block ISOLATE."""
+    state = _make_state(tmp_path)
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M core/dogfood.py\n"  # unstaged modified (porcelain v1: XY + space)
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "-old line\n+new line\n"  # real content diff
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        with pytest.raises(GitWorktreeError, match="dirty"):
+            prepare_isolated_worktree(state)
+
+
+# ---------------------------------------------------------------------------
 # run_all with merge_mode="never" completes
 # ---------------------------------------------------------------------------
 

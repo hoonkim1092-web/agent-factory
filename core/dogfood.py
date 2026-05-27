@@ -593,8 +593,11 @@ def prepare_isolated_worktree(state: DogfoodState) -> None:
     src = state.source_workspace
 
     # Refuse dirty source workspace (tracked changes only — untracked files are not copied to worktree)
+    # CRLF-only diffs (Windows↔Mac EOL noise) are ignored — same policy as FINALIZE.
     dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=src)
-    if dirty.stdout.strip():
+    dirty_files = [line[3:] for line in dirty.stdout.strip().splitlines() if line.strip()]
+    real_dirty = [f for f in dirty_files if not _is_crlf_only_diff(f, src)]
+    if real_dirty:
         state.isolation_status = "failed"
         raise GitWorktreeError(
             "Source workspace is dirty. Commit or stash changes before starting dogfood."
