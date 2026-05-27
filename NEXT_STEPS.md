@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Mac)** — R1 13차 COMPLETE (`1779893903-873d72fd`, merge `338dd3c2`). `range_span()` core/utils.py 추가 + TestRangeSpan 9 tests PASS. 자동 머지(auto-policy) 성공.
+> 마지막 업데이트: **2026-05-28 KST (Windows)** — ISOLATE CRLF 필터 fix (`d275fe21`, `59ca9edb`) push 완료. 다음: R2-1 dogfood run — `actual_changed` untracked 누락 버그 자기수정. 보류 dogfood run 없음.
 
 ---
 
