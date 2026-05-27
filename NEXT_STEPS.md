@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-27 KST (PM)** — reference_artifacts path-separator dedup 패치 적용. `core/planner.py:_references_for_scope_item()` 가 finding path / scope item 모두 `\`→`/` 정규화 후 비교·dedup, POSIX form 으로 emit. 회귀 테스트 2건 추가 (`test_build_plan_reference_artifacts_dedup_path_separator`, `..._scope_backslash_excludes_self`). af-test-runner PASS: planner 51/51, dogfood 99/99. R1 11차 (`c4c5c98b`) 의 minor advisory 해소.
+> 마지막 업데이트: **2026-05-27 KST (저녁, Mac)** — Mac PC 재개. R1 11차 머지 회수 불가 확정 (Windows PC `~/.af-dogfood/1779867851-3611529e/`에 갇힘, dogfood worktree·state PC-로컬 정책). CLAUDE.md "Dogfood Run PC 핸드오프 규칙" 신설(`3b9f670c`). 다음 진입점: **R1 13차 dogfood 라운드** Mac에서 시작.
 
 ---
 
@@ -322,14 +322,16 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - ✅ R1 comment step 필터 확인 — `planner.py:90 startswith("#")` 정상 차단
    - ✅ variance() 구현 + TestVariance 3개 테스트 → auto_policy merge 성공
 
-   **R1 11차 (2026-05-27) — COMPLETE** (run_id: 1779867851-3611529e, merge: never, dogfood_commit: `c4c5c98b`):
-   - ✅ multi-file scope (`core/utils.py` + `core/planner.py`) end-to-end COMPLETE
-   - ✅ R10 다중 파일 발화: verification에 `python -m py_compile core/utils.py core/planner.py` 자동 생성
-   - ✅ `reference_artifacts` end-to-end 도달: plan.json S1/S2 모두 `tests/test_<stem>.py` 채워짐
-   - ✅ `product()` + `plan_step_count()` 실 작성, 10건 신규 테스트 PASS
-   - ✅ `scope_violations: []` (selective staging 정상)
-   - 🟡 **버그 발견**: `reference_artifacts`에 path separator 중복 — Windows에서 `tests\\test_utils.py` AND `tests/test_utils.py` 둘 다 들어감. dedup이 path-normalize 없음. minor advisory.
-   - **수동 머지 대기**: `python agent_launcher.py dogfood merge 1779867851-3611529e` 실행 시 source 브랜치에 머지
+   **R1 11차 (2026-05-27) — 검증 PASS / 머지 회수 불가** (run_id: 1779867851-3611529e, merge: never, dogfood_commit: `c4c5c98b` Windows-only):
+   - ✅ 검증 결론은 이미 origin 보존 (이 본문 + 9259e2c9 dedup fix):
+     - multi-file scope (`core/utils.py` + `core/planner.py`) end-to-end OK
+     - R10 다중 파일 발화: `python -m py_compile core/utils.py core/planner.py` 자동 생성
+     - `reference_artifacts` end-to-end 도달: plan.json S1/S2 모두 `tests/test_<stem>.py` 채워짐
+     - `scope_violations: []` (selective staging 정상)
+     - path-separator dedup 버그 (`9259e2c9`로 별도 fix 완료)
+   - ❌ **머지 회수 불가**: 라운드에서 작성한 `product()` + `plan_step_count()` + 10건 테스트는 Windows PC `~/.af-dogfood/1779867851-3611529e/worktree/`의 `dogfood/1779867851-3611529e` 브랜치 commit `c4c5c98b`에만 존재. origin push 안 됨, Mac에 산출물 부재. dogfood worktree·state PC-로컬 정책상 다른 PC 회수 불가.
+   - dogfooding 검증용 dummy 함수라 production 가치 낮음 — 다음 라운드(R1 13차)에서 새 dummy로 동등 검증.
+   - 재발 방지: CLAUDE.md "Dogfood Run PC 핸드오프 규칙" 신설(`3b9f670c`) — 세션 종료 전 머지 완료 or NEXT_STEPS에 PC 식별자·worktree 경로 3줄 기록 의무.
 
    **R1 10.5차 묶음 (2026-05-27) — COMPLETE** (3-Tier WARN-only PASS, 303 tests):
    - ✅ scope-str-guard: `_research_scope_files` 가 str 입력일 때 char-iteration 방지 (`_str_list` 적용)
@@ -339,8 +341,7 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - WARN 보류 (advisory): thread-safety 이론, fixture teardown-only 패턴
 
    **다음 진입점**:
-   - R1 12차 (선택): reference_artifacts path-separator dedup 버그 수정 후 재검증
-   - R1 11차 머지: `python agent_launcher.py dogfood merge 1779867851-3611529e` (현재 worktree 유지 중)
+   - **R1 13차 dogfood 라운드** Mac에서 시작 — 새 dummy 함수(예: `range_span()`, `harmonic_mean()` 등 미존재 통계 함수) task로 `python agent_launcher.py dogfood run "<task>"` 실행. PC 식별자: `hoonkims-MacBook-Pro.local`
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
