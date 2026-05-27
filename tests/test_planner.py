@@ -303,6 +303,32 @@ def test_build_plan_reference_artifacts_no_stem_collision():
     assert impl.reference_artifacts == ["tests/test_utils.py"]
 
 
+def test_build_plan_reference_artifacts_dedup_path_separator():
+    """Windows/POSIX path separator 가 섞여도 한 번만 포함된다 (canonical=POSIX)."""
+    findings = [
+        {"path": "core/utils.py", "kind": "source"},
+        {"path": "tests\\test_utils.py", "kind": "test"},   # Windows-style
+        {"path": "tests/test_utils.py", "kind": "test"},    # POSIX-style (dup)
+    ]
+    spec = _spec(scope=["core/utils.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert impl.reference_artifacts == ["tests/test_utils.py"]
+
+
+def test_build_plan_reference_artifacts_scope_backslash_excludes_self():
+    """scope item 이 backslash 로 들어와도 자기 자신을 reference 에 끌어오지 않는다."""
+    findings = [
+        {"path": "core\\utils.py", "kind": "source"},
+        {"path": "tests/test_utils.py", "kind": "test"},
+    ]
+    spec = _spec(scope=["core/utils.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert "core/utils.py" not in impl.reference_artifacts
+    assert "core\\utils.py" not in impl.reference_artifacts
+
+
 # ---------------------------------------------------------------------------
 # build_plan — investigation steps (gaps)
 # ---------------------------------------------------------------------------

@@ -170,13 +170,18 @@ def _references_for_scope_item(
     if not research_findings:
         return []
     item_stem = Path(item).stem
+    item_norm = item.replace("\\", "/")
     refs: list[str] = []
     seen: set[str] = set()
     for finding in research_findings:
-        path = str(finding.get("path") or "").strip()
-        if not path or path == item or path in seen:
+        raw = str(finding.get("path") or "").strip()
+        if not raw:
             continue
-        # Only the canonical companion test layout qualifies as a reference.
+        # Normalize separators so Windows-style and POSIX-style entries dedup
+        # to the same canonical key (and emit POSIX form, matching repo convention).
+        path = raw.replace("\\", "/")
+        if path == item_norm or path in seen:
+            continue
         if Path(path).stem == f"test_{item_stem}":
             refs.append(path)
             seen.add(path)

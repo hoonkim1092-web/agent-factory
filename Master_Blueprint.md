@@ -1091,11 +1091,10 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+65)
+최근 자동 갱신 컨텍스트: chore(NEXT_STEPS): code update — NEXT_STEPS.md, planner.py, test_planner.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 | `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1629,6 +1628,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-27 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, planner.py, test_planner.py |
 | 2026-05-27 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+65) |
 | 2026-05-27 | v1.2.34 | feat(dogfood+planner): 묶음 3건 — (1) `_research_scope_files` str scope char-iteration 가드(`_str_list` 적용). (2) F-RUN-BUDGET-STATE: `DogfoodState`에 `budget_consumed`/`budget_max_tokens`/`budget_stopped` 필드 + `save_state`/`load_state`가 `core.run_budget` singleton 스냅샷·복원. (3) `PlanStep.reference_artifacts` 신설 + `_references_for_scope_item()` — research_findings companion test/stem-match 경로를 read-only로 노출, `_build_ai_task`가 "Reference files" 섹션 surface. tests: dogfood 99 PASS(+3 budget +1 scope-str +2 ai-task), planner 48 PASS(+4 reference). |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, utils.py, code-review.md, test_planner.py (+1) |

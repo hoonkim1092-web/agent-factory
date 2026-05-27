@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-27 KST** — R1 11차 COMPLETE (run_id 1779867851-3611529e). 다중 core/*.py scope(`core/utils.py`+`core/planner.py`) end-to-end 검증. R10 multi-file py_compile 발화 + `reference_artifacts` end-to-end 도달 확인. `product()`+`plan_step_count()` 실 작성, 10건 신규 테스트 PASS. merge: never (수동 머지 대기). 발견: reference_artifacts에 path separator 중복(`tests\\test_utils.py` + `tests/test_utils.py`) — minor.
+> 마지막 업데이트: **2026-05-27 KST (PM)** — reference_artifacts path-separator dedup 패치 적용. `core/planner.py:_references_for_scope_item()` 가 finding path / scope item 모두 `\`→`/` 정규화 후 비교·dedup, POSIX form 으로 emit. 회귀 테스트 2건 추가 (`test_build_plan_reference_artifacts_dedup_path_separator`, `..._scope_backslash_excludes_self`). af-test-runner PASS: planner 51/51, dogfood 99/99. R1 11차 (`c4c5c98b`) 의 minor advisory 해소.
 
 ---
 
