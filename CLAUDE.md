@@ -74,6 +74,13 @@
 - Claude Code 메모리(`memory/`)는 PC별 로컬 저장 — `sync_claude_memory.py`가 Supabase `claude_memory` 테이블을 통해 동기화
 - Supabase 미설정 시 `start_db`/`end_db` 실패하지 않고 경고만 출력하고 진행
 
+### Dogfood Run PC 핸드오프 규칙 (2026-05-27 추가)
+- **dogfood run의 worktree·state·dogfood_commit은 `~/.af-dogfood/<run_id>/`에 PC-로컬 저장** — git/Supabase 동기화 대상 아님. PC 이동 시 그 PC를 떠나면 회수 불가.
+- **세션 종료 전 진행 중인 dogfood run은 둘 중 하나로 처리 의무**:
+  1. **머지까지 완료**: `python agent_launcher.py dogfood merge <run_id>` → `git push` (권장)
+  2. **명시 보류**: NEXT_STEPS.md에 `보류 dogfood run: <run_id>`, `발생 PC: $(hostname)`, `worktree 경로: ~/.af-dogfood/<run_id>/worktree` 3줄 기록. 다른 PC 재개 시 회수 불가는 사용자가 사전 인지.
+- 미완료 머지 + PC 식별자 기록 누락 = 해당 라운드 산출물 회수 불가능 (Windows R1 11차 `1779867851-3611529e`가 그 사례).
+
 ### Master_Blueprint.md 참조 의무
 - **코드 수정 전**: `Master_Blueprint.md`의 해당 §섹션을 먼저 읽어 의존성과 영향 범위를 파악한다
 - **코드 수정 후**: 변경된 파일에 해당하는 섹션(§0~§11)과 §12 변경 이력을 **같은 커밋**에서 업데이트한다
