@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-27 | version: v1.2.34 -->
+<!-- last_updated: 2026-05-28 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -208,7 +208,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1089,13 +1089,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-05-28; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(NEXT_STEPS): code update — NEXT_STEPS.md, planner.py, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): dogfood finalize: core/utils.py 에 range_span(values: list[int \| float]) -> float 함수 추가. max(values) - min(values) 반환. 빈 리스트면 ValueError 발생 — Master_Blueprint.md, utils.py, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1628,6 +1628,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-28 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py 에 range_span(values: list[int | float]) -> float 함수 추가. max(values) - min(values) 반환. 빈 리스트면 ValueError 발생 — Master_Blueprint.md, utils.py, test_utils.py |
+| 2026-05-27 | v1.2.34 | feat(utils): `range_span(values)` 신설 — 최댓값과 최솟값의 차이를 float로 반환. 빈 리스트이면 ValueError. `tests/test_utils.py` TestRangeSpan 신규 (≥3건). §0 갱신. |
 | 2026-05-27 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, planner.py, test_planner.py |
 | 2026-05-27 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, GEMINI.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, NEXT_STEPS.md (+65) |
 | 2026-05-27 | v1.2.34 | feat(dogfood+planner): 묶음 3건 — (1) `_research_scope_files` str scope char-iteration 가드(`_str_list` 적용). (2) F-RUN-BUDGET-STATE: `DogfoodState`에 `budget_consumed`/`budget_max_tokens`/`budget_stopped` 필드 + `save_state`/`load_state`가 `core.run_budget` singleton 스냅샷·복원. (3) `PlanStep.reference_artifacts` 신설 + `_references_for_scope_item()` — research_findings companion test/stem-match 경로를 read-only로 노출, `_build_ai_task`가 "Reference files" 섹션 surface. tests: dogfood 99 PASS(+3 budget +1 scope-str +2 ai-task), planner 48 PASS(+4 reference). |

@@ -134,6 +134,13 @@ def std_dev(values: list[int | float]) -> float:
     return math.sqrt(variance(values))
 
 
+def range_span(values: list[int | float]) -> float:
+    """최댓값과 최솟값의 차이를 float로 반환한다. 빈 리스트이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 범위를 계산할 수 없습니다.")
+    return float(max(values) - min(values))
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
