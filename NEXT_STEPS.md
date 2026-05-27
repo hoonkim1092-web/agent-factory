@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-27 KST** — 묶음 3건 코드 수정 COMPLETE: (1) scope-str 가드, (2) F-RUN-BUDGET-STATE, (3) planner reference_artifacts. 3-Tier WARN-only PASS (303 tests). 다음: R1 11차 다중 core/*.py scope 검증 + reference_artifacts end-to-end 발화 확인.
+> 마지막 업데이트: **2026-05-27 KST** — R1 11차 COMPLETE (run_id 1779867851-3611529e). 다중 core/*.py scope(`core/utils.py`+`core/planner.py`) end-to-end 검증. R10 multi-file py_compile 발화 + `reference_artifacts` end-to-end 도달 확인. `product()`+`plan_step_count()` 실 작성, 10건 신규 테스트 PASS. merge: never (수동 머지 대기). 발견: reference_artifacts에 path separator 중복(`tests\\test_utils.py` + `tests/test_utils.py`) — minor.
 
 ---
 
@@ -322,6 +322,15 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - ✅ R1 comment step 필터 확인 — `planner.py:90 startswith("#")` 정상 차단
    - ✅ variance() 구현 + TestVariance 3개 테스트 → auto_policy merge 성공
 
+   **R1 11차 (2026-05-27) — COMPLETE** (run_id: 1779867851-3611529e, merge: never, dogfood_commit: `c4c5c98b`):
+   - ✅ multi-file scope (`core/utils.py` + `core/planner.py`) end-to-end COMPLETE
+   - ✅ R10 다중 파일 발화: verification에 `python -m py_compile core/utils.py core/planner.py` 자동 생성
+   - ✅ `reference_artifacts` end-to-end 도달: plan.json S1/S2 모두 `tests/test_<stem>.py` 채워짐
+   - ✅ `product()` + `plan_step_count()` 실 작성, 10건 신규 테스트 PASS
+   - ✅ `scope_violations: []` (selective staging 정상)
+   - 🟡 **버그 발견**: `reference_artifacts`에 path separator 중복 — Windows에서 `tests\\test_utils.py` AND `tests/test_utils.py` 둘 다 들어감. dedup이 path-normalize 없음. minor advisory.
+   - **수동 머지 대기**: `python agent_launcher.py dogfood merge 1779867851-3611529e` 실행 시 source 브랜치에 머지
+
    **R1 10.5차 묶음 (2026-05-27) — COMPLETE** (3-Tier WARN-only PASS, 303 tests):
    - ✅ scope-str-guard: `_research_scope_files` 가 str 입력일 때 char-iteration 방지 (`_str_list` 적용)
    - ✅ F-RUN-BUDGET-STATE: `DogfoodState`에 `budget_consumed`/`budget_max_tokens`/`budget_stopped`/`budget_project_id` 필드 + `_snapshot_run_budget`/`_restore_run_budget` 페어로 `save_state`/`load_state`가 `core.run_budget` singleton 4-필드 영속화
@@ -330,7 +339,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - WARN 보류 (advisory): thread-safety 이론, fixture teardown-only 패턴
 
    **다음 진입점**:
-   - R1 11차: 다중 core/*.py scope 태스크로 R10 다중 파일 경로 + `reference_artifacts` end-to-end 발화 검증
+   - R1 12차 (선택): reference_artifacts path-separator dedup 버그 수정 후 재검증
+   - R1 11차 머지: `python agent_launcher.py dogfood merge 1779867851-3611529e` (현재 worktree 유지 중)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
