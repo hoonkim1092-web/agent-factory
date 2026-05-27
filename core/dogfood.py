@@ -557,11 +557,14 @@ def _git(
 def _is_crlf_only_diff(filepath: str, cwd: str) -> bool:
     """Return True iff the only diff for filepath is CR/LF line-ending noise.
 
-    Uses --ignore-cr-at-eol so whitespace/content changes still produce output.
-    Only suppresses the specific Windows CRLF↔LF mismatch git reports.
+    Tries --ignore-cr-at-eol first; falls back to -b (ignore EOL whitespace)
+    for Windows git versions where --ignore-cr-at-eol does not suppress CRLF diffs.
     """
     r = _git(["diff", "--ignore-cr-at-eol", "--", filepath], cwd=cwd, check=False)
-    return r.returncode == 0 and not r.stdout.strip()
+    if r.returncode == 0 and not r.stdout.strip():
+        return True
+    r2 = _git(["diff", "-b", "--", filepath], cwd=cwd, check=False)
+    return r2.returncode == 0 and not r2.stdout.strip()
 
 
 def _safe_to_cleanup_partial_isolation(state: DogfoodState) -> bool:

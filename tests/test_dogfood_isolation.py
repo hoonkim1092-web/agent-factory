@@ -226,8 +226,8 @@ def test_finalize_records_dogfood_commit(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
-            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py"
         elif "diff" in args and "--name-only" in args:
@@ -272,8 +272,8 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
-            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py"  # committed file after commit
         elif "diff" in args and "--name-only" in args:
@@ -321,8 +321,8 @@ def test_finalize_runs_final_docs_sync_before_staging(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
-            r.stdout = "real content change"
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py\nMaster_Blueprint.md\ndocs/code_review/code-review.md"
         elif "diff" in args and "--name-only" in args:
@@ -371,8 +371,8 @@ def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
-            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py\nrun_output.txt"
         elif "diff" in args and "--name-only" in args:
@@ -537,7 +537,7 @@ def test_finalize_crlf_only_files_excluded_from_scope_violations(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
             filepath = args[-1]
             # core/utils.py has real changes; syncCompyne/foo.py is CRLF-only
             r.stdout = "" if "syncCompyne" in filepath else "real diff output"
@@ -829,8 +829,8 @@ def test_prepare_isolated_worktree_real_dirty_blocks(tmp_path):
         r.returncode = 0
         if "status" in args and "--porcelain" in args:
             r.stdout = " M core/dogfood.py\n"  # unstaged modified (porcelain v1: XY + space)
-        elif "diff" in args and "--ignore-cr-at-eol" in args:
-            r.stdout = "-old line\n+new line\n"  # real content diff
+        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+            r.stdout = "-old line\n+new line\n"  # real content diff (both fallback paths)
         else:
             r.stdout = ""
         return r

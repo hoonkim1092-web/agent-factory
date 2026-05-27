@@ -1629,6 +1629,7 @@ model_utils.py (독립 모듈)
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
+| 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
 | 2026-05-28 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py 에 range_span(values: list[int | float]) -> float 함수 추가. max(values) - min(values) 반환. 빈 리스트면 ValueError 발생 — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-27 | v1.2.34 | feat(utils): `range_span(values)` 신설 — 최댓값과 최솟값의 차이를 float로 반환. 빈 리스트이면 ValueError. `tests/test_utils.py` TestRangeSpan 신규 (≥3건). §0 갱신. |
 | 2026-05-27 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, planner.py, test_planner.py |
