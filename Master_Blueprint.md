@@ -151,7 +151,7 @@
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
-| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. | `ExecutablePlan`, `PlanStep`, `build_plan()` |
+| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()` |
 | `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
@@ -208,7 +208,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1089,10 +1089,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-27; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, utils.py, code-review.md, test_planner.py (+1)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
+| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1626,6 +1627,10 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, utils.py, code-review.md, test_planner.py (+1) |
+| 2026-05-27 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 std_dev(values: list[int | float]) -> float 함수 추가 (빈 리스트면 ValueError, variance() 활용해 math.sqrt 적용). core/ — Master_Blueprint.md, planner.py, utils.py, test_planner.py, test_utils.py |
+| 2026-05-27 | v1.2.34 | feat(planner): `implementation_steps(plan)` 헬퍼 신설 — `plan.steps` 중 `id`에 'IMPLEMENT' 포함 step만 필터, 없으면 빈 리스트. case-sensitive 매칭. `tests/test_planner.py` TestImplementationSteps 6건 신규. §0 갱신. |
+| 2026-05-27 | v1.2.34 | feat(utils): `std_dev(values)` 신설 — 모집단 표준편차를 float로 반환. `variance()` 위에 `math.sqrt` 적용. 빈 리스트이면 ValueError. `tests/test_utils.py` TestStdDev 6건 신규. §0 갱신. |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 variance(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. 분산 공식: sum((x - mean)^2 for x in  — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-27 | v1.2.34 | chore(core): code update — premortem.py, test_premortem.py |

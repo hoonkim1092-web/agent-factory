@@ -9,6 +9,7 @@ from core.planner import (
     ExecutablePlan,
     PlanStep,
     build_plan,
+    implementation_steps,
     _test_file_for,
     _collect_verification_commands,
     _collect_approval_points,
@@ -360,3 +361,49 @@ def test_build_plan_to_dict_round_trip():
     d = plan.to_dict()
     assert isinstance(d["steps"], list)
     assert d["completion_criteria"] == ["done"]
+
+
+# ---------------------------------------------------------------------------
+# implementation_steps
+# ---------------------------------------------------------------------------
+
+class TestImplementationSteps:
+    def test_returns_empty_for_empty_plan(self):
+        plan = ExecutablePlan(intent="x")
+        assert implementation_steps(plan) == []
+
+    def test_returns_empty_when_no_implement_id(self):
+        plan = ExecutablePlan(intent="x", steps=[
+            PlanStep(id="S1", action="research", target="research"),
+            PlanStep(id="S2", action="verify", target="verification"),
+        ])
+        assert implementation_steps(plan) == []
+
+    def test_filters_only_implement_ids(self):
+        impl_a = PlanStep(id="IMPLEMENT_1", action="impl a", target="core/a.py")
+        impl_b = PlanStep(id="STEP_IMPLEMENT_B", action="impl b", target="core/b.py")
+        other = PlanStep(id="S1", action="other", target="research")
+        plan = ExecutablePlan(intent="x", steps=[impl_a, other, impl_b])
+        result = implementation_steps(plan)
+        assert result == [impl_a, impl_b]
+
+    def test_preserves_step_order(self):
+        steps = [
+            PlanStep(id="IMPLEMENT_3", action="3", target="c"),
+            PlanStep(id="IMPLEMENT_1", action="1", target="a"),
+            PlanStep(id="IMPLEMENT_2", action="2", target="b"),
+        ]
+        plan = ExecutablePlan(intent="x", steps=steps)
+        result = implementation_steps(plan)
+        assert [s.id for s in result] == ["IMPLEMENT_3", "IMPLEMENT_1", "IMPLEMENT_2"]
+
+    def test_case_sensitive_match(self):
+        # 'implement' (lowercase) must NOT match 'IMPLEMENT'.
+        plan = ExecutablePlan(intent="x", steps=[
+            PlanStep(id="implement_1", action="lower", target="core/a.py"),
+        ])
+        assert implementation_steps(plan) == []
+
+    def test_returns_list_type(self):
+        plan = ExecutablePlan(intent="x")
+        assert isinstance(implementation_steps(plan), list)
