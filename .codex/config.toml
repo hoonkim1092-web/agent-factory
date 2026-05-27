@@ -1,0 +1,18 @@
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+
+# Shared repo-local defaults only.
+#
+# Do not add [projects.'...'] trust entries here. Codex project trust is keyed
+# by each machine's absolute checkout path, so Windows/Mac/worktree paths cannot
+# be shared safely from this file. Add the local agent-factory path to each
+# machine's ~/.codex/config.toml instead.
+#
+# Example:
+# [projects.'D:\path\to\agent-factory']
+# trust_level = "trusted"
+# [projects.'/Users/hoon/path/to/agent-factory']
+# trust_level = "trusted"
+
+[windows]
+sandbox = "elevated"
