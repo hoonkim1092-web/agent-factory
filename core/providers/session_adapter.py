@@ -625,7 +625,7 @@ def _hook_output(
 ) -> dict[str, Any] | None:
     if not context:
         return None
-    if provider_base == "claude" and event_name in {"SessionStart", "UserPromptSubmit"}:
+    if provider_base == "claude" and event_name == "SessionStart":
         return {
             "hookSpecificOutput": {
                 "hookEventName": event_name,

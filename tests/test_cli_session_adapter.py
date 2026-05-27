@@ -335,7 +335,7 @@ def test_handle_hook_event_writes_surrogate_payload_safely(tmp_path: Path):
         / "cli_sessions"
         / "claude_cli_run_claude_surrogate_events.jsonl"
     )
-    assert output is not None
+    assert output is None
     assert events_path.exists()
     assert "\\udcec" in events_path.read_text(encoding="utf-8")
     assert "한글-ok" in (workspace / "resume_brief.md").read_text(encoding="utf-8")
