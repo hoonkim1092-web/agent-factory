@@ -796,6 +796,35 @@ def test_run_implement_ai_output_records_run_budget(tmp_path, monkeypatch):
     set_run_budget(0)
 
 
+def test_run_implement_new_untracked_file_included_in_actual_changed(tmp_path, monkeypatch):
+    """Executor가 새 파일을 생성하면 actual_changed에 포함되어야 한다 (untracked 누락 버그 회귀)."""
+    import core.dogfood as df
+    import subprocess
+
+    ls_files_calls = {"n": 0}
+
+    def fake_git(args, cwd, check=True, extra_env=None):
+        r = subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[:2] == ["rev-parse", "HEAD"]:
+            r.stdout = "deadbeef"
+        elif args[0] == "ls-files":
+            ls_files_calls["n"] += 1
+            # pre-execution call: empty; post-execution call: new_file.py appeared
+            r.stdout = "" if ls_files_calls["n"] == 1 else "new_file.py"
+        # diff calls return empty (no committed/staged changes)
+        return r
+
+    monkeypatch.setattr(df, "_git", fake_git)
+    monkeypatch.setattr(df, "_command_runner", _make_runner({"touch new_file.py": True}))
+    state = _state(tmp_path, phase=DogfoodPhase.IMPLEMENT)
+    plan = _plan_dict([_step("S1", commands=["touch new_file.py"])])
+
+    result = run_phase(state, context={"plan_dict": plan})
+
+    assert result["ok"] is True
+    assert "new_file.py" in result["actual_changed"]
+
+
 def test_strict_contract_blocks_empty_research_brief_and_premortem():
     import core.dogfood as df
 

@@ -1180,6 +1180,13 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
         _pre_sha = _git(["rev-parse", "HEAD"], cwd=cwd, check=False).stdout.strip()
     except (OSError, FileNotFoundError):
         _pre_sha = ""
+    # Capture untracked files before execution so new files created during IMPLEMENT are detected.
+    try:
+        _pre_untracked = set(
+            _git(["ls-files", "--others", "--exclude-standard"], cwd=cwd, check=False).stdout.splitlines()
+        )
+    except (OSError, FileNotFoundError):
+        _pre_untracked = set()
 
     executed: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -1213,9 +1220,16 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
     if _pre_sha:
         _post = _git(["diff", "--name-only", f"{_pre_sha}..HEAD"], cwd=cwd, check=False)
         _unstaged = _git(["diff", "--name-only", "HEAD"], cwd=cwd, check=False)
+        try:
+            _post_untracked = set(
+                _git(["ls-files", "--others", "--exclude-standard"], cwd=cwd, check=False).stdout.splitlines()
+            )
+        except (OSError, FileNotFoundError):
+            _post_untracked = set()
+        _new_untracked = _post_untracked - _pre_untracked
         actual_changed = sorted({
             f for f in (_post.stdout + "\n" + _unstaged.stdout).splitlines() if f
-        })
+        } | _new_untracked)
     else:
         actual_changed = []
 
