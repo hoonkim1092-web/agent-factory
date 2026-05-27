@@ -1,7 +1,7 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-27 KST (저녁, Mac)** — Mac PC 재개. R1 11차 머지 회수 불가 확정 (Windows PC `~/.af-dogfood/1779867851-3611529e/`에 갇힘, dogfood worktree·state PC-로컬 정책). CLAUDE.md "Dogfood Run PC 핸드오프 규칙" 신설(`3b9f670c`). 다음 진입점: **R1 13차 dogfood 라운드** Mac에서 시작.
+> 마지막 업데이트: **2026-05-28 KST (Mac)** — R1 13차 COMPLETE (`1779893903-873d72fd`, merge `338dd3c2`). `range_span()` core/utils.py 추가 + TestRangeSpan 9 tests PASS. 자동 머지(auto-policy) 성공.
 
 ---
 
@@ -340,8 +340,15 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
    - WARN 흡수: af-critic stem-collision (sibling source 차단) + project_id 손실, af-cross-review §3.13 심볼 누락
    - WARN 보류 (advisory): thread-safety 이론, fixture teardown-only 패턴
 
+   **R1 13차 (2026-05-28) — COMPLETE** (run_id: 1779893903-873d72fd, merge: `338dd3c2`, dogfood_commit: `0e9d9ce4`, PC: `hoonkims-MacBook-Pro.local`):
+   - ✅ `range_span(values: list[int | float]) -> float` core/utils.py 추가 — max-min, 빈 리스트 ValueError
+   - ✅ TestRangeSpan 9 tests PASS (싱글톤, 정수 리스트, 부동소수, 음수 포함, 음수만, 동일값, 미정렬, 반환 타입 float, ValueError 케이스)
+   - ✅ auto-policy 자동 머지: blueprint + code-review 문서 자동 동기화, source 브랜치 fast-forward 머지
+   - ✅ PC 핸드오프 규칙 첫 실전 사이클 — Mac 단일 세션에서 시작·머지·push 완료, R1 11차 미회수 패턴 재발 없음
+   - 1차 시도 실패 부산물: CRLF 정규화 chore 커밋(`4153b013`) — Windows→Mac pull 부산물 dirty 해소
+
    **다음 진입점**:
-   - **R1 13차 dogfood 라운드** Mac에서 시작 — 새 dummy 함수(예: `range_span()`, `harmonic_mean()` 등 미존재 통계 함수) task로 `python agent_launcher.py dogfood run "<task>"` 실행. PC 식별자: `hoonkims-MacBook-Pro.local`
+   - 별도 작업 시작 시 NEXT_STEPS 라인 4 갱신 후 진입 (보류 dogfood run 없음)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
