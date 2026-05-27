@@ -28,6 +28,7 @@ def _spec(
     constraints=None,
     approval_policy="",
     gaps=None,
+    research_findings=None,
 ) -> CompiledSpec:
     return CompiledSpec(
         intent=intent,
@@ -36,6 +37,7 @@ def _spec(
         constraints=constraints or [],
         approval_policy=approval_policy,
         gaps=gaps or [],
+        research_findings=research_findings or [],
     )
 
 
@@ -60,7 +62,7 @@ def test_plan_step_to_dict_keys():
         tests_required=["tests/test_foo.py"], artifacts=["core/foo.py"], depends_on=[],
     )
     d = step.to_dict()
-    assert set(d.keys()) == {"id", "action", "target", "tests_required", "artifacts", "depends_on", "commands"}
+    assert set(d.keys()) == {"id", "action", "target", "tests_required", "artifacts", "depends_on", "commands", "reference_artifacts"}
 
 
 def test_executable_plan_to_dict_keys():
@@ -228,6 +230,77 @@ def test_build_plan_non_core_py_excludes_blueprint():
     for step in plan.steps:
         if step.target in ("run_factory_cli.py", "scripts/build.py"):
             assert "Master_Blueprint.md" not in step.artifacts
+
+
+# ---------------------------------------------------------------------------
+# reference_artifacts (research_findings injection)
+# ---------------------------------------------------------------------------
+
+def test_build_plan_reference_artifacts_includes_companion_test():
+    """research_findings 의 companion test 가 reference_artifacts 로 노출된다."""
+    findings = [
+        {"path": "core/utils.py", "kind": "source"},
+        {"path": "tests/test_utils.py", "kind": "test"},
+    ]
+    spec = _spec(scope=["core/utils.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert "tests/test_utils.py" in impl.reference_artifacts
+    # scope item itself must not appear in reference_artifacts (already in artifacts)
+    assert "core/utils.py" not in impl.reference_artifacts
+
+
+def test_build_plan_reference_artifacts_empty_when_no_findings():
+    """research_findings 가 비어있으면 reference_artifacts 도 빈 리스트."""
+    spec = _spec(scope=["core/utils.py"])
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert impl.reference_artifacts == []
+
+
+def test_build_plan_reference_artifacts_per_scope_item():
+    """다중 core/*.py scope — 각 step 이 자기 companion test 만 받는다."""
+    findings = [
+        {"path": "core/utils.py", "kind": "source"},
+        {"path": "tests/test_utils.py", "kind": "test"},
+        {"path": "core/premortem.py", "kind": "source"},
+        {"path": "tests/test_premortem.py", "kind": "test"},
+    ]
+    spec = _spec(scope=["core/utils.py", "core/premortem.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    utils_step = next(s for s in plan.steps if s.target == "core/utils.py")
+    pre_step = next(s for s in plan.steps if s.target == "core/premortem.py")
+    assert utils_step.reference_artifacts == ["tests/test_utils.py"]
+    assert pre_step.reference_artifacts == ["tests/test_premortem.py"]
+
+
+def test_build_plan_reference_artifacts_ignores_unrelated():
+    """무관한 finding 경로는 reference_artifacts 에 포함되지 않는다."""
+    findings = [
+        {"path": "core/utils.py", "kind": "source"},
+        {"path": "docs/random.md", "kind": "doc"},
+    ]
+    spec = _spec(scope=["core/utils.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert "docs/random.md" not in impl.reference_artifacts
+
+
+def test_build_plan_reference_artifacts_no_stem_collision():
+    """동일 stem 다른 경로(`scripts/utils.py` vs `core/utils.py`) 는 reference 에서 제외된다.
+
+    WARN-fix 회귀 가드: companion test 만 매칭하므로 `scripts/utils.py` 같은 sibling
+    소스가 잘못 끌려오지 않는다.
+    """
+    findings = [
+        {"path": "core/utils.py", "kind": "source"},
+        {"path": "scripts/utils.py", "kind": "source"},   # 동일 stem, 무관한 모듈
+        {"path": "tests/test_utils.py", "kind": "test"},
+    ]
+    spec = _spec(scope=["core/utils.py"], research_findings=findings)
+    plan = build_plan(spec, _premortem())
+    impl = next(s for s in plan.steps if s.target == "core/utils.py")
+    assert impl.reference_artifacts == ["tests/test_utils.py"]
 
 
 # ---------------------------------------------------------------------------

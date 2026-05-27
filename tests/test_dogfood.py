@@ -117,6 +117,7 @@ def test_state_to_dict_keys(tmp_path):
         "interview_path", "research_brief_path", "research_path", "spec_path", "plan_path",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria",
+        "budget_consumed", "budget_max_tokens", "budget_stopped", "budget_project_id",
     }
     assert required == set(d.keys())
 
@@ -199,6 +200,99 @@ def test_state_path_structure(tmp_path):
     assert path.name == "dogfood_state.json"
     assert path.parent.name == "myrun"
     assert path.parent.parent.name == "dogfood"
+
+
+@pytest.fixture
+def reset_run_budget():
+    """Isolate run_budget singleton between tests — restore to unlimited default after each."""
+    from core.run_budget import set_run_budget
+    yield
+    set_run_budget(0)  # back to unlimited/clean default
+
+
+def test_save_state_snapshots_run_budget(tmp_path, reset_run_budget):
+    """F-RUN-BUDGET-STATE: save_state snapshots core.run_budget singleton."""
+    from core.run_budget import set_run_budget, get_run_budget
+    set_run_budget(1000, run_id="test-budget-run")
+    get_run_budget().record("x" * 400)  # ~100 tokens (400 chars / 4)
+    state = _state(tmp_path)
+    save_state(state)
+    loaded = load_state(state.runtime_workspace, state.run_id)
+    assert loaded.budget_consumed == 100
+    assert loaded.budget_max_tokens == 1000
+    assert loaded.budget_stopped is False
+
+
+def test_load_state_restores_run_budget_singleton(tmp_path, reset_run_budget):
+    """F-RUN-BUDGET-STATE: load_state re-hydrates run_budget singleton from state."""
+    from core.run_budget import set_run_budget, get_run_budget
+    # First run: accumulate some budget then persist
+    set_run_budget(1000, run_id="test-restore")
+    get_run_budget().record("y" * 800)  # 200 tokens
+    state = _state(tmp_path)
+    save_state(state)
+    # Simulate process restart: clear the singleton
+    set_run_budget(0)
+    assert get_run_budget().consumed == 0
+    # Load: singleton must be restored
+    load_state(state.runtime_workspace, state.run_id)
+    restored = get_run_budget()
+    assert restored.consumed == 200
+    assert restored.max_tokens == 1000
+
+
+def test_build_ai_task_includes_reference_artifacts():
+    """_build_ai_task surfaces reference_artifacts as read-only context."""
+    from core.dogfood import _build_ai_task
+    step = {
+        "id": "S2",
+        "action": "Implement core/utils.py",
+        "target": "core/utils.py",
+        "artifacts": ["core/utils.py", "Master_Blueprint.md"],
+        "reference_artifacts": ["tests/test_utils.py"],
+        "tests_required": ["tests/test_utils.py"],
+    }
+    text = _build_ai_task(step, "Add median()")
+    assert "Reference files (read-only" in text
+    assert "tests/test_utils.py" in text
+
+
+def test_build_ai_task_omits_reference_section_when_empty():
+    """No reference_artifacts → no reference section in prompt."""
+    from core.dogfood import _build_ai_task
+    step = {
+        "id": "S1",
+        "action": "Implement core/foo.py",
+        "artifacts": ["core/foo.py"],
+        "reference_artifacts": [],
+    }
+    text = _build_ai_task(step, "intent")
+    assert "Reference files" not in text
+
+
+def test_save_state_preserves_stopped_flag(tmp_path, reset_run_budget):
+    """F-RUN-BUDGET-STATE: budget_stopped survives roundtrip."""
+    from core.run_budget import set_run_budget, get_run_budget
+    set_run_budget(100, run_id="test-stop")
+    get_run_budget().record("z" * 500)  # 125 tokens > 100 = stopped
+    assert get_run_budget().stopped is True
+    state = _state(tmp_path)
+    save_state(state)
+    set_run_budget(0)  # reset
+    load_state(state.runtime_workspace, state.run_id)
+    assert get_run_budget().stopped is True
+
+
+def test_save_state_preserves_project_id(tmp_path, reset_run_budget):
+    """F-RUN-BUDGET-STATE: budget project_id 가 save→load roundtrip 후 보존된다."""
+    from core.run_budget import set_run_budget, get_run_budget
+    set_run_budget(1000, run_id="test-pid", project_id="agent-factory")
+    get_run_budget().record("a" * 200)
+    state = _state(tmp_path)
+    save_state(state)
+    set_run_budget(0)  # simulate restart
+    load_state(state.runtime_workspace, state.run_id)
+    assert get_run_budget().project_id == "agent-factory"
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +562,15 @@ def test_research_scope_files_intent_fallback(tmp_path):
     (tmp_path / "core").mkdir()
     (tmp_path / "core" / "utils.py").write_text("x = 1")
     interview = {"goal": "core/utils.py에 함수 추가"}
+    assert _research_scope_files(interview, str(tmp_path)) == ["core/utils.py"]
+
+
+def test_research_scope_files_string_scope_not_char_iterated(tmp_path):
+    """scope가 str로 들어와도 char 단위 순회 없이 단일 항목으로 처리됨."""
+    from core.dogfood import _research_scope_files
+    (tmp_path / "core").mkdir()
+    (tmp_path / "core" / "utils.py").write_text("x = 1")
+    interview = {"scope": "core/utils.py"}
     assert _research_scope_files(interview, str(tmp_path)) == ["core/utils.py"]
 
 

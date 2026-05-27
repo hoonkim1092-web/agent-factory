@@ -33,6 +33,9 @@ class PlanStep:
     artifacts: list[str] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
     commands: list[str] = field(default_factory=list)
+    # Read-only context paths pulled from research_findings — AI executor should
+    # consult these for existing patterns but not modify them.
+    reference_artifacts: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +46,7 @@ class PlanStep:
             "artifacts": self.artifacts,
             "depends_on": self.depends_on,
             "commands": self.commands,
+            "reference_artifacts": self.reference_artifacts,
         }
 
 
@@ -153,18 +157,47 @@ def _build_investigation_steps(
     return steps
 
 
+def _references_for_scope_item(
+    item: str,
+    research_findings: list[dict],
+) -> list[str]:
+    """Collect research_findings paths related to *item* but not the item itself.
+
+    Surfaces only the conventional companion test path (`tests/test_<stem>.py`)
+    to avoid false positives from same-stem siblings in unrelated directories
+    (e.g. `core/utils.py` would otherwise drag in `scripts/utils.py`).
+    """
+    if not research_findings:
+        return []
+    item_stem = Path(item).stem
+    refs: list[str] = []
+    seen: set[str] = set()
+    for finding in research_findings:
+        path = str(finding.get("path") or "").strip()
+        if not path or path == item or path in seen:
+            continue
+        # Only the canonical companion test layout qualifies as a reference.
+        if Path(path).stem == f"test_{item_stem}":
+            refs.append(path)
+            seen.add(path)
+    return refs
+
+
 def _build_implementation_steps(
     scope: list[str],
     investigation_ids: list[str],
     counter: list[int],
+    research_findings: list[dict] | None = None,
 ) -> list[PlanStep]:
     """One step per scope item; each depends on all investigation steps."""
     steps: list[PlanStep] = []
+    findings = research_findings or []
     for item in scope:
         test = _test_file_for(item)
         artifacts = [item]
         if re.match(r"core/[^/]+\.py$", item):
             artifacts.append("Master_Blueprint.md")
+        references = _references_for_scope_item(item, findings)
         steps.append(PlanStep(
             id=f"S{counter[0]}",
             action=f"Implement {item}",
@@ -172,6 +205,7 @@ def _build_implementation_steps(
             tests_required=[test] if test else [],
             artifacts=artifacts,
             depends_on=list(investigation_ids),
+            reference_artifacts=references,
         ))
         counter[0] += 1
     return steps
@@ -213,7 +247,9 @@ def build_plan(spec: CompiledSpec, premortem: PremortomResult) -> ExecutablePlan
     investigation = _build_investigation_steps(premortem, counter)
     inv_ids = [s.id for s in investigation]
 
-    implementation = _build_implementation_steps(spec.scope, inv_ids, counter)
+    implementation = _build_implementation_steps(
+        spec.scope, inv_ids, counter, spec.research_findings
+    )
     impl_ids = [s.id for s in implementation]
 
     verify_cmds = _collect_verification_commands(premortem)

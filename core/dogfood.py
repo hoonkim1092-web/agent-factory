@@ -134,6 +134,12 @@ class DogfoodState:
     approval_policy: str = ""
     completion_criteria: list[str] = field(default_factory=list)
 
+    # F-RUN-BUDGET-STATE: snapshot of core.run_budget singleton for restart survival
+    budget_consumed: int = 0
+    budget_max_tokens: int = 0
+    budget_stopped: bool = False
+    budget_project_id: str = ""
+
     @property
     def workspace(self) -> str:
         """Backward-compat alias for source_workspace."""
@@ -175,6 +181,10 @@ class DogfoodState:
             "next_action": self.next_action,
             "approval_policy": self.approval_policy,
             "completion_criteria": self.completion_criteria,
+            "budget_consumed": self.budget_consumed,
+            "budget_max_tokens": self.budget_max_tokens,
+            "budget_stopped": self.budget_stopped,
+            "budget_project_id": self.budget_project_id,
         }
 
     @classmethod
@@ -206,6 +216,10 @@ class DogfoodState:
             next_action=data.get("next_action", ""),
             approval_policy=data.get("approval_policy", ""),
             completion_criteria=data.get("completion_criteria", []),
+            budget_consumed=int(data.get("budget_consumed", 0) or 0),
+            budget_max_tokens=int(data.get("budget_max_tokens", 0) or 0),
+            budget_stopped=bool(data.get("budget_stopped", False)),
+            budget_project_id=data.get("budget_project_id", "") or "",
         )
 
 
@@ -303,6 +317,9 @@ def _build_ai_task(step: dict[str, Any], plan_intent: str) -> str:
     artifacts = step.get("artifacts") or []
     if artifacts:
         parts.append(f"Files to create/modify: {', '.join(artifacts)}")
+    references = step.get("reference_artifacts") or []
+    if references:
+        parts.append(f"Reference files (read-only context for existing patterns): {', '.join(references)}")
     tests = step.get("tests_required") or []
     if tests:
         parts.append(f"Tests required: {', '.join(tests)}")
@@ -394,8 +411,42 @@ def _state_path(state: DogfoodState) -> Path:
     return Path(state.runtime_workspace) / "dogfood" / state.run_id / "dogfood_state.json"
 
 
+def _snapshot_run_budget(state: DogfoodState) -> None:
+    """Sync core.run_budget singleton into state fields (F-RUN-BUDGET-STATE)."""
+    try:
+        from core.run_budget import get_run_budget
+        budget = get_run_budget()
+        state.budget_consumed = int(budget.consumed)
+        state.budget_max_tokens = int(budget.max_tokens)
+        state.budget_stopped = bool(budget.stopped)
+        state.budget_project_id = str(budget.project_id or "")
+    except Exception:
+        pass  # singleton snapshot is best-effort — must not crash persistence
+
+
+def _restore_run_budget(state: DogfoodState) -> None:
+    """Re-hydrate core.run_budget singleton from state fields (F-RUN-BUDGET-STATE)."""
+    if state.budget_max_tokens <= 0 and state.budget_consumed <= 0:
+        return  # no budget tracking was active
+    try:
+        from core.run_budget import set_run_budget, get_run_budget
+        set_run_budget(
+            state.budget_max_tokens,
+            run_id=state.run_id,
+            project_id=state.budget_project_id,
+        )
+        budget = get_run_budget()
+        budget.consumed = state.budget_consumed
+        budget.stopped = state.budget_stopped
+        if state.budget_max_tokens > 0 and state.budget_consumed >= state.budget_max_tokens * 0.8:
+            budget.warned_80 = True
+    except Exception:
+        pass  # restoration is best-effort
+
+
 def save_state(state: DogfoodState) -> None:
     """Persist state to disk (atomic write via temp-file + replace)."""
+    _snapshot_run_budget(state)
     path = _state_path(state)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -408,7 +459,9 @@ def load_state(runtime_workspace: str, run_id: str) -> DogfoodState:
     _validate_run_id(run_id)
     path = Path(runtime_workspace) / "dogfood" / run_id / "dogfood_state.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    return DogfoodState.from_dict(data)
+    state = DogfoodState.from_dict(data)
+    _restore_run_budget(state)
+    return state
 
 
 # ---------------------------------------------------------------------------
@@ -940,9 +993,9 @@ def _research_scope_files(interview: dict[str, Any], workspace: str) -> list[str
 
     All returned paths are confirmed inside *workspace* (no traversal).
     """
-    from core.spec_compiler import _scope_from_clarification_log, _scope_from_intent  # lazy import — matches pattern used elsewhere in this file
+    from core.spec_compiler import _scope_from_clarification_log, _scope_from_intent, _str_list  # lazy import — matches pattern used elsewhere in this file
     src = interview.get("project_brief") or interview
-    raw_scope: list[str] = [s for i in (src.get("scope") or []) if (s := str(i).strip()).endswith(".py")]
+    raw_scope: list[str] = [s for s in _str_list(src.get("scope")) if s.endswith(".py")]
     if not raw_scope:
         raw_scope = [p for p in _scope_from_clarification_log(src) if p.endswith(".py")]
     if not raw_scope:
