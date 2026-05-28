@@ -28,10 +28,12 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 from core.dogfood import (
+    ARTIFACT_MERGE_REPORT,
     DogfoodPhase,
     DogfoodState,
     GitWorktreeError,
     MergePolicy,
+    _artifact_path,
     _check_merge_policy,
     _cleanup_partial_isolation,
     _default_runtime_workspace,
@@ -40,6 +42,7 @@ from core.dogfood import (
     _run_isolate_phase,
     _run_merge_phase,
     _safe_to_cleanup_partial_isolation,
+    atomic_write_json,
     block_run,
     create_run,
     finalize_dogfood_result,
@@ -668,6 +671,10 @@ def test_merge_crash_recovery_already_ancestor(tmp_path):
 def test_conflict_check_uses_reset_merge_not_abort(tmp_path):
     state = _make_merge_state(tmp_path)
     state.source_workspace = str(tmp_path)
+
+    # Provide a valid merge_report so the missing-report guard is skipped
+    report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)
+    atomic_write_json(report_path, {"changed_files": ["core/x.py"], "scope_violations": []})
 
     call_log: list[str] = []
 

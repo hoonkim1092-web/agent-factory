@@ -6650,3 +6650,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (22)**: `Master_Blueprint.md, data/memory/smoke/test_cat/test_key_123.json, data/memory/test_cat/test_key_123.json, debug_log.txt, debug_log2.txt, docs/AGENT_FACTORY_PITCH.md, docs/ENGINE_FLOW.md, docs/ai_architecture_guide.md, docs/functional_spec.md, docs/registry_schema.md, docs/runtime_modes.md, docs/technical_plan.md, err.txt, factory_manual.md, final_test_log.txt ... (+7)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-28 17:46 — `2026-05-20-research-coverage-gate` (7ebcdf41)
+
+**Context**: Claude Code edit session
+
+**Changed (4)**: `Master_Blueprint.md, core/dogfood.py, tests/test_dogfood.py, tests/test_dogfood_isolation.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

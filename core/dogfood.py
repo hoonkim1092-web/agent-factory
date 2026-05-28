@@ -28,7 +28,31 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Literal, Tuple
+from typing import Any, Callable, Final, Literal, Tuple
+
+# ---------------------------------------------------------------------------
+# Artifact filename constants (SSOT — never use raw strings for these paths)
+# ---------------------------------------------------------------------------
+
+ARTIFACT_STATE: Final = "dogfood_state.json"
+ARTIFACT_INTERVIEW: Final = "interview.json"
+ARTIFACT_RESEARCH_BRIEF: Final = "research_brief.json"
+ARTIFACT_RESEARCH: Final = "research.json"
+ARTIFACT_SPEC: Final = "spec.json"
+ARTIFACT_PLAN: Final = "plan.json"
+ARTIFACT_MERGE_REPORT: Final = "merge_report.json"
+ARTIFACT_PHASE_TRACE: Final = "phase_trace.jsonl"
+
+ArtifactName = Literal[
+    "dogfood_state.json",
+    "interview.json",
+    "research_brief.json",
+    "research.json",
+    "spec.json",
+    "plan.json",
+    "merge_report.json",
+    "phase_trace.jsonl",
+]
 
 # run_id must be alphanumeric + hyphens — no path separators or dots
 _RUN_ID_RE = re.compile(r'^[\w\-]+$')
@@ -408,7 +432,7 @@ def _default_worktree_workspace(run_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _state_path(state: DogfoodState) -> Path:
-    return Path(state.runtime_workspace) / "dogfood" / state.run_id / "dogfood_state.json"
+    return Path(state.runtime_workspace) / "dogfood" / state.run_id / ARTIFACT_STATE
 
 
 def _snapshot_run_budget(state: DogfoodState) -> None:
@@ -457,8 +481,8 @@ def save_state(state: DogfoodState) -> None:
 def load_state(runtime_workspace: str, run_id: str) -> DogfoodState:
     """Load state from disk."""
     _validate_run_id(run_id)
-    path = Path(runtime_workspace) / "dogfood" / run_id / "dogfood_state.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
+    path = Path(runtime_workspace) / "dogfood" / run_id / ARTIFACT_STATE
+    data = load_policy_json(path, required=True)
     state = DogfoodState.from_dict(data)
     _restore_run_budget(state)
     return state
@@ -773,8 +797,8 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
         "merge_status": "ready" if committed_changed else "no_changes",
     }
 
-    report_path = _artifact_path(state, "merge_report.json")
-    _write_json(report_path, report)
+    report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)
+    atomic_write_json(report_path, report)
 
     state.merge_status = "ready" if committed_changed else "no_changes"
     return report
@@ -840,21 +864,16 @@ def merge_dogfood_branch(
         allowed: list[str] = []
         has_core_allowed = False
         if state.plan_path:
-            _pp = Path(state.plan_path)
-            if _pp.exists():
-                try:
-                    _pd = json.loads(_pp.read_text(encoding="utf-8"))
-                    for _s in _pd.get("steps", []):
-                        for _f in (_s.get("artifacts") or []):
-                            rel = _f.replace("\\", "/")
-                            allowed.append(rel)
-                            has_core_allowed = has_core_allowed or rel.startswith("core/")
-                        for _f in (_s.get("tests_required") or []):
-                            rel = _f.replace("\\", "/")
-                            allowed.append(rel)
-                            has_core_allowed = has_core_allowed or rel.startswith("core/")
-                except Exception:
-                    pass
+            _pd = load_policy_json(Path(state.plan_path), required=False)
+            for _s in _pd.get("steps", []):
+                for _f in (_s.get("artifacts") or []):
+                    rel = _f.replace("\\", "/")
+                    allowed.append(rel)
+                    has_core_allowed = has_core_allowed or rel.startswith("core/")
+                for _f in (_s.get("tests_required") or []):
+                    rel = _f.replace("\\", "/")
+                    allowed.append(rel)
+                    has_core_allowed = has_core_allowed or rel.startswith("core/")
         if has_core_allowed:
             allowed.extend(FINAL_DOC_PATHS)
         policy = MergePolicy(mode=state.merge_mode, allowed_paths=list(dict.fromkeys(allowed)))  # type: ignore[arg-type]
@@ -874,17 +893,19 @@ def merge_dogfood_branch(
             state.phase = DogfoodPhase.COMPLETE
             return
 
-    # Load changed files and scope_violations from merge_report if available
-    report_path = _artifact_path(state, "merge_report.json")
-    changed_files: list[str] = []
-    scope_violations: list[str] = []
-    if report_path.exists():
-        try:
-            report = json.loads(report_path.read_text(encoding="utf-8"))
-            changed_files = report.get("changed_files", [])
-            scope_violations = report.get("scope_violations", [])
-        except Exception:
-            pass
+    # Load changed files and scope_violations from merge_report.
+    # Corrupt JSON is fatal (always raises JSONDecodeError).
+    # Missing report with a recorded dogfood_commit is ambiguous — cannot verify
+    # changed files → reject rather than allowing scope-unchecked merge.
+    report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)
+    report = load_policy_json(report_path, required=False)
+    if not report and state.dogfood_commit:
+        state.merge_status = "policy_rejected"
+        state.last_failure = "merge_report missing: cannot verify changed files"
+        state.phase = DogfoodPhase.BLOCKED
+        return
+    changed_files: list[str] = report.get("changed_files", [])
+    scope_violations: list[str] = report.get("scope_violations", [])
 
     # Policy checks
     ok, reason = _check_merge_policy(state, policy, changed_files, scope_violations)
@@ -958,8 +979,8 @@ def _run_interview_phase(
         artifact = result.get("project_brief", {"goal": state.task})
     if artifact and "intent" not in artifact and "goal" not in artifact:
         raise ValueError("Interview artifact must contain 'intent' or 'goal'")
-    path = _artifact_path(state, "interview.json")
-    _write_json(path, artifact or {})
+    path = _artifact_path(state, ARTIFACT_INTERVIEW)
+    atomic_write_json(path, artifact or {})
     state.interview_path = str(path)
     return artifact
 
@@ -970,8 +991,8 @@ def _run_research_brief_phase(
     """Build ResearchBrief from interview artifact."""
     from core.research_brief import build_from_interview
     brief = build_from_interview(artifact)
-    path = _artifact_path(state, "research_brief.json")
-    _write_json(path, brief.to_dict())
+    path = _artifact_path(state, ARTIFACT_RESEARCH_BRIEF)
+    atomic_write_json(path, brief.to_dict())
     state.research_brief_path = str(path)
     return brief.to_dict()
 
@@ -1048,8 +1069,8 @@ def _run_research_phase(state: DogfoodState, context: dict[str, Any]) -> dict[st
     scope = _research_scope_files(interview, state.source_workspace)
     local_refs = _research_collect_refs(scope, state.source_workspace) if scope else []
     artifact: dict[str, Any] = {"local_refs": local_refs}
-    path = _artifact_path(state, "research.json")
-    _write_json(path, artifact)
+    path = _artifact_path(state, ARTIFACT_RESEARCH)
+    atomic_write_json(path, artifact)
     state.research_path = str(path)
     return artifact
 
@@ -1064,8 +1085,8 @@ def _run_spec_phase(
     from core.spec_compiler import compile_spec
     brief = build_from_interview(interview_artifact)
     spec = compile_spec(interview_artifact, research_artifact, brief)
-    path = _artifact_path(state, "spec.json")
-    _write_json(path, spec.to_dict())
+    path = _artifact_path(state, ARTIFACT_SPEC)
+    atomic_write_json(path, spec.to_dict())
     state.spec_path = str(path)
     if spec.approval_policy:
         state.approval_policy = spec.approval_policy
@@ -1124,8 +1145,8 @@ def _run_plan_phase(
 
     result = run_triad(plan.to_dict(), context, **triad_kwargs)
 
-    path = _artifact_path(state, "plan.json")
-    _write_json(path, result.final_plan)
+    path = _artifact_path(state, ARTIFACT_PLAN)
+    atomic_write_json(path, result.final_plan)
     state.plan_path = str(path)
     return result.final_plan
 
@@ -1159,9 +1180,7 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
     """
     plan_dict: dict[str, Any] = context.get("plan_dict") or {}
     if not plan_dict and state.plan_path:
-        plan_path = Path(state.plan_path)
-        if plan_path.exists():
-            plan_dict = json.loads(plan_path.read_text(encoding="utf-8"))
+        plan_dict = load_policy_json(Path(state.plan_path), required=False)
 
     cwd = state._cwd()
     if context.get("preflight_static"):
@@ -1508,7 +1527,16 @@ def run_all(
                 save_state(state)
                 continue
         elif phase == DogfoodPhase.MERGE:
-            trace_output = run_phase(state, merge_mode=merge_mode)
+            try:
+                trace_output = run_phase(state, merge_mode=merge_mode)
+            except Exception as exc:
+                block_run(state, f"merge failed: {exc}")
+                _append_phase_trace(
+                    state, phase, trace_input, {}, phase_started,
+                    exception_type=type(exc).__name__, blocked_reason=state.last_failure,
+                )
+                save_state(state)
+                continue
             # _run_merge_phase sets state.phase directly for COMPLETE/BLOCKED
             _append_phase_trace(state, phase, trace_input, trace_output, phase_started, blocked_reason=state.last_failure)
             save_state(state)
@@ -1597,13 +1625,36 @@ def run_phase(state: DogfoodState, **kwargs: Any) -> dict[str, Any]:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _artifact_path(state: DogfoodState, filename: str) -> Path:
+def _artifact_path(state: DogfoodState, filename: ArtifactName) -> Path:
     return Path(state.runtime_workspace) / "dogfood" / state.run_id / filename
 
 
-def _write_json(path: Path, data: dict[str, Any]) -> None:
+def atomic_write_json(path: Path, data: dict[str, Any]) -> None:
+    """Write JSON atomically: serialize → tmp → fsync → os.replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    serialized = json.dumps(data, indent=2)
+    tmp.write_text(serialized, encoding="utf-8")
+    try:
+        with tmp.open("rb") as fh:
+            os.fsync(fh.fileno())
+    except OSError:
+        pass  # fsync not supported on all platforms/filesystems
+    tmp.replace(path)
+
+
+def load_policy_json(path: Path, *, required: bool = True) -> dict[str, Any]:
+    """Load and parse a JSON artifact.
+
+    required=True  → raise on missing file or corrupt JSON (fail-closed).
+    required=False → return {} on missing file; raise on corrupt JSON.
+    """
+    if not path.exists():
+        if required:
+            raise FileNotFoundError(f"Required artifact missing: {path}")
+        return {}
+    raw = path.read_text(encoding="utf-8")
+    return json.loads(raw)  # JSONDecodeError propagates — corrupt artifact is always fatal
 
 
 def _estimate_tokens(data: Any) -> int:
@@ -1662,7 +1713,7 @@ def _append_phase_trace(
         "estimated_tokens": _estimate_tokens(input_data) + _estimate_tokens(output_data),
     }
     try:
-        path = _artifact_path(state, "phase_trace.jsonl")
+        path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
