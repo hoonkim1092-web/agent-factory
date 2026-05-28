@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — **dogfood production-grade hardening 4건 분석 완료, 다음 세션 진입 대기**. 직전 CRLF 정규화 chore 커밋(`d6f6ae39`) push 대기. R2 dogfood run COMPLETE(`88f3a7ab`).
+> 마지막 업데이트: **2026-05-28 KST (Windows)** — **dogfood production-grade hardening 4 PR 분할안 + 하드코딩 금지 원칙 확정**. 결함 8건 코드 grep 검증 완료(원본 4건 + 추가 4건). 직전 커밋 `d6f6ae39`(CRLF), `5bb4d3da`(진입점 기록 v1).
 >
-> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" 섹션. §17 Step 1~20은 모두 ✅ DONE이지만 **운영 신뢰성 게이트 4건 미통과** 상태. dummy 졸업 전 hardening 먼저.
+> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" 섹션. §17 Step 1~20은 모두 ✅ DONE이지만 **운영 신뢰성 게이트 미통과** 상태. dummy 졸업 전 PR 1부터 순차 진입.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -84,35 +84,100 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 ---
 
-## 🔒 Dogfood Production-Grade Hardening (2026-05-28 분석, 다음 세션 진입점)
+## 🔒 Dogfood Production-Grade Hardening (2026-05-28 분석 v2 확정)
 
-> **판단**: §17 Step 1~20은 "있다/없다" 게이트로 통과한 MVP. 실패 의미론·artifact 무결성·정책 일관성 게이트는 미통과.
-> **공통 메타-패턴**: R1 1~13차 누적 픽스(`F-DIRTY-UNTRACKED`, `F-CMD-RUNNER-WINDOWS`, `F-VERIFY-EMPTY` 등)가 전부 "한 곳에서만 처리, 다른 곳 누락" 유형 — 정책 단일소스 부재가 공통 원인.
+> **Root cause**: dogfood lifecycle에서 "정책 입력·상태 저장·변경 감지·실패 의미론"이 단일 계약으로 묶여 있지 않음.
+> 즉 SSOT는 일부 존재하나(MergePolicy, DogfoodState) **호출처가 우회 가능** = "계약을 만들었지만 강제하지 않음" 상태.
+> §17 Step 1~20은 "있다/없다" 게이트 통과 MVP. 실패 의미론·artifact 무결성·정책 일관성·하드코딩 금지 게이트는 미통과.
 
-### 4건 결함 (전부 grep으로 실재 확인)
+### 결함 8건 (grep 실재 확인)
 
-| # | 항목 | 위험 | 근거 라인 |
-|---|------|------|-----------|
-| **P0-1** | dirty 정책 분기 | High | `core/dogfood.py:598-602` (prepare) + `695-706` (finalize)는 `_is_crlf_only_diff` 필터 / `798-802` (merge)는 raw `status --porcelain` 직접 비교 — merge가 CRLF 필터 누락 |
-| **P0-2** | `_write_json` non-atomic | High | `core/dogfood.py:1604-1606` 직접 `write_text()`. `save_state:448-454`는 tmp+replace — 7곳 호출처 모두 non-atomic. crash/interrupt 시 plan/spec/merge_report 깨질 위험 |
-| **P1-1** | IMPLEMENT 부분실패→VERIFY | Medium | `core/dogfood.py:1473-1480` BLOCK 조건은 `not ok AND not executed`. `ok=False AND executed != []` 케이스는 VERIFY로 진행 — 부분실행 + VERIFY 잘못 통과 가능 |
-| **P1-2** | pre-existing untracked 수정 누락 | Medium | `core/dogfood.py:1224-1232` `_post_untracked - _pre_untracked` 집합 차이만. pre∩post(수정된 기존 untracked)는 `actual_changed`에서 누락. retry 시 1차 산출물 추적 못 함 |
+| # | 항목 | 위험 | 근거 (core/dogfood.py) |
+|---|------|------|----------------------|
+| **#1** | `_write_json` non-atomic | **High** | `1604-1606` direct `write_text()` vs `save_state:448-454` tmp+replace — 7 호출처 비-atomic |
+| **#2** | dirty 정책 분기 | **High** | prepare `598-602` + finalize `695-706`는 `_is_crlf_only_diff` 필터 / merge `798-802`는 raw `status` |
+| **#3** | IMPLEMENT 부분실패→VERIFY | Medium | `1473-1480` BLOCK은 `not ok AND not executed`. `ok=False AND executed != []` 흐름 |
+| **#4** | pre-existing untracked 수정 누락 | Medium | `1224-1232` `_post-_pre` 집합 차분만. pre∩post 수정분 누락 |
+| **#5** | merge_report.json **silent fail-soft → policy 우회** | **High** | `881-887` `except Exception: pass` — corrupt JSON 시 `changed_files=[], scope_violations=[]`로 진행 = **silently auto-merge 통과** |
+| **#6** | `_is_crlf_only_diff` `-b` fallback 과대 포섭 | Medium | `563-567` `-b`는 모든 whitespace 변경 무시 — 의도된 indent 수정도 CRLF로 분류 |
+| **#7** | `_run_merge_phase:1338` state.merge_mode 우회 | Medium | `MergePolicy(mode="auto_policy")` 강제 — state SSOT 위배 |
+| **#8** | `MergePolicy.denied_paths` default dataclass 박힘 | Low | `240-244` `.af_runtime/`, `runtime/`, `skills/registry.yaml` — 환경/Policy 입력 분리 불가 |
 
-### 실행 순서 (다음 세션)
+### 하드코딩 흩어짐 실측 (grep)
+
+- artifact 파일명 8 magic string: `dogfood_state.json`×2, `merge_report.json`×2, `research/spec/plan.json` 각 1, `phase_trace.jsonl`×1
+- merge_mode 리터럴 5+ 분기
+- DogfoodState 키(`changed_files`, `scope_violations`) 8회 magic string
+
+### 🚫 하드코딩 금지 원칙 (이번 hardening 필수 조건)
+
+이번 작업의 목표는 버그 4-8개 fix가 아니라 **dogfood 운영 정책을 단일 계약으로 잠그는 것**.
+
+1. **정책값은 SSOT에 둔다** — dirty 판정, CRLF 정책, partial-impl 허용, auto-merge 금지 조합, artifact 파일명/필수 목록, corrupt artifact 처리
+2. **호출처는 정책을 직접 판단하지 않는다** — prepare/finalize/merge가 각자 `git status` 직접 해석 금지. 공통 helper/policy object 경유
+3. **문자열/파일명도 흩어지면 안 된다** — `ARTIFACT_*: Final` 상수 7개로 모음 (DogfoodArtifact 클래스 신설 X — 과도한 추상화 회피)
+4. **옵트아웃도 하드코딩 금지** — `allow_partial_impl` 같은 정책은 CLI flag → MergePolicy → runner 경로로 전달. 코드 중간 "이 경우만 예외" 분기 금지
+5. **테스트는 행위 기반** — magic string에 묶지 말고 invariant("corrupt artifact면 BLOCK", "auto_policy + partial_impl이면 reject")로 검증
+
+### 우선순위 v2 (재배치)
+
+| 우선순위 | PR | 결함 | 위험 근거 |
+|---------|----|----|----------|
+| **P0-A** | PR 1 | #1 + #5 | merge_report corrupt 시 silent auto-merge 통과 = 운영 self-development 최악 패턴 |
+| **P0-B** | PR 2 | #2 + #6 + #8 | 16h 작업 후 merge 거부/허용 분기 = 운영 신뢰도 붕괴 |
+| **P1** | PR 3 | #3 + #4 + #7 | 실행 의미론 + Policy 우회 (#7도 의미론 결함) |
+| **P2** | PR 4 | trace/worktree | corrupt-last-line skip 정책 + BLOCK 시 cleanup — advisory |
+
+### 실행 단계 (PR 분할 확정)
 
 ```
-1. P2 추가 갭 조사 (30분)         — _append_phase_trace atomic / worktree leak
-2. P0-1 dirty 단일소스 (1-2h)     — _dirty_files() 헬퍼 신설, prepare/finalize/merge 통합
-3. P0-2 atomic write (30분-1h)    — tmp.write_text + tmp.replace 패턴
-4. P1-1 fail-closed (1h)          — 결정 필요: default vs --allow-partial-impl opt-out
-5. P1-2 untracked 보강 (2h)       — mtime/hash 동반 캡처 or 워크트리 스냅샷 차분
-6. 통합 dogfood 1회 (R14)         — hardening 검증
-7. "dummy 졸업" 선언 후 production work-item 진입
+PR 1 — Policy Input Integrity (P0-A)
+  1.1 atomic_write_json(path, data) — 같은 디렉터리 tmp → write → flush → fsync → os.replace
+  1.2 load_policy_json(path, *, required=True) — JSONDecodeError raise (silent except 금지)
+  1.3 ARTIFACT_* Final 상수 7개 (artifact filename SSOT)
+  1.4 _artifact_path() 시그니처: Final 상수만 허용 (임의 문자열 거부)
+  1.5 호출처 8곳 교체 + silent except 제거 (merge_report:881-887, plan load:1162-1164 등)
+  1.6 회귀: corrupt JSON → BLOCK / mid-write KeyboardInterrupt / 임의 문자열 타입체커 거부
+
+PR 2 — Policy Consistency (P0-B)
+  2.1 _dirty_files(state, *, include_untracked, ignore_crlf, policy) 단일 helper
+  2.2 _is_crlf_only_diff: -b fallback 제거 또는 좁힌 패턴 ("진짜 CRLF-only")
+  2.3 prepare/finalize/merge 3곳 호출처 helper로 교체 (raw status 제거)
+  2.4 MergePolicy.denied_paths default를 환경/Policy 입력으로 분리
+  2.5 회귀: invariant "prepare 허용→merge 같은 이유로 허용" / whitespace-only ≠ CRLF-only
+
+PR 3 — Execution Semantics (P1)
+  3.1 _run_implement_phase ok=False → 기본 BLOCK (executed 무관)
+  3.2 MergePolicy.allow_partial_impl: bool = False 추가
+  3.3 MergePolicy.__post_init__: allow_partial_impl + auto_policy 조합 ValueError (코드로 강제)
+  3.4 CLI flag → MergePolicy 전달 경로 명시 (하드코딩 분기 금지)
+  3.5 #7 fix: _run_merge_phase:1338 → MergePolicy(mode=state.merge_mode, ...)
+  3.6 pre_untracked 캡처에 hash(소형) + size/mtime(대형) 동반
+  3.7 회귀: ok=False+executed BLOCK / allow_partial_impl+auto_policy 즉시 reject / pre-existing 수정 감지
+
+PR 4 — Operational Hygiene (P2)
+  4.1 phase_trace.jsonl reader corrupt-last-line skip (load_policy_json required=False)
+  4.2 BLOCK 시 worktree preserve/cleanup 정책 명시 (state.isolation_status 기반)
+  4.3 CRLF helper fixture 확장
+
+통합 검증
+  - tests/test_dogfood.py, test_dogfood_isolation.py
+  - 신규 fixture 회귀
+  - 실제 dogfood R14 1회 (dummy로 무결성만 확인)
+  - 결과 정상 → "dummy 졸업" 선언 → production work-item 진입
 ```
 
-**PR 분할 권고**: P0-1+P0-2 한 PR(정책 unification), P1-1+P1-2 별도 PR(execution semantics). 4건 한 묶음은 cross-review 분리 못 함.
+### 결정 확정 사항
 
-**결정 필요**: P1-1 default fail-closed vs opt-in. R1 픽스 패턴상 default fail-closed 권장.
+| 항목 | 결정 |
+|------|------|
+| Atomic write + silent except 같은 PR? | **Yes (PR 1)** — silent except 남으면 atomic 효과 무효 |
+| CRLF 좁히기 + dirty 단일화 같은 PR? | **Yes (PR 2)** — 단일소스화 의미 잠금 |
+| Final 상수 vs DogfoodArtifact 클래스? | **Final 상수** — 과도한 추상화 회피 |
+| MergePolicy invariant `__post_init__`? | **Yes** — CLI/runtime 검증 누락 시 안전망 |
+| denied_paths default 분리? | **Yes (PR 2)** |
+| #7 우회 fix는 PR 3? | **Yes** — Policy 우회 = 실행 의미론 결함 |
+| fail-closed default? | **Yes** — opt-out은 `--allow-partial-impl` 명시 + auto_policy 차단 |
 
 ---
 
