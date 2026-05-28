@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — **dogfood production-grade hardening 4 PR 분할안 + 하드코딩 금지 원칙 확정**. 결함 8건 코드 grep 검증 완료(원본 4건 + 추가 4건). 직전 커밋 `d6f6ae39`(CRLF), `5bb4d3da`(진입점 기록 v1).
+> 마지막 업데이트: **2026-05-28 KST (Windows)** — **PR 1 (P0-A) 완료** (`86278509`). atomic_write_json + load_policy_json + ARTIFACT_* 상수 8개 + silent except 제거 + missing report guard + MERGE crash loop fix. 188 tests PASS. 3-Tier PASS.
 >
-> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" 섹션. §17 Step 1~20은 모두 ✅ DONE이지만 **운영 신뢰성 게이트 미통과** 상태. dummy 졸업 전 PR 1부터 순차 진입.
+> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" §PR 2 (P0-B) — dirty 단일화 + CRLF 좁히기 + denied_paths 분리.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
