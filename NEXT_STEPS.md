@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — **PR 1 (P0-A) 완료** (`86278509`). atomic_write_json + load_policy_json + ARTIFACT_* 상수 8개 + silent except 제거 + missing report guard + MERGE crash loop fix. 188 tests PASS. 3-Tier PASS.
+> 마지막 업데이트: **2026-05-28 KST (Windows)** — **PR 2 (P0-B) 완료** (`745520ba`). _dirty_files() 단일 헬퍼 + _is_crlf_only_diff -b fallback 제거 + DEFAULT_DENIED_PATHS 상수 + untracked 파일 CRLF 오분류 버그 수정 + denied_paths 분리. 206 tests PASS. 3-Tier PASS.
 >
-> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" §PR 2 (P0-B) — dirty 단일화 + CRLF 좁히기 + denied_paths 분리.
+> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" §PR 3 (P1) — 실행 의미론 (#3 ok=False→BLOCK, #4 allow_partial_impl, #7 MergePolicy merge_mode 우회 fix).
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
