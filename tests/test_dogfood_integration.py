@@ -237,8 +237,16 @@ def test_run_all_attempts_incremented_on_retry(tmp_path):
         plan.verification_requirements = ["fail-command"]
         return plan
 
+    # IMPLEMENT must succeed so that the VERIFY retry loop can fire.
+    # PR 3: ok=False in IMPLEMENT → immediate BLOCK; isolate VERIFY failure via
+    # _failing_runner only (stub IMPLEMENT to return ok=True).
+    def _noop_implement(state, context):
+        return {"executed": [{"step": "S1", "command": "ok", "ok": True, "output": ""}],
+                "failures": [], "skipped_no_commands": [], "actual_changed": [], "ok": True}
+
     p1, p2, p3 = _smoke_patches(dogfood_mod)
     with patch.object(dogfood_mod, "_command_runner", side_effect=_failing_runner), \
+         patch.object(dogfood_mod, "_run_implement_phase", side_effect=_noop_implement), \
          patch.object(planner_mod, "build_plan", side_effect=_patched_build_plan), \
          p1, p2, p3:
         state = run_all(

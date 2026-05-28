@@ -955,6 +955,10 @@ def _build_arg_parser(ad_hoc_mode):
             choices=["auto-policy", "manual", "never"],
             help="머지 정책 (기본: auto-policy)",
         )
+        df_run.add_argument(
+            "--allow-partial-impl", action="store_true", dest="allow_partial_impl",
+            help="IMPLEMENT 단계 실패가 있어도 VERIFY로 진행 (merge_mode=manual/never 전용)",
+        )
 
         df_interview = dogfood_sub.add_parser("interview", help="인터랙티브 인터뷰 실행 후 artifact 저장")
         df_interview.add_argument("task", nargs="+", help="요구사항을 구체화할 작업 설명")
@@ -1058,6 +1062,7 @@ if __name__ == "__main__":
                     non_interactive=getattr(args, "non_interactive", False),
                     merge_mode=merge_mode,
                     strict_contract=True,
+                    allow_partial_impl=getattr(args, "allow_partial_impl", False),
                 )
                 print(f"[dogfood] run_id    : {state.run_id}")
                 print(f"[dogfood] phase     : {state.phase.value}")

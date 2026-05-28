@@ -1518,3 +1518,211 @@ class TestMergeExceptionCrashLoop:
         # run_all re-runs from scratch since merge_mode default → auto_policy
         # What matters is it doesn't crash — BLOCKED or COMPLETE are both acceptable
         assert result.phase in (DogfoodPhase.BLOCKED, DogfoodPhase.COMPLETE)
+
+
+# ---------------------------------------------------------------------------
+# PR 3 — Execution Semantics (#3, #4, #7)
+# ---------------------------------------------------------------------------
+
+class TestMergePolicyAllowPartialImpl:
+    """MergePolicy.allow_partial_impl contract (3.2 + 3.3)."""
+
+    def test_default_is_false(self):
+        from core.dogfood import MergePolicy
+        p = MergePolicy()
+        assert p.allow_partial_impl is False
+
+    def test_manual_mode_allow_partial_impl_ok(self):
+        from core.dogfood import MergePolicy
+        p = MergePolicy(mode="manual", allow_partial_impl=True)
+        assert p.allow_partial_impl is True
+
+    def test_never_mode_allow_partial_impl_ok(self):
+        from core.dogfood import MergePolicy
+        p = MergePolicy(mode="never", allow_partial_impl=True)
+        assert p.allow_partial_impl is True
+
+    def test_auto_policy_with_allow_partial_impl_raises(self):
+        import pytest
+        from core.dogfood import MergePolicy
+        with pytest.raises(ValueError, match="auto_policy"):
+            MergePolicy(mode="auto_policy", allow_partial_impl=True)
+
+
+class TestRunAllPartialImpl:
+    """run_all() allow_partial_impl validation + IMPLEMENT BLOCK semantics (3.1 + 3.4)."""
+
+    def test_auto_policy_allow_partial_impl_raises(self, tmp_path):
+        import pytest
+        with pytest.raises(ValueError, match="auto_policy"):
+            run_all("t", str(tmp_path), merge_mode="auto_policy", allow_partial_impl=True,
+                    interview_artifact={"goal": "t"})
+
+    def test_ok_false_with_executed_blocks_by_default(self, tmp_path, monkeypatch):
+        """ok=False even with executed steps → BLOCKED (3.1 default)."""
+        import core.dogfood as df
+        _patch_all_runners(monkeypatch)
+        monkeypatch.setattr(df, "_run_implement_phase",
+            lambda s, context: {
+                "executed": [{"step": "S1", "command": "echo hi", "ok": False, "output": ""}],
+                "failures": ["S1: echo hi"],
+                "skipped_no_commands": [],
+                "ok": False,
+            })
+        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
+                        runtime_workspace=str(tmp_path / "rt"))
+        assert state.phase == DogfoodPhase.BLOCKED
+        assert "implementation failed" in state.last_failure
+
+    def test_ok_false_empty_executed_blocks(self, tmp_path, monkeypatch):
+        """ok=False with no executed steps → BLOCKED with 'no executed steps' reason."""
+        import core.dogfood as df
+        _patch_all_runners(monkeypatch)
+        monkeypatch.setattr(df, "_run_implement_phase",
+            lambda s, context: {"executed": [], "failures": ["S1: AI execution failed"],
+                                 "skipped_no_commands": [], "ok": False})
+        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
+                        runtime_workspace=str(tmp_path / "rt"))
+        assert state.phase == DogfoodPhase.BLOCKED
+        assert "no executed steps" in state.last_failure
+
+    def test_allow_partial_impl_proceeds_to_verify(self, tmp_path, monkeypatch):
+        """allow_partial_impl=True + merge_mode=never → ok=False does NOT block."""
+        import core.dogfood as df
+        _patch_all_runners(monkeypatch)
+        monkeypatch.setattr(df, "_run_implement_phase",
+            lambda s, context: {
+                "executed": [{"step": "S1", "command": "echo hi", "ok": False, "output": ""}],
+                "failures": ["S1: echo hi"],
+                "skipped_no_commands": [],
+                "ok": False,
+            })
+        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
+                        runtime_workspace=str(tmp_path / "rt"),
+                        merge_mode="never", allow_partial_impl=True)
+        # Should not be BLOCKED at IMPLEMENT; VERIFY/REVIEW decide the outcome
+        assert state.phase in (DogfoodPhase.COMPLETE, DogfoodPhase.BLOCKED)
+        if state.phase == DogfoodPhase.BLOCKED:
+            assert "no executed steps" not in state.last_failure
+            assert "implementation failed" not in state.last_failure
+
+
+class TestRunMergePhaseUsesStateMode:
+    """_run_merge_phase must respect caller's merge_mode, not hardcode auto_policy (#7)."""
+
+    def test_never_mode_skips_merge(self, tmp_path):
+        from core.dogfood import create_run, _run_merge_phase, DogfoodPhase
+        state = create_run("t", str(tmp_path), merge_mode="never",
+                           runtime_workspace=str(tmp_path / "rt"))
+        result = _run_merge_phase(state, "never")
+        assert result["merge_status"] == "never"
+        assert state.phase == DogfoodPhase.COMPLETE
+
+    def test_manual_mode_sets_ready(self, tmp_path):
+        from core.dogfood import create_run, _run_merge_phase, DogfoodPhase
+        state = create_run("t", str(tmp_path), merge_mode="manual",
+                           runtime_workspace=str(tmp_path / "rt"))
+        result = _run_merge_phase(state, "manual")
+        assert result["merge_status"] == "ready"
+        assert state.phase == DogfoodPhase.COMPLETE
+
+    def test_auto_policy_mode_calls_merge_with_correct_policy(self, tmp_path, monkeypatch):
+        """auto_policy passes MergePolicy(mode='auto_policy') to merge_dogfood_branch."""
+        import core.dogfood as df
+        captured: list = []
+
+        def _spy_merge(state, policy=None):
+            captured.append(policy)
+            state.merge_status = "merged"
+            state.merged_commit = "abc123"
+
+        monkeypatch.setattr(df, "merge_dogfood_branch", _spy_merge)
+        state = df.create_run("t", str(tmp_path), merge_mode="auto_policy",
+                              runtime_workspace=str(tmp_path / "rt"))
+        df._run_merge_phase(state, "auto_policy")
+        assert len(captured) == 1
+        assert captured[0].mode == "auto_policy"
+
+    def test_merge_mode_never_via_run_all_uses_never_in_phase(self, tmp_path, monkeypatch):
+        """run_all with merge_mode='never' must NOT call merge_dogfood_branch."""
+        import core.dogfood as df
+        _patch_all_runners(monkeypatch)
+        called: list = []
+
+        def _spy_merge(state, policy=None):
+            called.append(policy)
+            state.merge_status = "merged"
+
+        monkeypatch.setattr(df, "merge_dogfood_branch", _spy_merge)
+        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
+                        runtime_workspace=str(tmp_path / "rt"), merge_mode="never")
+        assert state.phase == DogfoodPhase.COMPLETE
+        assert called == []  # never → merge_dogfood_branch never called
+
+
+class TestFingerprintUntracked:
+    """_fingerprint_untracked detects pre-existing untracked file modifications (#4)."""
+
+    def _make_fake_git(self, names: list[str]):
+        """Return a fake _git that reports the given names for ls-files."""
+        import subprocess
+
+        def fake_git(args, cwd, check=True, extra_env=None):
+            r = subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+            if args[0] == "ls-files":
+                r.stdout = "\n".join(names)
+            return r
+
+        return fake_git
+
+    def test_new_file_detected_as_changed(self, tmp_path, monkeypatch):
+        """File present after but not before → in _new_untracked."""
+        import core.dogfood as df
+
+        new_file = tmp_path / "new_file.txt"
+        new_file.write_text("hello")
+
+        monkeypatch.setattr(df, "_git", self._make_fake_git(["new_file.txt"]))
+        post = df._fingerprint_untracked(str(tmp_path))
+        assert "new_file.txt" in post
+
+        pre: dict = {}  # nothing before
+        _new = set(post) - set(pre)
+        assert "new_file.txt" in _new
+
+    def test_modified_untracked_file_detected(self, tmp_path, monkeypatch):
+        """Pre-existing untracked file with changed content → in _modified_untracked."""
+        import core.dogfood as df
+
+        f = tmp_path / "existing.txt"
+        f.write_text("original")
+
+        monkeypatch.setattr(df, "_git", self._make_fake_git(["existing.txt"]))
+        pre = df._fingerprint_untracked(str(tmp_path))
+        assert "existing.txt" in pre
+
+        f.write_text("modified content")
+        post = df._fingerprint_untracked(str(tmp_path))
+
+        modified = {
+            name for name in set(pre) & set(post)
+            if pre[name] != post[name]
+        }
+        assert "existing.txt" in modified
+
+    def test_unmodified_untracked_not_in_modified(self, tmp_path, monkeypatch):
+        """Untracked file that doesn't change → not in _modified_untracked."""
+        import core.dogfood as df
+
+        f = tmp_path / "stable.txt"
+        f.write_text("same")
+
+        monkeypatch.setattr(df, "_git", self._make_fake_git(["stable.txt"]))
+        pre = df._fingerprint_untracked(str(tmp_path))
+        post = df._fingerprint_untracked(str(tmp_path))
+
+        modified = {
+            name for name in set(pre) & set(post)
+            if pre[name] != post[name]
+        }
+        assert "stable.txt" not in modified

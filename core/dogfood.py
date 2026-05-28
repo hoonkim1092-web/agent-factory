@@ -262,6 +262,16 @@ class MergePolicy:
     require_dogfood_commit: bool = True
     allowed_paths: list[str] = field(default_factory=list)
     denied_paths: list[str] = field(default_factory=list)
+    # Allow VERIFY to proceed even when IMPLEMENT has failures.
+    # Incompatible with auto_policy: partial results cannot auto-merge safely.
+    allow_partial_impl: bool = False
+
+    def __post_init__(self) -> None:
+        if self.allow_partial_impl and self.mode == "auto_policy":
+            raise ValueError(
+                "allow_partial_impl=True is incompatible with mode='auto_policy'."
+                " Use mode='manual' or 'never' to proceed with partial results."
+            )
 
 
 # Paths always blocked from dogfood merges unless overridden via MergePolicy.
@@ -1192,6 +1202,38 @@ def _run_isolate_phase(state: DogfoodState) -> dict[str, Any]:
     }
 
 
+_FINGERPRINT_SIZE_THRESHOLD = 65_536  # 64 KB — use hash below, size+mtime above
+
+
+def _fingerprint_untracked(cwd: str) -> dict[str, Any]:
+    """Return {relpath: fingerprint} for every untracked file in *cwd*.
+
+    Fingerprint is a SHA-1 hex string for files ≤ _FINGERPRINT_SIZE_THRESHOLD bytes,
+    or a (size, mtime_ns) tuple for larger files (avoids reading large binaries).
+    Missing/unreadable files are silently skipped.
+    """
+    import hashlib
+    try:
+        names = _git(
+            ["ls-files", "--others", "--exclude-standard"], cwd=cwd, check=False
+        ).stdout.splitlines()
+    except (OSError, FileNotFoundError):
+        return {}
+    result: dict[str, Any] = {}
+    for name in names:
+        p = Path(cwd) / name
+        try:
+            st = p.stat()
+            if st.st_size <= _FINGERPRINT_SIZE_THRESHOLD:
+                result[name] = hashlib.sha1(p.read_bytes(), usedforsecurity=False).hexdigest()
+            else:
+                result[name] = (st.st_size, st.st_mtime_ns)
+        except (OSError, FileNotFoundError):
+            # File listed by git but unreadable — record as present with unknown fingerprint.
+            result[name] = None
+    return result
+
+
 def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
     """Execute plan step commands and return impl_result dict.
 
@@ -1225,13 +1267,9 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
         _pre_sha = _git(["rev-parse", "HEAD"], cwd=cwd, check=False).stdout.strip()
     except (OSError, FileNotFoundError):
         _pre_sha = ""
-    # Capture untracked files before execution so new files created during IMPLEMENT are detected.
-    try:
-        _pre_untracked = set(
-            _git(["ls-files", "--others", "--exclude-standard"], cwd=cwd, check=False).stdout.splitlines()
-        )
-    except (OSError, FileNotFoundError):
-        _pre_untracked = set()
+    # Capture untracked files before execution — names + fingerprints to detect
+    # pre-existing untracked files that are MODIFIED (not just newly created).
+    _pre_untracked: dict[str, Any] = _fingerprint_untracked(cwd)
 
     executed: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -1265,16 +1303,17 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
     if _pre_sha:
         _post = _git(["diff", "--name-only", f"{_pre_sha}..HEAD"], cwd=cwd, check=False)
         _unstaged = _git(["diff", "--name-only", "HEAD"], cwd=cwd, check=False)
-        try:
-            _post_untracked = set(
-                _git(["ls-files", "--others", "--exclude-standard"], cwd=cwd, check=False).stdout.splitlines()
-            )
-        except (OSError, FileNotFoundError):
-            _post_untracked = set()
-        _new_untracked = _post_untracked - _pre_untracked
+        _post_untracked: dict[str, Any] = _fingerprint_untracked(cwd)
+        # New untracked: appeared after execution.
+        _new_untracked = set(_post_untracked) - set(_pre_untracked)
+        # Modified pre-existing untracked: present in both but fingerprint changed.
+        _modified_untracked = {
+            f for f in set(_pre_untracked) & set(_post_untracked)
+            if _pre_untracked[f] != _post_untracked[f]
+        }
         actual_changed = sorted({
             f for f in (_post.stdout + "\n" + _unstaged.stdout).splitlines() if f
-        } | _new_untracked)
+        } | _new_untracked | _modified_untracked)
     else:
         actual_changed = []
 
@@ -1379,8 +1418,9 @@ def _run_merge_phase(state: DogfoodState, merge_mode: str) -> dict[str, Any]:
         state.phase = DogfoodPhase.COMPLETE
         return {"merge_status": "ready"}
 
-    # auto_policy — apply DEFAULT_DENIED_PATHS so all callers get the same gate
-    merge_dogfood_branch(state, MergePolicy(mode="auto_policy", denied_paths=list(DEFAULT_DENIED_PATHS)))
+    # auto_policy — apply DEFAULT_DENIED_PATHS so all callers get the same gate.
+    # Use merge_mode from caller (not a hardcoded literal) to respect state SSOT.
+    merge_dogfood_branch(state, MergePolicy(mode=merge_mode, denied_paths=list(DEFAULT_DENIED_PATHS)))
     return {"merge_status": state.merge_status, "merged_commit": state.merged_commit}
 
 
@@ -1398,6 +1438,7 @@ def run_all(
     runtime_workspace: str | None = None,
     merge_mode: str = "auto_policy",
     strict_contract: bool = False,
+    allow_partial_impl: bool = False,
     _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
 ) -> "DogfoodState":
     """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
@@ -1415,6 +1456,13 @@ def run_all(
     _interview_fn: injectable for tests; overrides the default run_interview wrapper.
     Returns the final DogfoodState (phase COMPLETE or BLOCKED).
     """
+    # Validate policy combination before creating state (fail-fast).
+    if allow_partial_impl and merge_mode == "auto_policy":
+        raise ValueError(
+            "allow_partial_impl=True is incompatible with merge_mode='auto_policy'."
+            " Use merge_mode='manual' or 'never'."
+        )
+
     state = create_run(
         task, workspace,
         run_id=run_id,
@@ -1515,14 +1563,23 @@ def run_all(
                 )
                 save_state(state)
                 continue
-            if not impl_result.get("ok") and not impl_result.get("executed"):
-                block_run(state, "implementation phase produced no executed steps")
-                _append_phase_trace(
-                    state, phase, trace_input, trace_output, phase_started,
-                    llm_called=phase_llm_called, blocked_reason=state.last_failure,
-                )
-                save_state(state)
-                continue
+            if not impl_result.get("ok"):
+                # ok=False always BLOCK unless caller explicitly opted in.
+                # Empty execution and partial failure are both fail-closed.
+                if not allow_partial_impl:
+                    _failures = impl_result.get("failures") or []
+                    _reason = (
+                        "implementation phase produced no executed steps"
+                        if not impl_result.get("executed")
+                        else f"implementation failed: {_failures}"
+                    )
+                    block_run(state, _reason)
+                    _append_phase_trace(
+                        state, phase, trace_input, trace_output, phase_started,
+                        llm_called=phase_llm_called, blocked_reason=state.last_failure,
+                    )
+                    save_state(state)
+                    continue
         elif phase == DogfoodPhase.VERIFY:
             trace_input = plan_dict
             verify_result = run_phase(state, context={"plan_dict": plan_dict})
