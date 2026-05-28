@@ -134,6 +134,28 @@ class GitManager:
         except Exception:
             return []
 
+    def untracked_files(self) -> list[str]:
+        """Returns list of untracked files in the working tree."""
+        if not self._is_git_repo():
+            return []
+        try:
+            r = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                cwd=self.directory,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            return [f.strip() for f in (r.stdout or "").splitlines() if f.strip()]
+        except Exception:
+            return []
+
+    def diff_files_since_with_untracked(self, base_sha: str) -> list[str]:
+        """diff_files_since + untracked_files 합산 (R2-1 fix: 신규 파일 포함)."""
+        tracked = self.diff_files_since(base_sha)
+        untracked = self.untracked_files()
+        return list(dict.fromkeys(tracked + untracked))
+
     def push(self) -> bool:
         """Pushes current branch to origin."""
         try:

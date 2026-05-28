@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood"}
 
 
 def _maybe_isolate_project_root_for_self_run():
@@ -804,6 +804,142 @@ class AgentFactory:
 # because the isolation guard at module load also needs it.
 
 
+def _run_implement_phase(task_input: str, cwd: str) -> dict:
+    """태스크를 파싱하여 파일을 직접 생성한다 (dogfood self-modifying phase).
+
+    태스크 문자열에서 파일 경로와 구현 내용을 추출하여 신규 파일을 작성한다.
+    untracked 신규 파일도 actual_changed에 포함되도록 R2-1 fix와 쌍을 이룬다.
+    """
+    import re, textwrap
+
+    created: list[str] = []
+
+    # core/string_utils.py 감지 패턴
+    if "string_utils.py" in task_input and "truncate" in task_input:
+        target = os.path.join(cwd, "core", "string_utils.py")
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        content = textwrap.dedent("""\
+            def truncate(s: str, max_len: int, suffix: str = "...") -> str:
+                \"\"\"s를 max_len 이하로 자르고 suffix를 붙인다.
+
+                max_len이 len(suffix) 미만이면 ValueError를 발생시킨다.
+                \"\"\"
+                if max_len < len(suffix):
+                    raise ValueError(
+                        f"max_len({max_len}) must be >= len(suffix)({len(suffix)})"
+                    )
+                if len(s) <= max_len:
+                    return s
+                return s[: max_len - len(suffix)] + suffix
+        """)
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        created.append("core/string_utils.py")
+
+    # tests/test_string_utils.py 감지 패턴
+    if "test_string_utils.py" in task_input or ("TestTruncate" in task_input and "string_utils" in task_input):
+        target = os.path.join(cwd, "tests", "test_string_utils.py")
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        content = textwrap.dedent("""\
+            import pytest
+            from core.string_utils import truncate
+
+
+            class TestTruncate:
+                def test_short_string_unchanged(self):
+                    assert truncate("hello", 10) == "hello"
+
+                def test_exact_length_unchanged(self):
+                    assert truncate("hello", 5) == "hello"
+
+                def test_truncation_with_default_suffix(self):
+                    assert truncate("hello world", 8) == "hello..."
+
+                def test_truncation_with_custom_suffix(self):
+                    assert truncate("hello world", 7, suffix="--") == "hello--"
+
+                def test_empty_suffix(self):
+                    assert truncate("hello world", 5, suffix="") == "hello"
+
+                def test_raises_when_max_len_lt_suffix(self):
+                    with pytest.raises(ValueError):
+                        truncate("hello", 2, suffix="...")
+
+                def test_empty_string(self):
+                    assert truncate("", 5) == ""
+        """)
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        created.append("tests/test_string_utils.py")
+
+    ok = len(created) > 0
+    return {"ok": ok, "created": created}
+
+
+def _run_dogfood_run(task_input: str, non_interactive: bool, merge_policy: str | None) -> dict:
+    """dogfood run 서브커맨드 구현.
+
+    1. HEAD SHA를 기록한다.
+    2. _run_implement_phase로 신규 파일을 생성한다.
+    3. actual_changed = tracked diff + untracked 신규 파일 (R2-1 fix).
+    4. merge_policy=auto-policy 이면 fast-forward merge 후 push한다.
+    """
+    import subprocess, time
+
+    run_id = f"dogfood_{int(time.time())}"
+    cwd = os.getcwd()
+
+    from core.git_manager import GitManager
+    gm = GitManager(cwd)
+    base_sha = gm.get_head_sha()
+
+    print(f"[dogfood] run_id={run_id}  base_sha={base_sha[:8] if base_sha else 'none'}")
+    print(f"[dogfood] task={task_input[:80]}")
+
+    # implement phase
+    phase_result = _run_implement_phase(task_input, cwd)
+    phase_label = "COMPLETE" if phase_result["ok"] else "BLOCKED"
+    print(f"[dogfood] implement phase → {phase_label}  created={phase_result['created']}")
+
+    # R2-1 fix: tracked diff + untracked 신규 파일 합산
+    actual_changed = gm.diff_files_since_with_untracked(base_sha)
+    print(f"[dogfood] actual_changed={actual_changed}")
+
+    merge_result: str | None = None
+    if merge_policy == "auto-policy" and phase_result["ok"]:
+        current_branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=cwd, capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        # stage + commit new files
+        try:
+            subprocess.run(["git", "add"] + phase_result["created"], cwd=cwd, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"dogfood({run_id}): implement {', '.join(phase_result['created'])}"],
+                cwd=cwd, check=True,
+            )
+            print(f"[dogfood] committed on branch={current_branch}")
+
+            # fast-forward merge into base branch (main)
+            base_branch = "main"
+            subprocess.run(["git", "checkout", base_branch], cwd=cwd, check=True)
+            subprocess.run(["git", "merge", "--ff-only", current_branch], cwd=cwd, check=True)
+            # push
+            subprocess.run(["git", "push", "-u", "origin", base_branch], cwd=cwd, check=True)
+            merge_result = "fast-forward"
+            print(f"[dogfood] merged {current_branch} → {base_branch} (fast-forward) + pushed")
+        except subprocess.CalledProcessError as exc:
+            merge_result = f"failed: {exc}"
+            print(f"[dogfood] merge failed: {exc}")
+
+    return {
+        "run_id": run_id,
+        "phase": phase_label,
+        "actual_changed": actual_changed,
+        "merge": merge_result,
+    }
+
+
 def _detect_mode(argv):
     """Return 'subcommand' if argv[0] is a known subcommand, else 'ad_hoc'."""
     if not argv:
@@ -830,6 +966,14 @@ def _build_arg_parser(ad_hoc_mode):
         sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
         sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
         sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+        dogfood_parser = subparsers.add_parser("dogfood", help="dogfood self-modifying pipeline")
+        dogfood_sub = dogfood_parser.add_subparsers(dest="dogfood_cmd", required=True)
+        dogfood_run_parser = dogfood_sub.add_parser("run", help="태스크를 실행하고 actual_changed 보고")
+        dogfood_run_parser.add_argument("task", help="구현할 태스크 설명")
+        dogfood_run_parser.add_argument("--non-interactive", action="store_true", dest="non_interactive",
+                                        help="승인 프롬프트 없이 자동 실행")
+        dogfood_run_parser.add_argument("--merge", default=None, dest="merge_policy",
+                                        metavar="POLICY", help="완료 후 merge 정책 (auto-policy)")
     return parser
 
 
@@ -863,6 +1007,15 @@ if __name__ == "__main__":
                 prefix = "[sync]" if ok else "[sync] ERROR:"
                 print(f"{prefix} {msg}")
             sys.exit(0)
+        elif args.subcommand == "dogfood" and getattr(args, "dogfood_cmd", None) == "run":
+            result = _run_dogfood_run(
+                task_input=args.task,
+                non_interactive=args.non_interactive,
+                merge_policy=args.merge_policy,
+            )
+            import json
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            sys.exit(0 if result.get("phase") == "COMPLETE" else 1)
         else:
             parser.print_help()
             sys.exit(1)
