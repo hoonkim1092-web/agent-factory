@@ -1,7 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — R2 dogfood run COMPLETE (`88f3a7ab`). string_utils.py 신규 생성, R2-1 untracked fix 검증 완료. 보류 dogfood run 없음.
+> 마지막 업데이트: **2026-05-28 KST (Windows)** — **dogfood production-grade hardening 4건 분석 완료, 다음 세션 진입 대기**. 직전 CRLF 정규화 chore 커밋(`d6f6ae39`) push 대기. R2 dogfood run COMPLETE(`88f3a7ab`).
+>
+> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" 섹션. §17 Step 1~20은 모두 ✅ DONE이지만 **운영 신뢰성 게이트 4건 미통과** 상태. dummy 졸업 전 hardening 먼저.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -79,6 +81,38 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 | Cross-review 비용 감축 Phase 2-prep | ✅ (`23f3e7bc`) |
 | Cross-review 비용 감축 Phase 2 full bundle | ✅ (`23f3e7bc`) — 8섹션, 100KB cap, source_hash |
 | post-commit amend 루프 근본 fix | ✅ (`f5d5461d`) — pre-commit 단일화, post_edit_blueprint/code_review hook 제거 |
+
+---
+
+## 🔒 Dogfood Production-Grade Hardening (2026-05-28 분석, 다음 세션 진입점)
+
+> **판단**: §17 Step 1~20은 "있다/없다" 게이트로 통과한 MVP. 실패 의미론·artifact 무결성·정책 일관성 게이트는 미통과.
+> **공통 메타-패턴**: R1 1~13차 누적 픽스(`F-DIRTY-UNTRACKED`, `F-CMD-RUNNER-WINDOWS`, `F-VERIFY-EMPTY` 등)가 전부 "한 곳에서만 처리, 다른 곳 누락" 유형 — 정책 단일소스 부재가 공통 원인.
+
+### 4건 결함 (전부 grep으로 실재 확인)
+
+| # | 항목 | 위험 | 근거 라인 |
+|---|------|------|-----------|
+| **P0-1** | dirty 정책 분기 | High | `core/dogfood.py:598-602` (prepare) + `695-706` (finalize)는 `_is_crlf_only_diff` 필터 / `798-802` (merge)는 raw `status --porcelain` 직접 비교 — merge가 CRLF 필터 누락 |
+| **P0-2** | `_write_json` non-atomic | High | `core/dogfood.py:1604-1606` 직접 `write_text()`. `save_state:448-454`는 tmp+replace — 7곳 호출처 모두 non-atomic. crash/interrupt 시 plan/spec/merge_report 깨질 위험 |
+| **P1-1** | IMPLEMENT 부분실패→VERIFY | Medium | `core/dogfood.py:1473-1480` BLOCK 조건은 `not ok AND not executed`. `ok=False AND executed != []` 케이스는 VERIFY로 진행 — 부분실행 + VERIFY 잘못 통과 가능 |
+| **P1-2** | pre-existing untracked 수정 누락 | Medium | `core/dogfood.py:1224-1232` `_post_untracked - _pre_untracked` 집합 차이만. pre∩post(수정된 기존 untracked)는 `actual_changed`에서 누락. retry 시 1차 산출물 추적 못 함 |
+
+### 실행 순서 (다음 세션)
+
+```
+1. P2 추가 갭 조사 (30분)         — _append_phase_trace atomic / worktree leak
+2. P0-1 dirty 단일소스 (1-2h)     — _dirty_files() 헬퍼 신설, prepare/finalize/merge 통합
+3. P0-2 atomic write (30분-1h)    — tmp.write_text + tmp.replace 패턴
+4. P1-1 fail-closed (1h)          — 결정 필요: default vs --allow-partial-impl opt-out
+5. P1-2 untracked 보강 (2h)       — mtime/hash 동반 캡처 or 워크트리 스냅샷 차분
+6. 통합 dogfood 1회 (R14)         — hardening 검증
+7. "dummy 졸업" 선언 후 production work-item 진입
+```
+
+**PR 분할 권고**: P0-1+P0-2 한 PR(정책 unification), P1-1+P1-2 별도 PR(execution semantics). 4건 한 묶음은 cross-review 분리 못 함.
+
+**결정 필요**: P1-1 default fail-closed vs opt-in. R1 픽스 패턴상 default fail-closed 권장.
 
 ---
 
