@@ -3,7 +3,7 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-05-28 KST (Windows)** — **PR 2 (P0-B) 완료** (`745520ba`). _dirty_files() 단일 헬퍼 + _is_crlf_only_diff -b fallback 제거 + DEFAULT_DENIED_PATHS 상수 + untracked 파일 CRLF 오분류 버그 수정 + denied_paths 분리. 206 tests PASS. 3-Tier PASS.
 >
-> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" §PR 3 (P1) — 실행 의미론 (#3 ok=False→BLOCK, #4 allow_partial_impl, #7 MergePolicy merge_mode 우회 fix).
+> **다음 세션 최우선 진입점**: 아래 "🔒 Dogfood Production-Grade Hardening" §PR 4 (P2) — Operational Hygiene (phase_trace.jsonl corrupt-last-line skip + BLOCK 시 worktree cleanup 정책). 커밋 `84127c8f`.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -125,7 +125,7 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 |---------|----|----|----------|
 | **P0-A** | PR 1 | #1 + #5 | merge_report corrupt 시 silent auto-merge 통과 = 운영 self-development 최악 패턴 |
 | **P0-B** | PR 2 | #2 + #6 + #8 | 16h 작업 후 merge 거부/허용 분기 = 운영 신뢰도 붕괴 |
-| **P1** | PR 3 | #3 + #4 + #7 | 실행 의미론 + Policy 우회 (#7도 의미론 결함) |
+| **P1** | PR 3 | #3 + #4 + #7 | ✅ DONE (`84127c8f`) — ok=False BLOCK + allow_partial_impl + merge_mode SSOT + fingerprint untracked. 221 PASS. |
 | **P2** | PR 4 | trace/worktree | corrupt-last-line skip 정책 + BLOCK 시 cleanup — advisory |
 
 ### 실행 단계 (PR 분할 확정)
