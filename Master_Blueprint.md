@@ -1092,7 +1092,7 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-28; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py
+최근 자동 갱신 컨텍스트: chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, README.md, SPEC_skill_evolution.md (+58)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1629,6 +1629,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, README.md, SPEC_skill_evolution.md (+58) |
 | 2026-05-28 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |
 | 2026-05-28 | v1.2.34 | hardening(dogfood PR1): ARTIFACT_* Final 상수 8개 + ArtifactName Literal, atomic_write_json(tmp→fsync→replace), load_policy_json(required/fail-loud), silent except 제거(merge_report corrupt→BLOCK), missing merge_report + dogfood_commit → policy_rejected, run_all() MERGE 단계 exception 보호(persistent crash loop 방지). 3-Tier: af-critic PASS / af-cross-review BLOCK→fixed(2건) / af-test-runner PASS(188). |
 | 2026-05-28 | v1.2.34 | feat: add core/string_utils.py — truncate() + tests/test_string_utils.py (9 cases) |

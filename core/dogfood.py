@@ -261,11 +261,15 @@ class MergePolicy:
     require_plan_triad_pass: bool = True
     require_dogfood_commit: bool = True
     allowed_paths: list[str] = field(default_factory=list)
-    denied_paths: list[str] = field(default_factory=lambda: [
-        ".af_runtime/",
-        "runtime/",
-        "skills/registry.yaml",
-    ])
+    denied_paths: list[str] = field(default_factory=list)
+
+
+# Paths always blocked from dogfood merges unless overridden via MergePolicy.
+DEFAULT_DENIED_PATHS: Final[tuple[str, ...]] = (
+    ".af_runtime/",
+    "runtime/",
+    "skills/registry.yaml",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -579,16 +583,38 @@ def _git(
 
 
 def _is_crlf_only_diff(filepath: str, cwd: str) -> bool:
-    """Return True iff the only diff for filepath is CR/LF line-ending noise.
-
-    Tries --ignore-cr-at-eol first; falls back to -b (ignore EOL whitespace)
-    for Windows git versions where --ignore-cr-at-eol does not suppress CRLF diffs.
-    """
+    """Return True iff the only diff for filepath is CR/LF line-ending noise."""
     r = _git(["diff", "--ignore-cr-at-eol", "--", filepath], cwd=cwd, check=False)
-    if r.returncode == 0 and not r.stdout.strip():
-        return True
-    r2 = _git(["diff", "-b", "--", filepath], cwd=cwd, check=False)
-    return r2.returncode == 0 and not r2.stdout.strip()
+    return r.returncode == 0 and not r.stdout.strip()
+
+
+def _dirty_files(
+    workspace: str,
+    *,
+    include_untracked: bool,
+    ignore_crlf: bool,
+) -> list[str]:
+    """Return list of dirty files in workspace.
+
+    Single policy entry-point used by prepare/finalize/merge so all three
+    callers apply identical dirty-detection semantics.
+
+    include_untracked: include untracked files (git status '??' entries)
+    ignore_crlf: filter out files where the only diff is CR/LF noise
+    """
+    ut_flag = [] if include_untracked else ["--untracked-files=no"]
+    result = _git(["status", "--porcelain"] + ut_flag, cwd=workspace, check=False)
+    files: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        name = line[3:]
+        if " -> " in name:
+            name = name.split(" -> ", 1)[1]
+        files.append(name)
+    if ignore_crlf:
+        files = [f for f in files if not _is_crlf_only_diff(f, workspace)]
+    return files
 
 
 def _safe_to_cleanup_partial_isolation(state: DogfoodState) -> bool:
@@ -619,11 +645,9 @@ def prepare_isolated_worktree(state: DogfoodState) -> None:
     """
     src = state.source_workspace
 
-    # Refuse dirty source workspace (tracked changes only — untracked files are not copied to worktree)
-    # CRLF-only diffs (Windows↔Mac EOL noise) are ignored — same policy as FINALIZE.
-    dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=src)
-    dirty_files = [line[3:] for line in dirty.stdout.strip().splitlines() if line.strip()]
-    real_dirty = [f for f in dirty_files if not _is_crlf_only_diff(f, src)]
+    # Refuse dirty source workspace (tracked changes only; untracked not copied to worktree).
+    # CRLF-only diffs (Windows↔Mac EOL noise) are ignored — same policy as FINALIZE/MERGE.
+    real_dirty = _dirty_files(src, include_untracked=False, ignore_crlf=True)
     if real_dirty:
         state.isolation_status = "failed"
         raise GitWorktreeError(
@@ -716,18 +740,17 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
     pre_finalize_head = _git(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
     final_docs_synced = _run_final_docs_sync(state)
 
-    # Collect all dirty files (unstaged modified + untracked)
-    diff = _git(["diff", "--name-only", "HEAD"], cwd=wt)
-    untracked = _git(["ls-files", "--others", "--exclude-standard"], cwd=wt)
-    all_dirty = [
-        f for f in (diff.stdout.strip() + "\n" + untracked.stdout.strip()).splitlines() if f
+    # Collect all dirty files (tracked modified + untracked) via unified policy helper.
+    # CRLF filtering only applies to tracked files — untracked files are newly created
+    # and have no index version to diff against, so _is_crlf_only_diff would return True
+    # for them (empty diff == no tracked baseline), which would silently drop them.
+    all_dirty = _dirty_files(wt, include_untracked=True, ignore_crlf=False)
+    tracked_dirty_set = set(_dirty_files(wt, include_untracked=False, ignore_crlf=False))
+    real_dirty = [
+        f for f in all_dirty
+        if f not in tracked_dirty_set  # untracked (newly created): always real
+        or not _is_crlf_only_diff(f, wt)  # tracked: apply CRLF filter
     ]
-
-    # Filter out CRLF-only line-ending noise (Windows ↔ LF mismatch via .gitattributes).
-    # --ignore-cr-at-eol is intentionally narrow: whitespace/content changes still produce
-    # non-empty diff output and are NOT filtered.
-    crlf_only = {f for f in all_dirty if _is_crlf_only_diff(f, wt)}
-    real_dirty = [f for f in all_dirty if f not in crlf_only]
 
     # Build allowlist from plan artifacts + tests_required
     plan_allowlist: set[str] = set()
@@ -819,10 +842,9 @@ def _check_merge_policy(
     if scope_violations:
         return False, f"scope_violations: {', '.join(scope_violations[:3])}"
 
-    # Dirty source check
+    # Dirty source check (CRLF-only noise filtered — same policy as ISOLATE/FINALIZE)
     if policy.require_clean_source:
-        dirty = _git(["status", "--porcelain", "--untracked-files=no"], cwd=state.source_workspace, check=False)
-        if dirty.stdout.strip():
+        if _dirty_files(state.source_workspace, include_untracked=False, ignore_crlf=True):
             return False, "source_workspace is dirty"
 
     # Source drift check
@@ -876,7 +898,11 @@ def merge_dogfood_branch(
                     has_core_allowed = has_core_allowed or rel.startswith("core/")
         if has_core_allowed:
             allowed.extend(FINAL_DOC_PATHS)
-        policy = MergePolicy(mode=state.merge_mode, allowed_paths=list(dict.fromkeys(allowed)))  # type: ignore[arg-type]
+        policy = MergePolicy(  # type: ignore[arg-type]
+            mode=state.merge_mode,
+            allowed_paths=list(dict.fromkeys(allowed)),
+            denied_paths=list(DEFAULT_DENIED_PATHS),
+        )
 
     src = state.source_workspace
 
@@ -1353,8 +1379,8 @@ def _run_merge_phase(state: DogfoodState, merge_mode: str) -> dict[str, Any]:
         state.phase = DogfoodPhase.COMPLETE
         return {"merge_status": "ready"}
 
-    # auto_policy
-    merge_dogfood_branch(state, MergePolicy(mode="auto_policy"))
+    # auto_policy — apply DEFAULT_DENIED_PATHS so all callers get the same gate
+    merge_dogfood_branch(state, MergePolicy(mode="auto_policy", denied_paths=list(DEFAULT_DENIED_PATHS)))
     return {"merge_status": state.merge_status, "merged_commit": state.merged_commit}
 
 

@@ -29,6 +29,7 @@ import pytest
 
 from core.dogfood import (
     ARTIFACT_MERGE_REPORT,
+    DEFAULT_DENIED_PATHS,
     DogfoodPhase,
     DogfoodState,
     GitWorktreeError,
@@ -38,6 +39,7 @@ from core.dogfood import (
     _cleanup_partial_isolation,
     _default_runtime_workspace,
     _default_worktree_workspace,
+    _dirty_files,
     _dogfood_root,
     _run_isolate_phase,
     _run_merge_phase,
@@ -229,14 +231,12 @@ def test_finalize_records_dogfood_commit(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
-            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py"
-        elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py"
-        elif "ls-files" in args:
-            r.stdout = ""
         return r
 
     with patch("core.dogfood._git", side_effect=_git_stub):
@@ -275,14 +275,12 @@ def test_finalize_selective_staging_uses_plan_allowlist(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
-            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n?? run_output.txt\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
-            r.stdout = "core/utils.py"  # committed file after commit
-        elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py\nrun_output.txt"
-        elif "ls-files" in args:
-            r.stdout = ""
+            r.stdout = "core/utils.py"
         elif args[0] == "add":
             staged.append(list(args))
         return r
@@ -324,14 +322,12 @@ def test_finalize_runs_final_docs_sync_before_staging(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
-            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n M Master_Blueprint.md\n M docs/code_review/code-review.md\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py\nMaster_Blueprint.md\ndocs/code_review/code-review.md"
-        elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py\nMaster_Blueprint.md\ndocs/code_review/code-review.md"
-        elif "ls-files" in args:
-            r.stdout = ""
         elif args[0] == "add":
             staged.append(list(args))
         return r
@@ -374,14 +370,12 @@ def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
-            r.stdout = "real content change"  # not CRLF-only (both fallback paths)
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n?? run_output.txt\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py\nrun_output.txt"
-        elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py\nrun_output.txt"
-        elif "ls-files" in args:
-            r.stdout = ""
         elif args[0] == "add":
             staged.append(list(args))
         return r
@@ -540,16 +534,14 @@ def test_finalize_crlf_only_files_excluded_from_scope_violations(tmp_path):
         elif "rev-parse" in args and "HEAD" in args:
             rev_count["n"] += 1
             r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n M syncCompyne/foo.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
             filepath = args[-1]
             # core/utils.py has real changes; syncCompyne/foo.py is CRLF-only
             r.stdout = "" if "syncCompyne" in filepath else "real diff output"
         elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
             r.stdout = "core/utils.py"
-        elif "diff" in args and "--name-only" in args:
-            r.stdout = "core/utils.py\nsyncCompyne/foo.py"
-        elif "ls-files" in args:
-            r.stdout = ""
         elif args[0] == "add":
             staged.append(list(args))
         return r
@@ -791,7 +783,11 @@ def test_merge_policy_defaults():
     assert policy.allow_source_advanced is False
     assert policy.require_plan_triad_pass is True
     assert policy.require_dogfood_commit is True
-    assert ".af_runtime/" in policy.denied_paths
+    # denied_paths default is empty; callers apply DEFAULT_DENIED_PATHS explicitly
+    assert policy.denied_paths == []
+    assert ".af_runtime/" in DEFAULT_DENIED_PATHS
+    assert "runtime/" in DEFAULT_DENIED_PATHS
+    assert "skills/registry.yaml" in DEFAULT_DENIED_PATHS
 
 
 # ---------------------------------------------------------------------------
@@ -836,8 +832,8 @@ def test_prepare_isolated_worktree_real_dirty_blocks(tmp_path):
         r.returncode = 0
         if "status" in args and "--porcelain" in args:
             r.stdout = " M core/dogfood.py\n"  # unstaged modified (porcelain v1: XY + space)
-        elif "diff" in args and ("--ignore-cr-at-eol" in args or "-b" in args):
-            r.stdout = "-old line\n+new line\n"  # real content diff (both fallback paths)
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "-old line\n+new line\n"  # real content diff
         else:
             r.stdout = ""
         return r
@@ -971,3 +967,195 @@ def test_from_dict_backward_compat_workspace_key(tmp_path):
     state = DogfoodState.from_dict(data)
     assert state.source_workspace == str(tmp_path)
     assert state.workspace == str(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# PR 2 (P0-B) regression: _dirty_files / policy consistency
+# ---------------------------------------------------------------------------
+
+def test_dirty_files_returns_tracked_changes(tmp_path):
+    """_dirty_files returns tracked dirty files from status --porcelain."""
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n M tests/test_utils.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real diff"  # not CRLF-only
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files = _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=False)
+
+    assert set(files) == {"core/utils.py", "tests/test_utils.py"}
+
+
+def test_dirty_files_crlf_filtered(tmp_path):
+    """ignore_crlf=True must drop files where only CRLF differs."""
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M real_change.py\n M crlf_only.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            filepath = args[-1]
+            r.stdout = "" if "crlf_only" in filepath else "real diff"
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files = _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=True)
+
+    assert "crlf_only.py" not in files
+    assert "real_change.py" in files
+
+
+def test_dirty_files_whitespace_not_crlf(tmp_path):
+    """Indent/whitespace-only change is NOT filtered — only CR/LF is filtered."""
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M indented.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            # --ignore-cr-at-eol still shows indent change → non-empty
+            r.stdout = "-    x = 1\n+        x = 1\n"
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files = _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=True)
+
+    assert "indented.py" in files
+
+
+def test_dirty_files_includes_untracked(tmp_path):
+    """include_untracked=True must include '??' entries from status --porcelain."""
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            if "--untracked-files=no" in args:
+                r.stdout = " M tracked.py\n"  # no untracked when flag present
+            else:
+                r.stdout = " M tracked.py\n?? new_file.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real diff"
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files_with = _dirty_files(str(tmp_path), include_untracked=True, ignore_crlf=False)
+        files_without = _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=False)
+
+    assert "new_file.py" in files_with
+    assert "tracked.py" in files_with
+    assert "new_file.py" not in files_without
+
+
+def test_merge_dirty_check_applies_crlf_filter(tmp_path):
+    """_check_merge_policy must NOT block when source has only CRLF-only changes."""
+    state = _make_merge_state(tmp_path)
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M agents/README.md\n"  # appears dirty
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = ""  # CRLF-only — no real diff
+        elif "rev-parse" in args:
+            r.stdout = state.base_ref
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        ok, reason = _check_merge_policy(state, MergePolicy(), changed_files=[])
+
+    assert ok is True, f"CRLF-only source should not block merge, got: {reason}"
+
+
+def test_finalize_untracked_file_not_filtered_as_crlf(tmp_path):
+    """Newly created (untracked) files must NOT be dropped by CRLF filter.
+
+    git diff --ignore-cr-at-eol on an untracked file returns empty stdout
+    (no index version), which would make _is_crlf_only_diff return True.
+    The fix: skip CRLF check for untracked files.
+    """
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
+    state.plan_path = ""  # no plan — stage all
+
+    staged: list[list] = []
+    rev_count = {"n": 0}
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "status" in args and "--porcelain" in args:
+            if "--untracked-files=no" in args:
+                r.stdout = " M core/utils.py\n"  # only tracked
+            else:
+                r.stdout = " M core/utils.py\n?? new_module.py\n"  # tracked + untracked
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            filepath = args[-1]
+            # new_module.py is untracked: git diff returns empty (no index baseline)
+            r.stdout = "" if "new_module" in filepath else "real diff"
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = "core/utils.py\nnew_module.py"
+        elif args[0] == "add":
+            staged.append(list(args))
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        report = finalize_dogfood_result(state)
+
+    # new_module.py (untracked) must NOT be dropped despite empty CRLF diff
+    assert any("new_module.py" in " ".join(a) for a in staged)
+    assert report["scope_violations"] == []
+
+
+def test_merge_branch_default_policy_applies_denied_paths(tmp_path):
+    """merge_dogfood_branch must apply DEFAULT_DENIED_PATHS when no policy given."""
+    state = _make_merge_state(tmp_path)
+    state.source_workspace = str(tmp_path)
+
+    # Provide a merge report with a denied path in changed_files
+    report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)
+    atomic_write_json(report_path, {
+        "changed_files": [".af_runtime/dogfood/state.json"],
+        "scope_violations": [],
+    })
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "merge-base" in args and "--is-ancestor" in args:
+            r.returncode = 1  # not already merged
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = ""  # clean
+        elif "rev-parse" in args:
+            r.stdout = state.base_ref
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        merge_dogfood_branch(state)  # no policy arg → default applied
+
+    assert state.merge_status == "policy_rejected"
+    assert "denied" in state.last_failure
