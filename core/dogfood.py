@@ -138,7 +138,7 @@ class DogfoodState:
     base_ref: str = ""
     worktree_workspace: str = ""
     dogfood_branch: str = ""
-    isolation_status: str = "pending"   # pending | ready | failed | cleaned
+    isolation_status: str = "pending"   # pending | ready | failed | cleaned | worktree_removed | cleanup_failed
     merge_status: str = "none"          # none | ready | merged | conflict | policy_rejected | failed
     merge_mode: str = "auto_policy"     # auto_policy | manual | never
     dogfood_commit: str = ""
@@ -265,6 +265,9 @@ class MergePolicy:
     # Allow VERIFY to proceed even when IMPLEMENT has failures.
     # Incompatible with auto_policy: partial results cannot auto-merge safely.
     allow_partial_impl: bool = False
+    # When True, remove the worktree on BLOCKED (save disk space).
+    # Default False — preserve for debugging.  Failed isolations are always cleaned.
+    cleanup_worktree_on_block: bool = False
 
     def __post_init__(self) -> None:
         if self.allow_partial_impl and self.mode == "auto_policy":
@@ -610,21 +613,29 @@ def _dirty_files(
     callers apply identical dirty-detection semantics.
 
     include_untracked: include untracked files (git status '??' entries)
-    ignore_crlf: filter out files where the only diff is CR/LF noise
+    ignore_crlf: filter out files where the only diff is CR/LF noise.
+        Untracked files (no index version) are exempt from CRLF filtering —
+        git diff returns empty for them, which would otherwise wrongly drop them.
     """
     ut_flag = [] if include_untracked else ["--untracked-files=no"]
     result = _git(["status", "--porcelain"] + ut_flag, cwd=workspace, check=False)
-    files: list[str] = []
+    if result.returncode != 0:
+        raise GitWorktreeError(f"git status failed (rc={result.returncode}): {workspace}")
+    entries: list[tuple[str, bool]] = []  # (name, is_untracked)
     for line in result.stdout.splitlines():
         if not line.strip():
             continue
+        is_untracked = line[:2].strip() == "??"
         name = line[3:]
         if " -> " in name:
             name = name.split(" -> ", 1)[1]
-        files.append(name)
+        entries.append((name, is_untracked))
     if ignore_crlf:
-        files = [f for f in files if not _is_crlf_only_diff(f, workspace)]
-    return files
+        return [
+            name for name, is_untracked in entries
+            if is_untracked or not _is_crlf_only_diff(name, workspace)
+        ]
+    return [name for name, _ in entries]
 
 
 def _safe_to_cleanup_partial_isolation(state: DogfoodState) -> bool:
@@ -634,17 +645,112 @@ def _safe_to_cleanup_partial_isolation(state: DogfoodState) -> bool:
 
 
 def _cleanup_partial_isolation(state: DogfoodState) -> None:
-    """Remove a partial worktree and delete the dogfood branch if needed."""
+    """Remove a partial (failed) worktree and delete the dogfood branch.
+
+    Used only for failed isolations — branch has no meaningful commits yet.
+    For successful isolations (isolation_status=="ready"), use
+    _remove_worktree_only() to preserve the branch.
+
+    The branch is only deleted when the worktree was present before cleanup.
+    If the worktree never existed (e.g. ISOLATE failed before git worktree add,
+    or the branch already existed and git worktree add rejected it), we cannot
+    confirm this run created the branch — skip branch deletion to avoid
+    removing a pre-existing branch unrelated to this run.
+    """
     wt = Path(state.worktree_workspace)
-    if wt.exists():
+    wt_was_present = wt.exists()
+    if wt_was_present:
         try:
             _git(["worktree", "remove", "--force", str(wt)], cwd=state.source_workspace, check=False)
         except Exception:
             pass
+    # Only delete the branch if this run's worktree was present — that confirms
+    # git worktree add -b succeeded and this run owns the branch.
+    if wt_was_present and state.dogfood_branch:
+        try:
+            _git(["branch", "-D", state.dogfood_branch], cwd=state.source_workspace, check=False)
+        except Exception:
+            pass
+
+
+def _branch_exists(branch_name: str, cwd: str) -> "bool | None":
+    """Return True if branch exists, False if absent, None if git is unavailable.
+
+    Callers must treat None as "cannot verify" and default to cleanup_failed.
+    """
+    if not branch_name:
+        return False
     try:
-        _git(["branch", "-D", state.dogfood_branch], cwd=state.source_workspace, check=False)
+        r = _git(["branch", "--list", branch_name], cwd=cwd, check=False)
+        return bool(r.stdout.strip())
+    except Exception:
+        return None  # git unavailable or invalid cwd — caller decides
+
+
+def _remove_worktree_only(state: DogfoodState) -> bool:
+    """Remove the worktree but keep the dogfood branch intact.
+
+    Used when isolation_status=="ready" so that dogfood_commit (if created
+    during FINALIZE) remains reachable via the branch.
+
+    Refuses to remove a dirty worktree (uncommitted artifacts would be lost).
+    Returns True iff the worktree was actually removed; False if it still exists
+    (either because it was dirty or because git worktree remove failed).
+    """
+    wt = Path(state.worktree_workspace)
+    if not wt.exists():
+        return True
+    # Fail-safe: do not force-remove uncommitted work from the worktree.
+    try:
+        dirty = _dirty_files(str(wt), include_untracked=True, ignore_crlf=True)
+    except Exception:
+        return False  # cannot verify dirtiness — preserve worktree
+    if dirty:
+        return False  # preserve — uncommitted work present
+    try:
+        _git(["worktree", "remove", "--force", str(wt)], cwd=state.source_workspace, check=False)
     except Exception:
         pass
+    return not wt.exists()
+
+
+def _handle_blocked_worktree(state: DogfoodState, *, cleanup_on_block: bool) -> None:
+    """Apply worktree cleanup policy when a run transitions to BLOCKED.
+
+    isolation_status == "pending"        → no worktree exists; no-op.
+    isolation_status == "failed"         → partial worktree + branch; always clean up.
+                                           Sets "cleaned" when both are gone, else "cleanup_failed".
+                                           If branch-existence cannot be verified, sets "cleanup_failed".
+    isolation_status == "ready"          → worktree removed (branch preserved so that
+                                           any dogfood_commit stays reachable); only
+                                           when cleanup_on_block=True.
+                                           Sets "worktree_removed" (not "cleaned" — branch still exists).
+    "cleaned"         = worktree + branch both gone.
+    "worktree_removed"= worktree gone, branch preserved (ready path only).
+    "cleanup_failed"  = cleanup attempted but something still exists, or could not be verified.
+    """
+    status = state.isolation_status
+    if status in ("pending", "cleaned", "worktree_removed", "cleanup_failed"):
+        return
+    try:
+        if status == "failed":
+            _cleanup_partial_isolation(state)
+            wt_gone = not Path(state.worktree_workspace).exists()
+            branch_result = _branch_exists(state.dogfood_branch, state.source_workspace)
+            if branch_result is None:
+                # git unavailable — cannot confirm branch is gone; mark cleanup_failed
+                state.isolation_status = "cleanup_failed"
+                return
+            branch_gone = not branch_result
+            state.isolation_status = "cleaned" if (wt_gone and branch_gone) else "cleanup_failed"
+            return
+        # status == "ready"
+        if cleanup_on_block:
+            removed = _remove_worktree_only(state)
+            # Branch is intentionally preserved — use "worktree_removed", not "cleaned"
+            state.isolation_status = "worktree_removed" if removed else "cleanup_failed"
+    except Exception:
+        state.isolation_status = "cleanup_failed"
 
 
 def prepare_isolated_worktree(state: DogfoodState) -> None:
@@ -1439,6 +1545,7 @@ def run_all(
     merge_mode: str = "auto_policy",
     strict_contract: bool = False,
     allow_partial_impl: bool = False,
+    cleanup_worktree_on_block: bool = False,
     _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
 ) -> "DogfoodState":
     """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
@@ -1453,6 +1560,8 @@ def run_all(
     merge_mode: auto_policy | manual | never
     strict_contract: production-mode artifact contract checks. Direct phase
         tests remain permissive via run_phase() or strict_contract=False.
+    cleanup_worktree_on_block: when True, remove the worktree if the run ends
+        BLOCKED.  Failed isolations are always cleaned regardless of this flag.
     _interview_fn: injectable for tests; overrides the default run_interview wrapper.
     Returns the final DogfoodState (phase COMPLETE or BLOCKED).
     """
@@ -1650,6 +1759,10 @@ def run_all(
         advance_phase(state)
         save_state(state)
 
+    if state.phase == DogfoodPhase.BLOCKED:
+        _handle_blocked_worktree(state, cleanup_on_block=cleanup_worktree_on_block)
+        save_state(state)
+
     return state
 
 
@@ -1802,6 +1915,27 @@ def _append_phase_trace(
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     except Exception:
         pass
+
+
+def read_phase_trace(state: DogfoodState) -> list[dict[str, Any]]:
+    """Return all phase trace records from phase_trace.jsonl.
+
+    Returns [] if the trace file doesn't exist.
+    Corrupt lines (e.g. truncated last write after a crash) are silently dropped.
+    """
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            records.append(json.loads(stripped))
+        except json.JSONDecodeError:
+            pass  # truncated last-write — skip silently
+    return records
 
 
 def _strict_contract_failure(phase: DogfoodPhase, artifact: dict[str, Any]) -> str:

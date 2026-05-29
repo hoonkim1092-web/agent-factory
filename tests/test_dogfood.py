@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -389,6 +390,193 @@ def test_block_run_sets_blocked(tmp_path):
     block_run(state, "review blocked")
     assert state.phase == DogfoodPhase.BLOCKED
     assert state.last_failure == "review blocked"
+
+
+# ---------------------------------------------------------------------------
+# read_phase_trace
+# ---------------------------------------------------------------------------
+
+def test_read_phase_trace_missing_file_returns_empty(tmp_path):
+    state = _state(tmp_path)
+    from core.dogfood import read_phase_trace
+    assert read_phase_trace(state) == []
+
+
+def test_read_phase_trace_parses_valid_records(tmp_path):
+    from core.dogfood import read_phase_trace, _artifact_path, ARTIFACT_PHASE_TRACE
+    state = _state(tmp_path)
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    records = [{"phase": "INTERVIEW", "elapsed_ms": 100}, {"phase": "RESEARCH_BRIEF", "elapsed_ms": 200}]
+    path.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
+    result = read_phase_trace(state)
+    assert len(result) == 2
+    assert result[0]["phase"] == "INTERVIEW"
+    assert result[1]["elapsed_ms"] == 200
+
+
+def test_read_phase_trace_skips_corrupt_last_line(tmp_path):
+    from core.dogfood import read_phase_trace, _artifact_path, ARTIFACT_PHASE_TRACE
+    state = _state(tmp_path)
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Last line truncated — simulates kill-mid-write
+    path.write_text(
+        '{"phase": "INTERVIEW", "elapsed_ms": 50}\n{"phase": "SPEC", "elapsed_ms"',
+        encoding="utf-8",
+    )
+    result = read_phase_trace(state)
+    assert len(result) == 1
+    assert result[0]["phase"] == "INTERVIEW"
+
+
+def test_read_phase_trace_skips_blank_lines(tmp_path):
+    from core.dogfood import read_phase_trace, _artifact_path, ARTIFACT_PHASE_TRACE
+    state = _state(tmp_path)
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('\n{"phase": "PLAN", "elapsed_ms": 300}\n\n', encoding="utf-8")
+    result = read_phase_trace(state)
+    assert len(result) == 1
+    assert result[0]["phase"] == "PLAN"
+
+
+# ---------------------------------------------------------------------------
+# _handle_blocked_worktree
+# ---------------------------------------------------------------------------
+
+def test_handle_blocked_worktree_pending_noop(tmp_path):
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "pending"
+    _handle_blocked_worktree(state, cleanup_on_block=True)
+    assert state.isolation_status == "pending"  # unchanged
+
+
+def test_handle_blocked_worktree_failed_always_cleans(tmp_path):
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "failed"
+    wt = tmp_path / "wt"
+    # worktree doesn't exist → removal trivially succeeds.
+    # branch --list returns empty → branch already gone.
+    state.worktree_workspace = str(wt)
+    state.dogfood_branch = "dogfood/test-run-001"
+    def _git_stub(args, cwd, **kw):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""  # branch --list → not found
+        return r
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert state.isolation_status == "cleaned"
+
+
+def test_handle_blocked_worktree_failed_cleanup_failure_wt_remains(tmp_path):
+    """If the worktree still exists after cleanup, status must be 'cleanup_failed'."""
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "failed"
+    wt = tmp_path / "wt"
+    wt.mkdir()  # exists — simulates git worktree remove failure
+    state.worktree_workspace = str(wt)
+    state.dogfood_branch = "dogfood/test-run-001"
+    # git call "succeeds" but dir remains (permission lock); branch --list returns empty
+    def _git_stub(args, cwd, **kw):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""  # branch --list → not found
+        return r
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert state.isolation_status == "cleanup_failed"
+
+
+def test_handle_blocked_worktree_failed_cleanup_failure_branch_remains(tmp_path):
+    """If the branch still exists after cleanup, status must be 'cleanup_failed'."""
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "failed"
+    # worktree path does not exist — worktree removal trivially succeeds
+    state.worktree_workspace = str(tmp_path / "wt")
+    state.dogfood_branch = "dogfood/test-run-001"
+    # branch --list returns the branch name (branch -D failed silently)
+    def _git_stub(args, cwd, **kw):
+        r = MagicMock()
+        r.returncode = 0
+        if "--list" in args:
+            r.stdout = "dogfood/test-run-001\n"
+        else:
+            r.stdout = ""
+        return r
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert state.isolation_status == "cleanup_failed"
+
+
+def test_handle_blocked_worktree_ready_preserved_by_default(tmp_path):
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "ready"
+    _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert state.isolation_status == "ready"  # preserved
+
+
+def test_handle_blocked_worktree_ready_cleaned_when_requested(tmp_path):
+    """cleanup_on_block=True removes worktree only; branch is preserved → worktree_removed."""
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "ready"
+    wt = tmp_path / "wt"
+    # worktree doesn't exist → removal succeeds (nothing to remove)
+    state.worktree_workspace = str(wt)
+    state.dogfood_branch = "dogfood/test-run-001"
+    with patch("core.dogfood._git") as mock_git:
+        _handle_blocked_worktree(state, cleanup_on_block=True)
+    # Branch is preserved → status is "worktree_removed", NOT "cleaned"
+    assert state.isolation_status == "worktree_removed"
+    # branch -D must NOT be called (branch preserved for dogfood_commit reachability)
+    branch_delete_calls = [
+        c for c in mock_git.call_args_list
+        if "branch" in c.args[0] and "-D" in c.args[0]
+    ]
+    assert branch_delete_calls == [], "branch must not be deleted on ready+cleanup"
+
+
+def test_handle_blocked_worktree_failed_no_worktree_skips_branch_delete(tmp_path):
+    """ISOLATE failed before worktree existed → branch NOT deleted (may be pre-existing)."""
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "failed"
+    # Worktree path does NOT exist — simulates failure before git worktree add
+    state.worktree_workspace = str(tmp_path / "wt")
+    state.dogfood_branch = "dogfood/test-run-001"
+    called_branch_delete = []
+
+    def _git_stub(args, cwd, **kw):
+        if "branch" in args and "-D" in args:
+            called_branch_delete.append(args)
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""  # branch --list → not found
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert called_branch_delete == [], "branch must not be deleted when worktree was never created"
+    assert state.isolation_status == "cleaned"  # wt_gone=True, branch confirmed gone
+
+
+def test_handle_blocked_worktree_failed_branch_exists_unknown_marks_failed(tmp_path):
+    """If _branch_exists returns None (git unavailable), status must be cleanup_failed."""
+    from core.dogfood import _handle_blocked_worktree
+    state = _state(tmp_path)
+    state.isolation_status = "failed"
+    state.worktree_workspace = str(tmp_path / "wt")
+    state.dogfood_branch = "dogfood/test-run-001"
+    with patch("core.dogfood._branch_exists", return_value=None):
+        _handle_blocked_worktree(state, cleanup_on_block=False)
+    assert state.isolation_status == "cleanup_failed"
 
 
 # ---------------------------------------------------------------------------

@@ -1040,7 +1040,7 @@ run_factory_cli.main()
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
 ### §3.13 Dogfood Pipeline (`core/dogfood.py`)
-<!-- last_updated: 2026-05-29 PR3 (P1 Execution Semantics): MergePolicy.allow_partial_impl + __post_init__ + ok=False→BLOCK + _run_merge_phase mode SSOT + _fingerprint_untracked (#3/#4/#7) -->
+<!-- last_updated: 2026-05-29 PR4 (P2 Operational Hygiene): read_phase_trace + _handle_blocked_worktree + cleanup_worktree_on_block + isolation_status worktree_removed/cleanup_failed -->
 
 **목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
 
@@ -1049,8 +1049,8 @@ run_factory_cli.main()
 | 클래스 | 역할 |
 |--------|------|
 | `DogfoodPhase` | 14-phase enum (PENDING → COMPLETE / BLOCKED) |
-| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()` |
-| `MergePolicy` | auto_policy / manual / never + `allow_partial_impl: bool = False`. `__post_init__`: `allow_partial_impl + auto_policy` 조합 ValueError. |
+| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()`. `isolation_status`: pending\|ready\|failed\|cleaned\|worktree_removed\|cleanup_failed |
+| `MergePolicy` | auto_policy / manual / never + `allow_partial_impl: bool = False` + `cleanup_worktree_on_block: bool = False`. `__post_init__`: `allow_partial_impl + auto_policy` 조합 ValueError. |
 | `VerifyResult` / `ReviewDecision` | 검증/리뷰 결과 (passed/retry/block, accept/reject) |
 
 **공개 API:**
@@ -1058,7 +1058,8 @@ run_factory_cli.main()
 | 함수 | 역할 |
 |------|------|
 | `create_run(task, workspace)` | 新 run_id 생성 + PENDING 상태 초기화 |
-| `run_all(task, workspace, *, strict_contract, allow_partial_impl, ...)` | PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. `strict_contract=True`면 6-phase 계약 체크 활성. `allow_partial_impl=True`이면 ok=False IMPLEMENT에서도 VERIFY 진행 (`merge_mode=manual/never` 전용 — auto_policy 조합은 ValueError). |
+| `run_all(task, workspace, *, strict_contract, allow_partial_impl, cleanup_worktree_on_block, ...)` | PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. `strict_contract=True`면 6-phase 계약 체크 활성. `allow_partial_impl=True`이면 ok=False IMPLEMENT에서도 VERIFY 진행 (`merge_mode=manual/never` 전용). `cleanup_worktree_on_block=True`이면 BLOCKED 시 worktree 제거(branch 보존). |
+| `read_phase_trace(state)` | `phase_trace.jsonl` 파일 전체 파싱 → `list[dict]`. 파일 없으면 `[]`. corrupt 마지막 줄 silently drop (crash-safe). |
 | `run_phase(state, phase)` | 단일 phase 실행 |
 | `advance_phase` / `block_run` / `retry_run` | 상태 전이 (retry는 IMPLEMENT→VERIFY 최대 3회) |
 | `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE |
@@ -1083,16 +1084,25 @@ run_factory_cli.main()
 - `dogfood merge <run_id>` → `merge_dogfood_branch()`
 - `dogfood interview <task>` → `core.interview.run_interview()` 래핑
 
+**P2 BLOCK 정리 함수 (2026-05-29 신규):**
+
+| 함수 | 역할 |
+|------|------|
+| `_handle_blocked_worktree(state, *, cleanup_on_block)` | BLOCKED 전이 시 isolation_status 기반 cleanup 정책 적용. failed→cleaned/cleanup_failed, ready+cleanup_on_block→worktree_removed/cleanup_failed. `_branch_exists=None`(git 불가) → cleanup_failed. |
+| `_branch_exists(name, cwd)` | branch 존재 확인. True/False/None(git 불가). 호출자는 None→cleanup_failed로 처리. |
+| `_remove_worktree_only(state)` | worktree만 제거, branch 보존. dirty worktree 거부. `_dirty_files` 예외 시 `False` 반환(보수적). |
+
 **격리 + 머지 설계:**
 - FINALIZE `scope_violations`: plan artifacts + tests_required 허용 목록 외 변경은 git add 대상 제외 + 기록
 - MERGE `require_dogfood_commit`: source_branch와 동일 SHA면 BLOCKED (no-op 머지 방지)
 - FINALIZE commit: `AF_SKIP_REVIEW_GATE=1` 인라인 env — 워크트리는 이미 3-Tier 통과 경로이므로 이중 발화 방지
+- BLOCK cleanup: `_cleanup_partial_isolation`은 worktree가 없었으면 branch 삭제 생략 (pre-existing branch 방지)
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-29; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md, README.md (+58)
+최근 자동 갱신 컨텍스트: chore(AGENTS): code update — AGENTS.md, Master_Blueprint.md, NEXT_STEPS.md, PROJECT_LOG.md, README.md (+51)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1629,10 +1639,12 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, Master_Blueprint.md, NEXT_STEPS.md, PROJECT_LOG.md, README.md (+51) |
 | 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md, README.md (+58) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, README.md, SPEC_skill_evolution.md (+58) |
 | 2026-05-28 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |
 | 2026-05-28 | v1.2.34 | hardening(dogfood PR1): ARTIFACT_* Final 상수 8개 + ArtifactName Literal, atomic_write_json(tmp→fsync→replace), load_policy_json(required/fail-loud), silent except 제거(merge_report corrupt→BLOCK), missing merge_report + dogfood_commit → policy_rejected, run_all() MERGE 단계 exception 보호(persistent crash loop 방지). 3-Tier: af-critic PASS / af-cross-review BLOCK→fixed(2건) / af-test-runner PASS(188). |
+| 2026-05-29 | v1.2.34 | fix(dogfood PR4 P2): Operational Hygiene — (1) `_cleanup_partial_isolation`: worktree 미존재 시 branch 삭제 금지(pre-existing branch 방지). (2) `_branch_exists` → `bool\|None` tri-state, git 불가 시 None 반환, `_handle_blocked_worktree`에서 None→cleanup_failed. (3) `_remove_worktree_only` `except Exception`(기존 `GitWorktreeError`→ OSError 누락 수정). (4) ready+cleanup 경로: `"cleaned"` → `"worktree_removed"`(branch 보존 상태 정직 표현). (5) `read_phase_trace()` 신규 공개 API — corrupt 마지막 줄 silently drop. (6) `run_all(cleanup_worktree_on_block=False)` 파라미터 추가. `DogfoodState.isolation_status` 6-enum으로 확장. 신규 테스트 +2건. dogfood 237 PASS. 3-Tier: af-critic PASS / af-cross-review WARN-only / af-test-runner PASS. |
 | 2026-05-29 | v1.2.34 | feat(dogfood PR3 P1): Execution Semantics — (1) `MergePolicy.allow_partial_impl: bool=False` + `__post_init__` ValueError(auto_policy 조합 금지). (2) `run_all(allow_partial_impl=False)` — ok=False→기본 BLOCK, allow_partial_impl=True 시 VERIFY 진행(manual/never 전용). (3) `_run_merge_phase`: mode="auto_policy" 하드코딩 → `mode=merge_mode`(state SSOT). (4) `_fingerprint_untracked()` 신규 — 64KB 임계 SHA-1/size+mtime_ns, None 센티널, pre-existing 수정 파일 감지. CLI `--allow-partial-impl` 플래그. 회귀 테스트 +15건. integration test 수정(ok=False BLOCK 의미론 반영). dogfood 221 PASS. 3-Tier: af-critic WARN-only / af-cross-review PASS / af-test-runner 221 PASS. |
 | 2026-05-28 | v1.2.34 | feat: add core/string_utils.py — truncate() + tests/test_string_utils.py (9 cases) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, Parallelization_plan.md, README.md (+57) |
