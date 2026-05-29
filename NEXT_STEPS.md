@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-28 KST (Windows)** — **PR 2 (P0-B) 완료** (`745520ba`). _dirty_files() 단일 헬퍼 + _is_crlf_only_diff -b fallback 제거 + DEFAULT_DENIED_PATHS 상수 + untracked 파일 CRLF 오분류 버그 수정 + denied_paths 분리. 206 tests PASS. 3-Tier PASS.
+> 마지막 업데이트: **2026-05-29 KST (Mac)** — **R14 dummy dogfood run COMPLETE** (`58748d90`). flatten() + TestFlatten 5 tests auto-policy merge. 12 phase trace 생성, BLOCKED 없음 → **"dummy 졸업" 선언 완료**.
 >
-> **다음 세션 최우선 진입점**: "🔒 Dogfood Production-Grade Hardening" §PR 4 (P2) COMPLETE (이 세션). 다음 진입점: PR 4 이후 R14 dummy dogfood run — "dummy 졸업" 선언 후 production work-item 진입.
+> **다음 세션 최우선 진입점**: production work-item 선정 후 dogfood run 진입. 후보: (1) Phase A Phase 4 스마트 라우팅 (1주 측정 데이터 있으면), (2) premortem/planner 개선 작업, (3) 사용자 지정 작업.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -448,8 +448,15 @@ PR 4 — Operational Hygiene (P2)
    - ✅ PC 핸드오프 규칙 첫 실전 사이클 — Mac 단일 세션에서 시작·머지·push 완료, R1 11차 미회수 패턴 재발 없음
    - 1차 시도 실패 부산물: CRLF 정규화 chore 커밋(`4153b013`) — Windows→Mac pull 부산물 dirty 해소
 
+   **R1 14차 (2026-05-29) — COMPLETE** (run_id: 1780028360-9b5d3139, merge: `58748d90`, PC: `hoonkims-MacBook-Pro.local`):
+   - ✅ `flatten(lst: list) -> list` core/utils.py 추가 — shallow flatten, 빈 리스트 []
+   - ✅ TestFlatten 5 tests PASS (빈, 평탄, 1단계 중첩, 2단계+ 1단계만, 혼합 타입)
+   - ✅ 12 phase 전부 trace 생성, BLOCKED 없음 — implement 143s AI executor 정상
+   - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
+   - **🎓 "dummy 졸업" 선언** — R5~R14 9회 연속 COMPLETE, 핵심 인프라 안정성 확인
+
    **다음 진입점**:
-   - 별도 작업 시작 시 NEXT_STEPS 라인 4 갱신 후 진입 (보류 dogfood run 없음)
+   - production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
