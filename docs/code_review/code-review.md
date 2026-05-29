@@ -6710,3 +6710,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (5)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dogfood.py, tests/test_dogfood.py, tests/test_dogfood_isolation.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-30 01:06 — `dogfood/1780070580-509da39d` (1c62a73f)
+
+**Context**: dogfood finalize: core/planner.py의 _build_investigation_steps() 함수를 확장하여 R5+ assumption 리스크도 investigation step으로 변환한다. 현재 구현은 R20+ gap ri
+
+**Changed (3)**: `Master_Blueprint.md, core/planner.py, tests/test_planner.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
