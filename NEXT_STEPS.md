@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-29 KST (Mac)** — **R14 dummy dogfood run COMPLETE** (`58748d90`). flatten() + TestFlatten 5 tests auto-policy merge. 12 phase trace 생성, BLOCKED 없음 → **"dummy 졸업" 선언 완료**.
+> 마지막 업데이트: **2026-05-30 KST (Windows)** — **R15 production dogfood run COMPLETE** (`03d9347b`). planner `_build_investigation_steps()` 확장 — R5+ assumption risks investigation step 생성. auto-policy merge. **첫 production work-item dogfood run 성공**.
 >
-> **다음 세션 최우선 진입점**: production work-item 선정 후 dogfood run 진입. 후보: (1) Phase A Phase 4 스마트 라우팅 (1주 측정 데이터 있으면), (2) premortem/planner 개선 작업, (3) 사용자 지정 작업.
+> **다음 세션 최우선 진입점**: 다음 production work-item 선정 후 dogfood run 진입. 후보: (1) Phase A Phase 4 스마트 라우팅 (1주 측정 데이터 있으면), (2) premortem/planner 추가 개선, (3) 사용자 지정 작업.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -459,8 +459,16 @@ PR 4 — Operational Hygiene (P2)
    - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
    - **🎓 "dummy 졸업" 선언** — R5~R14 9회 연속 COMPLETE, 핵심 인프라 안정성 확인
 
+   **R1 15차 (2026-05-30) — COMPLETE** (run_id: 1780070580-509da39d, merge: `03d9347b`, PC: Windows):
+   - ✅ `core/planner.py` `_build_investigation_steps()` 확장 — R5-R19 assumption risks도 investigation step 생성
+   - ✅ `_is_assumption_risk()` 헬퍼 신설 (category='assumption' OR risk_id in [5, 20))
+   - ✅ comment 명령어(`#` 시작) 필터링으로 실행 가능한 commands만 포함
+   - ✅ tests/test_planner.py 36줄 신규 (assumption 1개·2개·0개 시나리오)
+   - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
+   - **🚀 첫 production work-item dogfood run COMPLETE** — premortem/planner 개선 실제 반영
+
    **다음 진입점**:
-   - production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
+   - 다음 production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
 
 4. ✅ **R3 scope guard enforce** — `_scope_guard_report()` + baseline 기반 false-positive 제거. `AF_SCOPE_GUARD_PATHS` env var로 allowlist 지정 가능. DONE (`2026-05-23`).
 5. ✅ **§17 Step 3~4** — `core/research_brief.py` + `core/spec_compiler.py` 신규. 24 tests PASS. 3-Tier PASS. (`0466d28e`, 2026-05-23)
