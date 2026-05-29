@@ -84,8 +84,10 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 ---
 
-## 🔒 Dogfood Production-Grade Hardening (2026-05-28 분석 v2 확정)
+## 🔒 Dogfood Production-Grade Hardening (2026-05-28 분석 v2 확정) — ✅ PR 1~4 전부 DONE (2026-05-29 확인)
 
+> **상태**: P0-A(`86278509`) · P0-B(`745520ba`) · P1(`84127c8f`) · P2(`0ad0f047`) 4개 PR 모두 머지 완료. 아래 결함 8건 전부 해소. (이하 분석 기록은 history로 보존)
+>
 > **Root cause**: dogfood lifecycle에서 "정책 입력·상태 저장·변경 감지·실패 의미론"이 단일 계약으로 묶여 있지 않음.
 > 즉 SSOT는 일부 존재하나(MergePolicy, DogfoodState) **호출처가 우회 가능** = "계약을 만들었지만 강제하지 않음" 상태.
 > §17 Step 1~20은 "있다/없다" 게이트 통과 MVP. 실패 의미론·artifact 무결성·정책 일관성·하드코딩 금지 게이트는 미통과.
@@ -123,10 +125,10 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 | 우선순위 | PR | 결함 | 위험 근거 |
 |---------|----|----|----------|
-| **P0-A** | PR 1 | #1 + #5 | merge_report corrupt 시 silent auto-merge 통과 = 운영 self-development 최악 패턴 |
-| **P0-B** | PR 2 | #2 + #6 + #8 | 16h 작업 후 merge 거부/허용 분기 = 운영 신뢰도 붕괴 |
+| **P0-A** | PR 1 | #1 + #5 | ✅ DONE (`86278509`) — atomic_write_json + load_policy_json(corrupt=fatal, silent except 제거) + ARTIFACT_* SSOT. |
+| **P0-B** | PR 2 | #2 + #6 + #8 | ✅ DONE (`745520ba`) — _dirty_files 단일화 + CRLF -b fallback 좁히기 + denied_paths 입력 분리. |
 | **P1** | PR 3 | #3 + #4 + #7 | ✅ DONE (`84127c8f`) — ok=False BLOCK + allow_partial_impl + merge_mode SSOT + fingerprint untracked. 221 PASS. |
-| **P2** | PR 4 | trace/worktree | ✅ DONE — corrupt-last-line skip + BLOCK 시 cleanup 정책 (이 세션). |
+| **P2** | PR 4 | trace/worktree | ✅ DONE (`0ad0f047`) — corrupt-last-line skip + BLOCK 시 cleanup 정책. |
 
 ### 실행 단계 (PR 분할 확정)
 
