@@ -1159,3 +1159,100 @@ def test_merge_branch_default_policy_applies_denied_paths(tmp_path):
 
     assert state.merge_status == "policy_rejected"
     assert "denied" in state.last_failure
+
+
+# ---------------------------------------------------------------------------
+# CRLF fixture 확장 — untracked + all-CRLF edge cases
+# ---------------------------------------------------------------------------
+
+def test_dirty_files_untracked_not_crlf_filtered(tmp_path):
+    """Untracked files must appear even when ignore_crlf=True.
+
+    git diff --ignore-cr-at-eol on an untracked path returns empty stdout
+    (no index version), which would wrongly classify it as CRLF-only.
+    _dirty_files must skip the CRLF check for '??' entries.
+    """
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            # One tracked CRLF-only file + one untracked new file
+            r.stdout = " M crlf_only.py\n?? new_file.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            # Real git behaviour: untracked file → empty output (no index version)
+            r.stdout = ""
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files = _dirty_files(str(tmp_path), include_untracked=True, ignore_crlf=True)
+
+    assert "crlf_only.py" not in files  # filtered out (tracked, CRLF-only)
+    assert "new_file.py" in files       # untracked — exempt from CRLF check
+
+
+def test_dirty_files_all_crlf_returns_empty(tmp_path):
+    """When all dirty files are CRLF-only, _dirty_files returns an empty list."""
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M a.py\n M b.py\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = ""  # both are CRLF-only
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        files = _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=True)
+
+    assert files == []
+
+
+def test_dirty_files_git_status_failure_raises(tmp_path):
+    """git status non-zero exit must raise GitWorktreeError (fail-closed)."""
+    from core.dogfood import GitWorktreeError
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 128  # git: not a repository / fatal error
+        r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        with pytest.raises(GitWorktreeError):
+            _dirty_files(str(tmp_path), include_untracked=False, ignore_crlf=False)
+
+
+def test_remove_worktree_only_dirty_refuses(tmp_path):
+    """_remove_worktree_only must refuse to remove a dirty worktree."""
+    from core.dogfood import _remove_worktree_only, DogfoodPhase, DogfoodState
+
+    state = DogfoodState(
+        run_id="rw-test",
+        task="t",
+        phase=DogfoodPhase.BLOCKED,
+        source_workspace=str(tmp_path),
+        runtime_workspace=str(tmp_path / "rt"),
+    )
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    state.worktree_workspace = str(wt)
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "status" in args and "--porcelain" in args:
+            r.stdout = " M core/utils.py\n"  # dirty: real change
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real diff content"  # not CRLF-only
+        else:
+            r.stdout = ""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        removed = _remove_worktree_only(state)
+
+    assert removed is False  # must refuse (uncommitted work present)
+    assert wt.exists()       # worktree still exists
