@@ -148,6 +148,17 @@ def chunks(lst: list, n: int) -> list[list]:
     return [lst[i:i + n] for i in range(0, len(lst), n)]
 
 
+def flatten(lst: list) -> list:
+    """리스트를 1단계만 평탄화한다. 중첩이 2단계 이상이면 첫 번째 단계만 풀린다."""
+    result = []
+    for item in lst:
+        if isinstance(item, list):
+            result.extend(item)
+        else:
+            result.append(item)
+    return result
+
+
 def _split_env_paths(raw: str | None) -> list[str]:
     return [part.strip() for part in str(raw or "").split(",") if part.strip()]
 

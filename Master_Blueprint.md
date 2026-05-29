@@ -209,7 +209,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1102,11 +1102,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-29; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(AGENTS): code update — AGENTS.md, Master_Blueprint.md, NEXT_STEPS.md, PROJECT_LOG.md, README.md (+51)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1639,11 +1639,14 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-29 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
+| 2026-05-29 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 flatten(lst: list) -> list 함수 추가. 중첩 리스트를 1단계만 평탄화(shallow flatten). 빈 리스트는 []을 반환. tests/test_utils.py에  — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, Master_Blueprint.md, NEXT_STEPS.md, PROJECT_LOG.md, README.md (+51) |
 | 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md, README.md (+58) |
 | 2026-05-28 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, PROJECT_LOG.md, README.md, SPEC_skill_evolution.md (+58) |
 | 2026-05-28 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |
 | 2026-05-28 | v1.2.34 | hardening(dogfood PR1): ARTIFACT_* Final 상수 8개 + ArtifactName Literal, atomic_write_json(tmp→fsync→replace), load_policy_json(required/fail-loud), silent except 제거(merge_report corrupt→BLOCK), missing merge_report + dogfood_commit → policy_rejected, run_all() MERGE 단계 exception 보호(persistent crash loop 방지). 3-Tier: af-critic PASS / af-cross-review BLOCK→fixed(2건) / af-test-runner PASS(188). |
+| 2026-05-29 | v1.2.34 | feat(utils): `flatten(lst)` 신설 — 중첩 리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환. `tests/test_utils.py` TestFlatten 5건 신규. §0 갱신. |
 | 2026-05-29 | v1.2.34 | fix(dogfood PR4 P2): Operational Hygiene — (1) `_cleanup_partial_isolation`: worktree 미존재 시 branch 삭제 금지(pre-existing branch 방지). (2) `_branch_exists` → `bool\|None` tri-state, git 불가 시 None 반환, `_handle_blocked_worktree`에서 None→cleanup_failed. (3) `_remove_worktree_only` `except Exception`(기존 `GitWorktreeError`→ OSError 누락 수정). (4) ready+cleanup 경로: `"cleaned"` → `"worktree_removed"`(branch 보존 상태 정직 표현). (5) `read_phase_trace()` 신규 공개 API — corrupt 마지막 줄 silently drop. (6) `run_all(cleanup_worktree_on_block=False)` 파라미터 추가. `DogfoodState.isolation_status` 6-enum으로 확장. 신규 테스트 +2건. dogfood 237 PASS. 3-Tier: af-critic PASS / af-cross-review WARN-only / af-test-runner PASS. |
 | 2026-05-29 | v1.2.34 | feat(dogfood PR3 P1): Execution Semantics — (1) `MergePolicy.allow_partial_impl: bool=False` + `__post_init__` ValueError(auto_policy 조합 금지). (2) `run_all(allow_partial_impl=False)` — ok=False→기본 BLOCK, allow_partial_impl=True 시 VERIFY 진행(manual/never 전용). (3) `_run_merge_phase`: mode="auto_policy" 하드코딩 → `mode=merge_mode`(state SSOT). (4) `_fingerprint_untracked()` 신규 — 64KB 임계 SHA-1/size+mtime_ns, None 센티널, pre-existing 수정 파일 감지. CLI `--allow-partial-impl` 플래그. 회귀 테스트 +15건. integration test 수정(ok=False BLOCK 의미론 반영). dogfood 221 PASS. 3-Tier: af-critic WARN-only / af-cross-review PASS / af-test-runner 221 PASS. |
 | 2026-05-28 | v1.2.34 | feat: add core/string_utils.py — truncate() + tests/test_string_utils.py (9 cases) |
