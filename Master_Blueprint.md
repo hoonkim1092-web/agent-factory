@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-29 | version: v1.2.34 -->
+<!-- last_updated: 2026-05-30 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1101,13 +1101,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-05-29; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-05-30; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, code-review.md, test_planner.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1640,6 +1640,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-30 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, code-review.md, test_planner.py |
+| 2026-05-30 | v1.2.34 | chore(core): dogfood finalize: core/planner.py의 _build_investigation_steps() 함수를 확장하여 R5+ assumption 리스크도 investigation step으로 변환한다. 현재 구현은 R20+ gap ri — planner.py, test_planner.py |
 | 2026-05-29 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |
 | 2026-05-29 | v1.2.34 | fix(dogfood review 5건): (1) **[High]** `build_merge_policy(state, mode)` 공용 헬퍼 추출 — auto(`_run_merge_phase`)·manual(`merge_dogfood_branch`) 양쪽이 plan-derived `allowed_paths`를 동일하게 적용. 기존 auto 경로는 bare `MergePolicy`로 `allowed_paths=[]` → scope 게이트 무력화 우회 결함. (2) **[Med]** `VALID_MERGE_MODES` + `MergePolicy.__post_init__`/`create_run` enum 검증 — 임의 문자열·`"manual "` auto fallthrough 차단(fail-closed). (3) **[Med]** `read_phase_trace` `errors="replace"` + `OSError` 캐치 — 절단 UTF-8/lock 시 contract 유지. (4) **[Med]** `DogfoodState.cleanup_skip_reason` 신규 — `wt_never_created`로 cleanup_failed 모호성 해소. (5) **[Low]** `_dirty_files` docstring `Raises` 명시. 신규 회귀 +9건, finding-4 assertion +2. dogfood 246 PASS. |
 | 2026-05-29 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 flatten(lst: list) -> list 함수 추가. 중첩 리스트를 1단계만 평탄화(shallow flatten). 빈 리스트는 []을 반환. tests/test_utils.py에  — Master_Blueprint.md, utils.py, test_utils.py |

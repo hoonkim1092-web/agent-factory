@@ -136,11 +136,21 @@ def _unresolved_risks(
 # Step builders
 # ---------------------------------------------------------------------------
 
+def _is_assumption_risk(risk: PremortomResult) -> bool:
+    """True when risk qualifies as an assumption: category='assumption' OR risk_id in [5, 20)."""
+    if risk.category == "assumption":
+        return True
+    try:
+        return 5 <= int(risk.id.lstrip("R")) < 20
+    except (ValueError, AttributeError):
+        return False
+
+
 def _build_investigation_steps(
     premortem: PremortomResult,
     counter: list[int],
 ) -> list[PlanStep]:
-    """One step per research_gap risk — must be resolved before implementation."""
+    """One step per research_gap or assumption risk — must be resolved before implementation."""
     steps: list[PlanStep] = []
     for risk in premortem.risks:
         if risk.category == "research_gap":
@@ -152,6 +162,21 @@ def _build_investigation_steps(
                 tests_required=[],
                 artifacts=["research_notes.md"],
                 depends_on=[],
+            ))
+            counter[0] += 1
+        elif _is_assumption_risk(risk):
+            cmds = [
+                v.command for v in risk.verification
+                if not v.command.strip().startswith("#")
+            ]
+            steps.append(PlanStep(
+                id=f"S{counter[0]}",
+                action=f"Investigate: {risk.description}",
+                target=risk.description,
+                tests_required=[],
+                artifacts=[],
+                depends_on=[],
+                commands=cmds,
             ))
             counter[0] += 1
     return steps

@@ -416,6 +416,42 @@ def test_build_plan_investigation_step_no_commands():
 
 
 # ---------------------------------------------------------------------------
+# build_plan — investigation steps (assumption risks)
+# ---------------------------------------------------------------------------
+
+def test_build_plan_single_assumption_risk_becomes_investigation_step():
+    """assumption risk 1개 → investigation step 1개 생성."""
+    risks = [_risk("R10", "rate limiting not validated", "assumption", ["grep rate_limit core/"])]
+    plan = build_plan(_spec(), _premortem(risks))
+    inv = [s for s in plan.steps if s.target == "rate limiting not validated"]
+    assert len(inv) == 1
+    assert "Investigate" in inv[0].action
+    assert "grep rate_limit core/" in inv[0].commands
+
+
+def test_build_plan_two_assumption_risks_become_two_investigation_steps():
+    """assumption risk 2개 → investigation step 2개 생성, 순서 보존."""
+    risks = [
+        _risk("R7", "cache size assumption", "assumption", ["check cache size"]),
+        _risk("R12", "timeout assumption", "assumption", ["ping endpoint"]),
+    ]
+    plan = build_plan(_spec(), _premortem(risks))
+    inv = [s for s in plan.steps if s.target in ("cache size assumption", "timeout assumption")]
+    assert len(inv) == 2
+    targets = [s.target for s in inv]
+    assert "cache size assumption" in targets
+    assert "timeout assumption" in targets
+
+
+def test_build_plan_no_assumption_risks_no_assumption_investigation_steps():
+    """assumption 범주 외 risk만 있으면 assumption investigation step 없음."""
+    risks = [_risk("R1", "blueprint sync risk", "blueprint_sync", ["cmd"])]
+    plan = build_plan(_spec(), _premortem(risks))
+    inv = [s for s in plan.steps if s.action.startswith("Investigate")]
+    assert inv == []
+
+
+# ---------------------------------------------------------------------------
 # build_plan — step IDs are unique and sequential
 # ---------------------------------------------------------------------------
 
