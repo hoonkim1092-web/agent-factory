@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, range_span, chunks
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, range_span, chunks, flatten
 from core.utils import test_file_for as _test_file_for
 
 
@@ -259,6 +259,23 @@ class TestChunks:
     def test_n_1이면_ValueError(self):
         with pytest.raises(ValueError):
             chunks([1, 2, 3], 0)
+
+
+class TestFlatten:
+    def test_빈_리스트(self):
+        assert flatten([]) == []
+
+    def test_이미_평탄_리스트(self):
+        assert flatten([1, 2, 3]) == [1, 2, 3]
+
+    def test_1단계_중첩(self):
+        assert flatten([[1, 2], [3, 4]]) == [1, 2, 3, 4]
+
+    def test_2단계_이상은_1단계만_평탄화(self):
+        assert flatten([[1, [2, 3]], [4]]) == [1, [2, 3], 4]
+
+    def test_혼합_타입(self):
+        assert flatten([[1, 2], 3, "a"]) == [1, 2, 3, "a"]
 
 
 class TestTestFileFor:
