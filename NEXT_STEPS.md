@@ -88,6 +88,8 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 
 > **상태**: P0-A(`86278509`) · P0-B(`745520ba`) · P1(`84127c8f`) · P2(`0ad0f047`) 4개 PR 모두 머지 완료. 아래 결함 8건 전부 해소. (이하 분석 기록은 history로 보존)
 >
+> **✅ 후속 review-fix (2026-05-29)** — dogfood 코드리뷰(`docs/reviews/2026-05-29-192056-*`)가 발견한 **5건 전부 수정**. 핵심: **[High] auto-merge scope 우회** — `_run_merge_phase`가 bare `MergePolicy`로 `allowed_paths=[]` → scope 게이트 무력화하던 결함. `build_merge_policy()` 공용 헬퍼 추출로 auto/manual 경로 정합. 나머지: merge_mode enum 검증(VALID_MERGE_MODES), read_phase_trace OSError/UTF-8 방어, cleanup_skip_reason 보조 필드, _dirty_files docstring. 회귀 +9, dogfood 246 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(codex MCP 미가용=single-vendor) / af-test-runner PASS. **잔여 advisory(미수정)**: `dogfood status`가 cleanup_skip_reason 미출력(Low).
+>
 > **Root cause**: dogfood lifecycle에서 "정책 입력·상태 저장·변경 감지·실패 의미론"이 단일 계약으로 묶여 있지 않음.
 > 즉 SSOT는 일부 존재하나(MergePolicy, DogfoodState) **호출처가 우회 가능** = "계약을 만들었지만 강제하지 않음" 상태.
 > §17 Step 1~20은 "있다/없다" 게이트 통과 MVP. 실패 의미론·artifact 무결성·정책 일관성·하드코딩 금지 게이트는 미통과.

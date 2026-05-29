@@ -1040,7 +1040,7 @@ run_factory_cli.main()
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
 ### §3.13 Dogfood Pipeline (`core/dogfood.py`)
-<!-- last_updated: 2026-05-29 PR4 (P2 Operational Hygiene): read_phase_trace + _handle_blocked_worktree + cleanup_worktree_on_block + isolation_status worktree_removed/cleanup_failed -->
+<!-- last_updated: 2026-05-29 review-fix (5건): build_merge_policy() 공용 헬퍼(auto/manual scope 정합) + merge_mode enum 런타임 검증(VALID_MERGE_MODES) + read_phase_trace OSError/UnicodeDecodeError 방어 + cleanup_skip_reason 보조 필드 -->
 
 **목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
 
@@ -1049,8 +1049,8 @@ run_factory_cli.main()
 | 클래스 | 역할 |
 |--------|------|
 | `DogfoodPhase` | 14-phase enum (PENDING → COMPLETE / BLOCKED) |
-| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()`. `isolation_status`: pending\|ready\|failed\|cleaned\|worktree_removed\|cleanup_failed |
-| `MergePolicy` | auto_policy / manual / never + `allow_partial_impl: bool = False` + `cleanup_worktree_on_block: bool = False`. `__post_init__`: `allow_partial_impl + auto_policy` 조합 ValueError. |
+| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()`. `isolation_status`: pending\|ready\|failed\|cleaned\|worktree_removed\|cleanup_failed. `cleanup_skip_reason`: cleanup_failed 라벨 구분 — `"wt_never_created"`(branch 삭제 의도적 생략) vs `""`(실제 실패). |
+| `MergePolicy` | auto_policy / manual / never + `allow_partial_impl: bool = False` + `cleanup_worktree_on_block: bool = False`. `__post_init__`: mode ∈ `VALID_MERGE_MODES` 아니면 ValueError(fail-closed, auto fallthrough 금지) + `allow_partial_impl + auto_policy` 조합 ValueError. |
 | `VerifyResult` / `ReviewDecision` | 검증/리뷰 결과 (passed/retry/block, accept/reject) |
 
 **공개 API:**
@@ -1059,7 +1059,8 @@ run_factory_cli.main()
 |------|------|
 | `create_run(task, workspace)` | 新 run_id 생성 + PENDING 상태 초기화 |
 | `run_all(task, workspace, *, strict_contract, allow_partial_impl, cleanup_worktree_on_block, ...)` | PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. `strict_contract=True`면 6-phase 계약 체크 활성. `allow_partial_impl=True`이면 ok=False IMPLEMENT에서도 VERIFY 진행 (`merge_mode=manual/never` 전용). `cleanup_worktree_on_block=True`이면 BLOCKED 시 worktree 제거(branch 보존). |
-| `read_phase_trace(state)` | `phase_trace.jsonl` 파일 전체 파싱 → `list[dict]`. 파일 없으면 `[]`. corrupt 마지막 줄 silently drop (crash-safe). |
+| `read_phase_trace(state)` | `phase_trace.jsonl` 파일 전체 파싱 → `list[dict]`. 파일 없으면 `[]`. corrupt 마지막 줄 silently drop (crash-safe). `errors="replace"`로 절단된 multibyte UTF-8 방어, `OSError`(lock/permission) → `[]`. |
+| `build_merge_policy(state, mode)` | plan(`artifacts`+`tests_required`)에서 `allowed_paths` 도출 + `DEFAULT_DENIED_PATHS`. auto(`_run_merge_phase`)·manual(`merge_dogfood_branch` policy=None) 양쪽이 반드시 경유 — bare MergePolicy 생성 시 `allowed_paths=[]`로 scope 게이트 무력화. |
 | `run_phase(state, phase)` | 단일 phase 실행 |
 | `advance_phase` / `block_run` / `retry_run` | 상태 전이 (retry는 IMPLEMENT→VERIFY 최대 3회) |
 | `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE |
@@ -1088,7 +1089,7 @@ run_factory_cli.main()
 
 | 함수 | 역할 |
 |------|------|
-| `_handle_blocked_worktree(state, *, cleanup_on_block)` | BLOCKED 전이 시 isolation_status 기반 cleanup 정책 적용. failed→cleaned/cleanup_failed, ready+cleanup_on_block→worktree_removed/cleanup_failed. `_branch_exists=None`(git 불가) → cleanup_failed. |
+| `_handle_blocked_worktree(state, *, cleanup_on_block)` | BLOCKED 전이 시 isolation_status 기반 cleanup 정책 적용. failed→cleaned/cleanup_failed, ready+cleanup_on_block→worktree_removed/cleanup_failed. `_branch_exists=None`(git 불가) → cleanup_failed. worktree 미존재+branch 잔존(의도적 skip) → `cleanup_skip_reason="wt_never_created"`로 실제 실패와 구분. |
 | `_branch_exists(name, cwd)` | branch 존재 확인. True/False/None(git 불가). 호출자는 None→cleanup_failed로 처리. |
 | `_remove_worktree_only(state)` | worktree만 제거, branch 보존. dirty worktree 거부. `_dirty_files` 예외 시 `False` 반환(보수적). |
 
@@ -1102,11 +1103,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-29; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1639,7 +1640,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
-| 2026-05-29 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
+| 2026-05-29 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |
+| 2026-05-29 | v1.2.34 | fix(dogfood review 5건): (1) **[High]** `build_merge_policy(state, mode)` 공용 헬퍼 추출 — auto(`_run_merge_phase`)·manual(`merge_dogfood_branch`) 양쪽이 plan-derived `allowed_paths`를 동일하게 적용. 기존 auto 경로는 bare `MergePolicy`로 `allowed_paths=[]` → scope 게이트 무력화 우회 결함. (2) **[Med]** `VALID_MERGE_MODES` + `MergePolicy.__post_init__`/`create_run` enum 검증 — 임의 문자열·`"manual "` auto fallthrough 차단(fail-closed). (3) **[Med]** `read_phase_trace` `errors="replace"` + `OSError` 캐치 — 절단 UTF-8/lock 시 contract 유지. (4) **[Med]** `DogfoodState.cleanup_skip_reason` 신규 — `wt_never_created`로 cleanup_failed 모호성 해소. (5) **[Low]** `_dirty_files` docstring `Raises` 명시. 신규 회귀 +9건, finding-4 assertion +2. dogfood 246 PASS. |
 | 2026-05-29 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 flatten(lst: list) -> list 함수 추가. 중첩 리스트를 1단계만 평탄화(shallow flatten). 빈 리스트는 []을 반환. tests/test_utils.py에  — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, Master_Blueprint.md, NEXT_STEPS.md, PROJECT_LOG.md, README.md (+51) |
 | 2026-05-29 | v1.2.34 | chore(AGENTS): code update — AGENTS.md, MASTER_SPEC_TEMPLATE.md, Master_Blueprint.md, PROJECT_LOG.md, README.md (+58) |

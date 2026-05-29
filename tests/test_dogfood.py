@@ -124,7 +124,7 @@ def test_state_to_dict_keys(tmp_path):
         "source_workspace", "workspace",  # workspace is a backward-compat alias
         "runtime_workspace",
         "source_branch", "base_ref", "worktree_workspace", "dogfood_branch",
-        "isolation_status", "merge_status", "merge_mode",
+        "isolation_status", "cleanup_skip_reason", "merge_status", "merge_mode",
         "dogfood_commit", "merged_commit",
         "interview_path", "research_brief_path", "research_path", "spec_path", "plan_path",
         "attempts", "last_failure", "next_action", "approval_policy",
@@ -441,6 +441,33 @@ def test_read_phase_trace_skips_blank_lines(tmp_path):
     assert result[0]["phase"] == "PLAN"
 
 
+def test_read_phase_trace_truncated_multibyte_utf8_does_not_raise(tmp_path):
+    """A crash mid-write can truncate a multi-byte UTF-8 char. read_phase_trace
+    must not raise UnicodeDecodeError — the good line survives, the bad is dropped."""
+    from core.dogfood import read_phase_trace, _artifact_path, ARTIFACT_PHASE_TRACE
+    state = _state(tmp_path)
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    good = ('{"phase": "INTERVIEW", "elapsed_ms": 10}\n').encode("utf-8")
+    # '한' is 3 bytes in UTF-8; keep only the first byte → invalid sequence.
+    truncated = '{"phase": "한'.encode("utf-8")[:-2]
+    path.write_bytes(good + truncated)
+    result = read_phase_trace(state)  # must not raise
+    assert len(result) == 1
+    assert result[0]["phase"] == "INTERVIEW"
+
+
+def test_read_phase_trace_oserror_returns_empty(tmp_path):
+    """If reading the trace raises OSError (lock/permission), return []."""
+    from core.dogfood import read_phase_trace, _artifact_path, ARTIFACT_PHASE_TRACE
+    state = _state(tmp_path)
+    path = _artifact_path(state, ARTIFACT_PHASE_TRACE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('{"phase": "PLAN"}\n', encoding="utf-8")
+    with patch("pathlib.Path.read_text", side_effect=OSError("locked")):
+        assert read_phase_trace(state) == []
+
+
 # ---------------------------------------------------------------------------
 # _handle_blocked_worktree
 # ---------------------------------------------------------------------------
@@ -490,6 +517,8 @@ def test_handle_blocked_worktree_failed_cleanup_failure_wt_remains(tmp_path):
     with patch("core.dogfood._git", side_effect=_git_stub):
         _handle_blocked_worktree(state, cleanup_on_block=False)
     assert state.isolation_status == "cleanup_failed"
+    # Worktree WAS present but survived removal → genuine failure, no skip reason.
+    assert state.cleanup_skip_reason == ""
 
 
 def test_handle_blocked_worktree_failed_cleanup_failure_branch_remains(tmp_path):
@@ -512,6 +541,9 @@ def test_handle_blocked_worktree_failed_cleanup_failure_branch_remains(tmp_path)
     with patch("core.dogfood._git", side_effect=_git_stub):
         _handle_blocked_worktree(state, cleanup_on_block=False)
     assert state.isolation_status == "cleanup_failed"
+    # Worktree never existed → branch deletion intentionally skipped, not a
+    # removal failure. cleanup_skip_reason disambiguates for debugging.
+    assert state.cleanup_skip_reason == "wt_never_created"
 
 
 def test_handle_blocked_worktree_ready_preserved_by_default(tmp_path):

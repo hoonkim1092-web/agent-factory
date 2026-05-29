@@ -46,7 +46,9 @@ from core.dogfood import (
     _safe_to_cleanup_partial_isolation,
     atomic_write_json,
     block_run,
+    build_merge_policy,
     create_run,
+    VALID_MERGE_MODES,
     finalize_dogfood_result,
     merge_dogfood_branch,
     prepare_isolated_worktree,
@@ -1159,6 +1161,99 @@ def test_merge_branch_default_policy_applies_denied_paths(tmp_path):
 
     assert state.merge_status == "policy_rejected"
     assert "denied" in state.last_failure
+
+
+# ---------------------------------------------------------------------------
+# Finding 1 — build_merge_policy: auto + manual paths share scope enforcement
+# ---------------------------------------------------------------------------
+
+def _write_plan(state, steps):
+    import json
+    plan_path = Path(state.runtime_workspace) / "plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(json.dumps({"steps": steps}), encoding="utf-8")
+    state.plan_path = str(plan_path)
+    return plan_path
+
+
+def test_build_merge_policy_derives_allowed_paths_from_plan(tmp_path):
+    """allowed_paths must come from the plan's artifacts + tests_required."""
+    state = _make_merge_state(tmp_path)
+    _write_plan(state, [
+        {"artifacts": ["core/utils.py"], "tests_required": ["tests/test_utils.py"]},
+    ])
+    policy = build_merge_policy(state)
+    assert "core/utils.py" in policy.allowed_paths
+    assert "tests/test_utils.py" in policy.allowed_paths
+    assert policy.mode == state.merge_mode
+    assert ".af_runtime/" in policy.denied_paths
+
+
+def test_build_merge_policy_no_plan_empty_allowed(tmp_path):
+    """No plan_path → allowed_paths empty (denied gate still applied)."""
+    state = _make_merge_state(tmp_path)
+    state.plan_path = ""
+    policy = build_merge_policy(state)
+    assert policy.allowed_paths == []
+
+
+def test_run_merge_phase_auto_enforces_plan_allowed_paths(tmp_path):
+    """REGRESSION (Finding 1, High): the auto_policy path must enforce the
+    plan-derived allowed_paths. Before build_merge_policy() it constructed a bare
+    MergePolicy with empty allowed_paths, silently disabling the scope gate."""
+    state = _make_merge_state(tmp_path)
+    state.source_workspace = str(tmp_path)
+    _write_plan(state, [{"artifacts": ["core/utils.py"], "tests_required": []}])
+
+    # An out-of-scope file made it into the commit — must be rejected on merge.
+    report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)
+    atomic_write_json(report_path, {
+        "changed_files": ["core/utils.py", "core/sneaky.py"],
+        "scope_violations": [],
+    })
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "merge-base" in args and "--is-ancestor" in args:
+            r.returncode = 1  # not already merged
+        elif "status" in args and "--porcelain" in args:
+            r.stdout = ""  # clean
+        elif "rev-parse" in args:
+            r.stdout = state.base_ref
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        _run_merge_phase(state, merge_mode="auto_policy")
+
+    assert state.merge_status == "policy_rejected"
+    assert "allowed_paths" in state.last_failure
+    assert "core/sneaky.py" in state.last_failure
+
+
+# ---------------------------------------------------------------------------
+# Finding 2 — merge_mode enum validation (fail-closed, no auto fallthrough)
+# ---------------------------------------------------------------------------
+
+def test_create_run_rejects_invalid_merge_mode(tmp_path):
+    with pytest.raises(ValueError):
+        create_run("t", str(tmp_path), merge_mode="foo")
+
+
+def test_merge_policy_rejects_invalid_mode():
+    with pytest.raises(ValueError):
+        MergePolicy(mode="foo")  # type: ignore[arg-type]
+
+
+def test_merge_policy_rejects_whitespace_mode():
+    """'manual ' (trailing space) must not fall through to auto_policy."""
+    with pytest.raises(ValueError):
+        MergePolicy(mode="manual ")  # type: ignore[arg-type]
+
+
+def test_valid_merge_modes_membership():
+    assert VALID_MERGE_MODES == frozenset({"auto_policy", "manual", "never"})
 
 
 # ---------------------------------------------------------------------------

@@ -139,6 +139,10 @@ class DogfoodState:
     worktree_workspace: str = ""
     dogfood_branch: str = ""
     isolation_status: str = "pending"   # pending | ready | failed | cleaned | worktree_removed | cleanup_failed
+    # Disambiguates a "cleanup_failed" label: "wt_never_created" means cleanup
+    # was intentionally skipped (worktree never existed → branch ownership
+    # unconfirmed, branch preserved), not an actual removal failure. "" = real failure.
+    cleanup_skip_reason: str = ""
     merge_status: str = "none"          # none | ready | merged | conflict | policy_rejected | failed
     merge_mode: str = "auto_policy"     # auto_policy | manual | never
     dogfood_commit: str = ""
@@ -191,6 +195,7 @@ class DogfoodState:
             "worktree_workspace": self.worktree_workspace,
             "dogfood_branch": self.dogfood_branch,
             "isolation_status": self.isolation_status,
+            "cleanup_skip_reason": self.cleanup_skip_reason,
             "merge_status": self.merge_status,
             "merge_mode": self.merge_mode,
             "dogfood_commit": self.dogfood_commit,
@@ -226,6 +231,7 @@ class DogfoodState:
             worktree_workspace=data.get("worktree_workspace", ""),
             dogfood_branch=data.get("dogfood_branch", ""),
             isolation_status=data.get("isolation_status", "pending"),
+            cleanup_skip_reason=data.get("cleanup_skip_reason", ""),
             merge_status=data.get("merge_status", "none"),
             merge_mode=data.get("merge_mode", "auto_policy"),
             dogfood_commit=data.get("dogfood_commit", ""),
@@ -251,6 +257,12 @@ class DogfoodState:
 # MergePolicy dataclass
 # ---------------------------------------------------------------------------
 
+# Valid merge modes — enforced at run entry (create_run) and policy construction
+# (MergePolicy.__post_init__) so an unexpected value fails closed instead of
+# falling through to auto_policy.
+VALID_MERGE_MODES: Final[frozenset[str]] = frozenset({"auto_policy", "manual", "never"})
+
+
 @dataclass
 class MergePolicy:
     mode: Literal["auto_policy", "manual", "never"] = "auto_policy"
@@ -270,6 +282,11 @@ class MergePolicy:
     cleanup_worktree_on_block: bool = False
 
     def __post_init__(self) -> None:
+        if self.mode not in VALID_MERGE_MODES:
+            raise ValueError(
+                f"invalid merge mode: {self.mode!r}."
+                f" Expected one of {sorted(VALID_MERGE_MODES)}."
+            )
         if self.allow_partial_impl and self.mode == "auto_policy":
             raise ValueError(
                 "allow_partial_impl=True is incompatible with mode='auto_policy'."
@@ -518,6 +535,11 @@ def create_run(
     merge_mode: str = "auto_policy",
 ) -> DogfoodState:
     """Create a new DogfoodState and persist it."""
+    if merge_mode not in VALID_MERGE_MODES:
+        raise ValueError(
+            f"invalid merge_mode: {merge_mode!r}."
+            f" Expected one of {sorted(VALID_MERGE_MODES)}."
+        )
     rid = run_id or f"{int(time.time())}-{uuid.uuid4().hex[:8]}"
     _validate_run_id(rid)
     rws = runtime_workspace or _default_runtime_workspace(rid)
@@ -616,6 +638,10 @@ def _dirty_files(
     ignore_crlf: filter out files where the only diff is CR/LF noise.
         Untracked files (no index version) are exempt from CRLF filtering —
         git diff returns empty for them, which would otherwise wrongly drop them.
+
+    Raises:
+        GitWorktreeError: if `git status` exits non-zero. All 5 current callers
+            guard with try/except, so this does not crash the pipeline.
     """
     ut_flag = [] if include_untracked else ["--untracked-files=no"]
     result = _git(["status", "--porcelain"] + ut_flag, cwd=workspace, check=False)
@@ -734,6 +760,11 @@ def _handle_blocked_worktree(state: DogfoodState, *, cleanup_on_block: bool) -> 
         return
     try:
         if status == "failed":
+            # Capture before cleanup: if the worktree never existed,
+            # _cleanup_partial_isolation intentionally skips branch deletion
+            # (cannot confirm this run owns the branch). A surviving branch in
+            # that case is an intentional skip, not a removal failure.
+            wt_was_present = Path(state.worktree_workspace).exists()
             _cleanup_partial_isolation(state)
             wt_gone = not Path(state.worktree_workspace).exists()
             branch_result = _branch_exists(state.dogfood_branch, state.source_workspace)
@@ -742,7 +773,15 @@ def _handle_blocked_worktree(state: DogfoodState, *, cleanup_on_block: bool) -> 
                 state.isolation_status = "cleanup_failed"
                 return
             branch_gone = not branch_result
-            state.isolation_status = "cleaned" if (wt_gone and branch_gone) else "cleanup_failed"
+            if wt_gone and branch_gone:
+                state.isolation_status = "cleaned"
+            elif not wt_was_present and not branch_gone:
+                # Worktree never created → branch deletion skipped by design.
+                # Not a failure — record reason so debugging doesn't false-alarm.
+                state.isolation_status = "cleanup_failed"
+                state.cleanup_skip_reason = "wt_never_created"
+            else:
+                state.isolation_status = "cleanup_failed"
             return
         # status == "ready"
         if cleanup_on_block:
@@ -990,6 +1029,37 @@ def _check_merge_policy(
     return True, ""
 
 
+def build_merge_policy(state: DogfoodState, mode: str | None = None) -> MergePolicy:
+    """Construct the MergePolicy for a dogfood merge from the plan-derived allowlist.
+
+    Both the manual path (merge_dogfood_branch with policy=None) and the auto
+    path (_run_merge_phase) MUST route through this so scope enforcement is
+    identical. Constructing a bare MergePolicy elsewhere leaves allowed_paths
+    empty, which disables the allowed-path gate in _check_merge_policy() and
+    lets IMPLEMENT commits bypass scope boundaries on auto-merge.
+    """
+    allowed: list[str] = []
+    has_core_allowed = False
+    if state.plan_path:
+        _pd = load_policy_json(Path(state.plan_path), required=False)
+        for _s in _pd.get("steps", []):
+            for _f in (_s.get("artifacts") or []):
+                rel = _f.replace("\\", "/")
+                allowed.append(rel)
+                has_core_allowed = has_core_allowed or rel.startswith("core/")
+            for _f in (_s.get("tests_required") or []):
+                rel = _f.replace("\\", "/")
+                allowed.append(rel)
+                has_core_allowed = has_core_allowed or rel.startswith("core/")
+    if has_core_allowed:
+        allowed.extend(FINAL_DOC_PATHS)
+    return MergePolicy(  # type: ignore[arg-type]
+        mode=mode or state.merge_mode,
+        allowed_paths=list(dict.fromkeys(allowed)),
+        denied_paths=list(DEFAULT_DENIED_PATHS),
+    )
+
+
 def merge_dogfood_branch(
     state: DogfoodState,
     policy: MergePolicy | None = None,
@@ -999,26 +1069,7 @@ def merge_dogfood_branch(
     Updates state.merge_status, state.merged_commit, state.phase.
     """
     if policy is None:
-        allowed: list[str] = []
-        has_core_allowed = False
-        if state.plan_path:
-            _pd = load_policy_json(Path(state.plan_path), required=False)
-            for _s in _pd.get("steps", []):
-                for _f in (_s.get("artifacts") or []):
-                    rel = _f.replace("\\", "/")
-                    allowed.append(rel)
-                    has_core_allowed = has_core_allowed or rel.startswith("core/")
-                for _f in (_s.get("tests_required") or []):
-                    rel = _f.replace("\\", "/")
-                    allowed.append(rel)
-                    has_core_allowed = has_core_allowed or rel.startswith("core/")
-        if has_core_allowed:
-            allowed.extend(FINAL_DOC_PATHS)
-        policy = MergePolicy(  # type: ignore[arg-type]
-            mode=state.merge_mode,
-            allowed_paths=list(dict.fromkeys(allowed)),
-            denied_paths=list(DEFAULT_DENIED_PATHS),
-        )
+        policy = build_merge_policy(state)
 
     src = state.source_workspace
 
@@ -1524,9 +1575,11 @@ def _run_merge_phase(state: DogfoodState, merge_mode: str) -> dict[str, Any]:
         state.phase = DogfoodPhase.COMPLETE
         return {"merge_status": "ready"}
 
-    # auto_policy — apply DEFAULT_DENIED_PATHS so all callers get the same gate.
-    # Use merge_mode from caller (not a hardcoded literal) to respect state SSOT.
-    merge_dogfood_branch(state, MergePolicy(mode=merge_mode, denied_paths=list(DEFAULT_DENIED_PATHS)))
+    # auto_policy — route through build_merge_policy() so the plan-derived
+    # allowed_paths (and DEFAULT_DENIED_PATHS) match the manual 'dogfood merge'
+    # path exactly. A bare MergePolicy here would leave allowed_paths empty and
+    # disable the scope gate.
+    merge_dogfood_branch(state, build_merge_policy(state, merge_mode))
     return {"merge_status": state.merge_status, "merged_commit": state.merged_commit}
 
 
@@ -1927,7 +1980,15 @@ def read_phase_trace(state: DogfoodState) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     records: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    # errors="replace": a crash mid-write can truncate a multi-byte UTF-8 char,
+    # which would raise UnicodeDecodeError before splitlines() — the replacement
+    # char makes that line fail json.loads instead, preserving the silent-drop
+    # contract. OSError (lock/permission) → return what we have ([]).
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    for line in text.splitlines():
         stripped = line.strip()
         if not stripped:
             continue
