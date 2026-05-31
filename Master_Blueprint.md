@@ -152,7 +152,7 @@
 | `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
-| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()` |
+| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`, `_detect_scope_file_risk()` |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()` |
 | `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, test_dogfood.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py |
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/premortem.py에 _detect_scope_file_risk() 함수 추가. scope 파일 목록에서 존재하지 않는 파일(예: typo 경로)을 감지해 R11 risk로 리포트. 파일 목록이 비어있거 — Master_Blueprint.md, premortem.py, test_premortem.py |
 | 2026-05-31 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 zscore(values: list[int | float]) -> list[float] 함수 추가. 각 원소의 Z-score 반환 (평균 0, 표준편차 1 정규화). 원소 1개이면 [0.0 — Master_Blueprint.md, utils.py, test_utils.py |
@@ -1691,6 +1693,7 @@ model_utils.py (독립 모듈)
 | 2026-05-27 | v1.2.34 | feat(utils): `std_dev(values)` 신설 — 모집단 표준편차를 float로 반환. `variance()` 위에 `math.sqrt` 적용. 빈 리스트이면 ValueError. `tests/test_utils.py` TestStdDev 6건 신규. §0 갱신. |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 variance(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. 분산 공식: sum((x - mean)^2 for x in  — Master_Blueprint.md, utils.py, test_utils.py |
+| 2026-05-31 | v1.2.34 | feat(premortem): `_detect_scope_file_risk(scope)` 신설 — scope 파일 목록 중 디스크에 존재하지 않는 경로를 R11 risk로 리포트. 빈 리스트이거나 모두 존재하면 빈 리스트 반환. assumption IDs R11→R12+ 시프트(R11 예약). `tests/test_premortem.py` TestDetectScopeFileRisk 13건 신규. §0 갱신. |
 | 2026-05-27 | v1.2.34 | chore(core): code update — premortem.py, test_premortem.py |
 | 2026-05-27 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, premortem.py, test_premortem.py |
 | 2026-05-27 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
