@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-30 KST (Windows)** — **R15 production dogfood run COMPLETE** (`03d9347b`). planner `_build_investigation_steps()` 확장 — R5+ assumption risks investigation step 생성. auto-policy merge. **첫 production work-item dogfood run 성공**.
+> 마지막 업데이트: **2026-05-31 KST (Windows)** — **A Phase 4 스마트 라우팅 COMPLETE** (`deae9dbb`). telemetry 기반 Tier 3 조건부 skip + ALWAYS-Tier-3 안전망. 1주 측정 데이터(T3 BLOCK-only 0/31) 게이트 충족 확인 후 구현. 3-Tier WARN/WARN/PASS (advisory 5건 흡수).
 >
-> **다음 세션 최우선 진입점**: 다음 production work-item 선정 후 dogfood run 진입. 후보: (1) Phase A Phase 4 스마트 라우팅 (1주 측정 데이터 있으면), (2) premortem/planner 추가 개선, (3) 사용자 지정 작업.
+> **다음 세션 최우선 진입점**: **Phase 4 실측 검증 dogfood run** (사용자 계획 step 2). 비위험 core 파일(예: `core/utils.py`) work-item으로 dogfood run을 돌려 telemetry skip이 실제 발효(blast2+비위험+skip=True → T3 생략)되는지 + 비용 절감을 end-to-end 확인. 그 다음 후보: premortem/planner 추가 개선, B-3 step 4(skill manifest reuse_decision).
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -510,10 +510,20 @@ PR 4 — Operational Hygiene (P2)
 
 ---
 
-### A Phase 4: 스마트 라우팅 (데이터 수집 후)
+### ✅ A Phase 4: 스마트 라우팅 (2026-05-31) — DONE (`deae9dbb`)
 
-- Tier 3 skip 조건 결정 (T3-only accepted finding rate < 10% 기준)
-- **1주 실측 데이터 없이 구현 금지**
+> 진입 게이트 충족 확인: 2026-05-23~31 측정 **T3 BLOCK-only 0/31**, af-cross-review block:0/36, span 7.6일 (commits≥10 AND span≥7일 통과).
+
+**구현**: telemetry 기반 Tier 3 조건부 skip + ALWAYS-Tier-3 안전망
+- `review_metrics_logger.compute_t3_telemetry_skip()` — 보수적 AND-게이트 4조건(전부 만족 시에만 skip, fail-closed):
+  ① commits_with_t3≥10 AND **T3-record 기준** span≥7일 ② block_only_rate<10% ③ 최근10 T3커밋 BLOCK 0 ④ skip_subsequent_block==0. 임계 4개 SSOT 상수.
+- `review_gate._is_always_tier3()` 위험군(게이트·메트릭·classifier 자체 파일 포함) → cosmetic·telemetry skip 모두 무시 [1,2,3] 강제 (부트스트랩 회피).
+- `_telemetry_skip_enacted()` = blast2 + 비위험 + skip=True. enqueue가 락 밖 계산 → state 동결(`_required_tiers_for` 순수성 유지) + 발효 시 라운드당 1회 skip_audit "why" 기록.
+- **라이브 검증**: 이번 커밋의 게이트 자기 파일(blast3+ALWAYS_TIER3)에서 telemetry skip=True여도 발효 안 되고 [1,2,3] 강제됨 확인.
+- 3-Tier: af-critic WARN(3건 흡수: review_metrics_logger ALWAYS_TIER3 / 빈 sha 제외 / docstring) + SSOT invariant 봉인 / af-cross-review WARN(2건 흡수: span T3기준 / t3_classifier ALWAYS_TIER3) / af-test-runner PASS. 신규 테스트 +26.
+- **잔여 한계(미수정)**: severity 분포 미포착 — 메트릭이 per-finding severity 없어 BLOCK-only를 severity 프록시로 사용(§397 caveat). tokens/duration 미지원. `compute_report`의 span은 여전히 전체 레코드 기준(advisory 표시용, 강제 경로 아님).
+
+**다음**: Phase 4 실측 검증 dogfood run — 비위험 core 파일 work-item으로 telemetry skip 실제 발효 + 비용 절감 end-to-end 확인.
 
 ### ✅ C. AF Dogfooding Review Safety — Follow-ups (2026-05-20) — DONE
 
