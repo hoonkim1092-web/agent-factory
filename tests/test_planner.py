@@ -16,6 +16,7 @@ from core.planner import (
     _unresolved_risks,
     _extract_scope_file_paths,
     _extract_stale_test_paths,
+    _extract_duplicate_function_paths,
 )
 
 
@@ -732,3 +733,79 @@ class TestStaleTestRiskInvestigation:
         """형식이 다르면 빈 리스트 반환."""
         risk = _risk("R12", "Some other description.", "stale_test")
         assert _extract_stale_test_paths(risk) == []
+
+
+class TestDuplicateFunctionRiskInvestigation:
+    """R13(duplicate_function) risk → investigation steps."""
+
+    def _dup_risk(self, desc: str) -> PremortomRisk:
+        return _risk("R13", desc, "duplicate_function")
+
+    def test_single_duplicate_generates_one_step(self):
+        """`foo` in core/utils.py → 1개 investigation step."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: `foo` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("기존 정의 확인")]
+        assert len(inv) == 1
+        assert "`foo`" in inv[0].action
+        assert "core/utils.py" in inv[0].action
+
+    def test_step_has_grep_command(self):
+        """investigation step에 grep 명령어가 포함된다."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: `bar` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("기존 정의 확인")]
+        assert inv[0].commands
+        assert "grep" in inv[0].commands[0]
+        assert "bar" in inv[0].commands[0]
+
+    def test_multiple_duplicates_generate_multiple_steps(self):
+        """두 함수 → 2개 investigation step."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: "
+            "`foo` in core/utils.py, `bar` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("기존 정의 확인")]
+        assert len(inv) == 2
+
+    def test_duplicate_steps_come_before_implementation(self):
+        """investigation step은 implementation step보다 먼저 배치된다."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: `foo` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        idx_inv = next(i for i, s in enumerate(plan.steps) if s.action.startswith("기존 정의 확인"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.action.startswith("Implement"))
+        assert idx_inv < idx_impl
+
+    def test_extract_duplicate_function_paths_single(self):
+        """_extract_duplicate_function_paths: 단일 항목 파싱."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: `foo` in core/utils.py."
+        )
+        assert _extract_duplicate_function_paths(risk) == [("foo", "core/utils.py")]
+
+    def test_extract_duplicate_function_paths_multiple(self):
+        """_extract_duplicate_function_paths: 다중 항목 파싱."""
+        risk = self._dup_risk(
+            "Function(s) named in intent already exist in scope: "
+            "`foo` in core/utils.py, `bar` in core/planner.py."
+        )
+        assert _extract_duplicate_function_paths(risk) == [
+            ("foo", "core/utils.py"),
+            ("bar", "core/planner.py"),
+        ]
+
+    def test_extract_duplicate_function_paths_unrecognized_format_returns_empty(self):
+        """형식이 다르면 빈 리스트 반환."""
+        risk = self._dup_risk("Some other description.")
+        assert _extract_duplicate_function_paths(risk) == []

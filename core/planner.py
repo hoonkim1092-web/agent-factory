@@ -154,6 +154,26 @@ _SCOPE_FILE_SUFFIX = ". Possible typo in path."
 _STALE_TEST_PREFIX = "No test file found for scope file(s): "
 _STALE_TEST_SUFFIX = "."
 
+_DUPLICATE_FUNC_PREFIX = "Function(s) named in intent already exist in scope: "
+_DUPLICATE_FUNC_SUFFIX = "."
+
+
+def _extract_duplicate_function_paths(risk: PremortomRisk) -> list[tuple[str, str]]:
+    """Parse (function_name, file_path) pairs from a duplicate_function risk description."""
+    desc = risk.description
+    if desc.startswith(_DUPLICATE_FUNC_PREFIX) and desc.endswith(_DUPLICATE_FUNC_SUFFIX):
+        inner = desc[len(_DUPLICATE_FUNC_PREFIX):len(desc) - len(_DUPLICATE_FUNC_SUFFIX)]
+        result = []
+        for part in inner.split(", "):
+            part = part.strip()
+            # format: "`name` in path"
+            if " in " in part:
+                name_part, path_part = part.split(" in ", 1)
+                func_name = name_part.strip("`")
+                result.append((func_name, path_part.strip()))
+        return result
+    return []
+
 
 def _extract_scope_file_paths(risk: PremortomRisk) -> list[str]:
     """Parse individual missing file paths from a scope_file risk description."""
@@ -221,6 +241,20 @@ def _build_investigation_steps(
                     tests_required=[test_path],
                     artifacts=[test_path],
                     depends_on=[],
+                ))
+                counter[0] += 1
+        elif risk.category == "duplicate_function":
+            for func_name, file_path in _extract_duplicate_function_paths(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"기존 정의 확인: `{func_name}` in {file_path}",
+                    target=file_path,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        shlex.join(["grep", "-n", f"def {func_name}", file_path]),
+                    ],
                 ))
                 counter[0] += 1
         elif _is_assumption_risk(risk):
