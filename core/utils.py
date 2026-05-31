@@ -170,6 +170,21 @@ def range_span(values: list[int | float]) -> float:
     return float(max(values) - min(values))
 
 
+def normalize(values: list[float]) -> list[float]:
+    """입력 리스트를 [0.0, 1.0] 범위로 선형 정규화한다.
+
+    빈 리스트이면 빈 리스트 반환. 모든 값이 동일하면 [0.0] * len(values) 반환.
+    """
+    if not values:
+        return []
+    lo = min(values)
+    hi = max(values)
+    if hi == lo:
+        return [0.0] * len(values)
+    span = hi - lo
+    return [(x - lo) / span for x in values]
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

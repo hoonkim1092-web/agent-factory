@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — planner.py, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+15)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,12 +1656,15 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+15) |
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 normalize(values: list[float]) -> list[float] 함수 추가. 입력 리스트를 [0.0, 1.0] 범위로 선형 정규화. 빈 리스트이면 빈 리스트 반환. 모든  — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+14) |
 | 2026-06-01 | v1.2.34 | chore(core): code update — planner.py, test_planner.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/premortem.py에 _detect_conflicting_import_risk() R14 detector 추가. intent 백틱 함수명(예: `foo`) 추출 후 scope .py 파일에서 해당 이름이 — Master_Blueprint.md, premortem.py, test_premortem.py |
 | 2026-06-01 | v1.2.34 | feat(premortem): `_detect_conflicting_import_risk(intent, scope)` 신설 — intent 백틱 함수명이 scope .py 파일에서 `import <name>` 또는 `from X import <name>`으로 이미 사용 중이면 R14 risk 생성. `run_premortem()`에 배선. assumption_risks start=15로 업데이트(R14=conflicting_import). `TestConflictingImportRisk` 11건 신규. §0 갱신. — premortem.py, test_premortem.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | chore(core): code update — planner.py, test_planner.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, runtime_modes.md, technical_plan.md (+9) |
+| 2026-06-01 | v1.2.34 | feat(utils): `normalize(values)` 신설 — [0.0, 1.0] 선형 정규화. 빈 리스트→[], 동일값→[0.0]*n. `TestNormalize` 11건 신규. §12 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/premortem.py에 R13 detector 추가: _detect_duplicate_function_risk(intent: str, scope: list[str]) -> PremortomRisk | No — Master_Blueprint.md, premortem.py, runtime_modes.md, technical_plan.md, err.txt (+8) |
 | 2026-06-01 | v1.2.34 | feat(premortem): `_detect_duplicate_function_risk(intent, scope)` 신설 — intent 백틱 함수명 패턴(`` `foo()` ``)을 추출, scope .py 파일에 `def <name>` 이 이미 존재하면 R13 risk 생성. `run_premortem()`에 배선. assumption_risks start=14로 업데이트(R11=scope_file, R12=stale_test, R13=duplicate_function). `TestDuplicateFunctionRisk` 11건 신규. §0 갱신. — premortem.py, test_premortem.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |

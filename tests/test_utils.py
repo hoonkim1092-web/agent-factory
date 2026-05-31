@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize
 from core.utils import test_file_for as _test_file_for
 
 
@@ -346,6 +346,51 @@ class TestTestFileFor:
 
     def test_대시와_점_포함_stem은_허용(self):
         assert _test_file_for("core/my-module.v2.py") == "tests/test_my-module.v2.py"
+
+
+class TestNormalize:
+    def test_빈_리스트는_빈_리스트_반환(self):
+        assert normalize([]) == []
+
+    def test_단일_요소는_0(self):
+        assert normalize([42.0]) == [0.0]
+
+    def test_모든_값이_동일하면_모두_0(self):
+        assert normalize([5.0, 5.0, 5.0]) == [0.0, 0.0, 0.0]
+
+    def test_두_원소(self):
+        result = normalize([0.0, 10.0])
+        assert result == pytest.approx([0.0, 1.0])
+
+    def test_정규화_결과_범위(self):
+        values = [1.0, 2.0, 3.0, 4.0, 5.0]
+        result = normalize(values)
+        assert result[0] == pytest.approx(0.0)
+        assert result[-1] == pytest.approx(1.0)
+
+    def test_중간값_보간(self):
+        result = normalize([0.0, 5.0, 10.0])
+        assert result == pytest.approx([0.0, 0.5, 1.0])
+
+    def test_음수_포함(self):
+        result = normalize([-10.0, 0.0, 10.0])
+        assert result == pytest.approx([0.0, 0.5, 1.0])
+
+    def test_비정렬_입력(self):
+        result = normalize([10.0, 0.0, 5.0])
+        assert result == pytest.approx([1.0, 0.0, 0.5])
+
+    def test_반환_길이_동일(self):
+        values = [3.0, 1.0, 4.0, 1.0, 5.0]
+        assert len(normalize(values)) == len(values)
+
+    def test_반환_타입은_float(self):
+        result = normalize([1.0, 2.0, 3.0])
+        assert all(isinstance(v, float) for v in result)
+
+    def test_정수_입력도_동작(self):
+        result = normalize([0, 5, 10])
+        assert result == pytest.approx([0.0, 0.5, 1.0])
 
 
 class TestPercentile:
