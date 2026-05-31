@@ -3,7 +3,10 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-05-31 KST (Windows)** — **Phase 4 실측 검증 COMPLETE** (`e0e477fc`). `core/utils.py` zscore dogfood run (R1 16차) + T3 skip 발효 검증 완료.
 >
-> **다음 세션 최우선 진입점**: **다음 production work-item** 선정. 완료: `denied_paths` 경계 매칭 fix (`4acc6ca1`) + R1 17차 `_detect_scope_file_risk()` (`a917f7ff`). 다음 후보: planner R10 다중 파일 investigation step 품질 개선, B-3 step 4 확인(이미 완료), 기타 premortem detector 확장.
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: `denied_paths` 경계 매칭 fix (`4acc6ca1`) + R1 17차 `_detect_scope_file_risk()` (`a917f7ff`). 다음 후보 (dogfood run 형식으로):
+> 1. `core/planner.py` investigation step에 R11(scope_file_risk) 연동 — scope에 없는 파일 발견 시 "경로 확인" investigation step 자동 생성
+> 2. `core/premortem.py` `_detect_stale_test_risk()` — scope 파일에 대응하는 테스트 파일이 없으면 R12 risk 생성
+> 3. 기타 utils 함수 추가 (dogfood 인프라 연습)
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
