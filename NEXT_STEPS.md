@@ -3,7 +3,7 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-05-31 KST (Windows)** — **Phase 4 실측 검증 COMPLETE** (`e0e477fc`). `core/utils.py` zscore dogfood run (R1 16차) + T3 skip 발효 검증 완료.
 >
-> **다음 세션 최우선 진입점**: **다음 production work-item** 선정. R1 16차 검증으로 telemetry skip end-to-end 완료 — 다음 후보: premortem/planner 추가 개선, B-3 step 4(skill manifest reuse_decision), denied_paths substring 비대칭 매칭 Medium 수정.
+> **다음 세션 최우선 진입점**: **다음 production work-item** 선정. 완료: `denied_paths` 경계 매칭 fix (`4acc6ca1`) + R1 17차 `_detect_scope_file_risk()` (`a917f7ff`). 다음 후보: planner R10 다중 파일 investigation step 품질 개선, B-3 step 4 확인(이미 완료), 기타 premortem detector 확장.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -522,6 +522,11 @@ PR 4 — Operational Hygiene (P2)
 - **라이브 검증**: 이번 커밋의 게이트 자기 파일(blast3+ALWAYS_TIER3)에서 telemetry skip=True여도 발효 안 되고 [1,2,3] 강제됨 확인.
 - 3-Tier: af-critic WARN(3건 흡수: review_metrics_logger ALWAYS_TIER3 / 빈 sha 제외 / docstring) + SSOT invariant 봉인 / af-cross-review WARN(2건 흡수: span T3기준 / t3_classifier ALWAYS_TIER3) / af-test-runner PASS. 신규 테스트 +26.
 - **잔여 한계(미수정)**: severity 분포 미포착 — 메트릭이 per-finding severity 없어 BLOCK-only를 severity 프록시로 사용(§397 caveat). tokens/duration 미지원. `compute_report`의 span은 여전히 전체 레코드 기준(advisory 표시용, 강제 경로 아님).
+
+**R1 17차 (2026-05-31) — COMPLETE** (run_id: 1780229193-54d8463a, merge: `a917f7ff`, PC: Windows):
+   - ✅ `core/premortem.py` `_detect_scope_file_risk()` 추가 — scope 목록 중 디스크에 없는 파일을 R11 risk로 리포트. `generate_risks()`에 배선, assumption_risks start=12로 ID 충돌 방지.
+   - ✅ `tests/test_premortem.py` `TestDetectScopeFileRisk` 신규 (60 PASS)
+   - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
