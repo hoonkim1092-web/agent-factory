@@ -3,10 +3,10 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`) + R1 24차 `core/premortem.py` R14(conflicting_import) (`85002ddc`) + R1 25차 `core/planner.py` R14 연동 (`6abe55b2`) + R1 26차 `core/utils.py` normalize() (`72ab2056`, 수동 cherry-pick). 다음 후보 (dogfood run 형식으로):
-> 1. `core/premortem.py`에 R15+ 신규 detector 추가 (예: 파일 크기 과대, 함수 복잡도)
-> 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
-> 3. `core/planner.py` R15+ 연동 (R15 detector 추가 후)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() + R1 22차 `core/premortem.py` R13(duplicate_function) + R1 23차 `core/planner.py` R13 연동 + R1 24차 `core/premortem.py` R14(conflicting_import) + R1 25차 `core/planner.py` R14 연동 + R1 26차 `core/utils.py` normalize() + **R1 27차** `core/premortem.py` R15(long_function) (`c0ee8b52`) + **R1 28차** `core/planner.py` R15 연동 (`850310b9`). 다음 후보:
+> 1. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
+> 2. `core/premortem.py`에 R16+ 신규 detector 추가 (예: 미사용 import, 복잡도)
+> 3. `core/planner.py` R16+ 연동
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
@@ -581,6 +581,17 @@ PR 4 — Operational Hygiene (P2)
    - ✅ TestNormalize 11 tests PASS
    - ✅ 3-Tier: af-test-runner PASS
    - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
+
+   **R1 27차 (2026-06-01) — COMPLETE** (직접 구현, commit: `c0ee8b52`, PC: Windows):
+   - ✅ `core/premortem.py` `_detect_long_function_risk()` R15 detector 추가 — scope .py 파일에서 ast 파싱으로 50줄 초과 함수 탐지 → R15 리스크 생성
+   - ✅ `assumption_risks start 15→16`, `gap_start max(20,15+n)→max(21,16+n)` 업데이트
+   - ✅ `tests/test_premortem.py` `TestLongFunctionRisk` 12건 신규 (107 PASS)
+   - ✅ 3-Tier: af-critic WARN(dead code 수정) / T3 skip(telemetry, commits=32) / af-test-runner PASS
+
+   **R1 28차 (2026-06-01) — COMPLETE** (직접 구현, commit: `850310b9`, PC: Windows):
+   - ✅ `core/planner.py` `_extract_long_function_pairs()` 헬퍼 신설 — R15 description에서 (func_name, file_path, line_count) 파싱
+   - ✅ `_build_investigation_steps()`에 long_function 분기 추가 — 긴 함수별 `grep -n def <name>` step 생성
+   - ✅ `tests/test_planner.py` `TestLongFunctionRiskInvestigation` 8건 신규 (94 PASS)
 
    **R1 24차 (2026-06-01) — COMPLETE** (run_id: 1780245030-6a8e81b3, merge: `85002ddc`, PC: Windows):
    - ✅ `core/premortem.py` `_detect_conflicting_import_risk()` R14 detector 추가 — intent 백틱 함수명 추출 후 scope .py 파일에서 `import <name>` / `from X import <name>` 형태 충돌 감지. R14 리스크 생성.
