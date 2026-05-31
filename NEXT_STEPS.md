@@ -1,9 +1,9 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-31 KST (Windows)** — **A Phase 4 스마트 라우팅 COMPLETE** (`deae9dbb`). telemetry 기반 Tier 3 조건부 skip + ALWAYS-Tier-3 안전망. 1주 측정 데이터(T3 BLOCK-only 0/31) 게이트 충족 확인 후 구현. 3-Tier WARN/WARN/PASS (advisory 5건 흡수).
+> 마지막 업데이트: **2026-05-31 KST (Windows)** — **Phase 4 실측 검증 COMPLETE** (`e0e477fc`). `core/utils.py` zscore dogfood run (R1 16차) + T3 skip 발효 검증 완료.
 >
-> **다음 세션 최우선 진입점**: **Phase 4 실측 검증 dogfood run** (사용자 계획 step 2). 비위험 core 파일(예: `core/utils.py`) work-item으로 dogfood run을 돌려 telemetry skip이 실제 발효(blast2+비위험+skip=True → T3 생략)되는지 + 비용 절감을 end-to-end 확인. 그 다음 후보: premortem/planner 추가 개선, B-3 step 4(skill manifest reuse_decision).
+> **다음 세션 최우선 진입점**: **다음 production work-item** 선정. R1 16차 검증으로 telemetry skip end-to-end 완료 — 다음 후보: premortem/planner 추가 개선, B-3 step 4(skill manifest reuse_decision), denied_paths substring 비대칭 매칭 Medium 수정.
 
 > **참고**: 원격 스케줄 루틴 `trig_016Vy1qc2iakGmz1bE7V6TFW` (2026-05-29 04:40 KST) — 로컬 성공으로 불필요. https://claude.ai/code/routines 에서 비활성화 가능.
 
@@ -523,7 +523,11 @@ PR 4 — Operational Hygiene (P2)
 - 3-Tier: af-critic WARN(3건 흡수: review_metrics_logger ALWAYS_TIER3 / 빈 sha 제외 / docstring) + SSOT invariant 봉인 / af-cross-review WARN(2건 흡수: span T3기준 / t3_classifier ALWAYS_TIER3) / af-test-runner PASS. 신규 테스트 +26.
 - **잔여 한계(미수정)**: severity 분포 미포착 — 메트릭이 per-finding severity 없어 BLOCK-only를 severity 프록시로 사용(§397 caveat). tokens/duration 미지원. `compute_report`의 span은 여전히 전체 레코드 기준(advisory 표시용, 강제 경로 아님).
 
-**다음**: Phase 4 실측 검증 dogfood run — 비위험 core 파일 work-item으로 telemetry skip 실제 발효 + 비용 절감 end-to-end 확인.
+**R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
+- ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
+- ✅ TestZscore 10 tests PASS
+- ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
+- **✅ Phase 4 T3 skip 발효 검증**: `core/utils.py` blast_tier=2, not ALWAYS_TIER3, `t3_telemetry_skip.skip=True` → `_required_tiers_for → [1, 2]` (T3 제외) 코드 경로 실행 확인. 비용 절감: T3(af-cross-review) ~517s 절약/커밋.
 
 ### ✅ C. AF Dogfooding Review Safety — Follow-ups (2026-05-20) — DONE
 
