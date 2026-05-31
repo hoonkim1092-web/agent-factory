@@ -3,10 +3,10 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`) + R1 24차 `core/premortem.py` R14(conflicting_import) (`85002ddc`). 다음 후보 (dogfood run 형식으로):
-> 1. `core/planner.py` R14 연동 — R14 발화 시 import 충돌 확인 investigation step 생성
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`) + R1 24차 `core/premortem.py` R14(conflicting_import) (`85002ddc`) + R1 25차 `core/planner.py` R14 연동 (`6abe55b2`) + R1 26차 `core/utils.py` normalize() (`72ab2056`, 수동 cherry-pick). 다음 후보 (dogfood run 형식으로):
+> 1. `core/premortem.py`에 R15+ 신규 detector 추가 (예: 파일 크기 과대, 함수 복잡도)
 > 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
-> 3. `core/premortem.py`에 R15+ 신규 detector 추가 (예: 파일 크기 과대, 함수 복잡도)
+> 3. `core/planner.py` R15+ 연동 (R15 detector 추가 후)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
@@ -568,6 +568,19 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `_build_investigation_steps()`에 R13(duplicate_function) 분기 추가 — 중복 함수별 `grep -n def <name>` investigation step 생성
    - ✅ `tests/test_planner.py` `TestDuplicateFunctionRiskInvestigation` 7건 신규 (78 PASS)
    - ✅ 3-Tier: af-critic PASS / T3 skip(telemetry) / pytest 78 PASS
+
+   **R1 25차 (2026-06-01) — COMPLETE** (직접 구현, commit: `6abe55b2`, PC: Windows):
+   - ✅ `core/planner.py` `_extract_conflicting_import_pairs()` 헬퍼 신설 — R14 description에서 (func_name, file_path) 쌍 파싱
+   - ✅ `_build_investigation_steps()`에 R14(conflicting_import) 분기 추가 — `grep -n "import {func_name}" {file_path}` investigation step 생성
+   - ✅ `_CONFLICTING_IMPORT_PREFIX` / `_CONFLICTING_IMPORT_SUFFIX` 상수 추가
+   - ✅ `tests/test_planner.py` `TestConflictingImportRiskInvestigation` 8건 신규 (86 PASS)
+   - ✅ 3-Tier: af-critic PASS(WARN-only: grep word boundary advisory, R13와 동일 패턴 수용) / T3 skip(telemetry, commits=32) / af-test-runner PASS
+
+   **R1 26차 (2026-06-01) — COMPLETE** (run_id: 1780246226-2274eb1e, 수동 cherry-pick, commit: `72ab2056`, PC: Windows):
+   - ✅ `normalize(values: list[float]) -> list[float]` core/utils.py 추가 — [0.0, 1.0] 선형 정규화, 빈 리스트 [], 동일값 [0.0]*n
+   - ✅ TestNormalize 11 tests PASS
+   - ✅ 3-Tier: af-test-runner PASS
+   - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
 
    **R1 24차 (2026-06-01) — COMPLETE** (run_id: 1780245030-6a8e81b3, merge: `85002ddc`, PC: Windows):
    - ✅ `core/premortem.py` `_detect_conflicting_import_risk()` R14 detector 추가 — intent 백틱 함수명 추출 후 scope .py 파일에서 `import <name>` / `from X import <name>` 형태 충돌 감지. R14 리스크 생성.
