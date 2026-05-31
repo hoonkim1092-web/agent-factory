@@ -3,8 +3,8 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 20차 `core/planner.py` R12(stale_test) 연동 (`80337dd8`) + R1 21차 `core/utils.py` percentile() 추가 (`df679c14`). 다음 후보 (dogfood run 형식으로):
-> 1. `core/premortem.py`에 R13 detector 추가 (새 리스크 카테고리 — 후보: 함수 중복 패턴, 미사용 import 리스크 등)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() 추가 (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) 추가 (`81b8fc3e`). 다음 후보 (dogfood run 형식으로):
+> 1. `core/planner.py`에 R13(duplicate_function) 연동 — `_extract_duplicate_function_paths()` 헬퍼 신설, 중복 함수별 "기존 정의 확인" investigation step 생성
 > 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
@@ -554,6 +554,13 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `percentile(values: list[int | float], p: float) -> float` core/utils.py 추가 — 선형 보간 백분위수, 빈 리스트/범위 외 p → ValueError
    - ✅ TestPercentile 테스트 클래스 신규 (경계값 p=0/100, 중앙값, 보간, 음수, ValueError 2종)
    - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
+
+   **R1 22차 (2026-06-01) — COMPLETE** (run_id: 1780242570-83d712b2, 수동 cherry-pick, commit: `81b8fc3e`, PC: Windows):
+   - ✅ `core/premortem.py` `_detect_duplicate_function_risk()` R13 detector 추가 — intent 백틱 함수명(`foo()`) 추출 후 scope .py 파일에 `def <name>` 존재 시 R13 리스크 생성
+   - ✅ `run_premortem()` 배선 + assumption_risks start=14로 업데이트 (R11=scope_file, R12=stale_test, R13=duplicate_function)
+   - ✅ `tests/test_premortem.py` `TestDuplicateFunctionRisk` 11건 신규 (84 PASS)
+   - ✅ 3-Tier: af-test-runner PASS (84 tests)
+   - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: docs/runtime_modes.md 등) → 수동 cherry-pick으로 처리
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
