@@ -22,8 +22,11 @@ import pytest
 
 from scripts.review_gate import (
     _AGENT_TIER,
+    _is_always_tier3,
     _load_state,
+    _required_tiers_for,
     _save_state,
+    _telemetry_skip_enacted,
     clear_committed_files,
     is_gate_blocked,
     record_review_done,
@@ -874,3 +877,86 @@ def test_cli_record_non_critic_does_not_persist_t3_required(ws):
     state = _load_state(ws)
     assert "t3_required" not in state["reviews"]["af-test-runner"]
     assert state.get("fired_at") == now + 1
+
+
+# ── Phase 4: ALWAYS-Tier-3 안전망 + telemetry skip 분기 ─────────────────────────
+
+def test_is_always_tier3_risk_files():
+    """위험군 파일은 ALWAYS-Tier-3로 분류."""
+    assert _is_always_tier3(["scripts/review_gate.py"])
+    assert _is_always_tier3(["scripts/hook_runner.py"])
+    assert _is_always_tier3(["scripts/enqueue_agent_review.py"])
+    assert _is_always_tier3(["scripts/review_metrics_logger.py"])
+    assert _is_always_tier3(["scripts/t3_classifier.py"])
+    assert _is_always_tier3(["core/providers/codex.py"])
+    assert _is_always_tier3(["core/provider_detect.py"])
+    assert _is_always_tier3([".claude/agents/af-critic.md"])
+    assert _is_always_tier3([".claude/skills/foo/SKILL.md"])
+    # Windows 백슬래시 경로도 정규화
+    assert _is_always_tier3([r"scripts\review_gate.py"])
+
+
+def test_is_always_tier3_non_risk_files():
+    """일반 core 파일은 위험군 아님."""
+    assert not _is_always_tier3(["core/utils.py"])
+    assert not _is_always_tier3(["core/foo.py"])
+    assert not _is_always_tier3(["scripts/blueprint_updater.py"])
+    assert not _is_always_tier3([])
+
+
+def _telemetry_state(blast_tier, *, skip, files=None):
+    return {
+        "files": files if files is not None else ["core/utils.py"],
+        "blast_tier": blast_tier,
+        "t3_telemetry_skip": {"skip": skip, "reason": "t3-redundant", "metrics": {}},
+    }
+
+
+def test_telemetry_skip_enacted_true():
+    """blast 2 + skip True + 비위험 파일 → 발효."""
+    assert _telemetry_skip_enacted(_telemetry_state(2, skip=True))
+
+
+def test_telemetry_skip_enacted_false_when_decision_false():
+    assert not _telemetry_skip_enacted(_telemetry_state(2, skip=False))
+
+
+def test_telemetry_skip_enacted_false_blast3():
+    """blast 3는 telemetry skip 불가."""
+    assert not _telemetry_skip_enacted(_telemetry_state(3, skip=True))
+
+
+def test_telemetry_skip_enacted_false_risk_file():
+    """위험군 파일은 skip 결정과 무관하게 발효 안 됨."""
+    assert not _telemetry_skip_enacted(
+        _telemetry_state(2, skip=True, files=["scripts/review_gate.py"])
+    )
+
+
+def test_telemetry_skip_enacted_false_no_decision():
+    assert not _telemetry_skip_enacted({"files": ["core/utils.py"], "blast_tier": 2})
+
+
+def test_required_tiers_telemetry_skip():
+    """blast 2 + telemetry skip 발효 → [1, 2]."""
+    assert _required_tiers_for(_telemetry_state(2, skip=True)) == [1, 2]
+
+
+def test_required_tiers_always_tier3_overrides_telemetry():
+    """위험군 파일은 telemetry skip을 무시하고 [1, 2, 3]."""
+    state = _telemetry_state(2, skip=True, files=["scripts/review_gate.py"])
+    assert _required_tiers_for(state) == [1, 2, 3]
+
+
+def test_required_tiers_blast3_no_telemetry_skip():
+    """blast 3는 telemetry skip 무관 [1, 2, 3]."""
+    assert _required_tiers_for(_telemetry_state(3, skip=True)) == [1, 2, 3]
+
+
+def test_required_tiers_no_skip_default():
+    """telemetry 결정 없음 → 정상 3-tier."""
+    assert _required_tiers_for({"files": ["core/utils.py"], "blast_tier": 2}) == [1, 2, 3]
+
+
+def test_required_tiers_blast1():
+    assert _required_tiers_for({"files": ["core/utils.py"], "blast_tier": 1}) == [1]

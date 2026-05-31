@@ -464,3 +464,181 @@ def test_post_agent_record_duration_ms_absent(tmp_path, monkeypatch):
 
     assert received, "append_metric 미호출"
     assert received[0].get("duration_ms") is None
+
+
+# ── compute_t3_telemetry_skip (Phase 4 보수적 AND-게이트) ──────────────────────
+
+def _write_t3_commits(ws, n, *, span_days=8.0, t3_verdicts=None):
+    """N개 커밋(T2 pass + T3)을 jsonl로 기록. t3_verdicts[i]로 T3 verdict 제어.
+
+    span_days: 첫~마지막 ts 간격 (마지막 커밋이 base+span_days).
+    """
+    import datetime as _dt
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    step = (span_days / (n - 1)) if n > 1 else 0.0
+    path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    with open(path, "w", encoding="utf-8") as f:
+        for i in range(n):
+            sha = f"sha{i + 1:03d}"
+            ts = (base + _dt.timedelta(days=i * step)).isoformat()
+            v3 = (t3_verdicts[i] if t3_verdicts else "pass")
+            for tier, agent, verdict in (
+                (2, "af-critic", "pass"),
+                (3, "af-cross-review", v3),
+            ):
+                f.write(json.dumps({
+                    "ts": ts, "commit_sha": sha, "tier": tier, "agent": agent,
+                    "verdict": verdict, "findings_count": 0, "extension_log_count": 0,
+                    "duration_ms": None, "tokens": None, "tool_calls": None,
+                    "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+                }) + "\n")
+
+
+def test_telemetry_skip_no_data(metrics_mod, ws):
+    """데이터 없음 → fail-closed skip=False, reason=no-data."""
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "no-data"
+
+
+def test_telemetry_skip_insufficient_commits(metrics_mod, ws):
+    """커밋 < MIN_COMMITS → skip=False, reason=insufficient-data."""
+    _write_t3_commits(ws, 5, span_days=8.0)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "insufficient-data"
+    assert d["metrics"]["commits_with_t3"] == 5
+
+
+def test_telemetry_skip_insufficient_span(metrics_mod, ws):
+    """커밋 >= MIN_COMMITS이지만 span < 7일 → reason=insufficient-data."""
+    _write_t3_commits(ws, 12, span_days=3.0)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "insufficient-data"
+    assert d["metrics"]["span_days"] < metrics_mod.T3_SKIP_MIN_SPAN_DAYS
+
+
+def test_telemetry_skip_all_clean(metrics_mod, ws):
+    """충분 데이터 + block-only 0 + recent clean + skip_audit clean → skip=True."""
+    _write_t3_commits(ws, 12, span_days=8.0)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is True
+    assert d["reason"] == "t3-redundant"
+    assert d["metrics"]["block_only_rate"] == 0.0
+    assert d["metrics"]["recent_block"] is False
+
+
+def test_telemetry_skip_high_block_only_rate(metrics_mod, ws):
+    """오래된 BLOCK으로 block-only rate >= 10% → reason=t3-block-only-rate-high.
+
+    최근 10개는 clean하게 유지하되(recent_block 게이트 회피), 앞쪽 커밋에서 충분한
+    block-only를 만들어 전체 rate가 임계 이상이 되도록 한다.
+    """
+    # 24 commits: 첫 4개 T3 block-only(나머지 T1/T2는 _write 헬퍼상 pass) → 4/24≈16.7%.
+    # 최근 10개(index 14~23)는 모두 pass → recent_block=False.
+    verdicts = ["block"] * 4 + ["pass"] * 20
+    _write_t3_commits(ws, 24, span_days=14.0, t3_verdicts=verdicts)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "t3-block-only-rate-high"
+    assert d["metrics"]["block_only_rate"] >= metrics_mod.T3_SKIP_BLOCK_ONLY_RATE_MAX
+    assert d["metrics"]["recent_block"] is False
+
+
+def test_telemetry_skip_recent_block(metrics_mod, ws):
+    """최근 창에 T3 BLOCK 1건 → reason=recent-t3-block (rate 임계 미만이어도 차단)."""
+    # 12 commits, 마지막 1개만 block → block_only_rate≈8.3%(<10%)지만 recent_block=True
+    verdicts = ["pass"] * 11 + ["block"]
+    _write_t3_commits(ws, 12, span_days=8.0, t3_verdicts=verdicts)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "recent-t3-block"
+    assert d["metrics"]["recent_block"] is True
+    assert d["metrics"]["block_only_rate"] < metrics_mod.T3_SKIP_BLOCK_ONLY_RATE_MAX
+
+
+def test_telemetry_skip_prior_skip_caught_block(metrics_mod, ws):
+    """skip_audit에 subsequent_block=True → reason=prior-skip-caught-block (모든 조건 우선)."""
+    _write_t3_commits(ws, 12, span_days=8.0)
+    metrics_mod.append_skip_audit(ws, skipped_tier=3, reason="t3-redundant", subsequent_block=True)
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    assert d["skip"] is False
+    assert d["reason"] == "prior-skip-caught-block"
+    assert d["metrics"]["skip_subsequent_block"] == 1
+
+
+def test_telemetry_skip_span_uses_t3_records_not_all(metrics_mod, ws):
+    """T3 데이터가 7일 미만이면, 최근 Tier-1 이벤트가 늦어도 span 게이트 통과 불가.
+
+    af-cross-review High advisory: span은 전체 레코드가 아닌 T3 레코드 기준이어야 한다.
+    """
+    import datetime as _dt
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    lines = []
+    # 12개 T3 커밋을 day 0~4 (span<7)에 밀집
+    for i in range(12):
+        ts = (base + _dt.timedelta(days=i * (4.0 / 11))).isoformat()
+        for tier, agent in ((2, "af-critic"), (3, "af-cross-review")):
+            lines.append(json.dumps({
+                "ts": ts, "commit_sha": f"sha{i + 1:03d}", "tier": tier,
+                "agent": agent, "verdict": "pass", "findings_count": 0,
+            }))
+    # day 8에 Tier-1-only 이벤트 1개 (전체 레코드 span은 8일이 됨)
+    lines.append(json.dumps({
+        "ts": (base + _dt.timedelta(days=8)).isoformat(), "commit_sha": "shaT1",
+        "tier": 1, "agent": "af-test-runner", "verdict": "pass", "findings_count": 0,
+    }))
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    # T3 span ≈ 4일 < 7 → insufficient-data (전체 span 8일에 속지 않음)
+    assert d["skip"] is False
+    assert d["reason"] == "insufficient-data"
+    assert d["metrics"]["span_days"] < metrics_mod.T3_SKIP_MIN_SPAN_DAYS
+
+
+def test_telemetry_block_only_matches_compute_report(metrics_mod, ws):
+    """SSOT invariant: compute_t3_telemetry_skip의 block_only 집계가 compute_report와 일치.
+
+    두 함수는 순회 방식이 다르므로(by_commit.items() vs t3_order) 정의 drift 위험이
+    docstring에만 의존한다. 동일 데이터셋에서 t3_block_only_commits가 일치함을 봉인한다.
+    """
+    import re as _re
+    # 14 commits: 3개는 T3 block-only(T1/T2 pass + T3 block), 나머지는 clean
+    verdicts = ["block", "block", "block"] + ["pass"] * 11
+    _write_t3_commits(ws, 14, span_days=12.0, t3_verdicts=verdicts)
+
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    report = metrics_mod.compute_report(ws)
+    m = _re.search(r"T3 BLOCK-only 커밋: (\d+) / (\d+)", report)
+    assert m, "compute_report에서 block-only 행 파싱 실패"
+    report_block_only, report_commits = int(m.group(1)), int(m.group(2))
+    assert d["metrics"]["t3_block_only_commits"] == report_block_only == 3
+    assert d["metrics"]["commits_with_t3"] == report_commits == 14
+
+
+def test_telemetry_skip_block_only_requires_t1t2_clean(metrics_mod, ws):
+    """T3 block이지만 T2도 block이면 block-only 아님 (severity 신호 정확성)."""
+    import datetime as _dt
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    path = os.path.join(ws, ".af_review_queue", "review_metrics.jsonl")
+    with open(path, "w", encoding="utf-8") as f:
+        for i in range(12):
+            sha = f"sha{i + 1:03d}"
+            ts = (base + _dt.timedelta(days=i * 0.8)).isoformat()
+            # T2 block + T3 block → T3 단독 아님 → block_only 미집계
+            for tier, agent in ((2, "af-critic"), (3, "af-cross-review")):
+                f.write(json.dumps({
+                    "ts": ts, "commit_sha": sha, "tier": tier, "agent": agent,
+                    "verdict": "block", "findings_count": 1, "extension_log_count": 0,
+                    "duration_ms": None, "tokens": None, "tool_calls": None,
+                    "evidence_present": False, "evidence_items": 0, "evidence_cited": 0,
+                }) + "\n")
+    d = metrics_mod.compute_t3_telemetry_skip(ws)
+    # T3 block이 전부 T2 block과 동반 → block_only_rate=0, 그러나 recent_block=True
+    assert d["metrics"]["t3_block_only_commits"] == 0
+    assert d["skip"] is False
+    assert d["reason"] == "recent-t3-block"

@@ -368,3 +368,60 @@ def test_enqueue_classifier_unavailable_fails_closed_over_stale_skip(tmp_path, m
     data = _read_marker(tmp_path)
     assert data["t3_required"] is True
     assert data["t3_decision"]["reason"] == "classifier-unavailable"
+
+
+# ── Phase 4: enqueue telemetry skip 배선 ───────────────────────────────────────
+
+def _seed_clean_metrics(tmp_path, n=12, span_days=8.0):
+    """telemetry skip=True를 유도하는 깨끗한 T3 메트릭 n개 커밋 기록."""
+    import datetime as _dt
+    q = tmp_path / ".af_review_queue"
+    q.mkdir(exist_ok=True)
+    base = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+    step = span_days / (n - 1)
+    lines = []
+    for i in range(n):
+        ts = (base + _dt.timedelta(days=i * step)).isoformat()
+        for tier, agent in ((2, "af-critic"), (3, "af-cross-review")):
+            lines.append(json.dumps({
+                "ts": ts, "commit_sha": f"sha{i + 1:03d}", "tier": tier,
+                "agent": agent, "verdict": "pass", "findings_count": 0,
+            }))
+    (q / "review_metrics.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_enqueue_stores_telemetry_skip_and_logs_once(tmp_path, monkeypatch):
+    """비위험 파일 + telemetry skip=True → marker에 결정 동결 + skip_audit 1회 기록."""
+    _seed_clean_metrics(tmp_path)
+    _enqueue_main(tmp_path, monkeypatch, "core/foo.py")
+
+    data = _read_marker(tmp_path)
+    decision = data.get("t3_telemetry_skip")
+    assert isinstance(decision, dict)
+    assert decision["skip"] is True
+    assert decision["reason"] == "t3-redundant"
+    assert data.get("blast_tier") == 2
+
+    audit_path = tmp_path / ".af_review_queue" / "skip_audit.jsonl"
+    assert audit_path.exists()
+    recs = [json.loads(l) for l in audit_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(recs) == 1
+    assert recs[0]["skipped_tier"] == 3
+    assert recs[0]["reason"] == "t3-redundant"
+
+    # 같은 라운드 재편집 → skip_audit 중복 기록 없음 (라운드당 1회 멱등)
+    _enqueue_main(tmp_path, monkeypatch, "core/bar.py")
+    recs2 = [json.loads(l) for l in audit_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(recs2) == 1
+
+
+def test_enqueue_risk_file_no_telemetry_skip_log(tmp_path, monkeypatch):
+    """위험군 파일은 telemetry skip 결정이 있어도 발효 안 됨 → skip_audit 미기록."""
+    _seed_clean_metrics(tmp_path)
+    _enqueue_main(tmp_path, monkeypatch, "scripts/review_gate.py")
+
+    data = _read_marker(tmp_path)
+    # 결정 자체는 동결되나 (forensic), 발효되지 않으므로 audit 미기록
+    assert data.get("t3_telemetry_skip", {}).get("skip") is True
+    audit_path = tmp_path / ".af_review_queue" / "skip_audit.jsonl"
+    assert not audit_path.exists()

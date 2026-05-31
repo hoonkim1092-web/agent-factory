@@ -27,6 +27,15 @@ from typing import Any
 METRICS_FILE = "review_metrics.jsonl"
 SKIP_AUDIT_FILE = "skip_audit.jsonl"
 
+# ── Phase 4 conservative Tier-3 skip thresholds (SSOT) ─────────────────────────
+# compute_t3_telemetry_skip() only authorises a skip when ALL conditions hold.
+# These are deliberately conservative — raising any of them never makes skip more
+# aggressive, only rarer.
+T3_SKIP_BLOCK_ONLY_RATE_MAX = 10.0   # %: T3 BLOCK-only commit rate must be below this
+T3_SKIP_MIN_COMMITS = 10             # sample floor: commits carrying a T3 record
+T3_SKIP_MIN_SPAN_DAYS = 7.0          # recency floor: data must span >= 1 week
+T3_SKIP_RECENT_WINDOW = 10           # last-N T3 commits checked for a BLOCK
+
 # finding 마커 패턴 (구조화된 verdict 라인만 인식)
 # Phase 2 v7 §5.6: `[ACCEPT-ADV]` (Medium/Low advisory) + `[BONUS]` (변경 무관 advisory)
 # 라벨 추가. ACCEPT 변형 4종(`[ACCEPT]`, `[ACCEPT★]`, `[ACCEPT*]`, `[ACCEPT-ADV]`) 통합.
@@ -359,6 +368,124 @@ def compute_report(workspace: str) -> str:
         "  tokens/tool_calls: 미지원 (API 통합 필요)",
     ]
     return "\n".join(lines)
+
+
+def compute_t3_telemetry_skip(workspace: str) -> dict:
+    """Conservative telemetry-based Tier-3 skip decision (Phase 4).
+
+    Returns {"skip": bool, "reason": str, "metrics": {...}}.
+
+    skip=True is granted ONLY when EVERY conservative condition holds:
+      1. Data sufficiency  — commits_with_t3 >= T3_SKIP_MIN_COMMITS AND
+                              span_days >= T3_SKIP_MIN_SPAN_DAYS (sample + recency floor).
+      2. Block-only rate   — T3 BLOCK-only commit rate < T3_SKIP_BLOCK_ONLY_RATE_MAX.
+                              BLOCK-only (T3 blocked when T1/T2 did not) is the
+                              severity signal — a BLOCK is the highest-severity
+                              outcome, so this stands in for the design's
+                              "Critical/High severity" caveat (§397) that raw
+                              finding share cannot express.
+      3. Recent window     — the last T3_SKIP_RECENT_WINDOW T3 commits contain zero
+                              af-cross-review BLOCK (guards a fresh regression in
+                              T3 value that the all-history rate would dilute).
+      4. Skip-audit clean  — no prior skip later proved to need a block
+                              (skip_subsequent_block == 0) — mirrors compute_report's
+                              Finding-2 guard.
+
+    Any failing condition → skip=False with a specific reason ("why NOT skipped").
+    Fail-closed: empty/insufficient data never authorises a skip.
+
+    The BLOCK-only counting mirrors compute_report() (last record per tier per
+    commit; v3==block AND v2!=block AND v1!=block). Kept self-contained rather than
+    refactoring compute_report so the working report code is untouched; the two
+    definitions MUST stay in sync.
+    """
+    records = _load_records(workspace)
+    if not records:
+        return {"skip": False, "reason": "no-data", "metrics": {}}
+    skip_records = _load_skip_audit_records(workspace)
+
+    # Group by commit (last record per tier) + remember T3 commit order (time order
+    # of first T3 appearance) for the recency window.
+    by_commit: dict[str, dict[int, dict]] = defaultdict(dict)
+    t3_order: list[str] = []
+    t3_seen: set[str] = set()
+    for r in records:
+        sha = r.get("commit_sha")
+        if not sha:
+            # SHA-less records (detached HEAD / non-git workspace) cannot be
+            # attributed to a commit; collapsing them into one "" bucket would
+            # distort the recency window. Excluding them only lowers
+            # commits_with_t3 → fail-closed (insufficient-data).
+            continue
+        tier = int(r.get("tier") or 0)
+        by_commit[sha][tier] = r
+        if tier == 3 and sha not in t3_seen:
+            t3_seen.add(sha)
+            t3_order.append(sha)
+
+    commits_with_t3 = 0
+    t3_block_only_commits = 0
+    for sha in t3_order:
+        tiers = by_commit[sha]
+        t3_rec = tiers.get(3)
+        if not t3_rec:
+            continue
+        commits_with_t3 += 1
+        v3 = (t3_rec.get("verdict") or "pass").lower()
+        v2 = (tiers.get(2) or {}).get("verdict") or "pass"
+        v1 = (tiers.get(1) or {}).get("verdict") or "pass"
+        if v3 == "block" and str(v2).lower() != "block" and str(v1).lower() != "block":
+            t3_block_only_commits += 1
+
+    block_only_rate = (
+        t3_block_only_commits / commits_with_t3 * 100 if commits_with_t3 else 100.0
+    )
+
+    # Recent window: zero af-cross-review BLOCK among the last N T3 commits.
+    recent_shas = t3_order[-T3_SKIP_RECENT_WINDOW:]
+    recent_block = any(
+        ((by_commit[s].get(3) or {}).get("verdict") or "pass").lower() == "block"
+        for s in recent_shas
+    )
+
+    # Timestamp span over T3 data specifically (not all records). The gate asks
+    # whether T3 itself has accumulated >= 1 week; a recent Tier-1-only event must
+    # not inflate the span (af-cross-review High advisory). Falls back to 0.0
+    # (→ insufficient-data, fail-closed) when no T3 commits or parsing fails.
+    try:
+        if t3_order:
+            t3_first_ts = datetime.fromisoformat(by_commit[t3_order[0]][3]["ts"])
+            t3_last_ts = datetime.fromisoformat(by_commit[t3_order[-1]][3]["ts"])
+            span_days = (t3_last_ts - t3_first_ts).total_seconds() / 86400
+        else:
+            span_days = 0.0
+    except Exception:
+        span_days = 0.0
+
+    skip_subsequent_block = sum(1 for r in skip_records if r.get("subsequent_block"))
+
+    metrics = {
+        "commits_with_t3": commits_with_t3,
+        "t3_block_only_commits": t3_block_only_commits,
+        "block_only_rate": round(block_only_rate, 2),
+        "span_days": round(span_days, 2),
+        "recent_window": len(recent_shas),
+        "recent_block": recent_block,
+        "skip_subsequent_block": skip_subsequent_block,
+    }
+
+    # Fail-closed evaluation — data sufficiency first, then conservative blockers.
+    if commits_with_t3 < T3_SKIP_MIN_COMMITS or span_days < T3_SKIP_MIN_SPAN_DAYS:
+        reason = "insufficient-data"
+    elif skip_subsequent_block > 0:
+        reason = "prior-skip-caught-block"
+    elif recent_block:
+        reason = "recent-t3-block"
+    elif block_only_rate >= T3_SKIP_BLOCK_ONLY_RATE_MAX:
+        reason = "t3-block-only-rate-high"
+    else:
+        return {"skip": True, "reason": "t3-redundant", "metrics": metrics}
+    return {"skip": False, "reason": reason, "metrics": metrics}
 
 
 if __name__ == "__main__":

@@ -139,6 +139,62 @@ def _allows_t3_skip(state: dict) -> bool:
     return _deterministic_t3_skip_candidate(state) and _critic_t3_advisory(state) == "no"
 
 
+# ── Phase 4: ALWAYS-Tier-3 safety net + telemetry skip ─────────────────────────
+# Risk-group files always fire full Tier 3 regardless of any skip pathway
+# (cosmetic classifier or telemetry). Source: cross-review-cost-reduction-plan
+# §Phase 4 ALWAYS_TIER_3_PATTERNS. The review-gate's own machinery is on this list
+# so changes to it can never auto-skip their own cross-review.
+_ALWAYS_TIER3_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p)
+    for p in (
+        r"scripts/hook_runner\.py$",
+        r"scripts/review_gate\.py$",
+        r"scripts/check_pending_review\.py$",
+        r"scripts/check_design_pending\.py$",
+        r"scripts/enqueue_agent_review\.py$",
+        r"scripts/review_metrics_logger\.py$",
+        r"scripts/t3_classifier\.py$",
+        r"scripts/blast_radius\.py$",
+        r"scripts/build_review_bundle\.py$",
+        r"\.claude/agents/.*\.md$",
+        r"\.claude/skills/.*",
+        r"core/.*provider.*\.py$",
+        r"core/providers/.*",
+    )
+)
+
+
+def _is_always_tier3(files: list[str]) -> bool:
+    """True when any changed file is in the ALWAYS-Tier-3 risk group (pure)."""
+    for f in files or []:
+        n = str(f).replace("\\", "/")
+        if any(p.search(n) for p in _ALWAYS_TIER3_PATTERNS):
+            return True
+    return False
+
+
+def _telemetry_skip_enacted(state: dict) -> bool:
+    """True when the Phase 4 telemetry decision authorises skipping Tier 3 here.
+
+    Pure: reads only the state dict (the decision frozen at enqueue time —
+    state["t3_telemetry_skip"]["skip"]) and compiled module-level constants
+    (_ALWAYS_TIER3_PATTERNS) — no I/O. Gated to blast_tier 2 and excludes the
+    ALWAYS-Tier-3 risk group, so blast_tier 3 / risk files never telemetry-skip.
+    enqueue_agent_review reuses this as the single source of truth for whether a
+    skip is genuinely enacted (so its skip-audit log never records phantom skips).
+    """
+    try:
+        blast = int(state.get("blast_tier", 2))
+    except (TypeError, ValueError):
+        return False
+    if blast != 2:
+        return False
+    if _is_always_tier3(state.get("files") or []):
+        return False
+    decision = state.get("t3_telemetry_skip")
+    return isinstance(decision, dict) and decision.get("skip") is True
+
+
 # ── 내부 헬퍼 ─────────────────────────────────────────────────────────────────
 
 def _queue_path(workspace: str) -> str:
@@ -228,13 +284,23 @@ def _required_tiers_for(state: dict) -> list[int]:
     - 이 함수는 순수 함수 (부작용 없음, state 변경 없음).
     - blast_tier는 결정 주체(blast_radius.py + enqueue max-merge)가 이미 확정한 값.
     - 이 함수가 blast_tier를 변경하거나 다른 곳에서 override하는 것은 금지된다.
+
+    [Phase 4] Tier 3 skip pathways (both return [1, 2]):
+    - cosmetic classifier: _allows_t3_skip (this diff is AST-cosmetic + critic 'no').
+    - telemetry: _telemetry_skip_enacted (T3 statistically redundant over recent
+      history; decision frozen into state at enqueue — this function stays pure).
+    ALWAYS-Tier-3 risk-group files override BOTH and force [1, 2, 3].
     """
     blast = int(state.get("blast_tier", 2))
     if blast == 1:
         return [1]
+    if _is_always_tier3(state.get("files") or []):
+        return [1, 2, 3]
     if _deterministic_t3_skip_candidate(state) and _critic_t3_advisory(state) is None:
         return [1, 2]
     if _allows_t3_skip(state):
+        return [1, 2]
+    if _telemetry_skip_enacted(state):
         return [1, 2]
     return [1, 2, 3]
 

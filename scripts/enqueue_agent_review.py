@@ -90,6 +90,9 @@ def main() -> None:
         new_file_tier: int,
         t3_decision: object | None,
         record_skip_telemetry_func: object | None,
+        telemetry_decision: dict | None = None,
+        telemetry_skip_enacted_func: object | None = None,
+        append_skip_audit_func: object | None = None,
     ) -> None:
         now = time.time()
 
@@ -145,8 +148,31 @@ def main() -> None:
         # round_started_at가 None이면 이전 라운드가 종료됐다는 뜻 → 새 라운드 시작
         if not data.get("round_started_at"):
             data["round_started_at"] = now
+            # Phase 4: 새 라운드 → skip-audit 1회 기록 허용 (라운드당 중복 방지)
+            data.pop("t3_skip_audit_logged_at", None)
         # round_count는 review_gate가 라운드 종료 시 증가시킴 — enqueue는 보존만
         data.setdefault("round_count", 0)
+
+        # Phase 4: telemetry 기반 Tier 3 skip 결정을 state에 동결 (락 밖 계산값).
+        # _required_tiers_for가 이 flag만 읽으므로 순수성 유지. skip이 실제 발효되면
+        # (위험군 외 + blast 2) 라운드당 1회 "왜 skip했는지" skip_audit.jsonl 기록.
+        if telemetry_decision is not None:
+            data["t3_telemetry_skip"] = telemetry_decision
+            if (
+                telemetry_skip_enacted_func is not None
+                and append_skip_audit_func is not None
+                and not data.get("t3_skip_audit_logged_at")
+            ):
+                try:
+                    if telemetry_skip_enacted_func(data):
+                        append_skip_audit_func(
+                            workspace,
+                            skipped_tier=3,
+                            reason=telemetry_decision.get("reason", "t3-redundant"),
+                        )
+                        data["t3_skip_audit_logged_at"] = now
+                except Exception:
+                    pass
 
         # 저장 (atomic write)
         fd, tmp_path = tempfile.mkstemp(prefix=".pending_", dir=marker_dir, text=True)
@@ -192,12 +218,36 @@ def main() -> None:
         t3_decision = None
         CLASSIFIER_VERSION = "classifier-unavailable"
 
+    # Phase 4: telemetry 기반 skip 결정 선계산 — review_metrics.jsonl 읽기는
+    # 락 밖에서 수행 (파일 I/O로 인한 3s hook 타임아웃 방지, blast_tier 선계산과 동일 패턴).
+    telemetry_decision = None
+    telemetry_skip_enacted_func = None
+    append_skip_audit_func = None
+    try:
+        from review_metrics_logger import (  # type: ignore
+            append_skip_audit,
+            compute_t3_telemetry_skip,
+        )
+        from review_gate import _telemetry_skip_enacted  # type: ignore
+
+        telemetry_decision = compute_t3_telemetry_skip(workspace)
+        telemetry_skip_enacted_func = _telemetry_skip_enacted
+        append_skip_audit_func = append_skip_audit
+    except Exception:
+        telemetry_decision = None
+
     try:
         if _state_lock is not None:
             with _state_lock(workspace):
-                _do_update(new_file_tier, t3_decision, record_skip_telemetry_func)
+                _do_update(
+                    new_file_tier, t3_decision, record_skip_telemetry_func,
+                    telemetry_decision, telemetry_skip_enacted_func, append_skip_audit_func,
+                )
         else:
-            _do_update(new_file_tier, t3_decision, record_skip_telemetry_func)
+            _do_update(
+                new_file_tier, t3_decision, record_skip_telemetry_func,
+                telemetry_decision, telemetry_skip_enacted_func, append_skip_audit_func,
+            )
     except Exception:
         pass
 

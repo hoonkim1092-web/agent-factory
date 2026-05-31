@@ -65,9 +65,10 @@
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | `run(workspace)` |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | `select_model()`, `log_routing()`, `store_pending_escalation()`, `get_pending_escalation()`, `clear_pending_escalation()` |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | `main()` |
-| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 deterministic classifier + af-critic `t3_required: no` 양쪽 합의일 때만 허용. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | `is_gate_blocked()`, `record_review_done()`, `clear_committed_files()`, `_required_tiers_for()`, `_deterministic_t3_skip_candidate()`, `_cli()` |
+| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | `is_gate_blocked()`, `record_review_done()`, `_required_tiers_for()`, `_deterministic_t3_skip_candidate()`, `_is_always_tier3()`, `_telemetry_skip_enacted()`, `_cli()` |
 | `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | `CLASSIFIER_VERSION`, `classify_t3_requirement()`, `record_skip_telemetry()` |
-| `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier 결과를 `.af_review_queue/pending_agent_review.json`에 atomic write | `main()` |
+| `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | `append_metric()`, `append_skip_audit()`, `compute_report()`, `compute_t3_telemetry_skip()` |
+| `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1287,7 +1288,7 @@ invalidate() → execution_open: false (재승인 필요)
 ```
 
 ### 3-Tier Review-Gate (§9)
-<!-- last_updated: 2026-05-21 -->
+<!-- last_updated: 2026-05-31 -->
 
 `.py` 파일을 포함한 커밋은 **af-critic → af-cross-review → af-test-runner** 순서로 3단계 교차검증을 완료해야 한다. (review-first pattern)
 
@@ -1304,6 +1305,18 @@ invalidate() → execution_open: false (재승인 필요)
 - `scripts/review_gate.py`는 `_T3_SKIP_CLASSIFIER_VERSION`을 `scripts.t3_classifier.CLASSIFIER_VERSION`에서 import한다. version 문자열은 classifier가 단일 원천이며, 한쪽만 bump되는 drift를 방지한다.
 - `scripts/review_gate.py --record af-critic --t3-required {yes,no,unknown}`은 af-critic advisory를 수동 기록한다. 다른 agent의 `--t3-required`는 저장되지 않으며 T3 skip 판단에 사용되지 않는다.
 - annotation-only 변경은 cosmetic으로 보지 않는다. Python annotations는 `__annotations__` 및 dataclass/Pydantic/FastAPI/CLI schema 등에서 런타임 관찰 가능하므로 semantic change로 취급한다.
+
+**Phase 4 — Telemetry 기반 T3 skip + ALWAYS-Tier-3 안전망 (2026-05-31):**
+- cosmetic classifier(위)와 **직교하는 두 번째 skip 경로**. cosmetic은 "이 diff가 cosmetic" 판단, telemetry는 "T3가 최근 이력상 통계적으로 중복" 판단. 둘 다 결과는 `[1, 2]`.
+- **보수적 AND-게이트** — `scripts/review_metrics_logger.py:compute_t3_telemetry_skip()`가 아래 4조건을 **전부** 만족할 때만 `skip=True` (fail-closed):
+  1. 데이터 충분: `commits_with_t3 >= T3_SKIP_MIN_COMMITS(10)` AND `span_days >= T3_SKIP_MIN_SPAN_DAYS(7)`
+  2. `block_only_rate < T3_SKIP_BLOCK_ONLY_RATE_MAX(10%)` — T3 BLOCK-only 커밋 비율(severity 신호: BLOCK이 최고 심각도이므로 raw finding share 대신 사용)
+  3. 최근 `T3_SKIP_RECENT_WINDOW(10)` T3 커밋에 BLOCK 0건
+  4. `skip_subsequent_block == 0` (skip 후 BLOCK 발견 이력 없음 — compute_report Finding-2 가드와 정합)
+  - 임계값 4개는 review_metrics_logger SSOT 상수. 미충족 시 사유(`insufficient-data`/`prior-skip-caught-block`/`recent-t3-block`/`t3-block-only-rate-high`)를 반환.
+- **계산·동결 위치**: `enqueue_agent_review.py`가 락 밖에서 `compute_t3_telemetry_skip()` 호출(파일 I/O 3s 타임아웃 회피) → `state["t3_telemetry_skip"]`에 결정 동결. `_required_tiers_for`는 이 flag만 읽어 **순수성 유지**.
+- **발효 판정**: `review_gate._telemetry_skip_enacted(state)` = `blast_tier==2` AND `not _is_always_tier3(files)` AND `t3_telemetry_skip.skip is True`. enqueue가 이 동일 함수로 발효 여부를 판단해 발효 시에만 **라운드당 1회** `skip_audit.jsonl`에 사유 기록(`t3_skip_audit_logged_at` 멱등 가드).
+- **ALWAYS-Tier-3 안전망**: `_ALWAYS_TIER3_PATTERNS`(hook_runner/review_gate/check_pending_review/check_design_pending/enqueue_agent_review/review_metrics_logger/t3_classifier/blast_radius/build_review_bundle, `.claude/agents/*.md`, `.claude/skills/*`, `core/*provider*.py`, `core/providers/*`)에 매칭되는 변경은 cosmetic·telemetry 두 skip을 모두 무시하고 `[1, 2, 3]` 강제. 게이트·메트릭·classifier 자체 파일도 이 목록에 포함 — 자기 변경이 자기 cross-review를 skip하는 부트스트랩 회피(telemetry path는 classifier_version 무시하므로 t3_classifier도 필수).
 
 **test-gap gate (af-test-runner 전처리):**
 - `scripts/test_gap_analyzer.py`: diff에서 subprocess/shlex/sys.platform 위험 패턴 탐지. 관련 테스트에 cross-platform quoted-path 케이스 없으면 `verdict=FAIL`.
@@ -1364,6 +1377,8 @@ Layer 6: 3-Tier Review Gate
 | tier 2(af-critic) 미완료 | `missing-tier-2` |
 | tier 3(af-cross-review) 미완료 | `missing-tier-3` |
 | deterministic T3 skip 후보 + af-critic `t3_required: no` | tier 3만 생략 가능 |
+| telemetry skip 발효 (비위험 + blast 2 + 보수적 AND-게이트) | tier 3만 생략 가능 |
+| ALWAYS-Tier-3 위험군 파일 (`_is_always_tier3`) | tier 3 강제 — 모든 skip 무시 |
 | 리뷰 완료 후 파일 재편집 | `stale-review` |
 | tier-3 snapshot에 없는 `.py` 신규 추가 | `new-files-added` |
 | 어느 tier에서든 verdict=block/fail | `verdict-block:<agent>` |
@@ -1641,6 +1656,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | feat(review-gate Phase 4): telemetry 기반 Tier 3 조건부 skip + ALWAYS-Tier-3 안전망. `review_metrics_logger.compute_t3_telemetry_skip()` 신규 — 보수적 AND-게이트 4조건(데이터충분 `commits≥10`+`span≥7d` / `block_only_rate<10%` / 최근10 BLOCK 0 / `skip_subsequent_block==0`) 전부 만족 시에만 `skip=True`, fail-closed. SSOT 임계 상수 4개. `review_gate._is_always_tier3()`(위험군 패턴) + `_telemetry_skip_enacted()`(blast2+비위험+skip) 추가, `_required_tiers_for`에 telemetry 분기 + ALWAYS-Tier-3 override(순수성 유지 — 결정은 enqueue가 state에 동결). `enqueue_agent_review`가 락 밖 telemetry 계산 → `t3_telemetry_skip` 저장 + 발효 시 라운드당 1회 `skip_audit.jsonl` 사유 기록. 근거: 2026-05-23~31 측정 T3 BLOCK-only 0/31. 신규 테스트 +23(metrics 8 / gate 13 / enqueue 2). 148 PASS. 3-Tier PASS. |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood_isolation.py |
 | 2026-05-31 | v1.2.34 | fix(dogfood BLOCK 232850): (1) **[High]** `_check_merge_policy` allowed_paths 경계 매칭 — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open. `f == p or f.startswith(p.rstrip("/")+"/")`로 교정(파일=정확일치, 디렉터리=경계). auto-merge scope 게이트 안전성 복구. (2) **[Med→실제 Med]** `build_merge_policy` mode fail-closed — `mode or state.merge_mode`가 `""`을 무음 강등하던 결함을 `mode is None` 분기로 교정, 무효 문자열은 `__post_init__` ValueError 도달. (3) **[Low]** `dogfood status`에 `cleanup_skip_reason` 출력 — 출하됐으나 미배선이던 false-alarm 구분 필드 surface. (4) **[Low]** `read_phase_trace` OSError 시 stderr 경고 추가(비-throwing 계약 유지, 가시성 확보). 신규 회귀 +4건. dogfood 239 PASS. |
 | 2026-05-30 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, code-review.md, test_planner.py |
