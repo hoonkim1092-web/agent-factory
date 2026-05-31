@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, test_dogfood.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 zscore(values: list[int | float]) -> list[float] 함수 추가. 각 원소의 Z-score 반환 (평균 0, 표준편차 1 정규화). 원소 1개이면 [0.0 — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-31 | v1.2.34 | feat(utils): `zscore(values)` 신설 — 각 원소의 Z-score를 list[float]로 반환. 원소 1개이면 [0.0]. 빈 리스트이면 ValueError. `std_dev()`/`variance()` 재사용. `tests/test_utils.py` TestZscore 신규. §0 갱신. |

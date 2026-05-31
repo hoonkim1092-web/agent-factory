@@ -1946,3 +1946,63 @@ class TestFingerprintUntracked:
             if pre[name] != post[name]
         }
         assert "stable.txt" not in modified
+
+
+# ---------------------------------------------------------------------------
+# _check_merge_policy — denied_paths boundary matching
+# ---------------------------------------------------------------------------
+
+class TestCheckMergePolicyDeniedPaths:
+    """denied_paths must use boundary-aware matching, not substring."""
+
+    def _make_state(self, tmp_path) -> DogfoodState:
+        st = DogfoodState(
+            run_id="test-run",
+            task="test",
+            source_workspace=str(tmp_path),
+            runtime_workspace=str(tmp_path / "rt"),
+            base_ref="abc123",
+            phase=DogfoodPhase.MERGE,
+        )
+        st.worktree_workspace = str(tmp_path)
+        return st
+
+    def _policy(self, denied: list[str]) -> MergePolicy:
+        return MergePolicy(
+            mode="manual",
+            require_clean_source=False,
+            allow_source_advanced=True,
+            require_dogfood_commit=False,
+            denied_paths=denied,
+        )
+
+    def _check(self, tmp_path, denied: list[str], changed: list[str]):
+        import core.dogfood as df
+        st = self._make_state(tmp_path)
+        policy = self._policy(denied)
+        return df._check_merge_policy(st, policy, changed)
+
+    def test_directory_prefix_denied(self, tmp_path):
+        ok, reason = self._check(tmp_path, ["runtime/"], ["runtime/foo.py"])
+        assert not ok
+        assert "denied path" in reason
+
+    def test_no_false_positive_substring(self, tmp_path):
+        """'runtime/' must NOT match 'myruntime/foo.py' (substring false positive)."""
+        ok, _ = self._check(tmp_path, ["runtime/"], ["myruntime/foo.py"])
+        assert ok
+
+    def test_exact_file_denied(self, tmp_path):
+        ok, reason = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml"])
+        assert not ok
+        assert "denied path" in reason
+
+    def test_similar_filename_not_denied(self, tmp_path):
+        """'skills/registry.yaml' must NOT match 'skills/registry.yaml.bak'."""
+        ok, _ = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml.bak"])
+        assert ok
+
+    def test_nested_dir_denied(self, tmp_path):
+        ok, reason = self._check(tmp_path, [".af_runtime/"], [".af_runtime/dogfood/state.json"])
+        assert not ok
+        assert "denied path" in reason

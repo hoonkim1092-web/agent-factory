@@ -1014,10 +1014,11 @@ def _check_merge_policy(
     ):
         return False, "dogfood_commit not recorded"
 
-    # Denied path check
+    # Denied path check — boundary-aware to avoid false positives:
+    # "runtime/" must not match "myruntime/foo" via substring.
     for f in changed_files:
         for denied in policy.denied_paths:
-            if f.startswith(denied) or denied in f:
+            if f == denied or f.startswith(denied.rstrip("/") + "/"):
                 return False, f"denied path: {f}"
 
     # Allowed path check — boundary-aware: exact match for files, directory
