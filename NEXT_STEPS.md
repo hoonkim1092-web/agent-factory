@@ -3,9 +3,9 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-05-31 KST (Windows)** — **Phase 4 실측 검증 COMPLETE** (`e0e477fc`). `core/utils.py` zscore dogfood run (R1 16차) + T3 skip 발효 검증 완료.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 19차 `core/premortem.py` R12(stale_test) detector 추가 (`ffc0decf`). 다음 후보 (dogfood run 형식으로):
-> 1. `core/planner.py` `_build_investigation_steps()`에 R12(stale_test) 연동 — missing test 파일에 대한 "테스트 작성" investigation step 생성
-> 2. 기타 utils 함수 추가 (dogfood 인프라 연습)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 19차 `core/premortem.py` R12(stale_test) detector 추가 (`ffc0decf`) + R1 20차 `core/planner.py` `_build_investigation_steps()`에 R12(stale_test) 연동 (`80337dd8`). 다음 후보 (dogfood run 형식으로):
+> 1. 기타 production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
+> 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
@@ -544,6 +544,11 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `tests/test_premortem.py` `TestDetectStaleTestRisk` 13건 신규 (73 PASS)
    - ✅ 3-Tier: af-critic WARN(CWD의존 advisory) / T3 skip(blast2) / af-test-runner PASS
    - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations 동일 패턴) → 수동 cherry-pick으로 처리
+
+   **R1 20차 (2026-05-31) — COMPLETE** (직접 구현, commit: `80337dd8`, PC: Windows):
+   - ✅ `core/planner.py` `_build_investigation_steps()`에 R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼 신설, stale 파일→`tests/test_<stem>.py` 변환, "테스트 작성" investigation step 생성
+   - ✅ `tests/test_planner.py` `TestStaleTestRiskInvestigation` 9건 신규 (71 PASS)
+   - ✅ 3-Tier: af-critic PASS / T3-skip(blast2) / af-test-runner PASS
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
