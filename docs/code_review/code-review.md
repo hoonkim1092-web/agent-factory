@@ -6820,3 +6820,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/planner.py, tests/test_planner.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 01:35 — `dogfood/1780245030-6a8e81b3` (26290bdf)
+
+**Context**: dogfood finalize: core/premortem.py에 _detect_conflicting_import_risk() R14 detector 추가. intent 백틱 함수명(예: `foo`) 추출 후 scope .py 파일에서 해당 이름이
+
+**Changed (3)**: `Master_Blueprint.md, core/premortem.py, tests/test_premortem.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

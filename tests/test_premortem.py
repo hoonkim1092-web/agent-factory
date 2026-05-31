@@ -19,6 +19,7 @@ from core.premortem import (
     _detect_scope_file_risk,
     _detect_stale_test_risk,
     _detect_duplicate_function_risk,
+    _detect_conflicting_import_risk,
 )
 
 
@@ -488,13 +489,14 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r14_not_r13(self):
-        """Assumptions must start at R14: R11=scope_file, R12=stale_test, R13=duplicate_function."""
+    def test_assumption_ids_start_at_r15_not_r14(self):
+        """Assumptions must start at R15: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R14" in ids
+        assert "R15" in ids
+        assert "R14" not in ids
         assert "R13" not in ids
         assert "R12" not in ids
         assert "R11" not in ids
@@ -642,13 +644,14 @@ class TestDuplicateFunctionRisk:
         ids = [r.id for r in result.risks]
         assert "R13" not in ids
 
-    def test_assumption_ids_start_at_r14_not_r13(self):
-        """Assumptions must start at R14: R11=scope_file, R12=stale_test, R13=duplicate_function."""
+    def test_assumption_ids_start_at_r15_not_r14(self):
+        """Assumptions must start at R15: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R14" in ids
+        assert "R15" in ids
+        assert "R14" not in ids
         assert "R13" not in ids
 
     def test_no_id_collision_with_all_detectors(self, tmp_path):
@@ -663,4 +666,88 @@ class TestDuplicateFunctionRisk:
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
         assert "R13" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+
+# ---------------------------------------------------------------------------
+# TestConflictingImportRisk
+# ---------------------------------------------------------------------------
+
+class TestConflictingImportRisk:
+    def test_no_backtick_names_returns_none(self):
+        assert _detect_conflicting_import_risk("add a helper function", ["core/utils.py"]) is None
+
+    def test_empty_scope_returns_none(self):
+        assert _detect_conflicting_import_risk("`foo()` to add", []) is None
+
+    def test_no_conflict_returns_none(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("import os\n")
+        assert _detect_conflicting_import_risk("`foo()` to add", [str(f)]) is None
+
+    def test_direct_import_conflict_returns_r14(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("import foo\n")
+        result = _detect_conflicting_import_risk("`foo()` to add", [str(f)])
+        assert result is not None
+        assert result.id == "R14"
+        assert result.category == "conflicting_import"
+
+    def test_from_import_conflict_returns_r14(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("from mypackage import foo\n")
+        result = _detect_conflicting_import_risk("`foo()` to add", [str(f)])
+        assert result is not None
+        assert result.id == "R14"
+
+    def test_description_mentions_name_and_file(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("import bar\n")
+        result = _detect_conflicting_import_risk("`bar()` to add", [str(f)])
+        assert "bar" in result.description
+        assert str(f) in result.description
+
+    def test_non_py_scope_files_ignored(self, tmp_path):
+        f = tmp_path / "config.yaml"
+        f.write_text("import foo\n")
+        assert _detect_conflicting_import_risk("`foo()` to add", [str(f)]) is None
+
+    def test_missing_scope_file_skipped(self):
+        assert _detect_conflicting_import_risk("`foo()` to add", ["__nonexistent__.py"]) is None
+
+    def test_run_premortem_fires_r14_for_conflict(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("from os.path import join\n")
+        spec = _spec(
+            intent="Add `join()` function",
+            scope=[str(f)],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R14" in ids
+
+    def test_run_premortem_no_r14_when_no_conflict(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("import os\n")
+        spec = _spec(
+            intent="Add `join()` function",
+            scope=[str(f)],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R14" not in ids
+
+    def test_no_id_collision_with_all_detectors(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("from os import join\ndef join(): pass\n")
+        spec = _spec(
+            intent="Add `join()` function",
+            scope=[str(f), "__nonexistent__.py", "core/__no_test_xyz__.py"],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R13" in ids
+        assert "R14" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
