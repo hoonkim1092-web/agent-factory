@@ -3,9 +3,10 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`). 다음 후보 (dogfood run 형식으로):
-> 1. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
-> 2. `core/premortem.py`에 R14+ 신규 detector 추가 (예: import 충돌, 파일 크기 과대)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`) + R1 24차 `core/premortem.py` R14(conflicting_import) (`85002ddc`). 다음 후보 (dogfood run 형식으로):
+> 1. `core/planner.py` R14 연동 — R14 발화 시 import 충돌 확인 investigation step 생성
+> 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
+> 3. `core/premortem.py`에 R15+ 신규 detector 추가 (예: 파일 크기 과대, 함수 복잡도)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
@@ -567,6 +568,12 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `_build_investigation_steps()`에 R13(duplicate_function) 분기 추가 — 중복 함수별 `grep -n def <name>` investigation step 생성
    - ✅ `tests/test_planner.py` `TestDuplicateFunctionRiskInvestigation` 7건 신규 (78 PASS)
    - ✅ 3-Tier: af-critic PASS / T3 skip(telemetry) / pytest 78 PASS
+
+   **R1 24차 (2026-06-01) — COMPLETE** (run_id: 1780245030-6a8e81b3, merge: `85002ddc`, PC: Windows):
+   - ✅ `core/premortem.py` `_detect_conflicting_import_risk()` R14 detector 추가 — intent 백틱 함수명 추출 후 scope .py 파일에서 `import <name>` / `from X import <name>` 형태 충돌 감지. R14 리스크 생성.
+   - ✅ `run_premortem()` 배선 + assumption_risks start=15로 업데이트 (R11~R14 ID 충돌 방지)
+   - ✅ `tests/test_premortem.py` `TestConflictingImportRisk` 11건 신규 (95 PASS)
+   - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
