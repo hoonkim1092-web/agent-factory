@@ -210,7 +210,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood_isolation.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 zscore(values: list[int | float]) -> list[float] 함수 추가. 각 원소의 Z-score 반환 (평균 0, 표준편차 1 정규화). 원소 1개이면 [0.0 — Master_Blueprint.md, utils.py, test_utils.py |
+| 2026-05-31 | v1.2.34 | feat(utils): `zscore(values)` 신설 — 각 원소의 Z-score를 list[float]로 반환. 원소 1개이면 [0.0]. 빈 리스트이면 ValueError. `std_dev()`/`variance()` 재사용. `tests/test_utils.py` TestZscore 신규. §0 갱신. |
 | 2026-05-31 | v1.2.34 | feat(review-gate Phase 4): telemetry 기반 Tier 3 조건부 skip + ALWAYS-Tier-3 안전망. `review_metrics_logger.compute_t3_telemetry_skip()` 신규 — 보수적 AND-게이트 4조건(데이터충분 `commits≥10`+`span≥7d` / `block_only_rate<10%` / 최근10 BLOCK 0 / `skip_subsequent_block==0`) 전부 만족 시에만 `skip=True`, fail-closed. SSOT 임계 상수 4개. `review_gate._is_always_tier3()`(위험군 패턴) + `_telemetry_skip_enacted()`(blast2+비위험+skip) 추가, `_required_tiers_for`에 telemetry 분기 + ALWAYS-Tier-3 override(순수성 유지 — 결정은 enqueue가 state에 동결). `enqueue_agent_review`가 락 밖 telemetry 계산 → `t3_telemetry_skip` 저장 + 발효 시 라운드당 1회 `skip_audit.jsonl` 사유 기록. 근거: 2026-05-23~31 측정 T3 BLOCK-only 0/31. 신규 테스트 +23(metrics 8 / gate 13 / enqueue 2). 148 PASS. 3-Tier PASS. |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood_isolation.py |
 | 2026-05-31 | v1.2.34 | fix(dogfood BLOCK 232850): (1) **[High]** `_check_merge_policy` allowed_paths 경계 매칭 — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open. `f == p or f.startswith(p.rstrip("/")+"/")`로 교정(파일=정확일치, 디렉터리=경계). auto-merge scope 게이트 안전성 복구. (2) **[Med→실제 Med]** `build_merge_policy` mode fail-closed — `mode or state.merge_mode`가 `""`을 무음 강등하던 결함을 `mode is None` 분기로 교정, 무효 문자열은 `__post_init__` ValueError 도달. (3) **[Low]** `dogfood status`에 `cleanup_skip_reason` 출력 — 출하됐으나 미배선이던 false-alarm 구분 필드 surface. (4) **[Low]** `read_phase_trace` OSError 시 stderr 경고 추가(비-throwing 계약 유지, 가시성 확보). 신규 회귀 +4건. dogfood 239 PASS. |

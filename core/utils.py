@@ -134,6 +134,19 @@ def std_dev(values: list[int | float]) -> float:
     return math.sqrt(variance(values))
 
 
+def zscore(values: list[int | float]) -> list[float]:
+    """각 원소의 Z-score를 반환한다. 빈 리스트이면 ValueError. 원소 1개 또는 표준편차 0이면 모두 0.0."""
+    if not values:
+        raise ValueError("빈 리스트에서 Z-score를 계산할 수 없습니다.")
+    if len(values) == 1:
+        return [0.0]
+    mean = sum(values) / len(values)
+    sd = std_dev(values)
+    if sd == 0.0:
+        return [0.0] * len(values)
+    return [(x - mean) / sd for x in values]
+
+
 def range_span(values: list[int | float]) -> float:
     """최댓값과 최솟값의 차이를 float로 반환한다. 빈 리스트이면 ValueError."""
     if not values:
