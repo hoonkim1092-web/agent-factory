@@ -9,6 +9,7 @@ implementation.  Steps are ordered: investigation (resolve gaps) → implementat
 from __future__ import annotations
 
 import re
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ _WORD_RE = re.compile(r"[a-zA-Z0-9]+")
 _SAFE_STEM_RE = re.compile(r"^[\w\-\.]+$")
 
 from core.spec_compiler import CompiledSpec
-from core.premortem import PremortomResult
+from core.premortem import PremortomResult, PremortomRisk
 
 
 # ---------------------------------------------------------------------------
@@ -146,11 +147,24 @@ def _is_assumption_risk(risk: PremortomResult) -> bool:
         return False
 
 
+_SCOPE_FILE_PREFIX = "Scope file(s) not found on disk: "
+_SCOPE_FILE_SUFFIX = ". Possible typo in path."
+
+
+def _extract_scope_file_paths(risk: PremortomRisk) -> list[str]:
+    """Parse individual missing file paths from a scope_file risk description."""
+    desc = risk.description
+    if desc.startswith(_SCOPE_FILE_PREFIX) and desc.endswith(_SCOPE_FILE_SUFFIX):
+        inner = desc[len(_SCOPE_FILE_PREFIX):len(desc) - len(_SCOPE_FILE_SUFFIX)]
+        return [p.strip() for p in inner.split(",") if p.strip()]
+    return []
+
+
 def _build_investigation_steps(
     premortem: PremortomResult,
     counter: list[int],
 ) -> list[PlanStep]:
-    """One step per research_gap or assumption risk — must be resolved before implementation."""
+    """One step per research_gap, assumption, or scope_file risk — must be resolved before implementation."""
     steps: list[PlanStep] = []
     for risk in premortem.risks:
         if risk.category == "research_gap":
@@ -164,6 +178,20 @@ def _build_investigation_steps(
                 depends_on=[],
             ))
             counter[0] += 1
+        elif risk.category == "scope_file":
+            for missing_file in _extract_scope_file_paths(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"경로 확인: {missing_file}",
+                    target=missing_file,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        f"python -c \"import os; print(os.path.exists({shlex.quote(missing_file)}))\"",
+                    ],
+                ))
+                counter[0] += 1
         elif _is_assumption_risk(risk):
             cmds = [
                 v.command for v in risk.verification

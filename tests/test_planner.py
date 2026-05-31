@@ -14,6 +14,7 @@ from core.planner import (
     _collect_verification_commands,
     _collect_approval_points,
     _unresolved_risks,
+    _extract_scope_file_paths,
 )
 
 
@@ -542,3 +543,91 @@ class TestImplementationSteps:
     def test_returns_list_type(self):
         plan = ExecutablePlan(intent="x")
         assert isinstance(implementation_steps(plan), list)
+
+
+# ---------------------------------------------------------------------------
+# TestScopeFileRiskInvestigation
+# ---------------------------------------------------------------------------
+
+class TestScopeFileRiskInvestigation:
+    def test_no_scope_file_risk_no_investigation_step(self):
+        """scope_file risk 없으면 경로 확인 step이 생성되지 않는다."""
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        path_check = [s for s in plan.steps if s.action.startswith("경로 확인")]
+        assert path_check == []
+
+    def test_scope_file_risk_single_missing_generates_one_step(self):
+        """scope_file risk 1개(파일 1개) → 경로 확인 step 1개 생성."""
+        risks = [_risk(
+            "R11",
+            "Scope file(s) not found on disk: core/missing.py. Possible typo in path.",
+            "scope_file",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        path_check = [s for s in plan.steps if s.action.startswith("경로 확인")]
+        assert len(path_check) == 1
+        assert path_check[0].action == "경로 확인: core/missing.py"
+        assert path_check[0].target == "core/missing.py"
+
+    def test_scope_file_risk_step_has_existence_check_command(self):
+        """경로 확인 step의 command는 os.path.exists 호출이다."""
+        risks = [_risk(
+            "R11",
+            "Scope file(s) not found on disk: core/missing.py. Possible typo in path.",
+            "scope_file",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        step = next(s for s in plan.steps if s.action.startswith("경로 확인"))
+        assert len(step.commands) == 1
+        assert "os.path.exists" in step.commands[0]
+        assert "core/missing.py" in step.commands[0]
+
+    def test_scope_file_risk_multiple_missing_generates_one_step_each(self):
+        """scope_file risk 1개에 파일 2개 → 경로 확인 step 2개 생성, 순서 보존."""
+        risks = [_risk(
+            "R11",
+            "Scope file(s) not found on disk: core/a.py, core/b.py. Possible typo in path.",
+            "scope_file",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        path_check = [s for s in plan.steps if s.action.startswith("경로 확인")]
+        assert len(path_check) == 2
+        assert path_check[0].target == "core/a.py"
+        assert path_check[1].target == "core/b.py"
+
+    def test_extract_scope_file_paths_single(self):
+        """_extract_scope_file_paths: 단일 경로 파싱."""
+        risk = _risk(
+            "R11",
+            "Scope file(s) not found on disk: core/foo.py. Possible typo in path.",
+            "scope_file",
+        )
+        assert _extract_scope_file_paths(risk) == ["core/foo.py"]
+
+    def test_extract_scope_file_paths_multiple(self):
+        """_extract_scope_file_paths: 다중 경로 파싱."""
+        risk = _risk(
+            "R11",
+            "Scope file(s) not found on disk: core/a.py, scripts/b.py. Possible typo in path.",
+            "scope_file",
+        )
+        assert _extract_scope_file_paths(risk) == ["core/a.py", "scripts/b.py"]
+
+    def test_extract_scope_file_paths_unrecognized_format_returns_empty(self):
+        """형식이 다르면 빈 리스트 반환 — 파싱 실패 silent."""
+        risk = _risk("R11", "Some other description.", "scope_file")
+        assert _extract_scope_file_paths(risk) == []
+
+    def test_scope_file_steps_come_before_implementation(self):
+        """경로 확인 step은 implementation step보다 먼저 배치된다."""
+        risks = [_risk(
+            "R11",
+            "Scope file(s) not found on disk: core/missing.py. Possible typo in path.",
+            "scope_file",
+        )]
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem(risks))
+        idx_path = next(i for i, s in enumerate(plan.steps) if s.action.startswith("경로 확인"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.target == "core/utils.py")
+        assert idx_path < idx_impl
