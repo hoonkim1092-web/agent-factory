@@ -157,6 +157,9 @@ _STALE_TEST_SUFFIX = "."
 _DUPLICATE_FUNC_PREFIX = "Function(s) named in intent already exist in scope: "
 _DUPLICATE_FUNC_SUFFIX = "."
 
+_CONFLICTING_IMPORT_PREFIX = "Function name(s) in intent conflict with existing imports in scope: "
+_CONFLICTING_IMPORT_SUFFIX = "."
+
 
 def _extract_duplicate_function_paths(risk: PremortomRisk) -> list[tuple[str, str]]:
     """Parse (function_name, file_path) pairs from a duplicate_function risk description."""
@@ -167,6 +170,22 @@ def _extract_duplicate_function_paths(risk: PremortomRisk) -> list[tuple[str, st
         for part in inner.split(", "):
             part = part.strip()
             # format: "`name` in path"
+            if " in " in part:
+                name_part, path_part = part.split(" in ", 1)
+                func_name = name_part.strip("`")
+                result.append((func_name, path_part.strip()))
+        return result
+    return []
+
+
+def _extract_conflicting_import_pairs(risk: PremortomRisk) -> list[tuple[str, str]]:
+    """Parse (function_name, file_path) pairs from a conflicting_import risk description."""
+    desc = risk.description
+    if desc.startswith(_CONFLICTING_IMPORT_PREFIX) and desc.endswith(_CONFLICTING_IMPORT_SUFFIX):
+        inner = desc[len(_CONFLICTING_IMPORT_PREFIX):len(desc) - len(_CONFLICTING_IMPORT_SUFFIX)]
+        result = []
+        for part in inner.split(", "):
+            part = part.strip()
             if " in " in part:
                 name_part, path_part = part.split(" in ", 1)
                 func_name = name_part.strip("`")
@@ -254,6 +273,20 @@ def _build_investigation_steps(
                     depends_on=[],
                     commands=[
                         shlex.join(["grep", "-n", f"def {func_name}", file_path]),
+                    ],
+                ))
+                counter[0] += 1
+        elif risk.category == "conflicting_import":
+            for func_name, file_path in _extract_conflicting_import_pairs(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"import 충돌 확인: `{func_name}` in {file_path}",
+                    target=file_path,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        shlex.join(["grep", "-n", f"import {func_name}", file_path]),
                     ],
                 ))
                 counter[0] += 1

@@ -809,3 +809,90 @@ class TestDuplicateFunctionRiskInvestigation:
         """형식이 다르면 빈 리스트 반환."""
         risk = self._dup_risk("Some other description.")
         assert _extract_duplicate_function_paths(risk) == []
+
+
+class TestConflictingImportRiskInvestigation:
+    """R14(conflicting_import) risk → investigation steps."""
+
+    def _import_risk(self, desc: str) -> PremortomRisk:
+        return _risk("R14", desc, "conflicting_import")
+
+    def test_single_conflict_generates_one_step(self):
+        """`foo` in core/utils.py → 1개 investigation step."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: `foo` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("import 충돌 확인")]
+        assert len(inv) == 1
+        assert "`foo`" in inv[0].action
+        assert "core/utils.py" in inv[0].action
+
+    def test_step_has_grep_import_command(self):
+        """investigation step에 'grep ... import foo' 명령어가 포함된다."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: `bar` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("import 충돌 확인")]
+        assert inv[0].commands
+        assert "grep" in inv[0].commands[0]
+        assert "import" in inv[0].commands[0]
+        assert "bar" in inv[0].commands[0]
+
+    def test_multiple_conflicts_generate_multiple_steps(self):
+        """두 충돌 → 2개 investigation step."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: "
+            "`foo` in core/utils.py, `bar` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("import 충돌 확인")]
+        assert len(inv) == 2
+
+    def test_conflict_steps_come_before_implementation(self):
+        """investigation step은 implementation step보다 먼저 배치된다."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: `foo` in core/utils.py."
+        )
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem([risk]))
+        idx_inv = next(i for i, s in enumerate(plan.steps) if s.action.startswith("import 충돌 확인"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.action.startswith("Implement"))
+        assert idx_inv < idx_impl
+
+    def test_extract_conflicting_import_pairs_single(self):
+        """_extract_conflicting_import_pairs: 단일 항목 파싱."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: `foo` in core/utils.py."
+        )
+        from core.planner import _extract_conflicting_import_pairs
+        assert _extract_conflicting_import_pairs(risk) == [("foo", "core/utils.py")]
+
+    def test_extract_conflicting_import_pairs_multiple(self):
+        """_extract_conflicting_import_pairs: 다중 항목 파싱."""
+        risk = self._import_risk(
+            "Function name(s) in intent conflict with existing imports in scope: "
+            "`foo` in core/utils.py, `bar` in core/planner.py."
+        )
+        from core.planner import _extract_conflicting_import_pairs
+        assert _extract_conflicting_import_pairs(risk) == [
+            ("foo", "core/utils.py"),
+            ("bar", "core/planner.py"),
+        ]
+
+    def test_extract_conflicting_import_pairs_unrecognized_format_returns_empty(self):
+        """형식이 다르면 빈 리스트 반환."""
+        risk = self._import_risk("Some other description.")
+        from core.planner import _extract_conflicting_import_pairs
+        assert _extract_conflicting_import_pairs(risk) == []
+
+    def test_no_conflicting_import_risk_no_investigation_step(self):
+        """conflicting_import risk 없으면 import 충돌 확인 step이 생성되지 않는다."""
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        inv = [s for s in plan.steps if s.action.startswith("import 충돌 확인")]
+        assert inv == []

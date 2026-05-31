@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py
+최근 자동 갱신 컨텍스트: chore(core): code update — planner.py, test_planner.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
+| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(core): code update — planner.py, test_planner.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/premortem.py에 _detect_conflicting_import_risk() R14 detector 추가. intent 백틱 함수명(예: `foo`) 추출 후 scope .py 파일에서 해당 이름이 — Master_Blueprint.md, premortem.py, test_premortem.py |
 | 2026-06-01 | v1.2.34 | feat(premortem): `_detect_conflicting_import_risk(intent, scope)` 신설 — intent 백틱 함수명이 scope .py 파일에서 `import <name>` 또는 `from X import <name>`으로 이미 사용 중이면 R14 risk 생성. `run_premortem()`에 배선. assumption_risks start=15로 업데이트(R14=conflicting_import). `TestConflictingImportRisk` 11건 신규. §0 갱신. — premortem.py, test_premortem.py, Master_Blueprint.md |
