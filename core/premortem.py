@@ -225,6 +225,38 @@ def _detect_scope_file_risk(scope: list[str]) -> list[PremortomRisk]:
     )]
 
 
+def _detect_stale_test_risk(scope: list[str]) -> PremortomRisk | None:
+    """Scope .py files with no corresponding tests/test_<stem>.py are R12.
+
+    Skips files whose basename already starts with 'test_' (they are tests).
+    """
+    stale = []
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        basename = os.path.basename(path)
+        if basename.startswith("test_"):
+            continue
+        stem = os.path.splitext(basename)[0]
+        test_path = os.path.join("tests", f"test_{stem}.py")
+        if not os.path.exists(test_path):
+            stale.append(path)
+    if not stale:
+        return None
+    stale_str = ", ".join(stale)
+    return PremortomRisk(
+        id="R12",
+        description=f"No test file found for scope file(s): {stale_str}.",
+        category="stale_test",
+        verification=[
+            VerificationStep(
+                command=f"# Add or verify tests for: {stale_str}",
+                description="Ensure tests/test_<stem>.py exists for each scope .py file.",
+            ),
+        ],
+    )
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -307,11 +339,14 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    # R11 is reserved for scope_file; assumptions start at R12 to avoid collision.
+    # R11 = scope_file, R12 = stale_test; assumptions start at R13 to avoid collision.
     risks.extend(_detect_scope_file_risk(spec.scope))
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=12)
+    r = _detect_stale_test_risk(spec.scope)
+    if r:
+        risks.append(r)
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=13)
     risks.extend(assumption_risks)
-    gap_start = max(20, 12 + len(assumption_risks))
+    gap_start = max(20, 13 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

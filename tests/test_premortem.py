@@ -17,6 +17,7 @@ from core.premortem import (
     _detect_existing_pattern_risk,
     _detect_gap_risks,
     _detect_scope_file_risk,
+    _detect_stale_test_risk,
 )
 
 
@@ -486,11 +487,88 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r12_not_r11(self):
-        """Assumptions must start at R12 so R11 is reserved for scope_file_risk."""
+    def test_assumption_ids_start_at_r13_not_r12(self):
+        """Assumptions must start at R13: R11=scope_file, R12=stale_test."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R12" in ids
+        assert "R13" in ids
+        assert "R12" not in ids
         assert "R11" not in ids
+
+
+# ---------------------------------------------------------------------------
+# TestDetectStaleTestRisk
+# ---------------------------------------------------------------------------
+
+class TestDetectStaleTestRisk:
+    def test_empty_scope_returns_none(self):
+        assert _detect_stale_test_risk([]) is None
+
+    def test_non_py_files_ignored(self):
+        assert _detect_stale_test_risk(["docs/foo.md", "README.rst"]) is None
+
+    def test_test_files_in_scope_are_skipped(self):
+        # test_ files are already tests — no recursive check expected
+        assert _detect_stale_test_risk(["tests/test_foo.py"]) is None
+
+    def test_existing_test_file_returns_none(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_mymodule.py").write_text("")
+        src = tmp_path / "mymodule.py"
+        src.write_text("")
+        assert _detect_stale_test_risk([str(src.relative_to(tmp_path))]) is None
+
+    def test_missing_test_file_returns_r12(self):
+        result = _detect_stale_test_risk(["core/__no_test_for_this_module__.py"])
+        assert result is not None
+        assert result.id == "R12"
+
+    def test_r12_category_is_stale_test(self):
+        result = _detect_stale_test_risk(["core/__no_test_for_this_module__.py"])
+        assert result.category == "stale_test"
+
+    def test_description_mentions_missing_file(self):
+        result = _detect_stale_test_risk(["core/__orphan__.py"])
+        assert "core/__orphan__.py" in result.description
+
+    def test_multiple_missing_tests_in_one_risk(self):
+        result = _detect_stale_test_risk(["core/__a__.py", "core/__b__.py"])
+        assert result is not None
+        assert "core/__a__.py" in result.description
+        assert "core/__b__.py" in result.description
+
+    def test_has_verification_step(self):
+        result = _detect_stale_test_risk(["core/__no_test__.py"])
+        assert len(result.verification) >= 1
+
+    def test_mixed_py_and_non_py_only_checks_py(self):
+        # only core/__no_test__.py is .py and missing test
+        result = _detect_stale_test_risk(["core/__no_test__.py", "docs/spec.md"])
+        assert result is not None
+        assert "docs/spec.md" not in result.description
+
+    def test_run_premortem_fires_r12_for_missing_test(self):
+        spec = _spec(scope=["core/__no_test_for_this_xyz__.py"])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R12" in ids
+
+    def test_run_premortem_no_r12_when_scope_empty(self):
+        spec = _spec(scope=[])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R12" not in ids
+
+    def test_no_id_collision_r12_with_r11_and_assumptions(self):
+        spec = _spec(
+            scope=["__nonexistent_scope__.py", "core/__no_test_xyz__.py"],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"

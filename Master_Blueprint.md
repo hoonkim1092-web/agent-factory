@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, functional_spec.md, registry_schema.md (+11)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, functional_spec.md, registry_schema.md (+11) |
+| 2026-05-31 | v1.2.34 | chore(core): dogfood finalize: core/premortem.py에 _detect_stale_test_risk() detector 추가. scope 목록 중 대응하는 tests/test_<stem>.py 파일이 존재하지 않는 .py 파일을 R12 r — premortem.py, functional_spec.md, registry_schema.md, runtime_modes.md, technical_plan.md (+9) |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py |
 | 2026-05-31 | v1.2.34 | feat(planner): `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱, 경로별 "경로 확인" investigation step 생성(`shlex.quote` 안전 처리). `TestScopeFileRiskInvestigation` 8건 신규. 62 tests PASS. 3-Tier WARN(shlex fix 흡수)/T3-skip/PASS. — planner.py, test_planner.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py |

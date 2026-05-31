@@ -6770,3 +6770,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/planner.py, tests/test_planner.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-31 23:00 — `dogfood/1780235778-8d0d1f80` (d21c0208)
+
+**Context**: dogfood finalize: core/premortem.py에 _detect_stale_test_risk() detector 추가. scope 목록 중 대응하는 tests/test_<stem>.py 파일이 존재하지 않는 .py 파일을 R12 r
+
+**Changed (15)**: `Master_Blueprint.md, core/premortem.py, docs/functional_spec.md, docs/registry_schema.md, docs/runtime_modes.md, docs/technical_plan.md, err.txt, factory_manual.md, implementation_plan.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/settings.yaml, projects/agent_factory/workflow.yaml, tests/test_premortem.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
