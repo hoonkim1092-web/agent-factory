@@ -6730,3 +6730,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (4)**: `Master_Blueprint.md, agent_launcher.py, core/dogfood.py, tests/test_dogfood_isolation.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-31 15:53 — `dogfood/1780210301-3e899fe9` (e2e7d942)
+
+**Context**: dogfood finalize: core/utils.py에 zscore(values: list[int | float]) -> list[float] 함수 추가. 각 원소의 Z-score 반환 (평균 0, 표준편차 1 정규화). 원소 1개이면 [0.0
+
+**Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

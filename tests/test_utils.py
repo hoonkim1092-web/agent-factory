@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, range_span, chunks, flatten
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten
 from core.utils import test_file_for as _test_file_for
 
 
@@ -210,6 +210,44 @@ class TestStdDev:
     def test_반환_타입은_float(self):
         result = std_dev([1, 2, 3])
         assert isinstance(result, float)
+
+
+class TestZscore:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            zscore([])
+
+    def test_단일_원소는_0(self):
+        assert zscore([42]) == [0.0]
+
+    def test_두_원소_대칭(self):
+        result = zscore([1.0, 3.0])
+        assert len(result) == 2
+        assert result[0] == pytest.approx(-1.0)
+        assert result[1] == pytest.approx(1.0)
+
+    def test_평균_0_표준편차_1(self):
+        import math
+        result = zscore([2, 4, 4, 4, 5, 5, 7, 9])
+        assert pytest.approx(sum(result), abs=1e-9) == 0.0
+        assert pytest.approx(math.sqrt(sum(z ** 2 for z in result) / len(result)), abs=1e-9) == 1.0
+
+    def test_동일_값은_모두_0(self):
+        result = zscore([5, 5, 5])
+        assert all(z == 0.0 for z in result)
+
+    def test_반환_길이_동일(self):
+        values = [1, 2, 3, 4, 5]
+        assert len(zscore(values)) == len(values)
+
+    def test_반환_타입은_float(self):
+        result = zscore([1, 2, 3])
+        assert all(isinstance(z, float) for z in result)
+
+    def test_음수_포함(self):
+        result = zscore([-1, 0, 1])
+        assert result[1] == pytest.approx(0.0)
+        assert result[0] == pytest.approx(-result[2])
 
 
 class TestRangeSpan:
