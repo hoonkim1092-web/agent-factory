@@ -8,6 +8,7 @@ implementation.  Steps are ordered: investigation (resolve gaps) → implementat
 """
 from __future__ import annotations
 
+import os
 import re
 import shlex
 from dataclasses import dataclass, field
@@ -150,6 +151,9 @@ def _is_assumption_risk(risk: PremortomResult) -> bool:
 _SCOPE_FILE_PREFIX = "Scope file(s) not found on disk: "
 _SCOPE_FILE_SUFFIX = ". Possible typo in path."
 
+_STALE_TEST_PREFIX = "No test file found for scope file(s): "
+_STALE_TEST_SUFFIX = "."
+
 
 def _extract_scope_file_paths(risk: PremortomRisk) -> list[str]:
     """Parse individual missing file paths from a scope_file risk description."""
@@ -157,6 +161,22 @@ def _extract_scope_file_paths(risk: PremortomRisk) -> list[str]:
     if desc.startswith(_SCOPE_FILE_PREFIX) and desc.endswith(_SCOPE_FILE_SUFFIX):
         inner = desc[len(_SCOPE_FILE_PREFIX):len(desc) - len(_SCOPE_FILE_SUFFIX)]
         return [p.strip() for p in inner.split(",") if p.strip()]
+    return []
+
+
+def _extract_stale_test_paths(risk: PremortomRisk) -> list[str]:
+    """Parse scope file paths from a stale_test risk and return the missing test paths.
+
+    E.g. "No test file found for scope file(s): core/utils.py." → ["tests/test_utils.py"]
+    """
+    desc = risk.description
+    if desc.startswith(_STALE_TEST_PREFIX) and desc.endswith(_STALE_TEST_SUFFIX):
+        inner = desc[len(_STALE_TEST_PREFIX):len(desc) - len(_STALE_TEST_SUFFIX)]
+        paths = [p.strip() for p in inner.split(",") if p.strip()]
+        return [
+            f"tests/test_{os.path.splitext(os.path.basename(p))[0]}.py"
+            for p in paths
+        ]
     return []
 
 
@@ -190,6 +210,17 @@ def _build_investigation_steps(
                     commands=[
                         f"python -c \"import os; print(os.path.exists({shlex.quote(missing_file)}))\"",
                     ],
+                ))
+                counter[0] += 1
+        elif risk.category == "stale_test":
+            for test_path in _extract_stale_test_paths(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"테스트 작성: {test_path}",
+                    target=test_path,
+                    tests_required=[test_path],
+                    artifacts=[test_path],
+                    depends_on=[],
                 ))
                 counter[0] += 1
         elif _is_assumption_risk(risk):

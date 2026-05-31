@@ -153,7 +153,7 @@
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`, `_detect_scope_file_risk()` |
-| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성(`shlex.quote` 안전 처리). last_updated: 2026-05-31 | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()`, `_extract_scope_file_paths()` |
+| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성(`shlex.quote` 안전 처리). 2026-05-31: R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼로 stale 파일→`tests/test_<stem>.py` 경로 변환, "테스트 작성" investigation step 생성. last_updated: 2026-05-31 | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()`, `_extract_scope_file_paths()`, `_extract_stale_test_paths()` |
 | `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, functional_spec.md, registry_schema.md (+11)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
+| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, functional_spec.md, registry_schema.md (+11) |
 | 2026-05-31 | v1.2.34 | chore(core): dogfood finalize: core/premortem.py에 _detect_stale_test_risk() detector 추가. scope 목록 중 대응하는 tests/test_<stem>.py 파일이 존재하지 않는 .py 파일을 R12 r — premortem.py, functional_spec.md, registry_schema.md, runtime_modes.md, technical_plan.md (+9) |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py |

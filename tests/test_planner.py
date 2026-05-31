@@ -15,6 +15,7 @@ from core.planner import (
     _collect_approval_points,
     _unresolved_risks,
     _extract_scope_file_paths,
+    _extract_stale_test_paths,
 )
 
 
@@ -631,3 +632,103 @@ class TestScopeFileRiskInvestigation:
         idx_path = next(i for i, s in enumerate(plan.steps) if s.action.startswith("경로 확인"))
         idx_impl = next(i for i, s in enumerate(plan.steps) if s.target == "core/utils.py")
         assert idx_path < idx_impl
+
+
+# ---------------------------------------------------------------------------
+# TestStaleTestRiskInvestigation
+# ---------------------------------------------------------------------------
+
+class TestStaleTestRiskInvestigation:
+    def test_no_stale_test_risk_no_investigation_step(self):
+        """stale_test risk 없으면 테스트 작성 step이 생성되지 않는다."""
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        write_steps = [s for s in plan.steps if s.action.startswith("테스트 작성")]
+        assert write_steps == []
+
+    def test_stale_test_risk_single_file_generates_one_step(self):
+        """stale_test risk 1개(파일 1개) → 테스트 작성 step 1개 생성."""
+        risks = [_risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py.",
+            "stale_test",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        write_steps = [s for s in plan.steps if s.action.startswith("테스트 작성")]
+        assert len(write_steps) == 1
+        assert write_steps[0].action == "테스트 작성: tests/test_utils.py"
+        assert write_steps[0].target == "tests/test_utils.py"
+
+    def test_stale_test_risk_target_is_test_file_path(self):
+        """step target은 소스 파일이 아니라 tests/test_<stem>.py 경로이다."""
+        risks = [_risk(
+            "R12",
+            "No test file found for scope file(s): core/planner.py.",
+            "stale_test",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        step = next(s for s in plan.steps if s.action.startswith("테스트 작성"))
+        assert step.target == "tests/test_planner.py"
+
+    def test_stale_test_risk_step_has_test_in_tests_required(self):
+        """테스트 작성 step의 tests_required에 생성할 테스트 파일 경로가 포함된다."""
+        risks = [_risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py.",
+            "stale_test",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        step = next(s for s in plan.steps if s.action.startswith("테스트 작성"))
+        assert "tests/test_utils.py" in step.tests_required
+
+    def test_stale_test_risk_multiple_files_generates_one_step_each(self):
+        """stale_test risk 1개에 파일 2개 → 테스트 작성 step 2개 생성, 순서 보존."""
+        risks = [_risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py, core/planner.py.",
+            "stale_test",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        write_steps = [s for s in plan.steps if s.action.startswith("테스트 작성")]
+        assert len(write_steps) == 2
+        assert write_steps[0].target == "tests/test_utils.py"
+        assert write_steps[1].target == "tests/test_planner.py"
+
+    def test_stale_test_steps_come_before_implementation(self):
+        """테스트 작성 step은 implementation step보다 먼저 배치된다."""
+        risks = [_risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py.",
+            "stale_test",
+        )]
+        spec = _spec(scope=["core/utils.py"])
+        plan = build_plan(spec, _premortem(risks))
+        idx_write = next(i for i, s in enumerate(plan.steps) if s.action.startswith("테스트 작성"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.target == "core/utils.py")
+        assert idx_write < idx_impl
+
+    def test_extract_stale_test_paths_single(self):
+        """_extract_stale_test_paths: 단일 파일 → 단일 테스트 경로 반환."""
+        risk = _risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py.",
+            "stale_test",
+        )
+        assert _extract_stale_test_paths(risk) == ["tests/test_utils.py"]
+
+    def test_extract_stale_test_paths_multiple(self):
+        """_extract_stale_test_paths: 다중 파일 → 다중 테스트 경로 반환."""
+        risk = _risk(
+            "R12",
+            "No test file found for scope file(s): core/utils.py, core/planner.py.",
+            "stale_test",
+        )
+        assert _extract_stale_test_paths(risk) == [
+            "tests/test_utils.py",
+            "tests/test_planner.py",
+        ]
+
+    def test_extract_stale_test_paths_unrecognized_format_returns_empty(self):
+        """형식이 다르면 빈 리스트 반환."""
+        risk = _risk("R12", "Some other description.", "stale_test")
+        assert _extract_stale_test_paths(risk) == []
