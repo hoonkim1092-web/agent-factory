@@ -3,9 +3,9 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() 추가 (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) 추가 (`81b8fc3e`). 다음 후보 (dogfood run 형식으로):
-> 1. `core/planner.py`에 R13(duplicate_function) 연동 — `_extract_duplicate_function_paths()` 헬퍼 신설, 중복 함수별 "기존 정의 확인" investigation step 생성
-> 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 `core/utils.py` percentile() (`df679c14`) + R1 22차 `core/premortem.py` R13(duplicate_function) (`81b8fc3e`) + R1 23차 `core/planner.py` R13 연동 (`55cd2ebb`). 다음 후보 (dogfood run 형식으로):
+> 1. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
+> 2. `core/premortem.py`에 R14+ 신규 detector 추가 (예: import 충돌, 파일 크기 과대)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
@@ -561,6 +561,12 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `tests/test_premortem.py` `TestDuplicateFunctionRisk` 11건 신규 (84 PASS)
    - ✅ 3-Tier: af-test-runner PASS (84 tests)
    - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: docs/runtime_modes.md 등) → 수동 cherry-pick으로 처리
+
+   **R1 23차 (2026-06-01) — COMPLETE** (직접 구현, commit: `55cd2ebb`, PC: Windows):
+   - ✅ `core/planner.py` `_extract_duplicate_function_paths()` 헬퍼 신설 — `"`foo` in path"` 형식 파싱
+   - ✅ `_build_investigation_steps()`에 R13(duplicate_function) 분기 추가 — 중복 함수별 `grep -n def <name>` investigation step 생성
+   - ✅ `tests/test_planner.py` `TestDuplicateFunctionRiskInvestigation` 7건 신규 (78 PASS)
+   - ✅ 3-Tier: af-critic PASS / T3 skip(telemetry) / pytest 78 PASS
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
