@@ -225,6 +225,42 @@ def _detect_scope_file_risk(scope: list[str]) -> list[PremortomRisk]:
     )]
 
 
+_BACKTICK_FUNC_RE = re.compile(r"`(\w+)\(\)`")
+
+
+def _detect_duplicate_function_risk(intent: str, scope: list[str]) -> PremortomRisk | None:
+    """Backtick-named functions in intent that already exist in scope .py files are R13."""
+    func_names = _BACKTICK_FUNC_RE.findall(intent)
+    if not func_names:
+        return None
+    duplicates: list[tuple[str, str]] = []
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                content = fh.read()
+        except OSError:
+            continue
+        for name in func_names:
+            if re.search(rf"^def {re.escape(name)}\b", content, re.MULTILINE):
+                duplicates.append((name, path))
+    if not duplicates:
+        return None
+    desc_parts = ", ".join(f"`{name}` in {path}" for name, path in duplicates)
+    return PremortomRisk(
+        id="R13",
+        description=f"Function(s) named in intent already exist in scope: {desc_parts}.",
+        category="duplicate_function",
+        verification=[
+            VerificationStep(
+                command=f"# Review existing definitions: {desc_parts}",
+                description="Confirm intent is to overwrite/extend, not accidentally duplicate.",
+            ),
+        ],
+    )
+
+
 def _detect_stale_test_risk(scope: list[str]) -> PremortomRisk | None:
     """Scope .py files with no corresponding tests/test_<stem>.py are R12.
 
@@ -339,14 +375,17 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    # R11 = scope_file, R12 = stale_test; assumptions start at R13 to avoid collision.
+    # R11 = scope_file, R12 = stale_test, R13 = duplicate_function; assumptions start at R14.
     risks.extend(_detect_scope_file_risk(spec.scope))
     r = _detect_stale_test_risk(spec.scope)
     if r:
         risks.append(r)
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=13)
+    r = _detect_duplicate_function_risk(spec.intent, spec.scope)
+    if r:
+        risks.append(r)
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=14)
     risks.extend(assumption_risks)
-    gap_start = max(20, 13 + len(assumption_risks))
+    gap_start = max(20, 14 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

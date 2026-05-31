@@ -18,6 +18,7 @@ from core.premortem import (
     _detect_gap_risks,
     _detect_scope_file_risk,
     _detect_stale_test_risk,
+    _detect_duplicate_function_risk,
 )
 
 
@@ -487,13 +488,14 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r13_not_r12(self):
-        """Assumptions must start at R13: R11=scope_file, R12=stale_test."""
+    def test_assumption_ids_start_at_r14_not_r13(self):
+        """Assumptions must start at R14: R11=scope_file, R12=stale_test, R13=duplicate_function."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R13" in ids
+        assert "R14" in ids
+        assert "R13" not in ids
         assert "R12" not in ids
         assert "R11" not in ids
 
@@ -571,4 +573,94 @@ class TestDetectStaleTestRisk:
         )
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+
+# ---------------------------------------------------------------------------
+# TestDuplicateFunctionRisk
+# ---------------------------------------------------------------------------
+
+class TestDuplicateFunctionRisk:
+    def test_empty_scope_returns_none(self):
+        assert _detect_duplicate_function_risk("`foo()` should be added", []) is None
+
+    def test_no_backtick_names_returns_none(self):
+        assert _detect_duplicate_function_risk("add a helper function", ["core/utils.py"]) is None
+
+    def test_no_duplicate_returns_none(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def bar(): pass\n")
+        assert _detect_duplicate_function_risk("`foo()` should be added", [str(f)]) is None
+
+    def test_duplicate_found_returns_r13(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def foo(): pass\n")
+        result = _detect_duplicate_function_risk("`foo()` should be added", [str(f)])
+        assert result is not None
+        assert result.id == "R13"
+        assert result.category == "duplicate_function"
+
+    def test_description_mentions_function_and_file(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def foo(): pass\n")
+        result = _detect_duplicate_function_risk("`foo()` should be added", [str(f)])
+        assert "foo" in result.description
+        assert str(f) in result.description
+
+    def test_multiple_duplicates_in_one_risk(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def foo(): pass\ndef bar(): pass\n")
+        result = _detect_duplicate_function_risk("`foo()` and `bar()` to add", [str(f)])
+        assert result is not None
+        assert "foo" in result.description
+        assert "bar" in result.description
+
+    def test_non_py_scope_files_ignored(self, tmp_path):
+        f = tmp_path / "config.yaml"
+        f.write_text("foo: bar\n")
+        assert _detect_duplicate_function_risk("`foo()` to add", [str(f)]) is None
+
+    def test_run_premortem_fires_r13_for_duplicate(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def percentile(): pass\n")
+        spec = _spec(
+            intent="Add `percentile()` function",
+            scope=[str(f)],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R13" in ids
+
+    def test_run_premortem_no_r13_when_no_duplicate(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def other(): pass\n")
+        spec = _spec(
+            intent="Add `percentile()` function",
+            scope=[str(f)],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R13" not in ids
+
+    def test_assumption_ids_start_at_r14_not_r13(self):
+        """Assumptions must start at R14: R11=scope_file, R12=stale_test, R13=duplicate_function."""
+        assumptions = [{"statement": "first", "confidence": "low"}]
+        spec = _spec(assumptions=assumptions)
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R14" in ids
+        assert "R13" not in ids
+
+    def test_no_id_collision_with_all_detectors(self, tmp_path):
+        f = tmp_path / "mymod.py"
+        f.write_text("def percentile(): pass\n")
+        spec = _spec(
+            intent="Add `percentile()` function",
+            scope=[str(f), "__nonexistent__.py", "core/__no_test_xyz__.py"],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R13" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
