@@ -6860,3 +6860,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/premortem.py, tests/test_premortem.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 02:09 — `2026-05-20-research-coverage-gate` (c0ee8b52)
+
+**Context**: Claude Code edit session
+
+**Changed (3)**: `Master_Blueprint.md, core/planner.py, tests/test_planner.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

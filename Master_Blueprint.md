@@ -1105,11 +1105,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — premortem.py, test_premortem.py
+최근 자동 갱신 컨텍스트: chore(core): code update — planner.py, test_planner.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
+| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(core): code update — planner.py, test_planner.py |
 | 2026-06-01 | v1.2.34 | chore(core): code update — premortem.py, test_premortem.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+15) |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 normalize(values: list[float]) -> list[float] 함수 추가. 입력 리스트를 [0.0, 1.0] 범위로 선형 정규화. 빈 리스트이면 빈 리스트 반환. 모든  — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+14) |

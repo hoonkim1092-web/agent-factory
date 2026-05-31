@@ -194,6 +194,24 @@ def _extract_conflicting_import_pairs(risk: PremortomRisk) -> list[tuple[str, st
     return []
 
 
+_LONG_FUNCTION_PREFIX = "Scope contains function(s) exceeding "
+_LONG_FUNCTION_RE = re.compile(r"`([^`]+)` in ([^ ]+) \((\d+) lines\)")
+
+
+def _extract_long_function_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]:
+    """Parse (func_name, file_path, line_count) triples from a long_function risk description."""
+    if not risk.description.startswith(_LONG_FUNCTION_PREFIX):
+        return []
+    colon_idx = risk.description.find(": ")
+    if colon_idx == -1:
+        return []
+    rest = risk.description[colon_idx + 2:].rstrip(".")
+    return [
+        (m.group(1), m.group(2), int(m.group(3)))
+        for m in _LONG_FUNCTION_RE.finditer(rest)
+    ]
+
+
 def _extract_scope_file_paths(risk: PremortomRisk) -> list[str]:
     """Parse individual missing file paths from a scope_file risk description."""
     desc = risk.description
@@ -287,6 +305,20 @@ def _build_investigation_steps(
                     depends_on=[],
                     commands=[
                         shlex.join(["grep", "-n", f"import {func_name}", file_path]),
+                    ],
+                ))
+                counter[0] += 1
+        elif risk.category == "long_function":
+            for func_name, file_path, line_count in _extract_long_function_pairs(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"긴 함수 검토: `{func_name}` in {file_path} ({line_count} lines)",
+                    target=file_path,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        shlex.join(["grep", "-n", f"def {func_name}", file_path]),
                     ],
                 ))
                 counter[0] += 1

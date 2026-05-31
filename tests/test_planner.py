@@ -896,3 +896,85 @@ class TestConflictingImportRiskInvestigation:
         plan = build_plan(_spec(), _premortem(risks))
         inv = [s for s in plan.steps if s.action.startswith("import 충돌 확인")]
         assert inv == []
+
+
+class TestLongFunctionRiskInvestigation:
+    """R15(long_function) risk → investigation steps."""
+
+    def _long_risk(self, desc: str) -> PremortomRisk:
+        return _risk("R15", desc, "long_function")
+
+    def _risk_desc(self, fn: str = "big_fn", path: str = "core/utils.py", n: int = 80) -> str:
+        return (
+            f"Scope contains function(s) exceeding 50 lines: "
+            f"`{fn}` in {path} ({n} lines)."
+        )
+
+    def test_single_long_function_generates_one_step(self):
+        """긴 함수 1개 → 1개 investigation step."""
+        risk = self._long_risk(self._risk_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("긴 함수 검토")]
+        assert len(inv) == 1
+        assert "big_fn" in inv[0].action
+        assert "core/utils.py" in inv[0].action
+
+    def test_step_has_grep_def_command(self):
+        """investigation step에 'grep -n def <func>' 명령어가 포함된다."""
+        risk = self._long_risk(self._risk_desc(fn="my_fn"))
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("긴 함수 검토")]
+        assert inv[0].commands
+        assert "grep" in inv[0].commands[0]
+        assert "def my_fn" in inv[0].commands[0]
+
+    def test_multiple_long_functions_generate_multiple_steps(self):
+        """두 긴 함수 → 2개 investigation step."""
+        desc = (
+            "Scope contains function(s) exceeding 50 lines: "
+            "`fn_a` in core/utils.py (60 lines), `fn_b` in core/planner.py (75 lines)."
+        )
+        risk = self._long_risk(desc)
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("긴 함수 검토")]
+        assert len(inv) == 2
+
+    def test_long_function_steps_come_before_implementation(self):
+        """investigation step은 implementation step보다 먼저 배치된다."""
+        risk = self._long_risk(self._risk_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        idx_inv = next(i for i, s in enumerate(plan.steps) if s.action.startswith("긴 함수 검토"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.action.startswith("Implement"))
+        assert idx_inv < idx_impl
+
+    def test_extract_long_function_pairs_single(self):
+        """_extract_long_function_pairs: 단일 항목 파싱."""
+        risk = self._long_risk(self._risk_desc("my_fn", "core/utils.py", 99))
+        from core.planner import _extract_long_function_pairs
+        assert _extract_long_function_pairs(risk) == [("my_fn", "core/utils.py", 99)]
+
+    def test_extract_long_function_pairs_multiple(self):
+        """_extract_long_function_pairs: 복수 항목 파싱."""
+        desc = (
+            "Scope contains function(s) exceeding 50 lines: "
+            "`fn_a` in core/utils.py (60 lines), `fn_b` in core/planner.py (75 lines)."
+        )
+        risk = self._long_risk(desc)
+        from core.planner import _extract_long_function_pairs
+        assert _extract_long_function_pairs(risk) == [
+            ("fn_a", "core/utils.py", 60),
+            ("fn_b", "core/planner.py", 75),
+        ]
+
+    def test_extract_long_function_pairs_unrecognized_format_returns_empty(self):
+        """형식이 다르면 빈 리스트 반환."""
+        risk = self._long_risk("Some other description.")
+        from core.planner import _extract_long_function_pairs
+        assert _extract_long_function_pairs(risk) == []
+
+    def test_no_long_function_risk_no_investigation_step(self):
+        """long_function risk 없으면 긴 함수 검토 step이 생성되지 않는다."""
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        inv = [s for s in plan.steps if s.action.startswith("긴 함수 검토")]
+        assert inv == []
