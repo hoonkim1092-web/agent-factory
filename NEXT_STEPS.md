@@ -1,10 +1,10 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-05-31 KST (Windows)** — **Phase 4 실측 검증 COMPLETE** (`e0e477fc`). `core/utils.py` zscore dogfood run (R1 16차) + T3 skip 발효 검증 완료.
+> 마지막 업데이트: **2026-06-01 KST (Windows)** — **R1 21차 COMPLETE** (`df679c14`). `core/utils.py` percentile() dogfood run auto-policy merge 성공.
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 19차 `core/premortem.py` R12(stale_test) detector 추가 (`ffc0decf`) + R1 20차 `core/planner.py` `_build_investigation_steps()`에 R12(stale_test) 연동 (`80337dd8`). 다음 후보 (dogfood run 형식으로):
-> 1. 기타 production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
+> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 20차 `core/planner.py` R12(stale_test) 연동 (`80337dd8`) + R1 21차 `core/utils.py` percentile() 추가 (`df679c14`). 다음 후보 (dogfood run 형식으로):
+> 1. `core/premortem.py`에 R13 detector 추가 (새 리스크 카테고리 — 후보: 함수 중복 패턴, 미사용 import 리스크 등)
 > 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
@@ -549,6 +549,11 @@ PR 4 — Operational Hygiene (P2)
    - ✅ `core/planner.py` `_build_investigation_steps()`에 R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼 신설, stale 파일→`tests/test_<stem>.py` 변환, "테스트 작성" investigation step 생성
    - ✅ `tests/test_planner.py` `TestStaleTestRiskInvestigation` 9건 신규 (71 PASS)
    - ✅ 3-Tier: af-critic PASS / T3-skip(blast2) / af-test-runner PASS
+
+   **R1 21차 (2026-06-01) — COMPLETE** (run_id: 1780241272-dc1583ae, merge: `df679c14`, PC: Windows):
+   - ✅ `percentile(values: list[int | float], p: float) -> float` core/utils.py 추가 — 선형 보간 백분위수, 빈 리스트/범위 외 p → ValueError
+   - ✅ TestPercentile 테스트 클래스 신규 (경계값 p=0/100, 중앙값, 보간, 음수, ValueError 2종)
+   - ✅ auto-policy 자동 머지 + blueprint/code-review 자동 동기화
 
 **R1 16차 (2026-05-31) — COMPLETE** (run_id: 1780210301-3e899fe9, merge: `e0e477fc`, PC: Windows):
 - ✅ `zscore(values: list[int | float]) -> list[float]` core/utils.py 추가 — 각 원소 Z-score, 1원소=[0.0], 빈리스트 ValueError
