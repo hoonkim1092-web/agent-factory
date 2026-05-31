@@ -8,6 +8,7 @@ assumptions/gaps rather than on generic heuristics.
 """
 from __future__ import annotations
 
+import os
 import re
 import shlex
 from dataclasses import dataclass, field
@@ -199,6 +200,31 @@ def _detect_existing_pattern_risk(
     )
 
 
+def _detect_scope_file_risk(scope: list[str]) -> list[PremortomRisk]:
+    """Detect scope file paths that do not exist on disk (e.g. typo paths).
+
+    Returns a single R11 risk listing all missing paths, or an empty list if
+    scope is empty or every path exists.
+    """
+    if not scope:
+        return []
+    missing = [f for f in scope if not os.path.exists(f)]
+    if not missing:
+        return []
+    missing_str = ", ".join(missing)
+    return [PremortomRisk(
+        id="R11",
+        description=f"Scope file(s) not found on disk: {missing_str}. Possible typo in path.",
+        category="scope_file",
+        verification=[
+            VerificationStep(
+                command=f"# Verify paths: {missing_str}",
+                description="Confirm scope paths exist or correct typos before implementation.",
+            ),
+        ],
+    )]
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -281,10 +307,11 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    # R10 is reserved for pattern_consistency; assumptions start at R11 to avoid collision.
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=11)
+    # R11 is reserved for scope_file; assumptions start at R12 to avoid collision.
+    risks.extend(_detect_scope_file_risk(spec.scope))
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=12)
     risks.extend(assumption_risks)
-    gap_start = max(20, 11 + len(assumption_risks))
+    gap_start = max(20, 12 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

@@ -6750,3 +6750,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/dogfood.py, tests/test_dogfood.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-05-31 21:11 — `dogfood/1780229193-54d8463a` (4acc6ca1)
+
+**Context**: dogfood finalize: core/premortem.py에 _detect_scope_file_risk() 함수 추가. scope 파일 목록에서 존재하지 않는 파일(예: typo 경로)을 감지해 R11 risk로 리포트. 파일 목록이 비어있거
+
+**Changed (3)**: `Master_Blueprint.md, core/premortem.py, tests/test_premortem.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

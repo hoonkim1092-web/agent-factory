@@ -16,6 +16,7 @@ from core.premortem import (
     _detect_assumption_risks,
     _detect_existing_pattern_risk,
     _detect_gap_risks,
+    _detect_scope_file_risk,
 )
 
 
@@ -414,3 +415,82 @@ def test_run_premortem_with_research_findings_adds_r10():
     assert "pattern_consistency" in categories
     r10 = next(r for r in result.risks if r.id == "R10")
     assert "core/utils.py" in r10.description
+
+
+# ---------------------------------------------------------------------------
+# TestDetectScopeFileRisk
+# ---------------------------------------------------------------------------
+
+class TestDetectScopeFileRisk:
+    def test_empty_scope_returns_empty(self):
+        assert _detect_scope_file_risk([]) == []
+
+    def test_all_existing_files_returns_empty(self, tmp_path):
+        f = tmp_path / "real.py"
+        f.write_text("# real")
+        assert _detect_scope_file_risk([str(f)]) == []
+
+    def test_missing_file_returns_single_r11_risk(self):
+        result = _detect_scope_file_risk(["nonexistent/__typo__/path.py"])
+        assert len(result) == 1
+        assert result[0].id == "R11"
+
+    def test_r11_category_is_scope_file(self):
+        result = _detect_scope_file_risk(["nonexistent/__typo__/path.py"])
+        assert result[0].category == "scope_file"
+
+    def test_description_mentions_missing_path(self):
+        result = _detect_scope_file_risk(["typo/__missing__.py"])
+        assert "typo/__missing__.py" in result[0].description
+
+    def test_multiple_missing_files_in_one_risk(self):
+        result = _detect_scope_file_risk(["__a__/b.py", "__c__/d.py"])
+        assert len(result) == 1
+        assert "__a__/b.py" in result[0].description
+        assert "__c__/d.py" in result[0].description
+
+    def test_mixed_existing_and_missing_reports_only_missing(self, tmp_path):
+        real = tmp_path / "real.py"
+        real.write_text("")
+        result = _detect_scope_file_risk([str(real), "__missing__/file.py"])
+        assert len(result) == 1
+        assert "__missing__/file.py" in result[0].description
+        assert str(real) not in result[0].description
+
+    def test_r11_has_verification_step(self):
+        result = _detect_scope_file_risk(["__no_such_file__.py"])
+        assert len(result[0].verification) >= 1
+
+    def test_run_premortem_fires_r11_for_missing_scope_file(self):
+        spec = _spec(scope=["__nonexistent_scope_file_xyz__.py"])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R11" in ids
+
+    def test_run_premortem_no_r11_when_scope_empty(self):
+        spec = _spec(scope=[])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R11" not in ids
+
+    def test_no_id_collision_when_r11_fires_with_assumptions_and_gaps(self):
+        spec = _spec(
+            scope=["__nonexistent_scope_file_xyz__.py"],
+            assumptions=[
+                {"statement": f"A{i}", "confidence": "low"} for i in range(3)
+            ],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R11" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+    def test_assumption_ids_start_at_r12_not_r11(self):
+        """Assumptions must start at R12 so R11 is reserved for scope_file_risk."""
+        assumptions = [{"statement": "first", "confidence": "low"}]
+        spec = _spec(assumptions=assumptions)
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R12" in ids
+        assert "R11" not in ids
