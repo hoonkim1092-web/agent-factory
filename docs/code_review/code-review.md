@@ -6790,3 +6790,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (3)**: `Master_Blueprint.md, core/planner.py, tests/test_planner.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 00:30 — `dogfood/1780241272-dc1583ae` (d6f30173)
+
+**Context**: dogfood finalize: core/utils.py에 percentile(values: list[int | float], p: float) -> float 함수 추가. values를 정렬해 p번째 백분위수(0.0~100.0)를 선형 보간으로 
+
+**Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

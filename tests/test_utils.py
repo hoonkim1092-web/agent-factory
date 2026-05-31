@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile
 from core.utils import test_file_for as _test_file_for
 
 
@@ -346,3 +346,42 @@ class TestTestFileFor:
 
     def test_대시와_점_포함_stem은_허용(self):
         assert _test_file_for("core/my-module.v2.py") == "tests/test_my-module.v2.py"
+
+
+class TestPercentile:
+    def test_경계값_p0(self):
+        assert percentile([3, 1, 2], 0.0) == pytest.approx(1.0)
+
+    def test_경계값_p100(self):
+        assert percentile([3, 1, 2], 100.0) == pytest.approx(3.0)
+
+    def test_중앙값_p50_홀수(self):
+        assert percentile([1, 2, 3, 4, 5], 50.0) == pytest.approx(3.0)
+
+    def test_중앙값_p50_짝수(self):
+        assert percentile([1, 2, 3, 4], 50.0) == pytest.approx(2.5)
+
+    def test_비정렬_입력(self):
+        assert percentile([5, 1, 4, 2, 3], 25.0) == pytest.approx(2.0)
+
+    def test_선형_보간(self):
+        # sorted [0, 10], p=25 → idx=0.25, 0*(0.75)+10*(0.25)=2.5
+        assert percentile([10, 0], 25.0) == pytest.approx(2.5)
+
+    def test_음수_포함(self):
+        assert percentile([-4, -2, 0, 2, 4], 50.0) == pytest.approx(0.0)
+
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            percentile([], 50.0)
+
+    def test_p_음수는_ValueError(self):
+        with pytest.raises(ValueError):
+            percentile([1, 2, 3], -1.0)
+
+    def test_p_100초과는_ValueError(self):
+        with pytest.raises(ValueError):
+            percentile([1, 2, 3], 100.1)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(percentile([1, 2, 3], 50.0), float)

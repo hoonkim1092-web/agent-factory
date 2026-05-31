@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-31 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-01 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -210,7 +210,7 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `percentile(values, p)` (p번째 백분위수를 선형 보간으로 float 반환; 빈 리스트이면 ValueError; p가 0~100 범위 밖이면 ValueError), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
@@ -1103,13 +1103,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1656,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 percentile(values: list[int | float], p: float) -> float 함수 추가. values를 정렬해 p번째 백분위수(0.0~100.0)를 선형 보간으로  — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, test_planner.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, functional_spec.md, registry_schema.md (+11) |
 | 2026-05-31 | v1.2.34 | chore(core): dogfood finalize: core/premortem.py에 _detect_stale_test_risk() detector 추가. scope 목록 중 대응하는 tests/test_<stem>.py 파일이 존재하지 않는 .py 파일을 R12 r — premortem.py, functional_spec.md, registry_schema.md, runtime_modes.md, technical_plan.md (+9) |
@@ -1664,6 +1666,7 @@ model_utils.py (독립 모듈)
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, premortem.py, code-review.md, test_premortem.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/premortem.py에 _detect_scope_file_risk() 함수 추가. scope 파일 목록에서 존재하지 않는 파일(예: typo 경로)을 감지해 R11 risk로 리포트. 파일 목록이 비어있거 — Master_Blueprint.md, premortem.py, test_premortem.py |
 | 2026-05-31 | v1.2.34 | chore(core): code update — dogfood.py, test_dogfood.py |
+| 2026-06-01 | v1.2.34 | feat(utils): `percentile(values, p)` 신설 — p번째 백분위수를 선형 보간으로 float 반환. 빈 리스트이면 ValueError. p가 0~100 범위 밖이면 ValueError. `tests/test_utils.py` TestPercentile 11건 신규. §0 갱신. |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-05-31 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 zscore(values: list[int | float]) -> list[float] 함수 추가. 각 원소의 Z-score 반환 (평균 0, 표준편차 1 정규화). 원소 1개이면 [0.0 — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-05-31 | v1.2.34 | feat(utils): `zscore(values)` 신설 — 각 원소의 Z-score를 list[float]로 반환. 원소 1개이면 [0.0]. 빈 리스트이면 ValueError. `std_dev()`/`variance()` 재사용. `tests/test_utils.py` TestZscore 신규. §0 갱신. |

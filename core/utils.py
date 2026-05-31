@@ -147,6 +147,22 @@ def zscore(values: list[int | float]) -> list[float]:
     return [(x - mean) / sd for x in values]
 
 
+def percentile(values: list[int | float], p: float) -> float:
+    """p번째 백분위수를 선형 보간으로 반환한다. 빈 리스트이면 ValueError. p가 0~100 범위 밖이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 백분위수를 계산할 수 없습니다.")
+    if p < 0.0 or p > 100.0:
+        raise ValueError(f"p는 0.0~100.0 범위여야 합니다: {p}")
+    s = sorted(values)
+    idx = p / 100.0 * (len(s) - 1)
+    lo = int(math.floor(idx))
+    hi = int(math.ceil(idx))
+    if lo == hi:
+        return float(s[lo])
+    frac = idx - lo
+    return float(s[lo] * (1.0 - frac) + s[hi] * frac)
+
+
 def range_span(values: list[int | float]) -> float:
     """최댓값과 최솟값의 차이를 float로 반환한다. 빈 리스트이면 ValueError."""
     if not values:
