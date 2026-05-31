@@ -20,6 +20,8 @@ from core.premortem import (
     _detect_stale_test_risk,
     _detect_duplicate_function_risk,
     _detect_conflicting_import_risk,
+    _detect_long_function_risk,
+    _LONG_FUNCTION_THRESHOLD,
 )
 
 
@@ -489,13 +491,13 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r15_not_r14(self):
-        """Assumptions must start at R15: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import."""
+    def test_assumption_ids_start_at_r16_not_r15(self):
+        """Assumptions start at R16: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R15" in ids
+        assert "R16" in ids
         assert "R14" not in ids
         assert "R13" not in ids
         assert "R12" not in ids
@@ -644,13 +646,13 @@ class TestDuplicateFunctionRisk:
         ids = [r.id for r in result.risks]
         assert "R13" not in ids
 
-    def test_assumption_ids_start_at_r15_not_r14(self):
-        """Assumptions must start at R15: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import."""
+    def test_assumption_ids_start_at_r16_not_r15(self):
+        """Assumptions start at R16: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R15" in ids
+        assert "R16" in ids
         assert "R14" not in ids
         assert "R13" not in ids
 
@@ -750,4 +752,92 @@ class TestConflictingImportRisk:
         ids = [r.id for r in result.risks]
         assert "R13" in ids
         assert "R14" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+
+class TestLongFunctionRisk:
+    """Tests for _detect_long_function_risk (R15)."""
+
+    def _make_long_func(self, tmp_path, name: str = "big_fn", lines: int = 51) -> str:
+        body = "\n".join(f"    x{i} = {i}" for i in range(lines - 1))
+        source = f"def {name}():\n{body}\n    return x0\n"
+        f = tmp_path / "mod.py"
+        f.write_text(source)
+        return str(f)
+
+    def test_empty_scope_returns_empty(self):
+        assert _detect_long_function_risk([]) == []
+
+    def test_non_py_files_ignored(self, tmp_path):
+        f = tmp_path / "config.yaml"
+        f.write_text("key: value\n")
+        assert _detect_long_function_risk([str(f)]) == []
+
+    def test_short_function_returns_empty(self, tmp_path):
+        f = tmp_path / "mod.py"
+        f.write_text("def small():\n    return 1\n")
+        assert _detect_long_function_risk([str(f)]) == []
+
+    def test_exactly_threshold_lines_returns_empty(self, tmp_path):
+        # def line + (_LONG_FUNCTION_THRESHOLD - 1) body lines = _LONG_FUNCTION_THRESHOLD total
+        body = "\n".join(f"    x{i} = {i}" for i in range(_LONG_FUNCTION_THRESHOLD - 1))
+        source = f"def borderline():\n{body}\n"
+        f = tmp_path / "mod.py"
+        f.write_text(source)
+        assert _detect_long_function_risk([str(f)]) == []
+
+    def test_one_over_threshold_returns_r15(self, tmp_path):
+        path = self._make_long_func(tmp_path, lines=_LONG_FUNCTION_THRESHOLD + 1)
+        result = _detect_long_function_risk([path])
+        assert len(result) == 1
+        assert result[0].id == "R15"
+
+    def test_category_is_long_function(self, tmp_path):
+        path = self._make_long_func(tmp_path)
+        result = _detect_long_function_risk([path])
+        assert result[0].category == "long_function"
+
+    def test_description_mentions_function_name_and_file(self, tmp_path):
+        path = self._make_long_func(tmp_path, name="my_fn")
+        result = _detect_long_function_risk([path])
+        assert "my_fn" in result[0].description
+        assert path in result[0].description
+
+    def test_missing_scope_file_skipped(self):
+        assert _detect_long_function_risk(["__nonexistent__.py"]) == []
+
+    def test_syntax_error_file_skipped(self, tmp_path):
+        f = tmp_path / "broken.py"
+        f.write_text("def bad(:\n    pass\n")
+        assert _detect_long_function_risk([str(f)]) == []
+
+    def test_run_premortem_fires_r15_for_long_function(self, tmp_path):
+        path = self._make_long_func(tmp_path)
+        spec = _spec(intent="Add feature", scope=[path])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R15" in ids
+
+    def test_run_premortem_no_r15_for_short_functions(self, tmp_path):
+        f = tmp_path / "mod.py"
+        f.write_text("def tiny():\n    return 1\n")
+        spec = _spec(intent="Add feature", scope=[str(f)])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R15" not in ids
+
+    def test_no_id_collision_r15_with_all_detectors(self, tmp_path):
+        # _make_long_func writes to tmp_path/mod.py; use a different name for second file
+        long_fn_path = self._make_long_func(tmp_path, name="join")
+        conflict_path = tmp_path / "conflict.py"
+        conflict_path.write_text("from os import join\ndef join(): pass\n")
+        spec = _spec(
+            intent="Add `join()` function",
+            scope=[str(long_fn_path), str(conflict_path), "__nonexistent__.py"],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R15" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"

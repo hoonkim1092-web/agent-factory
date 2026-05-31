@@ -8,6 +8,7 @@ assumptions/gaps rather than on generic heuristics.
 """
 from __future__ import annotations
 
+import ast
 import os
 import re
 import shlex
@@ -332,6 +333,57 @@ def _detect_conflicting_import_risk(intent: str, scope: list[str]) -> PremortomR
     )
 
 
+_LONG_FUNCTION_THRESHOLD = 50  # lines
+
+
+def _detect_long_function_risk(scope: list[str]) -> list[PremortomRisk]:
+    """Scope .py files containing functions longer than the threshold are R15.
+
+    Each qualifying (function, file) pair becomes a separate entry in the
+    returned risk's description.  Returns an empty list if nothing trips the
+    threshold.
+    """
+    findings: list[tuple[str, str, int]] = []  # (func_name, path, line_count)
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                source = fh.read()
+            tree = ast.parse(source, filename=path)
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            end_line = getattr(node, "end_lineno", None)
+            if end_line is None:
+                continue
+            length = end_line - node.lineno + 1
+            if length > _LONG_FUNCTION_THRESHOLD:
+                findings.append((node.name, path, length))
+    if not findings:
+        return []
+    desc_parts = ", ".join(
+        f"`{name}` in {path} ({lines} lines)" for name, path, lines in findings
+    )
+    return [
+        PremortomRisk(
+            id="R15",
+            description=f"Scope contains function(s) exceeding {_LONG_FUNCTION_THRESHOLD} lines: {desc_parts}.",
+            category="long_function",
+            verification=[
+                VerificationStep(
+                    command=f"# Review long functions: {desc_parts}",
+                    description=(
+                        "Consider splitting functions above the threshold before adding more code."
+                    ),
+                ),
+            ],
+        )
+    ]
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -414,7 +466,8 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    # R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import; assumptions start at R15.
+    # R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import,
+    # R15=long_function; assumptions start at R16.
     risks.extend(_detect_scope_file_risk(spec.scope))
     r = _detect_stale_test_risk(spec.scope)
     if r:
@@ -425,9 +478,10 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     r = _detect_conflicting_import_risk(spec.intent, spec.scope)
     if r:
         risks.append(r)
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=15)
+    risks.extend(_detect_long_function_risk(spec.scope))
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=16)
     risks.extend(assumption_risks)
-    gap_start = max(20, 15 + len(assumption_risks))
+    gap_start = max(21, 16 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

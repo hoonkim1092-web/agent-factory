@@ -6850,3 +6850,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (19)**: `Master_Blueprint.md, core/utils.py, data/memory/smoke/test_cat/test_key_123.json, data/memory/test_cat/test_key_123.json, docs/AGENT_FACTORY_PITCH.md, docs/ENGINE_FLOW.md, docs/functional_spec.md, docs/registry_schema.md, docs/runtime_modes.md, docs/technical_plan.md, err.txt, factory_manual.md, implementation_plan.md, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml ... (+4)`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 02:07 — `2026-05-20-research-coverage-gate` (6acd049c)
+
+**Context**: Claude Code edit session
+
+**Changed (3)**: `Master_Blueprint.md, core/premortem.py, tests/test_premortem.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
