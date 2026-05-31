@@ -476,6 +476,76 @@ def test_check_merge_policy_denied_path_blocks(tmp_path):
     assert "denied" in reason
 
 
+def test_check_merge_policy_allowed_path_suffix_sibling_blocks(tmp_path):
+    """A file sharing a prefix with an allowed file (e.g. .bak) must NOT pass.
+
+    Regression for the fail-open prefix match: 'core/utils.py.bak'.startswith(
+    'core/utils.py') was True, letting out-of-scope siblings through the gate.
+    """
+    state = _make_merge_state(tmp_path)
+    policy = MergePolicy(
+        mode="auto_policy",
+        allowed_paths=["core/utils.py"],
+        require_clean_source=False,
+        allow_source_advanced=True,
+        require_dogfood_commit=False,
+    )
+
+    with patch("core.dogfood._git"):
+        ok, reason = _check_merge_policy(
+            state, policy, changed_files=["core/utils.py.bak"]
+        )
+
+    assert ok is False
+    assert "allowed_paths" in reason
+
+
+def test_check_merge_policy_allowed_path_exact_and_dir_boundary(tmp_path):
+    """Exact file match passes; directory entry matches only on a path boundary."""
+    state = _make_merge_state(tmp_path)
+    policy = MergePolicy(
+        mode="auto_policy",
+        allowed_paths=["core/utils.py", "docs/"],
+        require_clean_source=False,
+        allow_source_advanced=True,
+        require_dogfood_commit=False,
+    )
+
+    with patch("core.dogfood._git"):
+        # exact file + file inside allowed dir → pass
+        ok_pass, _ = _check_merge_policy(
+            state, policy,
+            changed_files=["core/utils.py", "docs/code_review/code-review.md"],
+        )
+        # 'docsX/...' must NOT match the 'docs/' boundary
+        ok_fail, reason = _check_merge_policy(
+            state, policy, changed_files=["docsX/leak.md"]
+        )
+
+    assert ok_pass is True
+    assert ok_fail is False
+    assert "allowed_paths" in reason
+
+
+def test_build_merge_policy_empty_mode_raises(tmp_path):
+    """build_merge_policy(state, '') must fail closed, not coerce to state default.
+
+    Regression for `mode or state.merge_mode`: an explicit invalid '' silently
+    became state.merge_mode (auto_policy). Now '' reaches __post_init__ → ValueError.
+    """
+    state = _make_merge_state(tmp_path)
+    with pytest.raises(ValueError, match="invalid merge mode"):
+        build_merge_policy(state, "")
+
+
+def test_build_merge_policy_none_mode_uses_state_default(tmp_path):
+    """mode=None keeps the 'use state default' contract."""
+    state = _make_merge_state(tmp_path)
+    state.merge_mode = "manual"
+    policy = build_merge_policy(state, None)
+    assert policy.mode == "manual"
+
+
 def test_check_merge_policy_scope_violations_blocks(tmp_path):
     """scope_violations (non-CRLF dirty outside plan allowlist) must block merge."""
     state = _make_merge_state(tmp_path)

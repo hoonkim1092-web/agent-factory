@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-05-30 | version: v1.2.34 -->
+<!-- last_updated: 2026-05-31 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1040,7 +1040,7 @@ run_factory_cli.main()
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
 ### §3.13 Dogfood Pipeline (`core/dogfood.py`)
-<!-- last_updated: 2026-05-29 review-fix (5건): build_merge_policy() 공용 헬퍼(auto/manual scope 정합) + merge_mode enum 런타임 검증(VALID_MERGE_MODES) + read_phase_trace OSError/UnicodeDecodeError 방어 + cleanup_skip_reason 보조 필드 -->
+<!-- last_updated: 2026-05-31 BLOCK-fix (232850): _check_merge_policy allowed_paths 경계 매칭(prefix fail-open 제거) + build_merge_policy mode fail-closed(`mode is None` 분기) + cleanup_skip_reason status 출력 + read_phase_trace OSError stderr 경고. 이전: 2026-05-29 review-fix (5건): build_merge_policy() 공용 헬퍼 + merge_mode enum 검증 + read_phase_trace 방어 + cleanup_skip_reason 필드 -->
 
 **목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
 
@@ -1059,8 +1059,9 @@ run_factory_cli.main()
 |------|------|
 | `create_run(task, workspace)` | 新 run_id 생성 + PENDING 상태 초기화 |
 | `run_all(task, workspace, *, strict_contract, allow_partial_impl, cleanup_worktree_on_block, ...)` | PENDING→COMPLETE/BLOCKED 전 단계 자동 순환. `strict_contract=True`면 6-phase 계약 체크 활성. `allow_partial_impl=True`이면 ok=False IMPLEMENT에서도 VERIFY 진행 (`merge_mode=manual/never` 전용). `cleanup_worktree_on_block=True`이면 BLOCKED 시 worktree 제거(branch 보존). |
-| `read_phase_trace(state)` | `phase_trace.jsonl` 파일 전체 파싱 → `list[dict]`. 파일 없으면 `[]`. corrupt 마지막 줄 silently drop (crash-safe). `errors="replace"`로 절단된 multibyte UTF-8 방어, `OSError`(lock/permission) → `[]`. |
-| `build_merge_policy(state, mode)` | plan(`artifacts`+`tests_required`)에서 `allowed_paths` 도출 + `DEFAULT_DENIED_PATHS`. auto(`_run_merge_phase`)·manual(`merge_dogfood_branch` policy=None) 양쪽이 반드시 경유 — bare MergePolicy 생성 시 `allowed_paths=[]`로 scope 게이트 무력화. |
+| `read_phase_trace(state)` | `phase_trace.jsonl` 파일 전체 파싱 → `list[dict]`. 파일 없으면 `[]`. corrupt 마지막 줄 silently drop (crash-safe). `errors="replace"`로 절단된 multibyte UTF-8 방어, `OSError`(lock/permission) → stderr 경고 후 `[]` (비-throwing 계약 유지, 진단 전용 — production 소비처 없음). |
+| `build_merge_policy(state, mode)` | plan(`artifacts`+`tests_required`)에서 `allowed_paths` 도출 + `DEFAULT_DENIED_PATHS`. auto(`_run_merge_phase`)·manual(`merge_dogfood_branch` policy=None) 양쪽이 반드시 경유 — bare MergePolicy 생성 시 `allowed_paths=[]`로 scope 게이트 무력화. **mode fail-closed**: `mode is None`이면 state 기본값, 무효 문자열(`""` 등)은 `MergePolicy.__post_init__`까지 도달해 ValueError(`or` 강등 금지). |
+| `_check_merge_policy(state, policy, changed_files, ...)` | merge 게이트 — scope/dirty/drift/dogfood_commit/denied/allowed 검사. **allowed_paths는 경계 매칭** (`f == p or f.startswith(p.rstrip("/") + "/")`) — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open이라 제거. |
 | `run_phase(state, phase)` | 단일 phase 실행 |
 | `advance_phase` / `block_run` / `retry_run` | 상태 전이 (retry는 IMPLEMENT→VERIFY 최대 3회) |
 | `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE |
@@ -1101,13 +1102,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-05-30; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-05-31; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, code-review.md, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood_isolation.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1640,6 +1641,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-05-31 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood_isolation.py |
+| 2026-05-31 | v1.2.34 | fix(dogfood BLOCK 232850): (1) **[High]** `_check_merge_policy` allowed_paths 경계 매칭 — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open. `f == p or f.startswith(p.rstrip("/")+"/")`로 교정(파일=정확일치, 디렉터리=경계). auto-merge scope 게이트 안전성 복구. (2) **[Med→실제 Med]** `build_merge_policy` mode fail-closed — `mode or state.merge_mode`가 `""`을 무음 강등하던 결함을 `mode is None` 분기로 교정, 무효 문자열은 `__post_init__` ValueError 도달. (3) **[Low]** `dogfood status`에 `cleanup_skip_reason` 출력 — 출하됐으나 미배선이던 false-alarm 구분 필드 surface. (4) **[Low]** `read_phase_trace` OSError 시 stderr 경고 추가(비-throwing 계약 유지, 가시성 확보). 신규 회귀 +4건. dogfood 239 PASS. |
 | 2026-05-30 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, planner.py, code-review.md, test_planner.py |
 | 2026-05-30 | v1.2.34 | chore(core): dogfood finalize: core/planner.py의 _build_investigation_steps() 함수를 확장하여 R5+ assumption 리스크도 investigation step으로 변환한다. 현재 구현은 R20+ gap ri — planner.py, test_planner.py |
 | 2026-05-29 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, test_dogfood.py, test_dogfood_isolation.py |

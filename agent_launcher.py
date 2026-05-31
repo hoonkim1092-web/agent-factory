@@ -1091,6 +1091,8 @@ if __name__ == "__main__":
                 print(f"merge_mode        : {state.merge_mode}")
                 print(f"merge_status      : {state.merge_status}")
                 print(f"isolation_status  : {state.isolation_status}")
+                if state.cleanup_skip_reason:
+                    print(f"cleanup_skip_reason: {state.cleanup_skip_reason}")
                 print(f"worktree_workspace: {state.worktree_workspace}")
                 print(f"runtime_workspace : {state.runtime_workspace}")
                 print(f"attempts          : {state.attempts}")

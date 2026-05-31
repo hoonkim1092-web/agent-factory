@@ -1020,10 +1020,15 @@ def _check_merge_policy(
             if f.startswith(denied) or denied in f:
                 return False, f"denied path: {f}"
 
-    # Allowed path check
+    # Allowed path check — boundary-aware: exact match for files, directory
+    # boundary for dir entries. Plain startswith() is fail-open: it would let
+    # "core/utils.py.bak" pass an allowlist of "core/utils.py".
     if policy.allowed_paths:
         for f in changed_files:
-            if not any(f.startswith(p) for p in policy.allowed_paths):
+            if not any(
+                f == p or f.startswith(p.rstrip("/") + "/")
+                for p in policy.allowed_paths
+            ):
                 return False, f"file not in allowed_paths: {f}"
 
     return True, ""
@@ -1054,7 +1059,9 @@ def build_merge_policy(state: DogfoodState, mode: str | None = None) -> MergePol
     if has_core_allowed:
         allowed.extend(FINAL_DOC_PATHS)
     return MergePolicy(  # type: ignore[arg-type]
-        mode=mode or state.merge_mode,
+        # None means "use state default"; an explicit invalid string (e.g. "")
+        # must reach __post_init__ and raise, not silently coerce to the default.
+        mode=state.merge_mode if mode is None else mode,
         allowed_paths=list(dict.fromkeys(allowed)),
         denied_paths=list(DEFAULT_DENIED_PATHS),
     )
@@ -1986,7 +1993,11 @@ def read_phase_trace(state: DogfoodState) -> list[dict[str, Any]]:
     # contract. OSError (lock/permission) → return what we have ([]).
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    except OSError as exc:
+        # Non-throwing contract preserved for status/diagnostic callers, but a
+        # lock/permission failure is not "no trace" — surface it so it isn't
+        # invisible (no consumer gates on this today; this guards future use).
+        print(f"[dogfood] phase_trace read failed: {exc}", file=sys.stderr)
         return []
     for line in text.splitlines():
         stripped = line.strip()
