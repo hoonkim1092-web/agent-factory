@@ -293,6 +293,45 @@ def _detect_stale_test_risk(scope: list[str]) -> PremortomRisk | None:
     )
 
 
+def _detect_conflicting_import_risk(intent: str, scope: list[str]) -> PremortomRisk | None:
+    """Backtick-named functions in intent that are already imported in scope .py files are R14."""
+    func_names = _BACKTICK_FUNC_RE.findall(intent)
+    if not func_names:
+        return None
+    conflicts: list[tuple[str, str]] = []
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                content = fh.read()
+        except OSError:
+            continue
+        for name in func_names:
+            direct = re.search(rf"^import\s+{re.escape(name)}\b", content, re.MULTILINE)
+            from_import = re.search(
+                rf"^from\s+\S+\s+import\s+[^\n]*\b{re.escape(name)}\b",
+                content,
+                re.MULTILINE,
+            )
+            if direct or from_import:
+                conflicts.append((name, path))
+    if not conflicts:
+        return None
+    desc_parts = ", ".join(f"`{name}` in {path}" for name, path in conflicts)
+    return PremortomRisk(
+        id="R14",
+        description=f"Function name(s) in intent conflict with existing imports in scope: {desc_parts}.",
+        category="conflicting_import",
+        verification=[
+            VerificationStep(
+                command=f"# Review import conflicts: {desc_parts}",
+                description="Rename the new function or remove the conflicting import to avoid shadowing.",
+            ),
+        ],
+    )
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -375,7 +414,7 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
 
-    # R11 = scope_file, R12 = stale_test, R13 = duplicate_function; assumptions start at R14.
+    # R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import; assumptions start at R15.
     risks.extend(_detect_scope_file_risk(spec.scope))
     r = _detect_stale_test_risk(spec.scope)
     if r:
@@ -383,9 +422,12 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     r = _detect_duplicate_function_risk(spec.intent, spec.scope)
     if r:
         risks.append(r)
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=14)
+    r = _detect_conflicting_import_risk(spec.intent, spec.scope)
+    if r:
+        risks.append(r)
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=15)
     risks.extend(assumption_risks)
-    gap_start = max(20, 14 + len(assumption_risks))
+    gap_start = max(20, 15 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)
