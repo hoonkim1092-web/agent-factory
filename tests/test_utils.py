@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum
 from core.utils import test_file_for as _test_file_for
 
 
@@ -430,3 +430,36 @@ class TestPercentile:
 
     def test_반환_타입은_float(self):
         assert isinstance(percentile([1, 2, 3], 50.0), float)
+
+
+class TestCumsum:
+    def test_빈_리스트는_빈_리스트_반환(self):
+        assert cumsum([]) == []
+
+    def test_단일_요소(self):
+        assert cumsum([5]) == [5.0]
+
+    def test_정수_리스트(self):
+        assert cumsum([1, 2, 3, 4]) == [1.0, 3.0, 6.0, 10.0]
+
+    def test_부동소수점_리스트(self):
+        result = cumsum([1.5, 2.5, 3.0])
+        assert result == pytest.approx([1.5, 4.0, 7.0])
+
+    def test_음수_포함(self):
+        assert cumsum([1, -2, 3, -4]) == [1.0, -1.0, 2.0, -2.0]
+
+    def test_0_포함(self):
+        assert cumsum([0, 0, 5]) == [0.0, 0.0, 5.0]
+
+    def test_반환_길이_입력과_동일(self):
+        values = [3, 1, 4, 1, 5]
+        assert len(cumsum(values)) == len(values)
+
+    def test_반환_타입은_float(self):
+        result = cumsum([1, 2, 3])
+        assert all(isinstance(v, float) for v in result)
+
+    def test_마지막_값은_전체_합(self):
+        values = [10, 20, 30]
+        assert cumsum(values)[-1] == pytest.approx(sum(values))

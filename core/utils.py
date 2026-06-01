@@ -185,6 +185,16 @@ def normalize(values: list[float]) -> list[float]:
     return [(x - lo) / span for x in values]
 
 
+def cumsum(values: list[int | float]) -> list[float]:
+    """각 위치까지의 누적 합 리스트를 float로 반환한다. 빈 리스트이면 빈 리스트 반환."""
+    result: list[float] = []
+    total = 0.0
+    for x in values:
+        total += x
+        result.append(total)
+    return result
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
