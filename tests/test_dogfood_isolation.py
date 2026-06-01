@@ -351,6 +351,134 @@ def test_finalize_runs_final_docs_sync_before_staging(tmp_path):
     ]
 
 
+def test_finalize_stages_review_artifacts_under_docs_reviews(tmp_path):
+    """docs/reviews/<ts>-<stem>-code-review.md (dynamic filename) must be staged,
+    not flagged as a scope_violation. core/review_report.py writes these during a
+    run, but their timestamped names cannot match the exact-path plan allowlist.
+
+    Uses a SKILLS-ONLY plan and forces final_docs_synced=[] so the staging is
+    proven to be unconditional (a plan exists) — not reached via the core/ fallback
+    nor via a doc sync. This keeps FINALIZE symmetric with build_merge_policy's
+    `if allowed:` gate so the merge gate never rejects what FINALIZE stages."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.FINALIZE, isolation_status="ready")
+    state.worktree_workspace = str(tmp_path / "worktree")
+    Path(state.worktree_workspace).mkdir(parents=True, exist_ok=True)
+    state.base_ref = "base001"
+
+    plan = {"steps": [{"id": "S1", "artifacts": ["skills/dp/skill.py"], "tests_required": []}]}
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    review_doc = "docs/reviews/2026-06-01-120000-skill-code-review.md"
+    staged: list[list] = []
+    rev_count = {"n": 0}
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "branch" in args and "--show-current" in args:
+            r.stdout = state.dogfood_branch
+        elif "rev-parse" in args and "HEAD" in args:
+            rev_count["n"] += 1
+            r.stdout = "oldsha" if rev_count["n"] == 1 else "newsha"
+        elif "status" in args and "--porcelain" in args:
+            # skills/dp/skill.py tracked-modified; review doc is untracked (??).
+            # _dirty_files(include_untracked=False) adds --untracked-files=no, so
+            # distinguish the two calls — the review doc must be genuinely untracked
+            # (exercises the "untracked → always real" branch, no CRLF filtering).
+            if "--untracked-files=no" in args:
+                r.stdout = " M skills/dp/skill.py\n"
+            else:
+                r.stdout = f" M skills/dp/skill.py\n?? {review_doc}\n"
+        elif "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "real content change"  # not CRLF-only
+        elif "diff" in args and "--name-only" in args and ".." in " ".join(args):
+            r.stdout = f"skills/dp/skill.py\n{review_doc}"
+        elif args[0] == "add":
+            staged.append(list(args))
+        return r
+
+    # No doc sync ran (final_docs_synced=[]) and the plan has no core/ file, so the
+    # docs/reviews exemption cannot come from final_docs_gate — it must be unconditional.
+    with patch("core.dogfood._git", side_effect=_git_stub), \
+            patch("core.dogfood._run_final_docs_sync", return_value=[]):
+        report = finalize_dogfood_result(state)
+
+    staged_flat = " ".join(" ".join(a) for a in staged)
+    assert review_doc in staged_flat
+    assert "skills/dp/skill.py" in staged_flat
+    assert report["scope_violations"] == []
+
+
+def test_build_merge_policy_allows_docs_reviews_dir(tmp_path):
+    """build_merge_policy exposes docs/reviews/ as an allowed directory prefix so
+    dogfood-generated review artifacts pass the auto-merge allowed_paths gate."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.MERGE)
+    plan = {"steps": [{"id": "S1", "artifacts": ["core/utils.py"], "tests_required": []}]}
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    policy = build_merge_policy(state)
+    assert "docs/reviews/" in policy.allowed_paths
+
+    # Isolate the allowed_paths gate: disable the source-state gates that would
+    # otherwise short-circuit before the path check (base_ref/clean-source/commit).
+    review_doc = "docs/reviews/2026-06-01-120000-utils-code-review.md"
+    path_only = MergePolicy(
+        mode="auto_policy",
+        require_clean_source=False,
+        allow_source_advanced=True,
+        require_dogfood_commit=False,
+        allowed_paths=policy.allowed_paths,
+        denied_paths=policy.denied_paths,
+    )
+    ok, reason = _check_merge_policy(
+        state, path_only,
+        changed_files=["core/utils.py", review_doc],
+        scope_violations=[],
+    )
+    assert ok is True, reason
+    assert reason == ""
+
+
+def test_build_merge_policy_skills_only_plan_allows_docs_reviews(tmp_path):
+    """REGRESSION (cross-review Finding #2): a skills-only (no core/) plan still
+    triggers doc sync (blueprint_updater.TRIGGER_PREFIXES includes skills/), so
+    FINALIZE stages docs/reviews artifacts. The merge gate must permit them too —
+    otherwise FINALIZE stages a file that auto-merge then rejects."""
+    import json
+    state = _make_state(tmp_path, phase=DogfoodPhase.MERGE)
+    plan = {"steps": [{"id": "S1", "artifacts": ["skills/dp/skill.py"], "tests_required": []}]}
+    plan_file = tmp_path / "plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
+    state.plan_path = str(plan_file)
+
+    policy = build_merge_policy(state)
+    assert "docs/reviews/" in policy.allowed_paths
+    assert "Master_Blueprint.md" in policy.allowed_paths
+
+    path_only = MergePolicy(
+        mode="auto_policy",
+        require_clean_source=False,
+        allow_source_advanced=True,
+        require_dogfood_commit=False,
+        allowed_paths=policy.allowed_paths,
+        denied_paths=policy.denied_paths,
+    )
+    ok, reason = _check_merge_policy(
+        state, path_only,
+        changed_files=["skills/dp/skill.py",
+                       "docs/reviews/2026-06-01-120000-skill-code-review.md"],
+        scope_violations=[],
+    )
+    assert ok is True, reason
+
+
 def test_finalize_fallback_stages_all_when_no_plan(tmp_path):
     """P3: when plan_path is absent, all changed files are staged (no scope violations)."""
     import json

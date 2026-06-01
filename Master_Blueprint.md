@@ -1099,6 +1099,7 @@ run_factory_cli.main()
 
 **격리 + 머지 설계:**
 - FINALIZE `scope_violations`: plan artifacts + tests_required 허용 목록 외 변경은 git add 대상 제외 + 기록
+- `FINAL_DOC_PATHS`(고정 파일명: Blueprint·code-review)는 `final_docs_gate`(plan 존재 AND (final_docs_synced OR core/ 변경)) 통과 시에만 FINALIZE 스테이징. `FINAL_DOC_DIRS`(`docs/reviews/` — 동적 타임스탬프 파일명 디렉터리 prefix)는 **plan 이 존재하면 무조건** FINALIZE 스테이징 + `build_merge_policy` allowed_paths 에 추가(`if allowed:`). 양쪽 게이트가 동형이라 "FINALIZE 가 stage 한 파일을 merge 가 거부"하는 역방향 비대칭 없음. dogfood run 이 생성하는 자기 REVIEW 산출물(타임스탬프 파일명)이 정확매칭 allowlist 를 못 통과해 매 run scope_violation 으로 auto-merge 를 막던 결함 해소
 - MERGE `require_dogfood_commit`: source_branch와 동일 SHA면 BLOCKED (no-op 머지 방지)
 - FINALIZE commit: `AF_SKIP_REVIEW_GATE=1` 인라인 env — 워크트리는 이미 3-Tier 통과 경로이므로 이중 발화 방지
 - BLOCK cleanup: `_cleanup_partial_isolation`은 worktree가 없었으면 branch 삭제 생략 (pre-existing branch 방지)
@@ -1107,11 +1108,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, meta.yaml, skill-spec.yaml (+2)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1658,6 +1659,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dogfood.py, meta.yaml, skill-spec.yaml (+2) |
+| 2026-06-01 | v1.2.34 | fix(dogfood): FINALIZE scope 면제에 `docs/reviews/` 디렉터리 prefix(`FINAL_DOC_DIRS`) 추가 — dogfood run 이 생성하는 자기 REVIEW 산출물(`core/review_report.py` 타임스탬프 파일명)이 매 run scope_violation 으로 auto-merge 를 막던 결함 해소. 정확매칭 allowlist 가 동적 파일명을 못 잡던 문제 → FINALIZE 스테이징 + `build_merge_policy` allowed_paths 양쪽에 디렉터리 prefix 면제. 회귀 2건 신규(64 PASS). 3-Tier 예정. — core/dogfood.py, tests/test_dogfood_isolation.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, code-review.md, test_utils.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): dogfood finalize: core/utils.py에 cumsum(values: list[int | float]) -> list[float] 함수 추가. 각 위치까지의 누적 합 리스트를 반환한다. 빈 리스트이면 빈 리스트를 반환한다. test — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-06-01 | v1.2.34 | feat(utils): `cumsum(values)` 신설 — 각 위치까지의 누적 합 리스트를 float로 반환. 빈 리스트이면 빈 리스트 반환. `tests/test_utils.py` TestCumsum 9건 신규. §12 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |

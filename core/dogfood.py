@@ -904,6 +904,12 @@ FINAL_DOC_PATHS = (
     "docs/code_review/code-review.md",
 )
 
+# Directory prefixes for dogfood-generated doc artifacts whose filenames are
+# dynamic (e.g. core/review_report.py writes docs/reviews/<ts>-<stem>-<type>-review.md).
+# Exact-path allowlisting cannot match timestamped names, so the whole directory
+# is exempted under the same gate as FINAL_DOC_PATHS.
+FINAL_DOC_DIRS = ("docs/reviews/",)
+
 
 def _run_final_docs_sync(state: DogfoodState) -> list[str]:
     """Best-effort final documentation sync for dogfood result commits.
@@ -974,13 +980,25 @@ def finalize_dogfood_result(state: DogfoodState) -> dict[str, Any]:
                     plan_allowlist.add(_f.replace("\\", "/"))
                 for _f in (_step.get("tests_required") or []):
                     plan_allowlist.add(_f.replace("\\", "/"))
-    if plan_allowlist and (
+    # FINAL_DOC_PATHS (Blueprint / code-review) are staged only when a doc sync
+    # actually touched them — gate on final_docs_synced or a core/ change.
+    final_docs_gate = bool(plan_allowlist) and (
         final_docs_synced or any(f.replace("\\", "/").startswith("core/") for f in real_dirty)
-    ):
+    )
+    if final_docs_gate:
         plan_allowlist.update(FINAL_DOC_PATHS)
 
     if real_dirty and plan_allowlist:
-        stage_files = [f for f in real_dirty if f.replace("\\", "/") in plan_allowlist]
+        # FINAL_DOC_DIRS (docs/reviews/): any file under this dir in the (isolated)
+        # worktree is the dogfood run's review output — stage them whenever a plan
+        # exists, matching build_merge_policy's `if allowed:` so a file FINALIZE
+        # stages is never rejected by the merge gate. Staged unconditionally here,
+        # independent of whether a Blueprint/code-review sync ran.
+        stage_files = [
+            f for f in real_dirty
+            if f.replace("\\", "/") in plan_allowlist
+            or f.replace("\\", "/").startswith(FINAL_DOC_DIRS)
+        ]
         scope_violations = [f for f in real_dirty if f not in stage_files]
     elif real_dirty:
         stage_files = list(real_dirty)
@@ -1101,20 +1119,24 @@ def build_merge_policy(state: DogfoodState, mode: str | None = None) -> MergePol
     lets IMPLEMENT commits bypass scope boundaries on auto-merge.
     """
     allowed: list[str] = []
-    has_core_allowed = False
     if state.plan_path:
         _pd = load_policy_json(Path(state.plan_path), required=False)
         for _s in _pd.get("steps", []):
             for _f in (_s.get("artifacts") or []):
-                rel = _f.replace("\\", "/")
-                allowed.append(rel)
-                has_core_allowed = has_core_allowed or rel.startswith("core/")
+                allowed.append(_f.replace("\\", "/"))
             for _f in (_s.get("tests_required") or []):
-                rel = _f.replace("\\", "/")
-                allowed.append(rel)
-                has_core_allowed = has_core_allowed or rel.startswith("core/")
-    if has_core_allowed:
+                allowed.append(_f.replace("\\", "/"))
+    if allowed:
+        # Permit the dogfood doc artifacts whenever the plan has any allowed path.
+        # FINAL_DOC_DIRS (docs/reviews/) is staged unconditionally by FINALIZE under
+        # the same `plan present` condition, so this matches it exactly. FINAL_DOC_PATHS
+        # (Blueprint / code-review) is staged by FINALIZE only under final_docs_gate
+        # (a doc sync ran or core/ changed); permitting them here regardless is the
+        # safe direction — merge is then at-least-as-permissive as FINALIZE, so a file
+        # FINALIZE stages is never rejected here, and a doc path FINALIZE did NOT stage
+        # is simply absent from changed_files. denied_paths still blocks dangerous paths.
         allowed.extend(FINAL_DOC_PATHS)
+        allowed.extend(FINAL_DOC_DIRS)
     return MergePolicy(  # type: ignore[arg-type]
         # None means "use state default"; an explicit invalid string (e.g. "")
         # must reach __post_init__ and raise, not silently coerce to the default.
