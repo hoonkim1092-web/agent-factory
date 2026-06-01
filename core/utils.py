@@ -195,6 +195,20 @@ def cumsum(values: list[int | float]) -> list[float]:
     return result
 
 
+def running_max(values: list[int | float]) -> list[int | float]:
+    """각 위치까지의 누적 최댓값 리스트를 반환한다. 빈 리스트이면 빈 리스트 반환.
+
+    원소 타입을 보존한다 — 입력 값을 그대로 비교·반환하므로 정수 입력은 정수로 유지된다.
+    """
+    result: list[int | float] = []
+    current_max: int | float | None = None
+    for x in values:
+        if current_max is None or x > current_max:
+            current_max = x
+        result.append(current_max)
+    return result
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
