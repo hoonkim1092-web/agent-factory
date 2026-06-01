@@ -6910,3 +6910,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (7)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dogfood.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, skills/dp/skill.py, tests/test_dogfood_isolation.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 15:50 — `dogfood/1780296470-9487ce47` (ba82be6b)
+
+**Context**: dogfood finalize: core/utils.py에 running_max(values: list[int | float]) -> list[int | float] 함수 추가. 각 위치까지의 누적 최댓값 리스트를 반환한다. 빈 리스트이면 []. 
+
+**Changed (3)**: `Master_Blueprint.md, core/utils.py, tests/test_utils.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

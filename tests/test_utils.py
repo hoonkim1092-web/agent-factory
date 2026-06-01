@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max
 from core.utils import test_file_for as _test_file_for
 
 
@@ -463,3 +463,42 @@ class TestCumsum:
     def test_마지막_값은_전체_합(self):
         values = [10, 20, 30]
         assert cumsum(values)[-1] == pytest.approx(sum(values))
+
+
+class TestRunningMax:
+    def test_빈_리스트는_빈_리스트_반환(self):
+        assert running_max([]) == []
+
+    def test_단일_요소(self):
+        assert running_max([5]) == [5]
+
+    def test_증가_수열(self):
+        assert running_max([1, 2, 3, 4]) == [1, 2, 3, 4]
+
+    def test_감소_수열은_첫_값_유지(self):
+        assert running_max([4, 3, 2, 1]) == [4, 4, 4, 4]
+
+    def test_혼합_수열(self):
+        assert running_max([1, 3, 2, 5, 4]) == [1, 3, 3, 5, 5]
+
+    def test_음수_포함(self):
+        assert running_max([-3, -5, -1, -2]) == [-3, -3, -1, -1]
+
+    def test_중복_값(self):
+        assert running_max([2, 2, 2]) == [2, 2, 2]
+
+    def test_부동소수점_리스트(self):
+        assert running_max([1.5, 0.5, 3.0, 2.0]) == [1.5, 1.5, 3.0, 3.0]
+
+    def test_반환_길이_입력과_동일(self):
+        values = [3, 1, 4, 1, 5]
+        assert len(running_max(values)) == len(values)
+
+    def test_정수_타입_보존(self):
+        # 반환 타입은 입력 타입을 보존한다 — 정수 입력은 정수로 유지
+        result = running_max([1, 3, 2])
+        assert all(isinstance(v, int) for v in result)
+
+    def test_마지막_값은_전체_최댓값(self):
+        values = [3, 7, 2, 9, 4]
+        assert running_max(values)[-1] == max(values)
