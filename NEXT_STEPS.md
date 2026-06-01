@@ -3,7 +3,9 @@
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-02 KST (Windows)** — **고리③ 배선 detector 실효성 측정 COMPLETE** (run_id `1780326453-e9f27d38`, merge never). spy executor 실제 claude_cli run에서 investigation 출력이 AI 프롬프트에 실제 도달함 직접 관측(AI 2/2 evidence 블록 채워짐). 상세는 아래 후보 #4 "detector 실효성 측정". 부수 관찰(grep 검증 완료): get_external_skill_roots grep은 R15(57줄 함수) 정상 발화 — false-trigger 아님. 단 R15~17 whole-file 스캔 설계 논점은 남음. **이전 세션**: **병렬 2트랙 COMPLETE** (`3f1a9ec5`, `3d9de679`). premortem R16(complexity detector) + planner 연동 / dogfood CRLF 격리 fix. 2개 Sonnet 에이전트 병렬 구현 → 3-Tier 통합 2라운드 PASS. **1라운드에서 High 3건 검출·수정**: ① worktree `git config`가 source 레포 autocrlf 영구 오염(격리 위반, `--worktree` 없이 shared `.git/config` 기록) → `-c` 일회성 override ② `_is_crlf_only_diff` 2차 방어선이 `text=True` universal-newline으로 doubled-CR(`\r\r\n`→`\n\n`) 오판 → `_git_bytes` raw-bytes 비교 ③ complexity AST walk가 중첩함수 본문 이중계산 → DFS subtree pruning. planner risk ID 계약 정리(`_is_assumption_risk` category-only, R10 pattern_consistency 전용 branch). **+ CRLF fix 실전 검증 성공** (`9755f9b5` cumsum dogfood run — isolation `ready`, CRLF scope_violation 재발 0, 과거 R18/19/22/26 수동 cherry-pick 패턴 소멸 확인). 단 dogfood가 만든 `docs/reviews/*.md`가 FINALIZE scope 면제 누락으로 auto-merge를 막아 수동 ff 머지로 우회 — **새 결함 발견**(아래 후보 #1). **+ 고리③ 배선 수리 COMPLETE**: detector R10~R17의 investigation step(grep) 출력이 `executed`에만 기록되고 AI executor 프롬프트에 미도달하던 단선(`dogfood.py:370/1530`) 수리 — `_build_ai_task`에 investigation_outputs 합류 + evidence 신뢰경계 fence + head-slice 상한. 3-Tier WARN/WARN/PASS(163).
 >
-> **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 percentile() … R1 27차 R15(long_function) + R1 28차 planner R15 연동 + **R16 complexity(병렬 2트랙, 직접구현)** + **dogfood CRLF 격리 fix** + **dogfood docs/reviews scope 면제 fix** + **docs/reviews 면제 실전 검증 PASS** + **R17 nesting_depth(직접구현, 3-Tier PASS)**. 다음 후보:
+> **다음 세션 최우선 진입점**: **dogfood detector 인프라 검증 완료 (2026-06-02) — 다음은 ① 실가치 work-item 선정 또는 ② 저우선 정리**. 북극성 epic("AF가 AF를 개발하는 완성 루프")의 `investigation → AI 프롬프트 → production 코드` 고리가 실제 run에서 닫힘이 직접 관측됨(아래 후보 #4 실효성 측정). detector 풀(R10~R17) 소진 + R18 후보 부적합 → "동일 발화 N차 반복 검증" 프레임은 종료. **다음 work-item 선정 시 메타-재귀 주의**: 파이프라인 의존 모듈(premortem/planner/dogfood/research_*)은 손으로 3-Tier, leaf 기능만 dogfood run.
+>
+> 완료 누계(history): R1 21차 percentile() … R1 27차 R15(long_function) + R1 28차 planner R15 연동 + **R16 complexity(병렬 2트랙)** + **dogfood CRLF 격리 fix** + **dogfood docs/reviews scope 면제 fix** + **docs/reviews 면제 실전 검증 PASS** + **R17 nesting_depth(3-Tier PASS)** + **고리③ 배선 + 실효성 측정(2026-06-02)**. 후보 기록:
 > 1. ~~**(신규 결함, 최우선) dogfood FINALIZE scope 면제에 `docs/reviews/` 추가**~~ ✅ **완료 (2026-06-01)** — `FINAL_DOC_DIRS = ("docs/reviews/",)` 신설. FINALIZE 스테이징 필터 + `build_merge_policy` allowed_paths 양쪽에 디렉터리 prefix 면제. **3-Tier 중 cross-review가 내 1차 판단을 반박**: build_merge_policy가 `has_core_allowed`만 보던 비대칭이 `skills/`/`scripts/`-only plan(`blueprint_updater.TRIGGER_PREFIXES`에 skills 포함)에서도 도달 가능 → gate를 `if allowed:`(plan 비어있지 않으면 doc 면제 추가)로 정합, `has_core_allowed` 추적 제거. 회귀 3건. 3-Tier: af-critic WARN / af-cross-review BLOCK→fixed / af-test-runner PASS(265 tests). 이제 'CRLF fix + 이 결함' 둘 다 풀려 **수동개입 0 자동머지** 가능.
 > 2. ~~**(검증) 다음 dogfood run에서 docs/reviews 면제 실전 확인**~~ ✅ **완료 (2026-06-01, run_id `1780296470-9487ce47`, merge `46ff2ab2`, dogfood_commit `266e00f2`, PC: Windows)** — `running_max()` dummy run. `merge_report.json` 결정적 증거: dogfood가 `docs/reviews/2026-06-01-155026-utils-code-review.md` 생성(=cumsum run에서 머지 막던 그 artifact)했으나 **`scope_violations: []`** → auto_policy merge가 **수동 ff 개입 0**으로 자동 완료(`merge_status: merged`). 신규 `TestRunningMax` 11 PASS. 'CRLF fix + docs/reviews 면제' 둘 다 실전에서 검증돼 dogfood auto-merge 루프 안정화 확인.
 > 3. ~~`core/premortem.py`에 R17 신규 detector (깊은 중첩 depth)~~ ✅ **완료 (2026-06-01, `e66cb553`)** — `_detect_nesting_depth_risk()` + `_max_block_depth()` 신설. If/For/While/With/Try(async 포함) depth>4 → R17 risk. planner `_extract_nesting_depth_pairs()` + investigation branch 연동. 3-Tier: af-critic PASS / af-cross-review PASS(Finding 1/2/3 수용) / af-test-runner PASS. 14+9건 신규, 403 PASS.
@@ -101,7 +103,7 @@ Step A-1(checklist hoist) + A-2(llm_prior_refs) + B(escalation scores) — 신�
 >
 > **✅ 후속 review-fix (2026-05-29)** — dogfood 코드리뷰(`docs/reviews/2026-05-29-192056-*`)가 발견한 **5건 전부 수정**. 핵심: **[High] auto-merge scope 우회** — `_run_merge_phase`가 bare `MergePolicy`로 `allowed_paths=[]` → scope 게이트 무력화하던 결함. `build_merge_policy()` 공용 헬퍼 추출로 auto/manual 경로 정합. 나머지: merge_mode enum 검증(VALID_MERGE_MODES), read_phase_trace OSError/UTF-8 방어, cleanup_skip_reason 보조 필드, _dirty_files docstring. 회귀 +9, dogfood 246 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(codex MCP 미가용=single-vendor) / af-test-runner PASS.
 >
-> **✅ 후속 BLOCK-fix (2026-05-31, `68e1ddc6`)** — fix 이후 생성된 af-critic 리뷰(`docs/reviews/2026-05-29-232850-*`)가 **BLOCK** 판정. 4건 수정: **[High] `_check_merge_policy` allowed_paths fail-open** — plain `startswith`가 `core/utils.py.bak`를 `core/utils.py` allowlist로 통과시킴 → 경계매칭 `f == p or f.startswith(p.rstrip("/")+"/")`로 교정(auto-merge scope 게이트 안전성 복구). [Med] `build_merge_policy` mode fail-closed(`mode or state.merge_mode`→`mode is None` 분기, production 도달경로는 없었으나 latent fail-open 차단). [Low] `dogfood status` cleanup_skip_reason 출력(미배선 해소). [Low] read_phase_trace OSError stderr 경고. 회귀 +4, dogfood 250 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(gemini auth_expired 제외, codex no-findings+Claude 독립검증) / af-test-runner PASS. **잔여 advisory(미수정, diff 범위 밖)**: `_check_merge_policy` denied_paths `denied in f` substring 비대칭 매칭(Medium) — `"runtime/"`가 `"myruntime/"` 오포섭 가능. 별도 작업.
+> **✅ 후속 BLOCK-fix (2026-05-31, `68e1ddc6`)** — fix 이후 생성된 af-critic 리뷰(`docs/reviews/2026-05-29-232850-*`)가 **BLOCK** 판정. 4건 수정: **[High] `_check_merge_policy` allowed_paths fail-open** — plain `startswith`가 `core/utils.py.bak`를 `core/utils.py` allowlist로 통과시킴 → 경계매칭 `f == p or f.startswith(p.rstrip("/")+"/")`로 교정(auto-merge scope 게이트 안전성 복구). [Med] `build_merge_policy` mode fail-closed(`mode or state.merge_mode`→`mode is None` 분기, production 도달경로는 없었으나 latent fail-open 차단). [Low] `dogfood status` cleanup_skip_reason 출력(미배선 해소). [Low] read_phase_trace OSError stderr 경고. 회귀 +4, dogfood 250 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(gemini auth_expired 제외, codex no-findings+Claude 독립검증) / af-test-runner PASS. ~~**잔여 advisory(미수정)**: `_check_merge_policy` denied_paths `denied in f` substring 비대칭 매칭(Medium) — `"runtime/"`가 `"myruntime/"` 오포섭 가능.~~ ✅ **해소 확인 (2026-06-02 grep)**: `core/dogfood.py:1122-1123`이 이미 경계매칭 `f == denied or f.startswith(denied.rstrip("/") + "/")`로 구현됨. `denied in f` substring 잔존 0건. (문서 stale였음 — 코드는 fix 완료.)
 >
 > **Root cause**: dogfood lifecycle에서 "정책 입력·상태 저장·변경 감지·실패 의미론"이 단일 계약으로 묶여 있지 않음.
 > 즉 SSOT는 일부 존재하나(MergePolicy, DogfoodState) **호출처가 우회 가능** = "계약을 만들었지만 강제하지 않음" 상태.
@@ -198,9 +200,11 @@ PR 4 — Operational Hygiene (P2)
 
 ---
 
-## 🔥 미구현 항목 — 실행 순서
+## ✅ 완료된 로드맵 — 실행 로그 (보존)
 
-> 순서: **A Phase 2 → A Phase 3 → A Phase 3.5(측정) → B → A Phase 4**
+> **상태 (2026-06-02)**: 아래 A Phase 2~4 / B Research Router / §17 Step 1~20 항목은 **전부 완료**됐다. 미완료 항목이 아니라 완료 기록의 보존 로그다. 신규 진입은 상단 "다음 세션 최우선 진입점" 참조.
+>
+> 원래 순서(history): **A Phase 2 → A Phase 3 → A Phase 3.5(측정) → B → A Phase 4**
 > 근거: 검토 루프 인프라 먼저, 기능 확장은 루프 안정 후
 
 ### A Phase 2: review_bundle 생성기 ✅ DONE (`23f3e7bc`)
@@ -236,7 +240,7 @@ PR 4 — Operational Hygiene (P2)
 
 **1주 데이터 수집 후에만 Phase 4 진입** (감 기반 skip routing 금지)
 
-### B. Research Router Phase 2 — structured evidence promotion ✅ B-1(fallback trace) · B-2 완료 · B-3 step 1-3b 완료 (step 4 후행)
+### B. Research Router Phase 2 — structured evidence promotion ✅ 전체 완료 — B-1(fallback trace) · B-2 · B-3 step 1~4 (step 4 = `b48bf7cc` ReuseDecision→skill_manifest 보존)
 
 > 설계: `docs/2026-04-29-research-router-structured-evidence-design.md` §11 Phase 2 (L1139-1145)
 > 본질: **데이터는 이미 생성됨** — 뒤 파이프라인 소비처가 안 쓰는 게 문제. "Research Router 필드 연결"이 아니라 "structured evidence promotion".
