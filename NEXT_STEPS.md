@@ -1,5 +1,12 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+> ## 🛑 STREAM 상태 (2026-06-02 고정)
+> - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**
+> - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
+> - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
+> - **다음 단계**: Step 0 제품 결정 (범위 축소판: 대상 ICP + 첫 task type 2건만 확정, 나머지는 가설 1줄). 산출물 = `docs/2026-06-02-af-step0-product-decisions.md`, "결정 1줄 + 근거 1줄" 계약. analysis-paralysis 차단(4/26 정의 후 5주 미결 전례).
+> - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
+>
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
 > 마지막 업데이트: **2026-06-02 KST (Windows)** — **고리③ 배선 detector 실효성 측정 COMPLETE** (run_id `1780326453-e9f27d38`, merge never). spy executor 실제 claude_cli run에서 investigation 출력이 AI 프롬프트에 실제 도달함 직접 관측(AI 2/2 evidence 블록 채워짐). 상세는 아래 후보 #4 "detector 실효성 측정". 부수 관찰(grep 검증 완료): get_external_skill_roots grep은 R15(57줄 함수) 정상 발화 — false-trigger 아님. 단 R15~17 whole-file 스캔 설계 논점은 남음. **이전 세션**: **병렬 2트랙 COMPLETE** (`3f1a9ec5`, `3d9de679`). premortem R16(complexity detector) + planner 연동 / dogfood CRLF 격리 fix. 2개 Sonnet 에이전트 병렬 구현 → 3-Tier 통합 2라운드 PASS. **1라운드에서 High 3건 검출·수정**: ① worktree `git config`가 source 레포 autocrlf 영구 오염(격리 위반, `--worktree` 없이 shared `.git/config` 기록) → `-c` 일회성 override ② `_is_crlf_only_diff` 2차 방어선이 `text=True` universal-newline으로 doubled-CR(`\r\r\n`→`\n\n`) 오판 → `_git_bytes` raw-bytes 비교 ③ complexity AST walk가 중첩함수 본문 이중계산 → DFS subtree pruning. planner risk ID 계약 정리(`_is_assumption_risk` category-only, R10 pattern_consistency 전용 branch). **+ CRLF fix 실전 검증 성공** (`9755f9b5` cumsum dogfood run — isolation `ready`, CRLF scope_violation 재발 0, 과거 R18/19/22/26 수동 cherry-pick 패턴 소멸 확인). 단 dogfood가 만든 `docs/reviews/*.md`가 FINALIZE scope 면제 누락으로 auto-merge를 막아 수동 ff 머지로 우회 — **새 결함 발견**(아래 후보 #1). **+ 고리③ 배선 수리 COMPLETE**: detector R10~R17의 investigation step(grep) 출력이 `executed`에만 기록되고 AI executor 프롬프트에 미도달하던 단선(`dogfood.py:370/1530`) 수리 — `_build_ai_task`에 investigation_outputs 합류 + evidence 신뢰경계 fence + head-slice 상한. 3-Tier WARN/WARN/PASS(163).
 >
