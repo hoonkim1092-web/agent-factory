@@ -4,7 +4,9 @@
 > - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**
 > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
 > - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
-> - **다음 단계**: Step 0 제품 결정 (범위 축소판: 대상 ICP + 첫 task type 2건만 확정, 나머지는 가설 1줄). 산출물 = `docs/2026-06-02-af-step0-product-decisions.md`, "결정 1줄 + 근거 1줄" 계약. analysis-paralysis 차단(4/26 정의 후 5주 미결 전례).
+> - **✅ Step 0 완료 (2026-06-02)**: `docs/2026-06-02-af-step0-product-decisions.md` — #3 대상=Python 본인도구, #4 task type=기능추가(더미금지) 확정.
+> - **✅ LLM Wiki Phase 0 완료 (2026-06-02, `4fdd8df5`)**: `scripts/build_llm_wiki.py` + `docs/generated/llm_wiki/` 5페이지(index/architecture/review_patterns/open_items/source_refs) + 테스트 17 PASS. 재생성: `python scripts/build_llm_wiki.py`. Obsidian vault: `docs/generated/llm_wiki/`.
+> - **다음**: LLM Wiki Phase 1 후보 (ContextPack 연결 / 자동 재생성 트리거) 또는 F10(작업 git 맥락 주입) — LLM Wiki 품질 검증 후 결정.
 > - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
 >
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
