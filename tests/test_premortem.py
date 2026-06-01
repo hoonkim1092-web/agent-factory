@@ -1252,3 +1252,14 @@ class TestNestingDepthRisk:
         ids = [r.id for r in result.risks]
         assert "R17" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+    def test_detect_nesting_depth_fires_on_real_repo_file(self):
+        """R17 발화 smoke test — 합성 픽스처 없이 실제 repo 파일(core/premortem.py)에서 동작한다.
+
+        core/premortem.py의 _detect_complexity_risk 함수는 nesting depth 7로
+        _NESTING_DEPTH_THRESHOLD(4)를 초과한다 — R17이 발화해야 한다.
+        """
+        from core.premortem import _detect_nesting_depth_risk
+        result = _detect_nesting_depth_risk(["core/premortem.py"])
+        assert len(result) >= 1
+        assert any(r.id == "R17" for r in result)

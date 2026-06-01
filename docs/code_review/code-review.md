@@ -6930,3 +6930,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (5)**: `Master_Blueprint.md, core/planner.py, core/premortem.py, tests/test_planner.py, tests/test_premortem.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 23:44 — `2026-05-20-research-coverage-gate` (1bc15c0d)
+
+**Context**: Claude Code edit session
+
+**Changed (13)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dogfood.py, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/docs/architecture.md, projects/agent_factory/docs/change_history.md, projects/agent_factory/policies.yaml, projects/agent_factory/settings.yaml, projects/agent_factory/workflow.yaml, tests/test_dogfood.py, tests/test_premortem.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
