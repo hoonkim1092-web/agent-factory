@@ -1,12 +1,12 @@
 # NEXT_STEPS — 세션 재개 가이드
 
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
-> 마지막 업데이트: **2026-06-01 KST (Windows)** — **병렬 2트랙 COMPLETE** (`3f1a9ec5`, `3d9de679`). premortem R16(complexity detector) + planner 연동 / dogfood CRLF 격리 fix. 2개 Sonnet 에이전트 병렬 구현 → 3-Tier 통합 2라운드 PASS. **1라운드에서 High 3건 검출·수정**: ① worktree `git config`가 source 레포 autocrlf 영구 오염(격리 위반, `--worktree` 없이 shared `.git/config` 기록) → `-c` 일회성 override ② `_is_crlf_only_diff` 2차 방어선이 `text=True` universal-newline으로 doubled-CR(`\r\r\n`→`\n\n`) 오판 → `_git_bytes` raw-bytes 비교 ③ complexity AST walk가 중첩함수 본문 이중계산 → DFS subtree pruning. planner risk ID 계약 정리(`_is_assumption_risk` category-only, R10 pattern_consistency 전용 branch).
+> 마지막 업데이트: **2026-06-01 KST (Windows)** — **병렬 2트랙 COMPLETE** (`3f1a9ec5`, `3d9de679`). premortem R16(complexity detector) + planner 연동 / dogfood CRLF 격리 fix. 2개 Sonnet 에이전트 병렬 구현 → 3-Tier 통합 2라운드 PASS. **1라운드에서 High 3건 검출·수정**: ① worktree `git config`가 source 레포 autocrlf 영구 오염(격리 위반, `--worktree` 없이 shared `.git/config` 기록) → `-c` 일회성 override ② `_is_crlf_only_diff` 2차 방어선이 `text=True` universal-newline으로 doubled-CR(`\r\r\n`→`\n\n`) 오판 → `_git_bytes` raw-bytes 비교 ③ complexity AST walk가 중첩함수 본문 이중계산 → DFS subtree pruning. planner risk ID 계약 정리(`_is_assumption_risk` category-only, R10 pattern_consistency 전용 branch). **+ CRLF fix 실전 검증 성공** (`9755f9b5` cumsum dogfood run — isolation `ready`, CRLF scope_violation 재발 0, 과거 R18/19/22/26 수동 cherry-pick 패턴 소멸 확인). 단 dogfood가 만든 `docs/reviews/*.md`가 FINALIZE scope 면제 누락으로 auto-merge를 막아 수동 ff 머지로 우회 — **새 결함 발견**(아래 후보 #1).
 >
 > **다음 세션 최우선 진입점**: **production work-item dogfood run 연속 진행**. 완료: R1 21차 percentile() … R1 27차 R15(long_function) + R1 28차 planner R15 연동 + **R16 complexity(병렬 2트랙, 직접구현)** + **dogfood CRLF 격리 fix**. 다음 후보:
-> 1. `core/planner.py` R16(complexity)는 이미 연동됨 — `core/premortem.py`에 R17 신규 detector (예: 미사용 import, 깊은 중첩)
-> 2. `core/utils.py`에 새 유틸 함수 추가 (dogfood 인프라 계속 검증, CRLF fix로 auto-merge BLOCK 근절됐는지 실전 확인)
-> 3. (인프라) dogfood CRLF fix를 실제 dogfood run으로 검증 — R18/19/22/26차에서 반복되던 수동 cherry-pick이 사라지는지
+> 1. **(신규 결함, 최우선) dogfood FINALIZE scope 면제에 `docs/reviews/` 추가** — dogfood가 자기 REVIEW 산출물(`core/review_report.py:212`가 `docs/reviews/<date>-<module>-code-review.md` 생성)을 만드는데 FINALIZE allowed_paths 면제 목록에 없어 매 run auto-merge가 `scope_violations`로 막힘. P2에서 `Master_Blueprint.md`·`docs/code_review/code-review.md`는 자동 포함됐으나 `docs/reviews/` 누락. 고치면 'CRLF fix + 이 결함' 둘 다 풀려 **수동개입 0 자동머지** 완성. (1780290171 run에서 실측, 수동 ff 머지 `9755f9b5`로 우회함)
+> 2. `core/premortem.py`에 R17 신규 detector (예: 깊은 중첩 depth. 미사용 import는 false-positive 많아 비권장 — 2026-06-01 사용자 합의)
+> 3. ~~CRLF fix dogfood run 검증~~ ✅ 완료 (`9755f9b5`, CRLF 재발 0)
 >
 > **R1 18차 특이사항**: dogfood run scope_violations(CRLF 다중 `^M` 오염 파일 — data/memory/*.json, docs/*.md)로 auto-merge BLOCKED. 원인: 워크트리 일부 파일에 `^M`이 10개씩 중첩돼 `--ignore-cr-at-eol` 필터링 불통과. 수동 cherry-pick으로 처리. 근본 해결: dogfood worktree 생성 전 CRLF 오염 파일 목록 gitattributes 정리 (별도 작업).
 
