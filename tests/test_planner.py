@@ -978,3 +978,152 @@ class TestLongFunctionRiskInvestigation:
         plan = build_plan(_spec(), _premortem(risks))
         inv = [s for s in plan.steps if s.action.startswith("긴 함수 검토")]
         assert inv == []
+
+
+# ---------------------------------------------------------------------------
+# 1a 회귀 테스트: risk ID 계약 정리
+# ---------------------------------------------------------------------------
+
+class TestAssumptionRiskContractRegression:
+    """_is_assumption_risk ID-레인지 fallback 제거 회귀 가드."""
+
+    def test_r10_pattern_consistency_still_gets_investigation_step(self):
+        """R10 pattern_consistency → investigation step이 여전히 생성된다."""
+        risk = _risk(
+            "R10",
+            "Existing code patterns found in scope: core/utils.py. New implementation must extend consistently.",
+            "pattern_consistency",
+            ["python -m py_compile core/utils.py"],
+        )
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if "Investigate" in s.action]
+        assert len(inv) == 1
+
+    def test_r10_pattern_consistency_commands_include_py_compile(self):
+        """R10 pattern_consistency step의 commands에 py_compile 명령이 포함된다."""
+        risk = _risk(
+            "R10",
+            "Existing code patterns found in scope: core/utils.py. New implementation must extend consistently.",
+            "pattern_consistency",
+            ["python -m py_compile core/utils.py", "# Review patterns in core/utils.py"],
+        )
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if "Investigate" in s.action]
+        assert len(inv) == 1
+        assert any("py_compile" in cmd for cmd in inv[0].commands)
+        # comment는 포함되지 않아야 한다
+        assert all(not cmd.strip().startswith("#") for cmd in inv[0].commands)
+
+    def test_id_in_range_but_not_assumption_category_no_assumption_step(self):
+        """id=[5,20) 범위지만 category가 'assumption'도 'pattern_consistency'도 아니면 assumption step 없음."""
+        risk = _risk("R7", "some other risk description", "other", ["cmd"])
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if "Investigate" in s.action]
+        assert inv == []
+
+    def test_assumption_category_still_gets_investigation_step(self):
+        """category='assumption' risk는 여전히 investigation step을 받는다."""
+        risk = _risk("R16", "Low-confidence assumption: API stable", "assumption", ["grep rate_limit core/"])
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if "Investigate" in s.action]
+        assert len(inv) == 1
+        assert "grep rate_limit core/" in inv[0].commands
+
+
+# ---------------------------------------------------------------------------
+# TestComplexityRiskInvestigation
+# ---------------------------------------------------------------------------
+
+class TestComplexityRiskInvestigation:
+    """R16(complexity) risk → investigation steps."""
+
+    _PREFIX = "Complex function(s) in scope: "
+    _SUFFIX = ". Consider refactoring before extending."
+
+    def _complexity_desc(self, fn: str = "heavy_fn", path: str = "core/utils.py", n: int = 14) -> str:
+        return f"{self._PREFIX}`{fn}` in {path} (complexity {n}){self._SUFFIX}"
+
+    def _cx_risk(self, desc: str) -> PremortomRisk:
+        return _risk("R16", desc, "complexity")
+
+    def test_single_complexity_generates_one_step(self):
+        """복잡 함수 1개 → 1개 investigation step."""
+        risk = self._cx_risk(self._complexity_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
+        assert len(inv) == 1
+        assert "heavy_fn" in inv[0].action
+        assert "core/utils.py" in inv[0].action
+        assert "complexity 14" in inv[0].action
+
+    def test_step_has_grep_def_command(self):
+        """investigation step에 'grep -n def <func>' 명령어가 포함된다."""
+        risk = self._cx_risk(self._complexity_desc(fn="my_fn"))
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
+        assert inv[0].commands
+        assert "grep" in inv[0].commands[0]
+        assert "def my_fn" in inv[0].commands[0]
+
+    def test_multiple_complexity_entries_generate_multiple_steps(self):
+        """두 복잡 함수 → 2개 investigation step."""
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (complexity 12); "
+            f"`fn_b` in core/planner.py (complexity 15){self._SUFFIX}"
+        )
+        risk = self._cx_risk(desc)
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
+        assert len(inv) == 2
+
+    def test_no_complexity_risk_no_investigation_step(self):
+        """complexity risk 없으면 복잡 함수 검토 step이 생성되지 않는다."""
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
+        assert inv == []
+
+    def test_complexity_steps_come_before_implementation(self):
+        """investigation step은 implementation step보다 먼저 배치된다."""
+        risk = self._cx_risk(self._complexity_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        idx_inv = next(i for i, s in enumerate(plan.steps) if s.action.startswith("복잡 함수 검토"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.action.startswith("Implement"))
+        assert idx_inv < idx_impl
+
+    def test_extract_complexity_pairs_single(self):
+        """_extract_complexity_pairs: 단일 항목 파싱."""
+        from core.planner import _extract_complexity_pairs
+        risk = self._cx_risk(self._complexity_desc("my_fn", "core/utils.py", 14))
+        assert _extract_complexity_pairs(risk) == [("my_fn", "core/utils.py", 14)]
+
+    def test_extract_complexity_pairs_multiple(self):
+        """_extract_complexity_pairs: 복수 항목 파싱."""
+        from core.planner import _extract_complexity_pairs
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (complexity 12); "
+            f"`fn_b` in core/planner.py (complexity 15){self._SUFFIX}"
+        )
+        risk = self._cx_risk(desc)
+        assert _extract_complexity_pairs(risk) == [
+            ("fn_a", "core/utils.py", 12),
+            ("fn_b", "core/planner.py", 15),
+        ]
+
+    def test_extract_complexity_pairs_zero_findings(self):
+        """R16이지만 description 형식이 다르면 빈 리스트 반환."""
+        from core.planner import _extract_complexity_pairs
+        risk = self._cx_risk("Some other description.")
+        assert _extract_complexity_pairs(risk) == []
+
+    def test_complexity_grep_command_targets_correct_file(self):
+        """각 항목 step의 target이 해당 파일 경로이다."""
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (complexity 12); "
+            f"`fn_b` in core/planner.py (complexity 15){self._SUFFIX}"
+        )
+        risk = self._cx_risk(desc)
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
+        assert inv[0].target == "core/utils.py"
+        assert inv[1].target == "core/planner.py"

@@ -384,6 +384,74 @@ def _detect_long_function_risk(scope: list[str]) -> list[PremortomRisk]:
     ]
 
 
+_COMPLEXITY_THRESHOLD = 10
+
+
+def _detect_complexity_risk(scope: list[str]) -> list[PremortomRisk]:
+    """Scope .py files containing functions with cyclomatic-style complexity > threshold are R16.
+
+    Complexity = 1 + count of branching nodes (If, For, While, ExceptHandler,
+    BoolOp extra values, comprehension ifs) within each function body.
+    Returns an empty list if nothing trips the threshold.
+    """
+    findings: list[tuple[str, str, int]] = []  # (func_name, path, complexity)
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                source = fh.read()
+            tree = ast.parse(source, filename=path)
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            complexity = 1
+            # Use an explicit DFS stack that prunes nested FunctionDef subtrees.
+            # ast.walk() flattens the entire subtree, so a plain `continue` on a
+            # nested FunctionDef node skips that node but still yields all of its
+            # descendants, double-counting their branches in the outer function's
+            # complexity.  The stack-based traversal below never enqueues children
+            # of a nested FunctionDef, so inner branches are excluded entirely.
+            stack = list(ast.iter_child_nodes(node))
+            while stack:
+                child = stack.pop()
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    # Nested function — do not descend; it is counted separately
+                    # when ast.walk(tree) visits it as its own top-level node.
+                    continue
+                if isinstance(child, (ast.If, ast.For, ast.While, ast.ExceptHandler)):
+                    complexity += 1
+                elif isinstance(child, ast.BoolOp):
+                    complexity += len(child.values) - 1
+                elif isinstance(child, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
+                    for generator in child.generators:
+                        complexity += len(generator.ifs)
+                stack.extend(ast.iter_child_nodes(child))
+            if complexity > _COMPLEXITY_THRESHOLD:
+                findings.append((node.name, path, complexity))
+    if not findings:
+        return []
+    desc_parts = "; ".join(
+        f"`{name}` in {path} (complexity {n})" for name, path, n in findings
+    )
+    return [
+        PremortomRisk(
+            id="R16",
+            description=f"Complex function(s) in scope: {desc_parts}. Consider refactoring before extending.",
+            category="complexity",
+            verification=[
+                VerificationStep(
+                    command=shlex.join(["grep", "-n", f"def {name}", path]),
+                    description=f"Locate `{name}` in {path} for refactoring consideration.",
+                )
+                for name, path, _ in findings
+            ],
+        )
+    ]
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -467,7 +535,7 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
         risks.append(r)
 
     # R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import,
-    # R15=long_function; assumptions start at R16.
+    # R15=long_function; R16=complexity; assumptions start at R17.
     risks.extend(_detect_scope_file_risk(spec.scope))
     r = _detect_stale_test_risk(spec.scope)
     if r:
@@ -479,9 +547,10 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
     if r:
         risks.append(r)
     risks.extend(_detect_long_function_risk(spec.scope))
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=16)
+    risks.extend(_detect_complexity_risk(spec.scope))
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=17)
     risks.extend(assumption_risks)
-    gap_start = max(21, 16 + len(assumption_risks))
+    gap_start = max(22, 17 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)

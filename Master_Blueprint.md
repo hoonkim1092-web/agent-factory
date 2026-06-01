@@ -152,8 +152,8 @@
 | `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
-| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`, `_detect_scope_file_risk()`, `_detect_stale_test_risk()`, `_detect_duplicate_function_risk()`, `_detect_conflicting_import_risk()` |
-| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성(`shlex.quote` 안전 처리). 2026-05-31: R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼로 stale 파일→`tests/test_<stem>.py` 경로 변환, "테스트 작성" investigation step 생성. last_updated: 2026-05-31 | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()`, `_extract_scope_file_paths()`, `_extract_stale_test_paths()` |
+| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`, `_detect_scope_file_risk()`, `_detect_stale_test_risk()`, `_detect_duplicate_function_risk()`, `_detect_conflicting_import_risk()`, `_detect_long_function_risk()`, `_detect_complexity_risk()` |
+| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성(`shlex.quote` 안전 처리). 2026-05-31: R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼로 stale 파일→`tests/test_<stem>.py` 경로 변환, "테스트 작성" investigation step 생성. 2026-06-01: R16(complexity) 연동 — `_extract_complexity_pairs()` 헬퍼 + complexity investigation branch. **risk ID 계약 정리**: `_is_assumption_risk()`를 category-only로 축소(brittle `[5,20)` ID-레인지 제거 — 신규 fixed detector 오분류 방지), `pattern_consistency`(R10) 전용 investigation branch 신설(레인지 제거로 인한 R10 step 누락 회귀 차단). last_updated: 2026-06-01 | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()`, `_extract_scope_file_paths()`, `_extract_stale_test_paths()`, `_extract_complexity_pairs()` |
 | `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
 | `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
 | `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
@@ -1041,7 +1041,7 @@ run_factory_cli.main()
 - `install-af.ps1` / `install-af.sh`: Chrome 감지 + `__check-nlm` 검증 + 재설치 시 `.env`/`.af_setup_state.json` 자동 복원
 
 ### §3.13 Dogfood Pipeline (`core/dogfood.py`)
-<!-- last_updated: 2026-05-31 BLOCK-fix (232850): _check_merge_policy allowed_paths 경계 매칭(prefix fail-open 제거) + build_merge_policy mode fail-closed(`mode is None` 분기) + cleanup_skip_reason status 출력 + read_phase_trace OSError stderr 경고. 이전: 2026-05-29 review-fix (5건): build_merge_policy() 공용 헬퍼 + merge_mode enum 검증 + read_phase_trace 방어 + cleanup_skip_reason 필드 -->
+<!-- last_updated: 2026-06-01 CRLF-fix: prepare_isolated_worktree `-c core.autocrlf=false update-index --refresh` 일회성 override(영구 config 미기록 — source 레포 무영향) + _is_crlf_only_diff 2차 방어선 raw bytes(_git_bytes)로 doubled-CR text=True 함정 회피. 이전: 2026-05-31 BLOCK-fix (232850): _check_merge_policy allowed_paths 경계 매칭(prefix fail-open 제거) + build_merge_policy mode fail-closed(`mode is None` 분기) + cleanup_skip_reason status 출력 + read_phase_trace OSError stderr 경고. 이전: 2026-05-29 review-fix (5건): build_merge_policy() 공용 헬퍼 + merge_mode enum 검증 + read_phase_trace 방어 + cleanup_skip_reason 필드 -->
 
 **목적**: AF가 스스로 코드를 작성·검증·머지하는 "자기 수정" 파이프라인 (§17 Step 7~16). interview → research → spec → premortem → plan → isolate → implement → verify → review → finalize → merge 14-단계 순환.
 
@@ -1065,7 +1065,9 @@ run_factory_cli.main()
 | `_check_merge_policy(state, policy, changed_files, ...)` | merge 게이트 — scope/dirty/drift/dogfood_commit/denied/allowed 검사. **allowed_paths는 경계 매칭** (`f == p or f.startswith(p.rstrip("/") + "/")`) — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open이라 제거. |
 | `run_phase(state, phase)` | 단일 phase 실행 |
 | `advance_phase` / `block_run` / `retry_run` | 상태 전이 (retry는 IMPLEMENT→VERIFY 최대 3회) |
-| `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE |
+| `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE. **CRLF fix(2026-06-01)**: worktree 생성 직후 `git -c core.autocrlf=false update-index --refresh` **일회성 override** — Windows `autocrlf=true`가 bare-`\r` 누적 blob에 남기는 phantom stat-cache dirty(blob==index==WC인데 ` M`) 제거. dogfood auto-merge가 CRLF 오탐으로 BLOCK되던 근원 차단. **영구 `git config` 기록 안 함** — linked worktree는 source 레포와 `.git`을 공유하므로 `git config`(`--worktree` 없이)는 shared config를 오염시킴 → `-c` 일회성으로 source 레포 무영향(real-git 통합 테스트로 불변 검증). |
+| `_git_bytes(args, cwd, ...)` | `_git`의 raw-bytes 변형(`text=False`) — universal-newline 변환 없이 blob을 그대로 읽기 위한 헬퍼. |
+| `_is_crlf_only_diff(filepath, cwd)` | 변경이 CR/LF 노이즈뿐인지 판정. 1차 `git diff --ignore-cr-at-eol` empty. **2차 방어선(2026-06-01)**: blob(`HEAD:`, `_git_bytes` **raw bytes**)·working-copy `read_bytes()`를 `\r` 제거 후 **bytes 비교** — `text=True`가 `\r\r\n`→`\n\n`으로 변환해 `.replace`를 무력화하는 함정을 회피, doubled-CR(`\r\r\n`)도 노이즈로 인식. untracked/예외→fail-closed(real change 간주). |
 | `finalize_dogfood_result(state)` | plan allowlist 교집합만 `git add` → `scope_violations` 기록 + `AF_SKIP_REVIEW_GATE=1` commit |
 | `merge_dogfood_branch(state, policy)` | is-ancestor crash recovery → `reset --merge` → actual merge |
 
@@ -1105,11 +1107,13 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — planner.py, test_planner.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, planner.py, premortem.py, meta.yaml (+5)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 | `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
+| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1656,6 +1660,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, planner.py, premortem.py, meta.yaml (+5) |
+| 2026-06-01 | v1.2.34 | feat(premortem+planner): R16 complexity detector(`_detect_complexity_risk`, ast 분기복잡도>10) + planner 연동(`_extract_complexity_pairs` + complexity investigation branch). **risk ID 계약 정리**: `_is_assumption_risk` category-only 축소(brittle `[5,20)` 제거) + `pattern_consistency`(R10) 전용 branch 신설(레인지 제거 회귀 차단). assumption start 16→17, gap_start max(21,..)→max(22,..). `TestComplexityRisk`/`TestComplexityRiskInvestigation`/`TestAssumptionRiskContractRegression` 신규. — premortem.py, planner.py, test_premortem.py, test_planner.py, Master_Blueprint.md |
+| 2026-06-01 | v1.2.34 | fix(dogfood CRLF): `prepare_isolated_worktree`에 `git -c core.autocrlf=false update-index --refresh` 일회성 override(영구 config 미기록 — linked worktree가 shared `.git`을 오염시키던 격리 위반 차단, source 레포 불변 통합 테스트). `_is_crlf_only_diff` 2차 방어선을 `_git_bytes` raw-bytes 비교로(text=True가 `\r\r\n`→`\n\n` 변환해 doubled-CR을 놓치던 오판 수정). `tests/test_dogfood_isolation.py` 회귀. — core/dogfood.py, test_dogfood_isolation.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | chore(core): code update — planner.py, test_planner.py |
 | 2026-06-01 | v1.2.34 | chore(core): code update — premortem.py, test_premortem.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_key_123.json, test_key_123.json, AGENT_FACTORY_PITCH.md (+15) |

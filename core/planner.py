@@ -138,14 +138,9 @@ def _unresolved_risks(
 # Step builders
 # ---------------------------------------------------------------------------
 
-def _is_assumption_risk(risk: PremortomResult) -> bool:
-    """True when risk qualifies as an assumption: category='assumption' OR risk_id in [5, 20)."""
-    if risk.category == "assumption":
-        return True
-    try:
-        return 5 <= int(risk.id.lstrip("R")) < 20
-    except (ValueError, AttributeError):
-        return False
+def _is_assumption_risk(risk: PremortomRisk) -> bool:
+    """True when risk category is 'assumption'."""
+    return risk.category == "assumption"
 
 
 _SCOPE_FILE_PREFIX = "Scope file(s) not found on disk: "
@@ -197,6 +192,10 @@ def _extract_conflicting_import_pairs(risk: PremortomRisk) -> list[tuple[str, st
 _LONG_FUNCTION_PREFIX = "Scope contains function(s) exceeding "
 _LONG_FUNCTION_RE = re.compile(r"`([^`]+)` in ([^ ]+) \((\d+) lines\)")
 
+_COMPLEXITY_PREFIX = "Complex function(s) in scope: "
+_COMPLEXITY_SUFFIX = ". Consider refactoring before extending."
+_COMPLEXITY_RE = re.compile(r"`([^`]+)` in ([^ ]+) \(complexity (\d+)\)")
+
 
 def _extract_long_function_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]:
     """Parse (func_name, file_path, line_count) triples from a long_function risk description."""
@@ -209,6 +208,17 @@ def _extract_long_function_pairs(risk: PremortomRisk) -> list[tuple[str, str, in
     return [
         (m.group(1), m.group(2), int(m.group(3)))
         for m in _LONG_FUNCTION_RE.finditer(rest)
+    ]
+
+
+def _extract_complexity_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]:
+    """Parse (func_name, file_path, complexity) triples from a complexity risk description."""
+    if not (risk.description.startswith(_COMPLEXITY_PREFIX) and risk.description.endswith(_COMPLEXITY_SUFFIX)):
+        return []
+    inner = risk.description[len(_COMPLEXITY_PREFIX):len(risk.description) - len(_COMPLEXITY_SUFFIX)]
+    return [
+        (m.group(1), m.group(2), int(m.group(3)))
+        for m in _COMPLEXITY_RE.finditer(inner)
     ]
 
 
@@ -322,6 +332,35 @@ def _build_investigation_steps(
                     ],
                 ))
                 counter[0] += 1
+        elif risk.category == "complexity":
+            for func_name, file_path, n in _extract_complexity_pairs(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"복잡 함수 검토: `{func_name}` in {file_path} (complexity {n})",
+                    target=file_path,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        shlex.join(["grep", "-n", f"def {func_name}", file_path]),
+                    ],
+                ))
+                counter[0] += 1
+        elif risk.category == "pattern_consistency":
+            cmds = [
+                v.command for v in risk.verification
+                if not v.command.strip().startswith("#")
+            ]
+            steps.append(PlanStep(
+                id=f"S{counter[0]}",
+                action=f"Investigate: {risk.description}",
+                target=risk.description,
+                tests_required=[],
+                artifacts=[],
+                depends_on=[],
+                commands=cmds,
+            ))
+            counter[0] += 1
         elif _is_assumption_risk(risk):
             cmds = [
                 v.command for v in risk.verification

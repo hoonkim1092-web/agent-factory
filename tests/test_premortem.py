@@ -491,13 +491,14 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r16_not_r15(self):
-        """Assumptions start at R16: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function."""
+    def test_assumption_ids_start_at_r17_not_r16(self):
+        """Assumptions start at R17: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R16" in ids
+        assert "R17" in ids
+        assert "R16" not in ids  # no complex functions in empty scope
         assert "R14" not in ids
         assert "R13" not in ids
         assert "R12" not in ids
@@ -646,13 +647,14 @@ class TestDuplicateFunctionRisk:
         ids = [r.id for r in result.risks]
         assert "R13" not in ids
 
-    def test_assumption_ids_start_at_r16_not_r15(self):
-        """Assumptions start at R16: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function."""
+    def test_assumption_ids_start_at_r17_not_r16(self):
+        """Assumptions start at R17: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R16" in ids
+        assert "R17" in ids
+        assert "R16" not in ids  # no complex functions in empty scope
         assert "R14" not in ids
         assert "R13" not in ids
 
@@ -841,3 +843,255 @@ class TestLongFunctionRisk:
         ids = [r.id for r in result.risks]
         assert "R15" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+
+# ---------------------------------------------------------------------------
+# TestComplexityRisk
+# ---------------------------------------------------------------------------
+
+class TestComplexityRisk:
+    """Tests for _detect_complexity_risk (R16)."""
+
+    def _make_simple_func(self, tmp_path) -> str:
+        source = "def simple():\n    return 1\n"
+        f = tmp_path / "mod.py"
+        f.write_text(source)
+        return str(f)
+
+    def _make_complex_func(self, tmp_path, name: str = "complex_fn", complexity: int = 12) -> str:
+        """Build a function with enough if/for/while to exceed the threshold."""
+        # complexity = 1 + number of If/For/While nodes
+        branches = complexity - 1
+        body_lines = []
+        for i in range(branches):
+            body_lines.append(f"    if x{i} > 0:")
+            body_lines.append(f"        x{i} = 1")
+        source = f"def {name}(x0=0, **kwargs):\n"
+        for i in range(1, branches):
+            source += f"    x{i} = {i}\n"
+        source += "\n".join(body_lines) + "\n    return 0\n"
+        f = tmp_path / "mod.py"
+        f.write_text(source)
+        return str(f)
+
+    def test_empty_scope_returns_empty(self):
+        from core.premortem import _detect_complexity_risk
+        assert _detect_complexity_risk([]) == []
+
+    def test_non_py_files_ignored(self, tmp_path):
+        from core.premortem import _detect_complexity_risk
+        f = tmp_path / "config.yaml"
+        f.write_text("key: value\n")
+        assert _detect_complexity_risk([str(f)]) == []
+
+    def test_simple_function_returns_empty(self, tmp_path):
+        from core.premortem import _detect_complexity_risk
+        path = self._make_simple_func(tmp_path)
+        assert _detect_complexity_risk([path]) == []
+
+    def test_complex_function_returns_r16(self, tmp_path):
+        from core.premortem import _detect_complexity_risk
+        path = self._make_complex_func(tmp_path, complexity=12)
+        result = _detect_complexity_risk([path])
+        assert len(result) == 1
+        assert result[0].id == "R16"
+        assert result[0].category == "complexity"
+
+    def test_exactly_threshold_returns_empty(self, tmp_path):
+        """복잡도 == 10은 임계값 초과 아님 → 결과 없음."""
+        from core.premortem import _detect_complexity_risk, _COMPLEXITY_THRESHOLD
+        # 복잡도 10 = 1 + 9 branches
+        branches = _COMPLEXITY_THRESHOLD - 1
+        body = "\n".join(
+            f"    if x{i} > 0:\n        x{i} = 1"
+            for i in range(branches)
+        )
+        source = f"def borderline(**kwargs):\n"
+        for i in range(branches):
+            source += f"    x{i} = {i}\n"
+        source += body + "\n    return 0\n"
+        f = tmp_path / "mod.py"
+        f.write_text(source)
+        assert _detect_complexity_risk([str(f)]) == []
+
+    def test_one_over_threshold_returns_r16(self, tmp_path):
+        """복잡도 11 (> 10) → R16."""
+        from core.premortem import _detect_complexity_risk, _COMPLEXITY_THRESHOLD
+        path = self._make_complex_func(tmp_path, complexity=_COMPLEXITY_THRESHOLD + 1)
+        result = _detect_complexity_risk([path])
+        assert len(result) == 1
+        assert result[0].id == "R16"
+
+    def test_missing_scope_file_skipped(self):
+        from core.premortem import _detect_complexity_risk
+        assert _detect_complexity_risk(["__nonexistent__.py"]) == []
+
+    def test_syntax_error_file_skipped(self, tmp_path):
+        from core.premortem import _detect_complexity_risk
+        f = tmp_path / "broken.py"
+        f.write_text("def bad(:\n    pass\n")
+        assert _detect_complexity_risk([str(f)]) == []
+
+    def test_description_format(self, tmp_path):
+        """description이 정해진 접두사/접미사 형식을 따른다."""
+        from core.premortem import _detect_complexity_risk
+        path = self._make_complex_func(tmp_path, name="my_fn", complexity=12)
+        result = _detect_complexity_risk([path])
+        assert result
+        desc = result[0].description
+        assert desc.startswith("Complex function(s) in scope: ")
+        assert desc.endswith(". Consider refactoring before extending.")
+        assert "`my_fn`" in desc
+        assert "complexity" in desc
+
+    def test_run_premortem_fires_r16_for_complex_function(self, tmp_path):
+        from core.premortem import _COMPLEXITY_THRESHOLD
+        path = self._make_complex_func(tmp_path, complexity=_COMPLEXITY_THRESHOLD + 2)
+        spec = _spec(intent="Add feature", scope=[path])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R16" in ids
+
+    def test_run_premortem_no_r16_for_simple_function(self, tmp_path):
+        path = self._make_simple_func(tmp_path)
+        spec = _spec(intent="Add feature", scope=[path])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R16" not in ids
+
+    def test_assumption_start_at_r17_when_r16_fires(self, tmp_path):
+        """R16 complexity + R17 assumption 공존 시나리오 — ID 충돌 없음."""
+        path = self._make_complex_func(tmp_path, complexity=12)
+        assumptions = [{"statement": "API stable", "confidence": "low"}]
+        spec = _spec(intent="Add feature", scope=[path], assumptions=assumptions)
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R16" in ids
+        assert "R17" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+    def test_no_id_collision_r16_with_all_detectors(self, tmp_path):
+        path = self._make_complex_func(tmp_path, complexity=12)
+        spec = _spec(
+            intent="Add feature",
+            scope=[path, "__nonexistent__.py"],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R16" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
+
+    def test_nested_function_inner_branches_not_counted_in_outer(self, tmp_path):
+        """Outer function complexity must NOT include branches from nested functions.
+
+        Regression guard for the ast.walk() double-count bug: ast.walk flattens
+        the entire subtree, so a plain 'continue' on the nested FunctionDef node
+        skips that node but still yields all of its descendants (if/for/while),
+        causing them to be counted in the outer function's complexity.
+
+        The fix uses an explicit DFS stack that prunes nested FunctionDef
+        subtrees entirely — children of a nested function are never enqueued.
+
+        def outer():           # complexity 1
+            if a: pass         # +1 → 2 (outer branch)
+            if b: pass         # +1 → 3 (outer branch)
+            def inner():       # separate function — NOT counted in outer
+                if x: pass    # inner branch (must NOT appear in outer's count)
+                if y: pass    # inner branch (must NOT appear in outer's count)
+
+        Expected: outer complexity = 3, inner complexity = 10 (both within threshold>10).
+        With the bug: outer complexity = 12 (inner's 9 branches wrongly included) → R16 fires.
+        """
+        from core.premortem import _detect_complexity_risk, _COMPLEXITY_THRESHOLD
+
+        # outer has 2 own branches; inner has THRESHOLD-1 (9) branches so inner's
+        # own complexity is exactly 10 (does NOT exceed threshold, which is >10).
+        # But if the bug double-counts inner's branches into outer, outer becomes
+        # 1+2+9 = 12 > 10 and wrongly fires R16 — so this fixture actively catches
+        # the regression rather than passing regardless of the bug.
+        inner_branches = "\n".join(
+            f"        if y{i}: pass" for i in range(_COMPLEXITY_THRESHOLD - 1)
+        )
+        source = (
+            "def outer():\n"
+            "    if a: pass\n"
+            "    if b: pass\n"
+            "    def inner():\n"
+            f"{inner_branches}\n"
+            "        return 1\n"
+            "    return 0\n"
+        )
+        f = tmp_path / "nested.py"
+        f.write_text(source, encoding="utf-8")
+
+        # Fixed: outer=3, inner=10 — neither exceeds threshold(>10) → no R16.
+        # Buggy: inner's 9 branches counted in outer → outer=12 → R16 fires → non-empty.
+        assert _detect_complexity_risk([str(f)]) == [], (
+            "outer(2 own branches) must NOT include inner's 9 branches; "
+            "if R16 fires here, inner's branches are being double-counted in outer"
+        )
+
+    def test_nested_function_outer_independently_exceeds_threshold(self, tmp_path):
+        """Outer function that genuinely exceeds threshold must still fire R16.
+
+        Ensures the pruning fix doesn't suppress legitimate outer findings.
+        """
+        from core.premortem import _detect_complexity_risk, _COMPLEXITY_THRESHOLD
+
+        # outer: 1 + 11 branches = 12 → exceeds threshold(10) → R16
+        # inner: 1 branch = 2 → does not exceed
+        outer_branches = "\n".join(
+            f"    if x{i} > 0: pass" for i in range(_COMPLEXITY_THRESHOLD + 1)
+        )
+        source = (
+            f"def outer():\n"
+            f"{outer_branches}\n"
+            f"    def inner():\n"
+            f"        if z: pass\n"
+            f"        return 1\n"
+            f"    return 0\n"
+        )
+        f = tmp_path / "nested_exceeds.py"
+        f.write_text(source, encoding="utf-8")
+
+        result = _detect_complexity_risk([str(f)])
+        # outer must fire R16; inner must not
+        assert len(result) == 1, (
+            f"Expected exactly 1 R16 finding (outer), got {len(result)}"
+        )
+        assert result[0].id == "R16"
+        assert "outer" in result[0].description
+
+    def test_nested_function_inner_independently_exceeds_threshold(self, tmp_path):
+        """Inner function that genuinely exceeds threshold is counted as its own entry.
+
+        ast.walk(tree) visits inner as a separate FunctionDef node, so it gets
+        its own complexity count.  This test confirms that behaviour is preserved.
+        """
+        from core.premortem import _detect_complexity_risk, _COMPLEXITY_THRESHOLD
+
+        # outer: 1 branch = 2 → does not exceed
+        # inner: 1 + 11 branches = 12 → exceeds threshold(10) → R16
+        inner_branches = "\n".join(
+            f"        if x{i} > 0: pass" for i in range(_COMPLEXITY_THRESHOLD + 1)
+        )
+        source = (
+            f"def outer():\n"
+            f"    if a: pass\n"
+            f"    def inner():\n"
+            f"{inner_branches}\n"
+            f"        return 1\n"
+            f"    return 0\n"
+        )
+        f = tmp_path / "nested_inner_exceeds.py"
+        f.write_text(source, encoding="utf-8")
+
+        result = _detect_complexity_risk([str(f)])
+        # inner must fire R16; outer must not (outer has only 1 branch)
+        assert len(result) == 1, (
+            f"Expected exactly 1 R16 finding (inner), got {len(result)}"
+        )
+        assert result[0].id == "R16"
+        assert "inner" in result[0].description
