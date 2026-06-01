@@ -1127,3 +1127,93 @@ class TestComplexityRiskInvestigation:
         inv = [s for s in plan.steps if s.action.startswith("복잡 함수 검토")]
         assert inv[0].target == "core/utils.py"
         assert inv[1].target == "core/planner.py"
+
+
+# ---------------------------------------------------------------------------
+# TestNestingDepthRiskInvestigation
+# ---------------------------------------------------------------------------
+
+class TestNestingDepthRiskInvestigation:
+    """R17(nesting_depth) risk → investigation steps."""
+
+    _PREFIX = "Deeply nested function(s) in scope (> 4 levels): "
+    _SUFFIX = ". Consider flattening before extending."
+
+    def _depth_desc(self, fn: str = "deep_fn", path: str = "core/utils.py", d: int = 6) -> str:
+        return f"{self._PREFIX}`{fn}` in {path} (depth {d}){self._SUFFIX}"
+
+    def _nd_risk(self, desc: str) -> PremortomRisk:
+        return _risk("R17", desc, "nesting_depth")
+
+    def test_single_nesting_generates_one_step(self):
+        risk = self._nd_risk(self._depth_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("중첩 깊은 함수 검토")]
+        assert len(inv) == 1
+        assert "deep_fn" in inv[0].action
+        assert "core/utils.py" in inv[0].action
+        assert "depth 6" in inv[0].action
+
+    def test_step_has_grep_def_command(self):
+        risk = self._nd_risk(self._depth_desc(fn="my_fn"))
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("중첩 깊은 함수 검토")]
+        assert inv[0].commands
+        assert "grep" in inv[0].commands[0]
+        assert "def my_fn" in inv[0].commands[0]
+
+    def test_multiple_entries_generate_multiple_steps(self):
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (depth 5); "
+            f"`fn_b` in core/planner.py (depth 7){self._SUFFIX}"
+        )
+        risk = self._nd_risk(desc)
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("중첩 깊은 함수 검토")]
+        assert len(inv) == 2
+
+    def test_no_nesting_risk_no_investigation_step(self):
+        risks = [_risk("R1", "blueprint sync", "blueprint_sync", ["cmd"])]
+        plan = build_plan(_spec(), _premortem(risks))
+        inv = [s for s in plan.steps if s.action.startswith("중첩 깊은 함수 검토")]
+        assert inv == []
+
+    def test_nesting_steps_come_before_implementation(self):
+        risk = self._nd_risk(self._depth_desc())
+        plan = build_plan(_spec(scope=["core/utils.py"]), _premortem([risk]))
+        idx_inv = next(i for i, s in enumerate(plan.steps) if s.action.startswith("중첩 깊은 함수 검토"))
+        idx_impl = next(i for i, s in enumerate(plan.steps) if s.action.startswith("Implement"))
+        assert idx_inv < idx_impl
+
+    def test_extract_nesting_depth_pairs_single(self):
+        from core.planner import _extract_nesting_depth_pairs
+        risk = self._nd_risk(self._depth_desc("my_fn", "core/utils.py", 6))
+        assert _extract_nesting_depth_pairs(risk) == [("my_fn", "core/utils.py", 6)]
+
+    def test_extract_nesting_depth_pairs_multiple(self):
+        from core.planner import _extract_nesting_depth_pairs
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (depth 5); "
+            f"`fn_b` in core/planner.py (depth 7){self._SUFFIX}"
+        )
+        risk = self._nd_risk(desc)
+        assert _extract_nesting_depth_pairs(risk) == [
+            ("fn_a", "core/utils.py", 5),
+            ("fn_b", "core/planner.py", 7),
+        ]
+
+    def test_extract_nesting_depth_pairs_zero_findings(self):
+        from core.planner import _extract_nesting_depth_pairs
+        risk = self._nd_risk("Some other description.")
+        assert _extract_nesting_depth_pairs(risk) == []
+
+    def test_nesting_grep_command_targets_correct_file(self):
+        desc = (
+            f"{self._PREFIX}`fn_a` in core/utils.py (depth 5); "
+            f"`fn_b` in core/planner.py (depth 7){self._SUFFIX}"
+        )
+        risk = self._nd_risk(desc)
+        plan = build_plan(_spec(), _premortem([risk]))
+        inv = [s for s in plan.steps if s.action.startswith("중첩 깊은 함수 검토")]
+        assert inv[0].target == "core/utils.py"
+        assert inv[1].target == "core/planner.py"

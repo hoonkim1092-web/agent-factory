@@ -196,6 +196,10 @@ _COMPLEXITY_PREFIX = "Complex function(s) in scope: "
 _COMPLEXITY_SUFFIX = ". Consider refactoring before extending."
 _COMPLEXITY_RE = re.compile(r"`([^`]+)` in ([^ ]+) \(complexity (\d+)\)")
 
+_NESTING_DEPTH_PREFIX = "Deeply nested function(s) in scope (> "
+_NESTING_DEPTH_SUFFIX = ". Consider flattening before extending."
+_NESTING_DEPTH_RE = re.compile(r"`([^`]+)` in ([^ ]+) \(depth (\d+)\)")
+
 
 def _extract_long_function_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]:
     """Parse (func_name, file_path, line_count) triples from a long_function risk description."""
@@ -219,6 +223,21 @@ def _extract_complexity_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]
     return [
         (m.group(1), m.group(2), int(m.group(3)))
         for m in _COMPLEXITY_RE.finditer(inner)
+    ]
+
+
+def _extract_nesting_depth_pairs(risk: PremortomRisk) -> list[tuple[str, str, int]]:
+    """Parse (func_name, file_path, depth) triples from a nesting_depth risk description.
+
+    The prefix carries a dynamic threshold (e.g. "(> 4 levels)"), so the items
+    are extracted by regex over the whole description rather than by slicing the
+    prefix — the item pattern ``(depth N)`` never collides with ``(> N levels)``.
+    """
+    if not (risk.description.startswith(_NESTING_DEPTH_PREFIX) and risk.description.endswith(_NESTING_DEPTH_SUFFIX)):
+        return []
+    return [
+        (m.group(1), m.group(2), int(m.group(3)))
+        for m in _NESTING_DEPTH_RE.finditer(risk.description)
     ]
 
 
@@ -337,6 +356,20 @@ def _build_investigation_steps(
                 steps.append(PlanStep(
                     id=f"S{counter[0]}",
                     action=f"복잡 함수 검토: `{func_name}` in {file_path} (complexity {n})",
+                    target=file_path,
+                    tests_required=[],
+                    artifacts=[],
+                    depends_on=[],
+                    commands=[
+                        shlex.join(["grep", "-n", f"def {func_name}", file_path]),
+                    ],
+                ))
+                counter[0] += 1
+        elif risk.category == "nesting_depth":
+            for func_name, file_path, depth in _extract_nesting_depth_pairs(risk):
+                steps.append(PlanStep(
+                    id=f"S{counter[0]}",
+                    action=f"중첩 깊은 함수 검토: `{func_name}` in {file_path} (depth {depth})",
                     target=file_path,
                     tests_required=[],
                     artifacts=[],

@@ -491,13 +491,14 @@ class TestDetectScopeFileRisk:
         assert "R11" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-    def test_assumption_ids_start_at_r17_not_r16(self):
-        """Assumptions start at R17: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity."""
+    def test_assumption_ids_start_at_r18_not_r17(self):
+        """Assumptions start at R18: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity, R17=nesting_depth."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R17" in ids
+        assert "R18" in ids
+        assert "R17" not in ids  # no deeply nested functions in empty scope
         assert "R16" not in ids  # no complex functions in empty scope
         assert "R14" not in ids
         assert "R13" not in ids
@@ -647,13 +648,14 @@ class TestDuplicateFunctionRisk:
         ids = [r.id for r in result.risks]
         assert "R13" not in ids
 
-    def test_assumption_ids_start_at_r17_not_r16(self):
-        """Assumptions start at R17: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity."""
+    def test_assumption_ids_start_at_r18_not_r17(self):
+        """Assumptions start at R18: R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import, R15=long_function, R16=complexity, R17=nesting_depth."""
         assumptions = [{"statement": "first", "confidence": "low"}]
         spec = _spec(assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
-        assert "R17" in ids
+        assert "R18" in ids
+        assert "R17" not in ids  # no deeply nested functions in empty scope
         assert "R16" not in ids  # no complex functions in empty scope
         assert "R14" not in ids
         assert "R13" not in ids
@@ -959,15 +961,20 @@ class TestComplexityRisk:
         ids = [r.id for r in result.risks]
         assert "R16" not in ids
 
-    def test_assumption_start_at_r17_when_r16_fires(self, tmp_path):
-        """R16 complexity + R17 assumption 공존 시나리오 — ID 충돌 없음."""
+    def test_assumption_start_at_r18_when_r16_fires(self, tmp_path):
+        """R16 complexity + R18 assumption 공존 시나리오 — ID 충돌 없음.
+
+        The complex fixture uses flat (non-nested) if statements, so R17
+        (nesting_depth) does not fire; the assumption lands at R18.
+        """
         path = self._make_complex_func(tmp_path, complexity=12)
         assumptions = [{"statement": "API stable", "confidence": "low"}]
         spec = _spec(intent="Add feature", scope=[path], assumptions=assumptions)
         result = run_premortem(spec)
         ids = [r.id for r in result.risks]
         assert "R16" in ids
-        assert "R17" in ids
+        assert "R17" not in ids  # flat ifs are depth 1, not deeply nested
+        assert "R18" in ids
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
     def test_no_id_collision_r16_with_all_detectors(self, tmp_path):
@@ -1095,3 +1102,153 @@ class TestComplexityRisk:
         )
         assert result[0].id == "R16"
         assert "inner" in result[0].description
+
+
+# ---------------------------------------------------------------------------
+# TestNestingDepthRisk
+# ---------------------------------------------------------------------------
+
+class TestNestingDepthRisk:
+    """Tests for _detect_nesting_depth_risk (R17)."""
+
+    def _make_nested_func(self, tmp_path, name: str = "nested_fn", depth: int = 5) -> str:
+        """Build a function whose deepest control-flow nesting equals *depth*."""
+        lines = [f"def {name}():"]
+        for level in range(depth):
+            lines.append("    " * (level + 1) + f"if x{level}:")
+        lines.append("    " * (depth + 1) + "pass")
+        f = tmp_path / "mod.py"
+        f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return str(f)
+
+    def test_empty_scope_returns_empty(self):
+        from core.premortem import _detect_nesting_depth_risk
+        assert _detect_nesting_depth_risk([]) == []
+
+    def test_non_py_file_skipped(self, tmp_path):
+        from core.premortem import _detect_nesting_depth_risk
+        f = tmp_path / "notes.txt"
+        f.write_text("if a:\n  if b:\n    if c:\n      pass\n")
+        assert _detect_nesting_depth_risk([str(f)]) == []
+
+    def test_flat_function_returns_empty(self, tmp_path):
+        """Sequential (non-nested) if statements stay at depth 1 → no R17."""
+        from core.premortem import _detect_nesting_depth_risk
+        source = "def flat():\n" + "".join(
+            f"    if x{i}: pass\n" for i in range(8)
+        )
+        f = tmp_path / "mod.py"
+        f.write_text(source, encoding="utf-8")
+        assert _detect_nesting_depth_risk([str(f)]) == []
+
+    def test_deeply_nested_fires_r17(self, tmp_path):
+        from core.premortem import _detect_nesting_depth_risk
+        path = self._make_nested_func(tmp_path, depth=5)
+        result = _detect_nesting_depth_risk([path])
+        assert len(result) == 1
+        assert result[0].id == "R17"
+        assert result[0].category == "nesting_depth"
+
+    def test_depth_at_threshold_returns_empty(self, tmp_path):
+        """Depth exactly at the threshold does not fire (strictly greater than)."""
+        from core.premortem import _detect_nesting_depth_risk, _NESTING_DEPTH_THRESHOLD
+        path = self._make_nested_func(tmp_path, depth=_NESTING_DEPTH_THRESHOLD)
+        assert _detect_nesting_depth_risk([path]) == []
+
+    def test_depth_above_threshold_fires(self, tmp_path):
+        from core.premortem import _detect_nesting_depth_risk, _NESTING_DEPTH_THRESHOLD
+        path = self._make_nested_func(tmp_path, depth=_NESTING_DEPTH_THRESHOLD + 1)
+        result = _detect_nesting_depth_risk([path])
+        assert len(result) == 1
+        assert result[0].id == "R17"
+
+    def test_missing_file_returns_empty(self):
+        from core.premortem import _detect_nesting_depth_risk
+        assert _detect_nesting_depth_risk(["__nonexistent__.py"]) == []
+
+    def test_syntax_error_skipped(self, tmp_path):
+        from core.premortem import _detect_nesting_depth_risk
+        f = tmp_path / "broken.py"
+        f.write_text("def (:\n", encoding="utf-8")
+        assert _detect_nesting_depth_risk([str(f)]) == []
+
+    def test_description_and_verification_mention_function(self, tmp_path):
+        from core.premortem import _detect_nesting_depth_risk
+        path = self._make_nested_func(tmp_path, name="deep_fn", depth=6)
+        result = _detect_nesting_depth_risk([path])
+        assert "deep_fn" in result[0].description
+        assert "nested" in result[0].description.lower()
+        assert any("deep_fn" in v.command for v in result[0].verification)
+
+    def test_nested_function_inner_depth_not_counted_in_outer(self, tmp_path):
+        """A deeply nested inner def must not inflate the outer function's depth.
+
+        The outer body only contains the inner def at depth 0; the inner def's
+        own deep nesting is measured separately when ast.walk visits it.
+        """
+        from core.premortem import _detect_nesting_depth_risk, _NESTING_DEPTH_THRESHOLD
+        inner_lines = []
+        for level in range(_NESTING_DEPTH_THRESHOLD + 2):
+            inner_lines.append("        " + "    " * level + f"if y{level}:")
+        inner_lines.append("        " + "    " * (_NESTING_DEPTH_THRESHOLD + 2) + "pass")
+        source = (
+            "def outer():\n"
+            "    def inner():\n"
+            + "\n".join(inner_lines)
+            + "\n        return 1\n"
+            "    return 0\n"
+        )
+        f = tmp_path / "nested.py"
+        f.write_text(source, encoding="utf-8")
+        result = _detect_nesting_depth_risk([str(f)])
+        # Only inner is deeply nested; outer (just holds a def) must not fire.
+        assert len(result) == 1, f"Expected only inner to fire, got {len(result)}"
+        assert "inner" in result[0].description
+        assert "outer" not in result[0].description
+
+    def test_elif_chain_counts_toward_depth(self, tmp_path):
+        """Documented behaviour: a long elif chain is parsed as nested If nodes,
+        so it accumulates depth and can fire R17 even though it reads as flat.
+
+        This locks the intentional convention (see _max_block_depth docstring) so
+        a future refactor that special-cases orelse is a deliberate change, not a
+        silent regression.
+        """
+        from core.premortem import _detect_nesting_depth_risk, _NESTING_DEPTH_THRESHOLD
+        branches = _NESTING_DEPTH_THRESHOLD + 2  # exceed threshold via elif chain
+        lines = ["def dispatch(x):", "    if x == 0: pass"]
+        lines += [f"    elif x == {i}: pass" for i in range(1, branches)]
+        f = tmp_path / "mod.py"
+        f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = _detect_nesting_depth_risk([str(f)])
+        assert len(result) == 1
+        assert result[0].id == "R17"
+
+    def test_run_premortem_fires_r17_for_deeply_nested(self, tmp_path):
+        path = self._make_nested_func(tmp_path, depth=6)
+        spec = _spec(intent="Add feature", scope=[path])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R17" in ids
+
+    def test_run_premortem_no_r17_for_flat_function(self, tmp_path):
+        source = "def flat():\n" + "".join(f"    if x{i}: pass\n" for i in range(8))
+        f = tmp_path / "mod.py"
+        f.write_text(source, encoding="utf-8")
+        spec = _spec(intent="Add feature", scope=[str(f)])
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R17" not in ids
+
+    def test_no_id_collision_r17_with_assumptions_and_gaps(self, tmp_path):
+        path = self._make_nested_func(tmp_path, depth=6)
+        spec = _spec(
+            intent="Add feature",
+            scope=[path],
+            assumptions=[{"statement": f"A{i}", "confidence": "low"} for i in range(3)],
+            gaps=["some gap"],
+        )
+        result = run_premortem(spec)
+        ids = [r.id for r in result.risks]
+        assert "R17" in ids
+        assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"

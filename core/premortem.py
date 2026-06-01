@@ -452,6 +452,91 @@ def _detect_complexity_risk(scope: list[str]) -> list[PremortomRisk]:
     ]
 
 
+_NESTING_DEPTH_THRESHOLD = 4
+
+# Control-flow statements that introduce a nested block.
+_NESTING_NODES = (
+    ast.If,
+    ast.For,
+    ast.AsyncFor,
+    ast.While,
+    ast.With,
+    ast.AsyncWith,
+    ast.Try,
+)
+
+
+def _max_block_depth(node: ast.AST, depth: int = 0) -> int:
+    """Deepest control-flow nesting under *node*, without descending into nested defs.
+
+    Each If/For/While/With/Try (and async variants) adds one level.  Nested
+    function/async-function bodies are skipped — they are measured separately
+    when ``_detect_nesting_depth_risk`` visits them as their own top-level
+    definitions, mirroring the subtree-pruning convention in
+    ``_detect_complexity_risk``.
+
+    Note: ``elif`` is parsed as a nested ``If`` in an ``orelse`` block, so a long
+    ``elif`` chain counts toward depth.  R16 also treats each ``elif`` as an
+    ``If`` node, but as a flat branch count rather than structural depth — both
+    detectors are sensitive to ``elif`` chains, but R16 adds breadth while R17
+    adds depth.
+    """
+    deepest = depth
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        child_depth = depth + 1 if isinstance(child, _NESTING_NODES) else depth
+        deepest = max(deepest, _max_block_depth(child, child_depth))
+    return deepest
+
+
+def _detect_nesting_depth_risk(scope: list[str]) -> list[PremortomRisk]:
+    """Scope .py files with functions nested deeper than the threshold are R17.
+
+    Deep control-flow nesting signals code that is hard to extend safely.  Each
+    qualifying (function, file, depth) becomes an entry in the returned risk's
+    description.  Returns an empty list if nothing trips the threshold.
+    """
+    findings: list[tuple[str, str, int]] = []  # (func_name, path, depth)
+    for path in scope:
+        if not path.endswith(".py"):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                source = fh.read()
+            tree = ast.parse(source, filename=path)
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            depth = _max_block_depth(node)
+            if depth > _NESTING_DEPTH_THRESHOLD:
+                findings.append((node.name, path, depth))
+    if not findings:
+        return []
+    desc_parts = "; ".join(
+        f"`{name}` in {path} (depth {d})" for name, path, d in findings
+    )
+    return [
+        PremortomRisk(
+            id="R17",
+            description=(
+                f"Deeply nested function(s) in scope (> {_NESTING_DEPTH_THRESHOLD} levels): "
+                f"{desc_parts}. Consider flattening before extending."
+            ),
+            category="nesting_depth",
+            verification=[
+                VerificationStep(
+                    command=shlex.join(["grep", "-n", f"def {name}", path]),
+                    description=f"Locate `{name}` in {path} to reduce nesting depth.",
+                )
+                for name, path, _ in findings
+            ],
+        )
+    ]
+
+
 def _detect_assumption_risks(assumptions: list[dict], start: int = 5) -> list[PremortomRisk]:
     """Low-confidence assumptions become explicit risks (R5, R6, …).
 
@@ -535,7 +620,7 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
         risks.append(r)
 
     # R11=scope_file, R12=stale_test, R13=duplicate_function, R14=conflicting_import,
-    # R15=long_function; R16=complexity; assumptions start at R17.
+    # R15=long_function; R16=complexity; R17=nesting_depth; assumptions start at R18.
     risks.extend(_detect_scope_file_risk(spec.scope))
     r = _detect_stale_test_risk(spec.scope)
     if r:
@@ -548,9 +633,10 @@ def run_premortem(spec: CompiledSpec) -> PremortomResult:
         risks.append(r)
     risks.extend(_detect_long_function_risk(spec.scope))
     risks.extend(_detect_complexity_risk(spec.scope))
-    assumption_risks = _detect_assumption_risks(spec.assumptions, start=17)
+    risks.extend(_detect_nesting_depth_risk(spec.scope))
+    assumption_risks = _detect_assumption_risks(spec.assumptions, start=18)
     risks.extend(assumption_risks)
-    gap_start = max(22, 17 + len(assumption_risks))
+    gap_start = max(23, 18 + len(assumption_risks))
     risks.extend(_detect_gap_risks(spec.gaps, start=gap_start))
 
     return PremortomResult(risks=risks, spec_intent=spec.intent)
