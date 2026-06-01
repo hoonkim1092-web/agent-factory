@@ -106,6 +106,12 @@ tmp*/
 .tmp_review_importer/
 .tmp_review_sync/
 .tmp_smoke_projects/
+# Local measurement / prompt scratch files (tmp*/ above covers dirs; these catch files)
+tmp-*.txt
+tmp_*.py
+
+# Claude Code local scheduler lock
+.claude/scheduled_tasks.lock
 
 # --- 🎯 Developer Context Rules (DO NOT DEPLOY) ---
 .gemini_dev_rules.md
