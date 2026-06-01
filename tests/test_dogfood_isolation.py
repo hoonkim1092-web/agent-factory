@@ -1421,3 +1421,331 @@ def test_remove_worktree_only_dirty_refuses(tmp_path):
 
     assert removed is False  # must refuse (uncommitted work present)
     assert wt.exists()       # worktree still exists
+
+
+# ---------------------------------------------------------------------------
+# Track 2: autocrlf=false + update-index --refresh after worktree add
+# ---------------------------------------------------------------------------
+
+def test_prepare_isolated_worktree_sets_autocrlf_false(tmp_path):
+    """After git worktree add, prepare_isolated_worktree must run
+    update-index --refresh with -c core.autocrlf=false in the new worktree.
+
+    On Windows with core.autocrlf=true, files with bare \\r characters in their
+    committed blobs produce a stale stat cache entry after checkout, making
+    git-status report them as ' M' even though blob == working copy.
+    Using -c core.autocrlf=false as a one-shot override (not a permanent config
+    write) clears the phantom dirty state without polluting the shared source
+    repo config (linked worktrees share .git/config).
+    """
+    state = _make_state(tmp_path)
+    git_calls: list[tuple[list, str]] = []
+
+    def _git_stub(args, cwd, **kwargs):
+        git_calls.append((list(args), cwd))
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "status" in args and "--porcelain" in args:
+            r.stdout = ""  # clean
+        elif "branch" in args and "--show-current" in args:
+            r.stdout = "main"
+        elif "rev-parse" in args:
+            r.stdout = "abc1234def5678"
+        elif "worktree" in args and "add" in args:
+            wt = args[-2] if len(args) >= 3 else cwd
+            Path(wt).mkdir(parents=True, exist_ok=True)
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        prepare_isolated_worktree(state)
+
+    # update-index --refresh must be called with -c core.autocrlf=false, in the worktree
+    refresh_calls = [
+        (a, c) for a, c in git_calls
+        if "update-index" in a and "--refresh" in a
+    ]
+    assert refresh_calls, "Expected git update-index --refresh to be called"
+    refresh_args, refresh_cwd = refresh_calls[0]
+    assert refresh_cwd == state.worktree_workspace, (
+        "update-index --refresh must run in the worktree"
+    )
+    # -c core.autocrlf=false must be the inline override (not a separate config write)
+    assert "-c" in refresh_args and "core.autocrlf=false" in refresh_args, (
+        "update-index must use -c core.autocrlf=false inline override"
+    )
+
+    # There must be NO permanent 'git config core.autocrlf' call at all
+    config_writes = [
+        (a, c) for a, c in git_calls
+        if "config" in a and "core.autocrlf" in a
+    ]
+    assert config_writes == [], (
+        "git config core.autocrlf must NOT be called (use -c inline override instead)"
+    )
+
+    assert state.isolation_status == "ready"
+
+
+def test_prepare_isolated_worktree_source_repo_autocrlf_unchanged(tmp_path):
+    """autocrlf fix must NOT permanently write to any git config (source or worktree).
+
+    Linked worktrees share the parent repo's .git/config, so a bare
+    'git config core.autocrlf false' run from the worktree directory would
+    silently overwrite the source repo's setting.  The fix uses -c inline
+    override on update-index only — no permanent config write anywhere.
+    """
+    state = _make_state(tmp_path)
+    all_config_autocrlf_writes: list[tuple[list, str]] = []
+
+    def _git_stub(args, cwd, **kwargs):
+        # Catch any permanent 'git config core.autocrlf ...' call regardless of cwd
+        if "config" in args and "core.autocrlf" in args:
+            all_config_autocrlf_writes.append((list(args), cwd))
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "status" in args and "--porcelain" in args:
+            r.stdout = ""
+        elif "branch" in args and "--show-current" in args:
+            r.stdout = "main"
+        elif "rev-parse" in args:
+            r.stdout = "abc1234def5678"
+        elif "worktree" in args and "add" in args:
+            wt = args[-2] if len(args) >= 3 else cwd
+            Path(wt).mkdir(parents=True, exist_ok=True)
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        prepare_isolated_worktree(state)
+
+    assert all_config_autocrlf_writes == [], (
+        "git config core.autocrlf must NOT be called anywhere — "
+        "use -c inline override on update-index instead"
+    )
+
+
+def test_is_crlf_only_diff_doubled_cr_treated_as_noise(tmp_path):
+    """Secondary check: a file that differs from HEAD only in bare \\r chars
+    (doubled-CR: \\r\\r\\n) must be classified as CRLF-only noise.
+
+    --ignore-cr-at-eol misses doubled-CR because git only strips the final \\r
+    before \\n; extra bare \\r's appear as content changes.  The secondary
+    byte-level comparison (strip all \\r, compare) must catch these.
+
+    The blob is read via _git_bytes (text=False) so Python's universal-newline
+    conversion does not silently turn \\r\\r\\n into \\n\\n before the \\r-strip,
+    which was the original bug causing a false mismatch.
+    """
+    from core.dogfood import _is_crlf_only_diff
+
+    # Working copy has normal CRLF (\r\n)
+    wc_file = tmp_path / "doubled_cr.md"
+    wc_file.write_bytes(b"# Title\r\nLine two\r\n")
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "diff" in args and "--ignore-cr-at-eol" in args:
+            # --ignore-cr-at-eol still shows diff for doubled-CR
+            r.stdout = "-# Title\n\n+# Title\n"
+        return r
+
+    def _git_bytes_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "show" in args:
+            # Blob has doubled-CR: \r\r\n  — raw bytes, no newline conversion
+            r.stdout = b"# Title\r\r\nLine two\r\r\n"
+        else:
+            r.stdout = b""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub), \
+         patch("core.dogfood._git_bytes", side_effect=_git_bytes_stub):
+        result = _is_crlf_only_diff("doubled_cr.md", str(tmp_path))
+
+    assert result is True, "doubled-CR file should be classified as CRLF-only noise"
+
+
+def test_is_crlf_only_diff_real_content_change_not_noise(tmp_path):
+    """Secondary check must NOT classify a real content change as CRLF-only."""
+    from core.dogfood import _is_crlf_only_diff
+
+    wc_file = tmp_path / "changed.md"
+    wc_file.write_bytes(b"# New Title\r\nLine two\r\n")
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = "-# Old Title\n+# New Title\n"  # real content change
+        return r
+
+    def _git_bytes_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "show" in args:
+            r.stdout = b"# Old Title\r\nLine two\r\n"  # different content — raw bytes
+        else:
+            r.stdout = b""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub), \
+         patch("core.dogfood._git_bytes", side_effect=_git_bytes_stub):
+        result = _is_crlf_only_diff("changed.md", str(tmp_path))
+
+    assert result is False, "real content change must NOT be classified as CRLF-only"
+
+
+def test_is_crlf_only_diff_standard_crlf_still_works(tmp_path):
+    """Primary path (--ignore-cr-at-eol returns empty) must still work unchanged."""
+    from core.dogfood import _is_crlf_only_diff
+
+    wc_file = tmp_path / "normal_crlf.md"
+    wc_file.write_bytes(b"Line one\r\nLine two\r\n")
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        r.stdout = ""
+        if "diff" in args and "--ignore-cr-at-eol" in args:
+            r.stdout = ""  # standard CRLF → ignored by --ignore-cr-at-eol
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub):
+        result = _is_crlf_only_diff("normal_crlf.md", str(tmp_path))
+
+    assert result is True, "standard CRLF diff should still be classified as noise"
+
+
+# ---------------------------------------------------------------------------
+# Fix ① regression: _is_crlf_only_diff secondary check uses raw bytes
+# (no universal-newline conversion that would hide doubled-CR)
+# ---------------------------------------------------------------------------
+
+def test_is_crlf_only_diff_doubled_cr_raw_bytes_comparison(tmp_path):
+    """_git_bytes is called for the blob read (not _git with text=True).
+
+    Regression guard: if _git (text=True) were used instead of _git_bytes,
+    Python's universal-newline mode would convert \\r\\r\\n → \\n\\n before
+    the .replace(b"\\r",...) strip, making the stripped blob look like \\n\\n
+    while the working-copy strip gives \\n — a false mismatch → False (real
+    change).  The fix reads via _git_bytes so \\r\\r\\n stays \\r\\r\\n until
+    we explicitly strip all \\r, leaving \\n on both sides → True (CRLF-only).
+    """
+    from core.dogfood import _is_crlf_only_diff
+
+    # Working copy: standard \r\n (after CRLF normalisation)
+    wc_file = tmp_path / "doubled_cr_raw.md"
+    wc_file.write_bytes(b"hello\r\nworld\r\n")
+
+    git_bytes_called = {"show": False}
+
+    def _git_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        # Primary check: non-empty diff → secondary check triggered
+        r.stdout = "-old\n+new\n" if "diff" in args else ""
+        return r
+
+    def _git_bytes_stub(args, cwd, **kwargs):
+        r = MagicMock()
+        r.returncode = 0
+        if "show" in args:
+            git_bytes_called["show"] = True
+            # Blob has doubled-CR: \r\r\n — raw bytes as git would deliver them
+            r.stdout = b"hello\r\r\nworld\r\r\n"
+        else:
+            r.stdout = b""
+        return r
+
+    with patch("core.dogfood._git", side_effect=_git_stub), \
+         patch("core.dogfood._git_bytes", side_effect=_git_bytes_stub):
+        result = _is_crlf_only_diff("doubled_cr_raw.md", str(tmp_path))
+
+    assert git_bytes_called["show"], "_git_bytes must be called for blob read (not _git)"
+    # blob b"hello\r\r\nworld\r\r\n".replace(b"\r",b"") == b"hello\nworld\n"
+    # wc   b"hello\r\nworld\r\n"    .replace(b"\r",b"") == b"hello\nworld\n"
+    assert result is True, (
+        "doubled-CR blob vs CRLF working copy must be CRLF-only after \\r strip"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix ② regression: prepare_isolated_worktree does not permanently write
+# to any .git/config (real git repo integration test)
+# ---------------------------------------------------------------------------
+
+def test_prepare_isolated_worktree_no_permanent_config_change_real_git(tmp_path):
+    """Integration: prepare_isolated_worktree must not alter source repo's git config.
+
+    Creates a real git repo + worktree, runs prepare_isolated_worktree, then
+    asserts core.autocrlf in the source repo is unchanged.  This catches the
+    linked-worktree config pollution bug: 'git config core.autocrlf false' run
+    from a worktree directory writes to the shared .git/config, silently
+    overwriting the source repo's setting.
+    """
+    import shutil
+
+    # Skip if git is not available
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pytest.skip("git not available")
+
+    # Create a minimal real git repo
+    src = tmp_path / "src_repo"
+    src.mkdir()
+    subprocess.run(["git", "init", str(src)], capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(src), "config", "user.email", "test@test.com"],
+                   capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(src), "config", "user.name", "Test"],
+                   capture_output=True, check=True)
+    # Set a known autocrlf value we can check afterward
+    subprocess.run(["git", "-C", str(src), "config", "core.autocrlf", "input"],
+                   capture_output=True, check=True)
+    # Create an initial commit so HEAD exists
+    readme = src / "README.md"
+    readme.write_text("hello\n")
+    subprocess.run(["git", "-C", str(src), "add", "README.md"],
+                   capture_output=True, check=True)
+    subprocess.run(["git", "-C", str(src), "commit", "-m", "init"],
+                   capture_output=True, check=True)
+
+    # Build a DogfoodState pointing at the real repo
+    from core.dogfood import create_run, prepare_isolated_worktree
+    wt_path = tmp_path / "dogfood_wt"
+    state = create_run(
+        "test no-config-pollution",
+        str(src),
+        run_id="cfg-test-001",
+        runtime_workspace=str(tmp_path / ".runtime"),
+    )
+    state.worktree_workspace = str(wt_path)
+    state.dogfood_branch = "dogfood/cfg-test-001"
+
+    try:
+        prepare_isolated_worktree(state)
+    finally:
+        # Always clean up the worktree and branch
+        subprocess.run(
+            ["git", "-C", str(src), "worktree", "remove", "--force", str(wt_path)],
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(src), "branch", "-D", "dogfood/cfg-test-001"],
+            capture_output=True,
+        )
+
+    # Verify source repo's core.autocrlf was not changed
+    result = subprocess.run(
+        ["git", "-C", str(src), "config", "core.autocrlf"],
+        capture_output=True, text=True,
+    )
+    assert result.stdout.strip() == "input", (
+        f"source repo core.autocrlf was altered by prepare_isolated_worktree: "
+        f"got {result.stdout.strip()!r}, expected 'input'"
+    )

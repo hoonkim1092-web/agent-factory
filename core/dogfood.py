@@ -617,10 +617,56 @@ def _git(
     )
 
 
+def _git_bytes(
+    args: list[str],
+    cwd: str,
+    check: bool = True,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
+    """Run a git command and return raw bytes output (no text decoding)."""
+    env = _utf8_subprocess_env()
+    if extra_env:
+        env = {**env, **extra_env}
+    return subprocess.run(
+        ["git"] + args, cwd=cwd,
+        capture_output=True, text=False,
+        env=env,
+        check=check,
+    )
+
+
 def _is_crlf_only_diff(filepath: str, cwd: str) -> bool:
-    """Return True iff the only diff for filepath is CR/LF line-ending noise."""
+    """Return True iff the only diff for filepath is CR/LF line-ending noise.
+
+    Defense-in-depth: files whose blobs contain doubled bare-CR sequences
+    (\r\r\n) will pass --ignore-cr-at-eol only after the stat cache is
+    refreshed (see prepare_isolated_worktree).  If they somehow still appear
+    in a diff, we fall back to a byte-level check: read the working copy and
+    the index blob and compare after stripping all \r characters.  If the
+    stripped versions are identical, the diff is pure CR noise.
+    """
     r = _git(["diff", "--ignore-cr-at-eol", "--", filepath], cwd=cwd, check=False)
-    return r.returncode == 0 and not r.stdout.strip()
+    if r.returncode == 0 and not r.stdout.strip():
+        return True
+    # Secondary check: compare blob vs working copy ignoring all \r chars.
+    # This catches doubled-CR (\r\r\n) that --ignore-cr-at-eol misses.
+    # We read the blob as raw bytes (text=False) to avoid universal-newline
+    # conversion: Python's text=True silently turns \r\r\n into \n\n, making
+    # the .replace("\r", "") a no-op and causing a false mismatch against the
+    # working-copy bytes (which still contain the bare \r characters).
+    try:
+        blob_r = _git_bytes(["show", f"HEAD:{filepath}"], cwd=cwd, check=False)
+        if blob_r.returncode != 0:
+            return False  # untracked or error — treat as real change
+        import pathlib
+        wc_path = pathlib.Path(cwd) / filepath
+        if not wc_path.exists():
+            return False
+        blob_bytes: bytes = blob_r.stdout
+        wc_bytes: bytes = wc_path.read_bytes()
+        return blob_bytes.replace(b"\r", b"") == wc_bytes.replace(b"\r", b"")
+    except Exception:
+        return False
 
 
 def _dirty_files(
@@ -827,6 +873,16 @@ def prepare_isolated_worktree(state: DogfoodState) -> None:
                 ["worktree", "add", "-b", branch, wt, state.base_ref],
                 cwd=src,
             )
+            # On Windows with core.autocrlf=true, git records a stale stat cache
+            # for files whose blobs contain bare \r characters (historical CRLF
+            # accumulation).  This causes git-status to report those files as " M"
+            # even though blob == index == working-copy bytes.  We apply
+            # autocrlf=false as a one-shot -c override so the index refresh runs
+            # without CRLF translation — without permanently writing to any
+            # .git/config (which would silently pollute the shared source repo
+            # config because linked worktrees share the same .git directory).
+            _git(["-c", "core.autocrlf=false", "update-index", "--refresh", "--"],
+                 cwd=wt, check=False)
             state.isolation_status = "ready"
             return
         except subprocess.CalledProcessError:

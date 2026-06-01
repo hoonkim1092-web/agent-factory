@@ -1107,13 +1107,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-01; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, planner.py, premortem.py, meta.yaml (+5)
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, meta.yaml, skill-spec.yaml, skill.py, test_dogfood_isolation.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
 | `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
-| `core/planner.py` | Planner: compile Spec + Premortem into an executable Plan. | `PlanStep`, `ExecutablePlan`, `build_plan()`, `implementation_steps()` |
-| `core/premortem.py` | Premortem: repo-aware failure prediction converted into verification requirements. | `VerificationStep`, `PremortomRisk`, `PremortomResult`, `run_premortem()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1660,6 +1658,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-01 | v1.2.34 | chore(core): code update — dogfood.py, meta.yaml, skill-spec.yaml, skill.py, test_dogfood_isolation.py |
 | 2026-06-01 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, planner.py, premortem.py, meta.yaml (+5) |
 | 2026-06-01 | v1.2.34 | feat(premortem+planner): R16 complexity detector(`_detect_complexity_risk`, ast 분기복잡도>10) + planner 연동(`_extract_complexity_pairs` + complexity investigation branch). **risk ID 계약 정리**: `_is_assumption_risk` category-only 축소(brittle `[5,20)` 제거) + `pattern_consistency`(R10) 전용 branch 신설(레인지 제거 회귀 차단). assumption start 16→17, gap_start max(21,..)→max(22,..). `TestComplexityRisk`/`TestComplexityRiskInvestigation`/`TestAssumptionRiskContractRegression` 신규. — premortem.py, planner.py, test_premortem.py, test_planner.py, Master_Blueprint.md |
 | 2026-06-01 | v1.2.34 | fix(dogfood CRLF): `prepare_isolated_worktree`에 `git -c core.autocrlf=false update-index --refresh` 일회성 override(영구 config 미기록 — linked worktree가 shared `.git`을 오염시키던 격리 위반 차단, source 레포 불변 통합 테스트). `_is_crlf_only_diff` 2차 방어선을 `_git_bytes` raw-bytes 비교로(text=True가 `\r\r\n`→`\n\n` 변환해 doubled-CR을 놓치던 오판 수정). `tests/test_dogfood_isolation.py` 회귀. — core/dogfood.py, test_dogfood_isolation.py, Master_Blueprint.md |

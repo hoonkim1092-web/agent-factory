@@ -6880,3 +6880,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (10)**: `Master_Blueprint.md, core/dogfood.py, core/planner.py, core/premortem.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, skills/dp/skill.py, tests/test_dogfood_isolation.py, tests/test_planner.py, tests/test_premortem.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-01 13:29 — `2026-05-20-research-coverage-gate` (3f1a9ec5)
+
+**Context**: Claude Code edit session
+
+**Changed (6)**: `Master_Blueprint.md, core/dogfood.py, skills/dp/meta.yaml, skills/dp/skill-spec.yaml, skills/dp/skill.py, tests/test_dogfood_isolation.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
