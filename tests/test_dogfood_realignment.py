@@ -85,8 +85,8 @@ class _FakePipeline:
         self.env_during = {k: os.environ.get(k) for k in self._ISO_ENV_KEYS}
         # Simulate the engine's research/prepare having run.
         return {
-            "status": "blocked" if self.fail else "ok",
-            "research": {"evidence": ["fake-evidence"]},
+            "ok": not self.fail,
+            "reason": "blocked" if self.fail else "completed",
             "changed_files": [] if self.fail else ["core/utils.py"],
         }
 

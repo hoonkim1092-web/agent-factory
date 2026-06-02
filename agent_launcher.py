@@ -1056,11 +1056,12 @@ if __name__ == "__main__":
                 print(f"[dogfood] merge     : {merge_mode}")
                 if from_file:
                     print(f"[dogfood] from-file : {from_file}")
+                _af = AgentFactory()
                 state = run_all(
                     args.task, workspace, run_id=args.run_id,
                     merge_mode=merge_mode,
                     strict_contract=True,
-                    project_pipeline=self.project_pipeline,
+                    project_pipeline=_af.project_pipeline,
                 )
                 print(f"[dogfood] run_id    : {state.run_id}")
                 print(f"[dogfood] phase     : {state.phase.value}")

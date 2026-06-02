@@ -1663,7 +1663,34 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
         except Exception:
             pass
     state.develop_changed_paths = changed
-    return result
+
+    # Normalize so run_all and VERIFY consume a consistent shape.
+    # Real pipeline uses "ok"/"reason"; fake pipelines may expose "status".
+    normalized: dict[str, Any] = dict(result)
+    if "ok" not in normalized:
+        status = normalized.get("status", "ok")
+        normalized["ok"] = status not in ("blocked", "failed", "error")
+
+    # Derive independent verification commands from changed test files so VERIFY
+    # can re-run them without relying on pipeline self-report (addresses BLOCK 2).
+    if "verification_requirements" not in normalized and changed:
+        test_files = [
+            f for f in changed
+            if "test_" in Path(f).name or "/tests/" in f or f.startswith("tests/")
+        ]
+        if test_files:
+            normalized["verification_requirements"] = [
+                "python -m pytest " + " ".join(test_files) + " -q --tb=short"
+            ]
+        else:
+            normalized["verification_requirements"] = ["python -m pytest tests/ -q --tb=short"]
+
+    # Synthetic step ensures F-PHASE-COMPLETE guard fires when verification_requirements
+    # are missing or all-placeholder — prevents VERIFY silently passing with no evidence.
+    if "steps" not in normalized:
+        normalized["steps"] = [{"id": "pipeline_run"}] if changed else []
+
+    return normalized
 
 
 def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
@@ -1841,8 +1868,8 @@ def run_all(
                     )
                     save_state(state)
                     continue
-                if develop_result.get("status") == "blocked":
-                    block_run(state, develop_result.get("last_failure", "pipeline blocked"))
+                if not develop_result.get("ok", True):
+                    block_run(state, develop_result.get("reason", develop_result.get("last_failure", "pipeline blocked")))
                     _append_phase_trace(
                         state, phase, trace_input, trace_output, phase_started,
                         llm_called=True, blocked_reason=state.last_failure,
