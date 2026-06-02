@@ -7,6 +7,7 @@
 > - **✅ Step 0 완료 (2026-06-02)**: `docs/2026-06-02-af-step0-product-decisions.md` — #3 대상=Python 본인도구, #4 task type=기능추가(더미금지) 확정.
 > - **✅ LLM Wiki Phase 0 완료 (2026-06-02, `4fdd8df5`)**: `scripts/build_llm_wiki.py` + `docs/generated/llm_wiki/` 5페이지(index/architecture/review_patterns/open_items/source_refs) + 테스트 17 PASS. 재생성: `python scripts/build_llm_wiki.py`. Obsidian vault: `docs/generated/llm_wiki/`.
 > - **다음**: LLM Wiki Phase 1 후보 (ContextPack 연결 / 자동 재생성 트리거) 또는 F10(작업 git 맥락 주입) — LLM Wiki 품질 검증 후 결정.
+> - **🎯 최우선 진입점 (2026-06-02 결정, 집 PC 재개)**: **dogfood = 자기수정 안전 컨테이너 / pipeline = 개발 엔진 재정렬** 설계 **v3 완료** → `docs/2026-06-02-dogfood-pipeline-realignment.md`. 다회 deliberation으로 분류·불변식·인프라 재사용·실증 테스트 확정. 요지: dogfood가 ISOLATE 직후 worktree 안에서 `ProjectPipeline.run()`을 통째로 실행(Option 2), dogfood는 격리·VERIFY·allowlist·merge·쓰기탈출차단만 담당. **pipeline 본체 touch 최소**(최대 #5b 스킬빌드쓰기 1곳, 실측 조건부). INTERVIEW/RESEARCH/SPEC/PREMORTEM/PLAN/IMPLEMENT 제거(pipeline 흡수), retry=0(FSALoop 위임), 격리는 기존 `AF_DISABLE_REGISTRY_WRITE`+`AF_SELF_RUN`+`AGENT_PROJECT_ROOT=worktree` 재사용(신설 금지). **다음 작업**: §8 step0 = inv1~inv5 불변식 테스트 **red 작성(test-first)** → 구현. 검증 3티어: T1 불변식(CI) / T2 가짜pipeline 안전e2e(CI) / T3 실제LLM 수동acceptance(=05-21 R1 첫 증명). 모델: 구현은 **Sonnet** 권장. `core/dogfood.py` = Tier3 → review-first. baseline: `docs/2026-05-21-af-dogfooding-infrastructure-gap-analysis.md`.
 > - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
 >
 > **PC 바꿔서 시작했을 때 여기부터 읽을 것.**
