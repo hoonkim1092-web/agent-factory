@@ -80,14 +80,17 @@ def _validate_run_id(run_id: str) -> None:
 
 class DogfoodPhase(str, Enum):
     PENDING = "pending"
+    # Legacy phases (kept for state-file deserialization; not in _PHASE_ORDER)
     INTERVIEW = "interview"
     RESEARCH_BRIEF = "research_brief"
     RESEARCH = "research"
     SPEC = "spec"
     PREMORTEM = "premortem"
     PLAN = "plan"
-    ISOLATE = "isolate"
     IMPLEMENT = "implement"
+    # Active phases
+    ISOLATE = "isolate"
+    DEVELOP = "develop"
     VERIFY = "verify"
     REVIEW = "review"
     FINALIZE = "finalize"
@@ -96,17 +99,13 @@ class DogfoodPhase(str, Enum):
     BLOCKED = "blocked"
 
 
-# Ordered progression; terminal phases are not in this list.
+# Ordered progression — Option 2 (pipeline-delegate) machine.
+# Legacy phases (INTERVIEW…IMPLEMENT) are preserved in the enum for state-file
+# deserialization but are not part of this order; run_all blocks on them.
 _PHASE_ORDER = [
     DogfoodPhase.PENDING,
-    DogfoodPhase.INTERVIEW,
-    DogfoodPhase.RESEARCH_BRIEF,
-    DogfoodPhase.RESEARCH,
-    DogfoodPhase.SPEC,
-    DogfoodPhase.PREMORTEM,
-    DogfoodPhase.PLAN,
     DogfoodPhase.ISOLATE,
-    DogfoodPhase.IMPLEMENT,
+    DogfoodPhase.DEVELOP,
     DogfoodPhase.VERIFY,
     DogfoodPhase.REVIEW,
     DogfoodPhase.FINALIZE,
@@ -162,6 +161,8 @@ class DogfoodState:
     research_path: str = ""
     spec_path: str = ""
     plan_path: str = ""
+    # develop phase output: files changed inside the worktree (merge allowlist source)
+    develop_changed_paths: list[str] = field(default_factory=list)
 
     # runtime tracking
     attempts: int = 0
@@ -213,6 +214,7 @@ class DogfoodState:
             "research_path": self.research_path,
             "spec_path": self.spec_path,
             "plan_path": self.plan_path,
+            "develop_changed_paths": list(self.develop_changed_paths),
             "attempts": self.attempts,
             "last_failure": self.last_failure,
             "next_action": self.next_action,
@@ -249,6 +251,7 @@ class DogfoodState:
             research_path=data.get("research_path", ""),
             spec_path=data.get("spec_path", ""),
             plan_path=data.get("plan_path", ""),
+            develop_changed_paths=list(data.get("develop_changed_paths") or []),
             attempts=data.get("attempts", 0),
             last_failure=data.get("last_failure", ""),
             next_action=data.get("next_action", ""),
@@ -1126,6 +1129,9 @@ def _check_merge_policy(
     # Allowed path check — boundary-aware: exact match for files, directory
     # boundary for dir entries. Plain startswith() is fail-open: it would let
     # "core/utils.py.bak" pass an allowlist of "core/utils.py".
+    # inv1: empty allowlist + changed files = scope undefined → deny all.
+    if not policy.allowed_paths and changed_files:
+        return False, "no allowed_paths configured: deny-all when files changed"
     if policy.allowed_paths:
         for f in changed_files:
             if not any(
@@ -1138,16 +1144,18 @@ def _check_merge_policy(
 
 
 def build_merge_policy(state: DogfoodState, mode: str | None = None) -> MergePolicy:
-    """Construct the MergePolicy for a dogfood merge from the plan-derived allowlist.
+    """Construct the MergePolicy for a dogfood merge.
+
+    Primary source: state.develop_changed_paths (set by DEVELOP phase, inv1).
+    Legacy fallback: state.plan_path (plan-based flows and existing tests).
 
     Both the manual path (merge_dogfood_branch with policy=None) and the auto
     path (_run_merge_phase) MUST route through this so scope enforcement is
-    identical. Constructing a bare MergePolicy elsewhere leaves allowed_paths
-    empty, which disables the allowed-path gate in _check_merge_policy() and
-    lets IMPLEMENT commits bypass scope boundaries on auto-merge.
+    identical.
     """
-    allowed: list[str] = []
-    if state.plan_path:
+    allowed: list[str] = list(state.develop_changed_paths)
+
+    if not allowed and state.plan_path:
         _pd = load_policy_json(Path(state.plan_path), required=False)
         for _s in _pd.get("steps", []):
             for _f in (_s.get("artifacts") or []):
@@ -1604,6 +1612,60 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
     }
 
 
+# Env-var keys activated inside DEVELOP to confine writes to the worktree.
+_ISO_ENV_KEYS: Final[tuple[str, ...]] = (
+    "AF_DISABLE_REGISTRY_WRITE",
+    "AF_SELF_RUN",
+    "AGENT_PROJECT_ROOT",
+)
+
+
+def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
+    """Invoke the injected ProjectPipeline inside the isolated worktree.
+
+    Sets the reused F12/self-run guards around the call and restores prior
+    env unconditionally via try/finally (inv5). Changed files are stored in
+    state.develop_changed_paths for the merge allowlist (inv1).
+
+    Reads (skill lookup) stay global; writes (registry/workflow/files) are
+    confined to the worktree or globally blocked.
+    """
+    if pipeline is None:
+        raise ValueError("project_pipeline is required for DEVELOP phase")
+    worktree = state.worktree_workspace or state.source_workspace
+    prior: dict[str, str | None] = {k: os.environ.get(k) for k in _ISO_ENV_KEYS}
+    try:
+        os.environ["AF_DISABLE_REGISTRY_WRITE"] = "1"
+        os.environ["AF_SELF_RUN"] = "1"
+        os.environ["AGENT_PROJECT_ROOT"] = worktree
+        result = pipeline.run(
+            task_input=state.task,
+            workspace=worktree,
+            runtime_workspace=state.runtime_workspace,
+        )
+    finally:
+        for k, v in prior.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    # Primary: pipeline may expose changed_files (e.g. test doubles / future API).
+    # Fallback: git diff --name-only base_ref..HEAD in the worktree — reliable for
+    # production where ProjectPipeline.run() does not return changed_files.
+    changed: list[str] = list(result.get("changed_files") or [])
+    if not changed and state.base_ref:
+        try:
+            diff_out = _git(
+                ["diff", "--name-only", state.base_ref, "HEAD"],
+                cwd=worktree,
+            ).stdout.strip()
+            changed = [f for f in diff_out.splitlines() if f]
+        except Exception:
+            pass
+    state.develop_changed_paths = changed
+    return result
+
+
 def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
     """Run verification commands and return a VerifyResult dict.
 
@@ -1616,6 +1678,14 @@ def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
     commands: list[str] = list(context.get("commands") or [])
     if not commands:
         commands = list(plan_dict.get("verification_requirements", []))
+
+    # Filter # TODO / blank placeholders — they are not effective verification
+    # (inv2: reuse _is_e2e_missing semantics without the cross-module import).
+    def _is_placeholder(cmd: str) -> bool:
+        v = cmd.strip()
+        return not v or v.startswith("# TODO") or v.startswith("#TODO")
+
+    commands = [c for c in commands if not _is_placeholder(c)]
 
     # F-PHASE-COMPLETE guard: a plan with no verification commands has no
     # completion proof. Fail so the pipeline does not trivially reach COMPLETE.
@@ -1641,12 +1711,11 @@ def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
 
 
 def _run_review_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
-    """Inspect verify result and decide: pass / retry / block.
+    """Inspect verify result and decide: pass / block.
 
-    Decision logic:
-      - verify passed           → "pass"
-      - failed, attempts < MAX  → "retry"  (caller should call retry_run())
-      - failed, attempts >= MAX → "block"  (caller should call block_run())
+    In the pipeline-delegate model (Option 2) FSALoop owns self-correction;
+    a dogfood-level retry is redundant and its reset destroys FSALoop learning.
+    A failed verify always maps to BLOCK (inv3).
     """
     verify_result = context.get("verify_result", {})
     passed = verify_result.get("passed", True)
@@ -1657,18 +1726,9 @@ def _run_review_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
             reason="all verification checks passed",
         ).to_dict()
 
-    if state.attempts < MAX_VERIFY_ATTEMPTS - 1:
-        return ReviewDecision(
-            decision="retry",
-            reason=(
-                f"attempt {state.attempts + 1}/{MAX_VERIFY_ATTEMPTS};"
-                " retrying implementation"
-            ),
-        ).to_dict()
-
     return ReviewDecision(
         decision="block",
-        reason=f"max attempts ({MAX_VERIFY_ATTEMPTS}) reached without passing verification",
+        reason="verification failed — see verify_result.failures",
     ).to_dict()
 
 
@@ -1712,40 +1772,28 @@ def run_all(
     task: str,
     workspace: str,
     *,
+    # Legacy params kept for call-site compat; not used by the Option 2 machine.
     interview_artifact: dict[str, Any] | None = None,
     non_interactive: bool = False,
+    allow_partial_impl: bool = False,
+    _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
+    # Active params
     run_id: str | None = None,
     runtime_workspace: str | None = None,
     merge_mode: str = "auto_policy",
     strict_contract: bool = False,
-    allow_partial_impl: bool = False,
     cleanup_worktree_on_block: bool = False,
-    _interview_fn: Callable[[str, str], dict[str, Any]] | None = None,
+    project_pipeline: Any = None,
 ) -> "DogfoodState":
-    """Run the complete dogfood pipeline: PENDING → ... → COMPLETE or BLOCKED.
+    """Run the dogfood pipeline (Option 2): PENDING → ISOLATE → DEVELOP → VERIFY → REVIEW → FINALIZE → MERGE → COMPLETE/BLOCKED.
 
-    Phases execute sequentially. The IMPLEMENT → VERIFY → REVIEW loop repeats
-    on retry until verification passes or max attempts are exhausted (BLOCKED).
-    After REVIEW pass: FINALIZE commits the result, MERGE merges per merge_mode.
-
-    interview_artifact: pre-built interview data; when None the INTERVIEW phase
-        calls run_interview() interactively (TTY-detected) or non-interactively.
-    non_interactive: force non-interactive interview (skip TTY detection).
+    project_pipeline: injected ProjectPipeline for DEVELOP phase. None skips
+        DEVELOP (backward compat for tests that stub downstream phases directly).
     merge_mode: auto_policy | manual | never
-    strict_contract: production-mode artifact contract checks. Direct phase
-        tests remain permissive via run_phase() or strict_contract=False.
-    cleanup_worktree_on_block: when True, remove the worktree if the run ends
-        BLOCKED.  Failed isolations are always cleaned regardless of this flag.
-    _interview_fn: injectable for tests; overrides the default run_interview wrapper.
-    Returns the final DogfoodState (phase COMPLETE or BLOCKED).
+    strict_contract: production-mode artifact contract checks.
+    cleanup_worktree_on_block: remove the worktree when BLOCKED.
+    Returns the final DogfoodState.
     """
-    # Validate policy combination before creating state (fail-fast).
-    if allow_partial_impl and merge_mode == "auto_policy":
-        raise ValueError(
-            "allow_partial_impl=True is incompatible with merge_mode='auto_policy'."
-            " Use merge_mode='manual' or 'never'."
-        )
-
     state = create_run(
         task, workspace,
         run_id=run_id,
@@ -1753,19 +1801,7 @@ def run_all(
         merge_mode=merge_mode,
     )
 
-    # Build interview callable only when no pre-built artifact is provided.
-    effective_interview_fn: Callable[[str, str], dict[str, Any]] | None
-    if interview_artifact is None:
-        effective_interview_fn = _interview_fn or _build_interview_fn(non_interactive)
-    else:
-        effective_interview_fn = None
-
-    interview: dict[str, Any] = interview_artifact if interview_artifact is not None else {"goal": task}
-    research_brief: dict[str, Any] = {}
-    research: dict[str, Any] = {}
-    spec: dict[str, Any] = {}
-    premortem: dict[str, Any] = {}
-    plan_dict: dict[str, Any] = {}
+    develop_result: dict[str, Any] = {}
     verify_result: dict[str, Any] = {}
 
     while not state.is_terminal():
@@ -1780,45 +1816,7 @@ def run_all(
             save_state(state)
             continue
 
-        if phase == DogfoodPhase.INTERVIEW:
-            trace_input = interview
-            interview = run_phase(state, artifact=interview, _interview_fn=effective_interview_fn)
-            trace_output = interview
-        elif phase == DogfoodPhase.RESEARCH_BRIEF:
-            trace_input = interview
-            research_brief = run_phase(state, artifact=interview)
-            trace_output = research_brief
-        elif phase == DogfoodPhase.RESEARCH:
-            trace_input = research_brief
-            research = run_phase(state, context=research_brief)
-            trace_output = research
-        elif phase == DogfoodPhase.SPEC:
-            trace_input = {"interview": interview, "research": research}
-            spec = run_phase(
-                state,
-                interview_artifact=interview,
-                research_artifact=research,
-            )
-            trace_output = spec
-        elif phase == DogfoodPhase.PREMORTEM:
-            trace_input = spec
-            premortem = run_phase(state, spec_dict=spec)
-            trace_output = premortem
-        elif phase == DogfoodPhase.PLAN:
-            from core.triad import TriadBlockedError
-            trace_input = {"spec": spec, "premortem": premortem}
-            try:
-                plan_dict = run_phase(state, spec_dict=spec, premortem_dict=premortem)
-            except TriadBlockedError as exc:
-                block_run(state, str(exc))
-                _append_phase_trace(
-                    state, phase, trace_input, {}, phase_started,
-                    exception_type=type(exc).__name__, blocked_reason=state.last_failure,
-                )
-                save_state(state)
-                continue
-            trace_output = plan_dict
-        elif phase == DogfoodPhase.ISOLATE:
+        if phase == DogfoodPhase.ISOLATE:
             try:
                 trace_output = run_phase(state)
             except GitWorktreeError as exc:
@@ -1829,55 +1827,43 @@ def run_all(
                 )
                 save_state(state)
                 continue
-        elif phase == DogfoodPhase.IMPLEMENT:
-            trace_input = plan_dict
-            impl_result = run_phase(state, context={"preflight_static": True})
-            trace_output = impl_result
-            phase_llm_called = any(
-                str(item.get("command", "")).startswith("[AI]")
-                for item in impl_result.get("executed", [])
-                if isinstance(item, dict)
-            )
-            if strict_contract and not impl_result.get("executed"):
-                block_run(state, "strict_contract: implementation produced no executed steps")
-                _append_phase_trace(
-                    state, phase, trace_input, trace_output, phase_started,
-                    llm_called=phase_llm_called, blocked_reason=state.last_failure,
-                )
-                save_state(state)
-                continue
-            if not impl_result.get("ok"):
-                # ok=False always BLOCK unless caller explicitly opted in.
-                # Empty execution and partial failure are both fail-closed.
-                if not allow_partial_impl:
-                    _failures = impl_result.get("failures") or []
-                    _reason = (
-                        "implementation phase produced no executed steps"
-                        if not impl_result.get("executed")
-                        else f"implementation failed: {_failures}"
-                    )
-                    block_run(state, _reason)
+        elif phase == DogfoodPhase.DEVELOP:
+            if project_pipeline is not None:
+                try:
+                    develop_result = run_phase(state, project_pipeline=project_pipeline)
+                    trace_output = develop_result
+                    phase_llm_called = True
+                except Exception as exc:
+                    block_run(state, f"develop failed: {exc}")
                     _append_phase_trace(
-                        state, phase, trace_input, trace_output, phase_started,
-                        llm_called=phase_llm_called, blocked_reason=state.last_failure,
+                        state, phase, trace_input, {}, phase_started,
+                        exception_type=type(exc).__name__, blocked_reason=state.last_failure,
                     )
                     save_state(state)
                     continue
+                if develop_result.get("status") == "blocked":
+                    block_run(state, develop_result.get("last_failure", "pipeline blocked"))
+                    _append_phase_trace(
+                        state, phase, trace_input, trace_output, phase_started,
+                        llm_called=True, blocked_reason=state.last_failure,
+                    )
+                    save_state(state)
+                    continue
+            # project_pipeline=None → skip DEVELOP (backward compat for tests
+            # that stub downstream phases directly without a real pipeline).
         elif phase == DogfoodPhase.VERIFY:
-            trace_input = plan_dict
-            verify_result = run_phase(state, context={"plan_dict": plan_dict})
+            trace_input = develop_result
+            verify_result = run_phase(state, context={"plan_dict": develop_result})
             trace_output = verify_result
         elif phase == DogfoodPhase.REVIEW:
             trace_input = verify_result
             review = run_phase(state, context={"verify_result": verify_result})
             trace_output = review
             decision = review.get("decision", "pass")
-            if decision == "retry":
-                retry_run(state)
-            elif decision == "block":
+            if decision == "block":
                 block_run(state, review.get("reason", ""))
             else:
-                advance_phase(state)  # → FINALIZE
+                advance_phase(state)  # → FINALIZE (inv3: no retry in Option 2)
             _append_phase_trace(state, phase, trace_input, trace_output, phase_started, blocked_reason=state.last_failure)
             save_state(state)
             continue
@@ -1905,6 +1891,15 @@ def run_all(
                 continue
             # _run_merge_phase sets state.phase directly for COMPLETE/BLOCKED
             _append_phase_trace(state, phase, trace_input, trace_output, phase_started, blocked_reason=state.last_failure)
+            save_state(state)
+            continue
+        else:
+            # Legacy or unknown phase (not in active _PHASE_ORDER).
+            block_run(state, f"unrecognised phase in pipeline: {phase.value!r}")
+            _append_phase_trace(
+                state, phase, trace_input, {}, phase_started,
+                blocked_reason=state.last_failure,
+            )
             save_state(state)
             continue
 
@@ -1976,6 +1971,8 @@ def run_phase(state: DogfoodState, **kwargs: Any) -> dict[str, Any]:
         )
     if phase == DogfoodPhase.ISOLATE:
         return _run_isolate_phase(state)
+    if phase == DogfoodPhase.DEVELOP:
+        return _run_develop_phase(state, kwargs.get("project_pipeline"))
     if phase == DogfoodPhase.IMPLEMENT:
         return _run_implement_phase(state, kwargs.get("context", {}))
     if phase == DogfoodPhase.VERIFY:

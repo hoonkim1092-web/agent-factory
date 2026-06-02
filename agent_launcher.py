@@ -1058,11 +1058,9 @@ if __name__ == "__main__":
                     print(f"[dogfood] from-file : {from_file}")
                 state = run_all(
                     args.task, workspace, run_id=args.run_id,
-                    interview_artifact=interview_artifact,
-                    non_interactive=getattr(args, "non_interactive", False),
                     merge_mode=merge_mode,
                     strict_contract=True,
-                    allow_partial_impl=getattr(args, "allow_partial_impl", False),
+                    project_pipeline=self.project_pipeline,
                 )
                 print(f"[dogfood] run_id    : {state.run_id}")
                 print(f"[dogfood] phase     : {state.phase.value}")

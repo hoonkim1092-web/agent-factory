@@ -6940,3 +6940,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (13)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dogfood.py, projects/agent_factory/agents/architect.yaml, projects/agent_factory/agents/logicdev.yaml, projects/agent_factory/context_schema.yaml, projects/agent_factory/docs/architecture.md, projects/agent_factory/docs/change_history.md, projects/agent_factory/policies.yaml, projects/agent_factory/settings.yaml, projects/agent_factory/workflow.yaml, tests/test_dogfood.py, tests/test_premortem.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-03 01:26 — `2026-05-20-research-coverage-gate` (b0bbbb48)
+
+**Context**: Claude Code edit session
+
+**Changed (8)**: `Master_Blueprint.md, agent_launcher.py, core/dogfood.py, tests/test_dogfood.py, tests/test_dogfood_cli.py, tests/test_dogfood_integration.py, tests/test_dogfood_isolation.py, tests/test_dogfood_realignment.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

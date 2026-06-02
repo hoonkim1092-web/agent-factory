@@ -863,6 +863,8 @@ def test_merge_crash_recovery_already_ancestor(tmp_path):
 def test_conflict_check_uses_reset_merge_not_abort(tmp_path):
     state = _make_merge_state(tmp_path)
     state.source_workspace = str(tmp_path)
+    # develop_changed_paths populates the allowlist so inv1 doesn't fire first.
+    state.develop_changed_paths = ["core/x.py"]
 
     # Provide a valid merge_report so the missing-report guard is skipped
     report_path = _artifact_path(state, ARTIFACT_MERGE_REPORT)

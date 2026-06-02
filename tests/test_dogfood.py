@@ -127,6 +127,7 @@ def test_state_to_dict_keys(tmp_path):
         "isolation_status", "cleanup_skip_reason", "merge_status", "merge_mode",
         "dogfood_commit", "merged_commit",
         "interview_path", "research_brief_path", "research_path", "spec_path", "plan_path",
+        "develop_changed_paths",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria",
         "budget_consumed", "budget_max_tokens", "budget_stopped", "budget_project_id",
@@ -573,14 +574,14 @@ def test_create_run_unique_ids(tmp_path):
 def test_advance_from_pending(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.PENDING)
     new = advance_phase(state)
-    assert new == DogfoodPhase.INTERVIEW
-    assert state.phase == DogfoodPhase.INTERVIEW
-
-
-def test_advance_from_plan(tmp_path):
-    state = _state(tmp_path, phase=DogfoodPhase.PLAN)
-    new = advance_phase(state)
     assert new == DogfoodPhase.ISOLATE
+    assert state.phase == DogfoodPhase.ISOLATE
+
+
+def test_advance_from_isolate(tmp_path):
+    state = _state(tmp_path, phase=DogfoodPhase.ISOLATE)
+    new = advance_phase(state)
+    assert new == DogfoodPhase.DEVELOP
 
 
 def test_advance_from_review(tmp_path):
@@ -1408,75 +1409,18 @@ def test_run_review_passed_returns_pass(tmp_path):
     assert result["decision"] == "pass"
 
 
-def test_run_review_failed_first_attempt_returns_retry(tmp_path):
+def test_run_review_failed_always_blocks(tmp_path):
+    """inv3: any failed verify → block regardless of attempts count."""
     state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    state.attempts = 0  # first attempt
-    result = run_phase(state, context=_verify_passed_ctx(False))
-    assert result["decision"] == "retry"
-    assert "1/" in result["reason"]
-
-
-def test_run_review_failed_last_attempt_returns_block(tmp_path):
-    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    state.attempts = MAX_VERIFY_ATTEMPTS - 1
+    state.attempts = 0  # first attempt — must block, not retry
     result = run_phase(state, context=_verify_passed_ctx(False))
     assert result["decision"] == "block"
-    assert str(MAX_VERIFY_ATTEMPTS) in result["reason"]
 
 
 def test_run_review_missing_verify_result_assumes_passed(tmp_path):
     state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
     result = run_phase(state, context={})
     assert result["decision"] == "pass"
-
-
-def test_run_review_retry_boundary(tmp_path):
-    """attempts == MAX-2 still retries; attempts == MAX-1 blocks."""
-    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    state.attempts = MAX_VERIFY_ATTEMPTS - 2
-    r1 = run_phase(state, context=_verify_passed_ctx(False))
-    assert r1["decision"] == "retry"
-
-    state.attempts = MAX_VERIFY_ATTEMPTS - 1
-    r2 = run_phase(state, context=_verify_passed_ctx(False))
-    assert r2["decision"] == "block"
-
-
-# ---------------------------------------------------------------------------
-# retry_run
-# ---------------------------------------------------------------------------
-
-def test_retry_run_resets_to_implement(tmp_path):
-    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    retry_run(state)
-    assert state.phase == DogfoodPhase.IMPLEMENT
-
-
-def test_retry_run_increments_attempts(tmp_path):
-    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    assert state.attempts == 0
-    retry_run(state)
-    assert state.attempts == 1
-
-
-def test_retry_run_multiple(tmp_path):
-    state = _state(tmp_path, phase=DogfoodPhase.REVIEW)
-    retry_run(state)
-    advance_phase(state)  # IMPLEMENT → VERIFY
-    advance_phase(state)  # VERIFY → REVIEW
-    retry_run(state)
-    assert state.attempts == 2
-    assert state.phase == DogfoodPhase.IMPLEMENT
-
-
-def test_retry_run_does_not_persist(tmp_path):
-    """retry_run mutates state in-memory only; save_state must be called explicitly."""
-    state = _state(tmp_path)
-    save_state(state)
-    state.phase = DogfoodPhase.REVIEW
-    retry_run(state)
-    loaded = load_state(state.runtime_workspace, state.run_id)
-    assert loaded.phase == DogfoodPhase.PENDING  # not persisted yet
 
 
 # ---------------------------------------------------------------------------
@@ -1593,33 +1537,20 @@ def test_run_all_persists_complete_state(tmp_path, monkeypatch):
     assert loaded.phase == DogfoodPhase.COMPLETE
 
 
-def test_run_all_retry_then_pass_returns_complete(tmp_path, monkeypatch):
-    _patch_all_runners(monkeypatch, verify_seq=[False, True])
-    state = run_all(
-        "retry task", str(tmp_path),
-        interview_artifact={"goal": "retry task"},
-        runtime_workspace=str(tmp_path / "rt"),
-    )
-    assert state.phase == DogfoodPhase.COMPLETE
-    assert state.attempts == 1
-
-
-def test_run_all_max_retries_returns_blocked(tmp_path, monkeypatch):
-    _patch_all_runners(monkeypatch, verify_seq=[False] * MAX_VERIFY_ATTEMPTS)
+def test_run_all_blocked_on_first_verify_fail(tmp_path, monkeypatch):
+    """inv3: first verify failure → BLOCKED immediately (no retry)."""
+    _patch_all_runners(monkeypatch, verify_seq=[False])
     state = run_all(
         "blocked task", str(tmp_path),
-        interview_artifact={"goal": "blocked task"},
         runtime_workspace=str(tmp_path / "rt"),
     )
     assert state.phase == DogfoodPhase.BLOCKED
-    assert state.attempts == MAX_VERIFY_ATTEMPTS - 1
 
 
 def test_run_all_blocked_persists_state(tmp_path, monkeypatch):
-    _patch_all_runners(monkeypatch, verify_seq=[False] * MAX_VERIFY_ATTEMPTS)
+    _patch_all_runners(monkeypatch, verify_seq=[False])
     state = run_all(
         "blocked", str(tmp_path),
-        interview_artifact={"goal": "blocked"},
         runtime_workspace=str(tmp_path / "rt"),
     )
     loaded = load_state(state.runtime_workspace, state.run_id)
@@ -1627,34 +1558,18 @@ def test_run_all_blocked_persists_state(tmp_path, monkeypatch):
     assert loaded.last_failure != ""
 
 
-def test_run_all_default_interview_uses_task_as_goal(tmp_path, monkeypatch):
-    import core.dogfood as df
-    captured: dict = {}
-
-    def _capture_interview(s, artifact, **kw):
-        captured.update(artifact)
-        return artifact
-
-    _patch_all_runners(monkeypatch)
-    monkeypatch.setattr(df, "_run_interview_phase", _capture_interview)
-
-    run_all("my task", str(tmp_path), runtime_workspace=str(tmp_path / "rt"))
-    assert captured.get("goal") == "my task"
-
-
 def test_run_all_returns_dogfood_state(tmp_path, monkeypatch):
     _patch_all_runners(monkeypatch)
     state = run_all(
         "t", str(tmp_path),
-        interview_artifact={"goal": "t"},
         runtime_workspace=str(tmp_path / "rt"),
     )
     assert isinstance(state, DogfoodState)
     assert state.task == "t"
 
 
-def test_run_all_verify_uses_plan_verification_requirements(tmp_path, monkeypatch):
-    """VERIFY must receive plan_dict so verification_requirements are not silently skipped."""
+def test_run_all_verify_receives_develop_result(tmp_path, monkeypatch):
+    """VERIFY must receive develop_result as plan_dict (Option 2: no separate PLAN phase)."""
     import core.dogfood as df
 
     received_contexts: list[dict] = []
@@ -1664,23 +1579,17 @@ def test_run_all_verify_uses_plan_verification_requirements(tmp_path, monkeypatc
         return {"passed": True, "commands_run": [], "failures": []}
 
     _patch_all_runners(monkeypatch)
-    monkeypatch.setattr(df, "_run_plan_phase",
-        lambda s, spec_dict, premortem_dict, **kw: {
-            "intent": "t", "steps": [], "completion_criteria": [],
-            "approval_points": [], "verification_requirements": ["pytest -q"],
-            "unresolved_risks": [],
-        })
     monkeypatch.setattr(df, "_run_verify_phase", _capture_verify)
 
-    run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
-            runtime_workspace=str(tmp_path / "rt"))
+    run_all("t", str(tmp_path), runtime_workspace=str(tmp_path / "rt"))
 
     assert len(received_contexts) == 1
-    plan = received_contexts[0].get("plan_dict", {})
-    assert plan.get("verification_requirements") == ["pytest -q"]
+    # develop_result is {} when project_pipeline=None (skip mode)
+    assert "plan_dict" in received_contexts[0]
 
 
-def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
+def test_run_all_traverses_active_phases(tmp_path, monkeypatch):
+    """Option 2 machine traverses: isolate → (skip develop) → verify → review → finalize → merge."""
     import core.dogfood as df
     visited: list[str] = []
 
@@ -1693,14 +1602,7 @@ def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
     _patch_all_runners(monkeypatch)
 
     for attr, name in [
-        ("_run_interview_phase", "interview"),
-        ("_run_research_brief_phase", "research_brief"),
-        ("_run_research_phase", "research"),
-        ("_run_spec_phase", "spec"),
-        ("_run_premortem_phase", "premortem"),
-        ("_run_plan_phase", "plan"),
         ("_run_isolate_phase", "isolate"),
-        ("_run_implement_phase", "implement"),
         ("_run_verify_phase", "verify"),
         ("_run_review_phase", "review"),
         ("_run_finalize_phase", "finalize"),
@@ -1709,54 +1611,28 @@ def test_run_all_traverses_all_non_terminal_phases(tmp_path, monkeypatch):
         orig = getattr(df, attr)
         monkeypatch.setattr(df, attr, _track(name, orig))
 
-    run_all(
-        "track test", str(tmp_path),
-        interview_artifact={"goal": "track test"},
-        runtime_workspace=str(tmp_path / "rt"),
-    )
-    assert visited == [
-        "interview", "research_brief", "research", "spec",
-        "premortem", "plan", "isolate", "implement", "verify", "review",
-        "finalize", "merge",
-    ]
+    run_all("track test", str(tmp_path), runtime_workspace=str(tmp_path / "rt"))
+    # DEVELOP is skipped (project_pipeline=None)
+    assert visited == ["isolate", "verify", "review", "finalize", "merge"]
 
 
-def test_run_all_triad_blocked_transitions_to_blocked(tmp_path, monkeypatch):
-    """TriadBlockedError from _run_plan_phase → run_all() reaches BLOCKED state."""
-    import core.dogfood as df
-    from core.triad import TriadBlockedError
-
-    _patch_all_runners(monkeypatch)
-
-    def _raise_triad(s, spec_dict, premortem_dict, **kw):
-        raise TriadBlockedError("Critical: core.triad missing from af.spec")
-
-    monkeypatch.setattr(df, "_run_plan_phase", _raise_triad)
-
-    state = run_all(
-        "t", str(tmp_path),
-        interview_artifact={"goal": "t"},
-        runtime_workspace=str(tmp_path / "rt"),
-    )
-    assert state.phase == DogfoodPhase.BLOCKED
-    assert "Critical" in state.last_failure
-
-
-def test_run_all_implement_blocked_when_no_steps_executed(tmp_path, monkeypatch):
-    """P1: run_all() reaches BLOCKED when IMPLEMENT returns ok=False and no executed steps."""
+def test_run_all_develop_blocked_when_pipeline_raises(tmp_path, monkeypatch):
+    """DEVELOP exception → BLOCKED state."""
     import core.dogfood as df
 
     _patch_all_runners(monkeypatch)
-    monkeypatch.setattr(df, "_run_implement_phase",
-        lambda s, context: {"executed": [], "failures": ["S1: AI execution failed"], "skipped_no_commands": [], "ok": False})
+
+    class _BrokenPipeline:
+        def run(self, **kwargs):
+            raise RuntimeError("pipeline exploded")
 
     state = run_all(
         "t", str(tmp_path),
-        interview_artifact={"goal": "t"},
         runtime_workspace=str(tmp_path / "rt"),
+        project_pipeline=_BrokenPipeline(),
     )
     assert state.phase == DogfoodPhase.BLOCKED
-    assert "no executed steps" in state.last_failure
+    assert "pipeline exploded" in state.last_failure
 
 
 # ---------------------------------------------------------------------------
@@ -1998,62 +1874,6 @@ class TestMergePolicyAllowPartialImpl:
             MergePolicy(mode="auto_policy", allow_partial_impl=True)
 
 
-class TestRunAllPartialImpl:
-    """run_all() allow_partial_impl validation + IMPLEMENT BLOCK semantics (3.1 + 3.4)."""
-
-    def test_auto_policy_allow_partial_impl_raises(self, tmp_path):
-        import pytest
-        with pytest.raises(ValueError, match="auto_policy"):
-            run_all("t", str(tmp_path), merge_mode="auto_policy", allow_partial_impl=True,
-                    interview_artifact={"goal": "t"})
-
-    def test_ok_false_with_executed_blocks_by_default(self, tmp_path, monkeypatch):
-        """ok=False even with executed steps → BLOCKED (3.1 default)."""
-        import core.dogfood as df
-        _patch_all_runners(monkeypatch)
-        monkeypatch.setattr(df, "_run_implement_phase",
-            lambda s, context: {
-                "executed": [{"step": "S1", "command": "echo hi", "ok": False, "output": ""}],
-                "failures": ["S1: echo hi"],
-                "skipped_no_commands": [],
-                "ok": False,
-            })
-        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
-                        runtime_workspace=str(tmp_path / "rt"))
-        assert state.phase == DogfoodPhase.BLOCKED
-        assert "implementation failed" in state.last_failure
-
-    def test_ok_false_empty_executed_blocks(self, tmp_path, monkeypatch):
-        """ok=False with no executed steps → BLOCKED with 'no executed steps' reason."""
-        import core.dogfood as df
-        _patch_all_runners(monkeypatch)
-        monkeypatch.setattr(df, "_run_implement_phase",
-            lambda s, context: {"executed": [], "failures": ["S1: AI execution failed"],
-                                 "skipped_no_commands": [], "ok": False})
-        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
-                        runtime_workspace=str(tmp_path / "rt"))
-        assert state.phase == DogfoodPhase.BLOCKED
-        assert "no executed steps" in state.last_failure
-
-    def test_allow_partial_impl_proceeds_to_verify(self, tmp_path, monkeypatch):
-        """allow_partial_impl=True + merge_mode=never → ok=False does NOT block."""
-        import core.dogfood as df
-        _patch_all_runners(monkeypatch)
-        monkeypatch.setattr(df, "_run_implement_phase",
-            lambda s, context: {
-                "executed": [{"step": "S1", "command": "echo hi", "ok": False, "output": ""}],
-                "failures": ["S1: echo hi"],
-                "skipped_no_commands": [],
-                "ok": False,
-            })
-        state = run_all("t", str(tmp_path), interview_artifact={"goal": "t"},
-                        runtime_workspace=str(tmp_path / "rt"),
-                        merge_mode="never", allow_partial_impl=True)
-        # Should not be BLOCKED at IMPLEMENT; VERIFY/REVIEW decide the outcome
-        assert state.phase in (DogfoodPhase.COMPLETE, DogfoodPhase.BLOCKED)
-        if state.phase == DogfoodPhase.BLOCKED:
-            assert "no executed steps" not in state.last_failure
-            assert "implementation failed" not in state.last_failure
 
 
 class TestRunMergePhaseUsesStateMode:
@@ -2196,42 +2016,51 @@ class TestCheckMergePolicyDeniedPaths:
         st.worktree_workspace = str(tmp_path)
         return st
 
-    def _policy(self, denied: list[str]) -> MergePolicy:
+    def _policy(self, denied: list[str], allowed: list[str] | None = None) -> MergePolicy:
         return MergePolicy(
             mode="manual",
             require_clean_source=False,
             allow_source_advanced=True,
             require_dogfood_commit=False,
             denied_paths=denied,
+            # inv1: explicit allowlist required when changed_files is non-empty;
+            # tests that expect ok=True must pass the files they expect to allow.
+            allowed_paths=allowed or [],
         )
 
-    def _check(self, tmp_path, denied: list[str], changed: list[str]):
+    def _check(self, tmp_path, denied: list[str], changed: list[str],
+               allowed: list[str] | None = None):
         import core.dogfood as df
         st = self._make_state(tmp_path)
-        policy = self._policy(denied)
+        policy = self._policy(denied, allowed=allowed)
         return df._check_merge_policy(st, policy, changed)
 
     def test_directory_prefix_denied(self, tmp_path):
-        ok, reason = self._check(tmp_path, ["runtime/"], ["runtime/foo.py"])
+        ok, reason = self._check(tmp_path, ["runtime/"], ["runtime/foo.py"],
+                                  allowed=["runtime/"])
         assert not ok
         assert "denied path" in reason
 
     def test_no_false_positive_substring(self, tmp_path):
         """'runtime/' must NOT match 'myruntime/foo.py' (substring false positive)."""
-        ok, _ = self._check(tmp_path, ["runtime/"], ["myruntime/foo.py"])
+        ok, _ = self._check(tmp_path, ["runtime/"], ["myruntime/foo.py"],
+                             allowed=["myruntime/"])
         assert ok
 
     def test_exact_file_denied(self, tmp_path):
-        ok, reason = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml"])
+        ok, reason = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml"],
+                                  allowed=["skills/registry.yaml"])
         assert not ok
         assert "denied path" in reason
 
     def test_similar_filename_not_denied(self, tmp_path):
         """'skills/registry.yaml' must NOT match 'skills/registry.yaml.bak'."""
-        ok, _ = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml.bak"])
+        ok, _ = self._check(tmp_path, ["skills/registry.yaml"], ["skills/registry.yaml.bak"],
+                             allowed=["skills/registry.yaml.bak"])
         assert ok
 
     def test_nested_dir_denied(self, tmp_path):
-        ok, reason = self._check(tmp_path, [".af_runtime/"], [".af_runtime/dogfood/state.json"])
+        ok, reason = self._check(tmp_path, [".af_runtime/"], [".af_runtime/dogfood/state.json"],
+                                  allowed=[".af_runtime/"])
         assert not ok
         assert "denied path" in reason

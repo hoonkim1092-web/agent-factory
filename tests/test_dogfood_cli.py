@@ -459,24 +459,6 @@ def test_run_phase_passes_interview_fn(tmp_path):
     assert called
 
 
-def test_run_all_calls_interview_fn_when_no_artifact(tmp_path):
-    """`run_all` invokes _interview_fn when interview_artifact=None."""
-    from core.dogfood import run_all
-
-    brief = {"goal": "g", "intent": "i"}
-    calls: list[str] = []
-
-    def mock_fn(task: str, workspace: str) -> dict:
-        calls.append(task)
-        return {"ok": True, "project_brief": brief}
-
-    p1, p2 = _run_all_side_effect_patches()
-    with p1, p2:
-        state = run_all("g", str(tmp_path), _interview_fn=mock_fn)
-    assert calls == ["g"]
-    assert state.phase.value in ("complete", "blocked")
-
-
 def test_run_all_skips_interview_fn_when_artifact_provided(tmp_path):
     """`run_all` does NOT invoke _interview_fn when interview_artifact is given."""
     from core.dogfood import run_all
