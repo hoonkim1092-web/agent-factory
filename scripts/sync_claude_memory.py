@@ -22,6 +22,7 @@ Supabase DDL (artifacts/claude_memory_schema.sql 참조):
 import argparse
 import json
 import os
+import re
 import socket
 import sys
 import tempfile
@@ -164,12 +165,21 @@ def _fetch_remote_row(sb_url: str, sb_key: str, table: str, project_id: str) -> 
 # Atomic file write
 # ---------------------------------------------------------------------------
 
+def _normalize_newlines(text: str) -> str:
+    # 모든 줄바꿈 변종을 LF로 정규화. \r+\n 을 먼저 단일 \n 으로 붕괴시켜야
+    # 다중 CR(\r\r\n)이 빈 줄(\n\n)로 오변환되는 것을 막는다. 그 뒤 lone \r 처리.
+    return re.sub(r"\r+\n", "\n", text).replace("\r", "\n")
+
+
 def _write_atomic(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     try:
-        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-            f.write(content)
+        # content를 LF로 정규화 + newline="" 으로 OS 자동 변환(Windows \n→\r\n) 차단.
+        # 정규화는 다중 CR 재유입(push 경로의 universal-newline read가 \r\r\n을
+        # \n\n으로 오변환하는 경우 포함)을 차단한다.
+        with os.fdopen(tmp_fd, "w", encoding="utf-8", newline="") as f:
+            f.write(_normalize_newlines(content))
         os.replace(tmp_path, path)
     except Exception:
         try:
@@ -202,7 +212,9 @@ def _push(memory_dir: Path, project_id: str, dry_run: bool) -> dict:
         if md_file.is_symlink():
             continue
         local_files[md_file.name] = {
-            "content": md_file.read_text(encoding="utf-8"),
+            # read_bytes + _normalize_newlines: universal-newline read가 다중 CR(\r\r\n)을
+            # \n\n 으로 오변환하는 것을 피해 정확히 LF 로만 push (재유입 차단).
+            "content": _normalize_newlines(md_file.read_bytes().decode("utf-8")),
             "mtime": _mtime_iso(md_file),
         }
 

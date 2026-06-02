@@ -204,11 +204,19 @@ def resolve_global_root(repo_root: Path, user_key: str) -> tuple[str, Path]:
     return safe_user, root
 
 
+def _normalize_newlines(text: str) -> str:
+    # 모든 줄바꿈 변종을 LF로 정규화. read/write 양쪽에서 적용해
+    # sync round-trip 시 CR 누적을 차단한다.
+    # \r+\n 을 먼저 단일 \n 으로 붕괴시켜야 다중 CR(\r\r\n)이 빈 줄(\n\n)로
+    # 오변환되는 것을 막는다. 그 뒤 남은 lone \r 만 \n 으로 치환한다.
+    return re.sub(r"\r+\n", "\n", text).replace("\r", "\n")
+
+
 def read_text(path: Path) -> str:
     raw = path.read_bytes()
     for enc in ("utf-8", "utf-8-sig", "cp949", "utf-16", "latin-1"):
         try:
-            return raw.decode(enc)
+            return _normalize_newlines(raw.decode(enc))
         except Exception:
             continue
     raise UnicodeDecodeError("unknown", raw, 0, 1, "unsupported text encoding")
@@ -216,7 +224,8 @@ def read_text(path: Path) -> str:
 
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    # write_bytes로 LF 그대로 기록 — text mode의 OS별 줄바꿈 변환(Windows \n→\r\n) 차단.
+    path.write_bytes(_normalize_newlines(content).encode("utf-8"))
 
 
 def b64e(text: str) -> str:

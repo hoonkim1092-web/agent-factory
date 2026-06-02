@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from scripts.project_context_sync import collect_snapshot, resolve_project_root
+from scripts.project_context_sync import (
+    _normalize_newlines,
+    collect_snapshot,
+    read_text,
+    resolve_project_root,
+    write_text,
+)
 
 
 def _write(path: Path, content: str) -> None:
@@ -92,3 +98,48 @@ def test_resolve_project_root_normalizes_project_path_to_collision_safe_sync_id(
 
     assert sync_id == "project_agent_factory"
     assert resolved == local_project
+
+
+# --- 줄바꿈 정규화 (CRLF 누적 버그 fix 회귀) ---------------------------------
+
+
+def test_normalize_newlines_variants():
+    # CRLF / 다중 CR / triple CR / lone CR / LF / mixed 모두 LF로 수렴
+    assert _normalize_newlines("a\r\nb") == "a\nb"
+    assert _normalize_newlines("a\r\r\nb") == "a\nb"      # 다중 CR → 빈 줄 아님
+    assert _normalize_newlines("a\r\r\r\nb") == "a\nb"
+    assert _normalize_newlines("a\rb") == "a\nb"          # lone CR
+    assert _normalize_newlines("a\nb") == "a\nb"          # LF 보존
+    assert _normalize_newlines("a\r\nb\r\r\nc\rd") == "a\nb\nc\nd"
+
+
+def test_normalize_newlines_does_not_duplicate_lines():
+    # 다중 CR이 빈 줄(\n\n)로 폭증하지 않아야 한다 (회귀: 250 insertions 버그)
+    assert _normalize_newlines("x\r\r\ny").count("\n") == 1
+
+
+def test_write_text_emits_lf_only(tmp_path: Path):
+    # write_text는 OS와 무관하게 LF만 기록 (Windows text mode \n→\r\n 차단)
+    p = tmp_path / "out.yaml"
+    write_text(p, "a\nb\nc\n")
+    assert b"\r" not in p.read_bytes()
+    assert p.read_bytes() == b"a\nb\nc\n"
+
+
+def test_write_text_normalizes_crlf_input(tmp_path: Path):
+    # CRLF/다중 CR content를 받아도 디스크에는 LF만 기록
+    p = tmp_path / "out.yaml"
+    write_text(p, "a\r\nb\r\r\nc")
+    assert b"\r" not in p.read_bytes()
+    assert p.read_bytes() == b"a\nb\nc"
+
+
+def test_read_write_round_trip_is_stable(tmp_path: Path):
+    # round-trip이 CR을 누적하지 않아야 한다 (sync 반복 시 \r\n→\r\r\n 방지)
+    p = tmp_path / "rt.yaml"
+    write_text(p, "line1\r\nline2\r\r\nline3")
+    first = read_text(p)
+    write_text(p, first)
+    second = read_text(p)
+    assert first == second == "line1\nline2\nline3"
+    assert b"\r" not in p.read_bytes()
