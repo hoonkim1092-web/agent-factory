@@ -1110,7 +1110,7 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-03; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(agent_launcher): code update — agent_launcher.py, dogfood.py, test_dogfood_realignment.py
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1661,6 +1661,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-03 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-06-03 | v1.2.34 | chore(agent_launcher): code update — agent_launcher.py, dogfood.py, test_dogfood_realignment.py |
 | 2026-06-03 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_launcher.py, dogfood.py, test_dogfood.py, test_dogfood_cli.py (+3) |
 | 2026-06-03 | v1.2.36 | feat(dogfood): Option 2 자기수정 안전 컨테이너 재정렬 — inv1~inv5 불변식 test-first 구현 완료. (1) DogfoodPhase.DEVELOP 신설; _PHASE_ORDER = PENDING→ISOLATE→DEVELOP→VERIFY→REVIEW→FINALIZE→MERGE(레거시 phase enum 보존·비활성). (2) _run_develop_phase: isolation env(AF_DISABLE_REGISTRY_WRITE/AF_SELF_RUN/AGENT_PROJECT_ROOT=worktree) try/finally 래핑 후 ProjectPipeline.run() 위임(inv5). (3) DogfoodState.develop_changed_paths: DEVELOP 결과 파일 목록(merge allowlist 원본, inv1). (4) _check_merge_policy inv1 fix: allowed_paths=[] + changed_files→즉시 REJECT(deny-all, fail-closed). (5) build_merge_policy: develop_changed_paths 우선, plan_path fallback. (6) run_all: retry 제거(inv3 — FSALoop이 DEVELOP 내부 담당), 레거시 phase 분기 제거, DEVELOP→VERIFY→REVIEW 3단계로 단순화. (7) _run_verify_phase inv2 fix: placeholder(# TODO/empty) verification_requirements → passed=False(fail-closed). (8) agent_launcher.py dogfood CLI: project_pipeline 주입. tests: test_dogfood_realignment.py inv1~inv5 5건 신규 + 기존 레거시 phase/retry 테스트 제거. 519 PASS. §3.13 갱신. |

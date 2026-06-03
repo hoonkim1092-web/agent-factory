@@ -1613,10 +1613,13 @@ def _run_implement_phase(state: DogfoodState, context: dict[str, Any]) -> dict[s
 
 
 # Env-var keys activated inside DEVELOP to confine writes to the worktree.
+# AF_SKIP_DOMAIN_REVIEW: pipeline's domain gate is redundant — dogfood runs
+# its own 3-Tier REVIEW phase as the authoritative quality gate.
 _ISO_ENV_KEYS: Final[tuple[str, ...]] = (
     "AF_DISABLE_REGISTRY_WRITE",
     "AF_SELF_RUN",
     "AGENT_PROJECT_ROOT",
+    "AF_SKIP_DOMAIN_REVIEW",
 )
 
 
@@ -1638,6 +1641,7 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
         os.environ["AF_DISABLE_REGISTRY_WRITE"] = "1"
         os.environ["AF_SELF_RUN"] = "1"
         os.environ["AGENT_PROJECT_ROOT"] = worktree
+        os.environ["AF_SKIP_DOMAIN_REVIEW"] = "1"
         result = pipeline.run(
             task_input=state.task,
             workspace=worktree,
