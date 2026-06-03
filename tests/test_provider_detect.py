@@ -75,6 +75,7 @@ def test_t01_not_installed_no_ping(monkeypatch):
 
 def test_t02_installed_ping_ok(monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     mock_proc = MagicMock()
     mock_proc.returncode = 0
@@ -94,6 +95,7 @@ def test_t02_installed_ping_ok(monkeypatch):
 
 def test_t03_ping_auth_fail(monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     mock_proc = MagicMock()
     mock_proc.returncode = 1
@@ -113,6 +115,7 @@ def test_t03_ping_auth_fail(monkeypatch):
 
 def test_t04_ping_timeout(monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd=["codex"], timeout=5)):
         results = detect_provider_states(providers=["codex_cli"], use_cache=False)
@@ -145,6 +148,7 @@ def test_t05_fresh_cache_no_ping(fresh_cache, monkeypatch):
 
 def test_t06_expired_cache_re_ping(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     cache_dir = tmp_path / ".af"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -177,6 +181,7 @@ def test_t06_expired_cache_re_ping(tmp_path, monkeypatch):
 
 def test_t07_force_refresh_ignores_fresh_cache(fresh_cache, monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     mock_proc = MagicMock()
     mock_proc.returncode = 0
@@ -198,6 +203,7 @@ def test_t07_force_refresh_ignores_fresh_cache(fresh_cache, monkeypatch):
 
 def test_t08_skip_provider_masks_as_not_installed(monkeypatch):
     monkeypatch.setenv("AF_SKIP_PROVIDER", "codex_cli")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"])
 
     mock_proc = MagicMock()
@@ -224,6 +230,7 @@ def test_t08_skip_provider_masks_as_not_installed(monkeypatch):
 def test_t08b_skip_does_not_pollute_cache(monkeypatch):
     """skip provider는 캐시에 저장되지 않아야 한다 (§4.3 invariant)."""
     monkeypatch.setenv("AF_SKIP_PROVIDER", "codex_cli")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
     # codex_cli가 설치돼 있더라도 skip이므로 probe 안 함
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"])
 
@@ -274,6 +281,7 @@ def test_t09_skip_provider_alias_normalization(alias, monkeypatch):
 
 def test_t10_corrupt_cache_ignored(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     cache_dir = tmp_path / ".af"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -300,6 +308,7 @@ def test_t10_corrupt_cache_ignored(tmp_path, monkeypatch):
 
 def test_t10b_partial_corrupt_state_re_probed(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     cache_dir = tmp_path / ".af"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -335,6 +344,7 @@ def test_t10b_partial_corrupt_state_re_probed(tmp_path, monkeypatch):
 
 def test_t11_cache_write_permission_error(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     # 캐시 파일 쓰기를 OSError로 강제
     mock_proc = MagicMock()
@@ -362,6 +372,7 @@ def test_t11_cache_write_permission_error(tmp_path, monkeypatch):
 
 def test_t12_concurrent_cache_writes(monkeypatch):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     mock_proc = MagicMock()
     mock_proc.returncode = 0
@@ -409,6 +420,8 @@ def test_t12_concurrent_cache_writes(monkeypatch):
 
 def test_cli_json_output_fan_out_blocked(monkeypatch, capsys):
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"])
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
     def fake_run(cmd, **kwargs):
         m = MagicMock()
@@ -440,6 +453,7 @@ def test_cli_json_output_fan_out_blocked(monkeypatch, capsys):
 def test_cli_command_env_override_used_in_ping(monkeypatch):
     """AGENT_CODEX_CLI_COMMAND가 설정된 경우 해당 실행파일로 ping한다."""
     monkeypatch.setenv("AGENT_CODEX_CLI_COMMAND", "/custom/path/codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
 
     called_cmds: list[list[str]] = []
@@ -498,6 +512,8 @@ def test_t13_installed_set_computed_once_before_threadpool(monkeypatch):
         return []
 
     monkeypatch.setattr(pd, "detect_installed_cli_providers", counting_detect)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
     mock_proc = MagicMock()
     mock_proc.returncode = 0
@@ -531,6 +547,8 @@ def test_t14_concurrent_detect_provider_states(monkeypatch):
     monkeypatch.setattr(
         pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"]
     )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
     def fake_run(cmd, **kwargs):
         m = MagicMock()

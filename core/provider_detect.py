@@ -54,6 +54,13 @@ _PING_SUFFIX: dict[str, list[str]] = {
     "codex_cli": ["--version"],
 }
 
+# Provider → 필수 API 키 env var 목록. 비어있는 provider는 CLI 자체 인증 사용(항상 프로브).
+# 여기 등록된 provider는 키 없으면 ping 없이 즉시 NOT_INSTALLED — 불필요한 LLM API 호출 방지.
+_PROVIDER_KEY_ENVS: dict[str, tuple[str, ...]] = {
+    "gemini_cli": ("GOOGLE_API_KEY", "GEMINI_API_KEY"),
+    "codex_cli": ("OPENAI_API_KEY",),
+}
+
 
 def _resolve_ping_cmd(provider_id: str) -> list[str] | None:
     """AGENT_*_CLI_COMMAND env var override를 반영한 auth ping 명령 반환."""
@@ -253,7 +260,7 @@ def _ping_one(provider_id: str) -> ProviderProbeResult:
 
 
 def _probe_one(provider_id: str, installed: frozenset[str]) -> ProviderProbeResult:
-    """설치 확인 → auth ping. skip 판단은 호출 측이 담당.
+    """설치 확인 → API 키 체크 → auth ping. skip 판단은 호출 측이 담당.
 
     installed는 ThreadPool 시작 전 main thread에서 1회 계산된 frozenset을 받는다.
     ThreadPool worker 안에서 전역 캐시(detect_installed_cli_providers)를 재호출하지 않으므로 race-free.
@@ -261,6 +268,17 @@ def _probe_one(provider_id: str, installed: frozenset[str]) -> ProviderProbeResu
     checked_at = _now_iso()
 
     if provider_id not in installed:
+        return ProviderProbeResult(
+            provider_id=provider_id,
+            state=ProviderState.NOT_INSTALLED,
+            checked_at=checked_at,
+        )
+
+    # API 키 없는 provider는 ping 없이 즉시 NOT_INSTALLED.
+    # Gemini/Codex는 API 키 없으면 ping 자체가 LLM API 호출로 비용/시간 낭비.
+    required_keys = _PROVIDER_KEY_ENVS.get(provider_id, ())
+    if required_keys and not any(os.getenv(k, "").strip() for k in required_keys):
+        log.debug("provider_detect: %s skipped — no API key env vars %s", provider_id, required_keys)
         return ProviderProbeResult(
             provider_id=provider_id,
             state=ProviderState.NOT_INSTALLED,
