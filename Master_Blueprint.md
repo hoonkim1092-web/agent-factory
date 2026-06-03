@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-03 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-04 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -211,10 +211,11 @@
 | `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
 | `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
-| `core/utils.py` | utils. last_updated: 2026-06-03 | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `percentile(values, p)` (p번째 백분위수를 선형 보간으로 float 반환; 빈 리스트이면 ValueError; p가 0~100 범위 밖이면 ValueError), `cumsum(values)` (각 위치까지의 누적 합을 list[float]로 반환; 빈 리스트이면 빈 리스트), `running_max(values)` (각 위치까지의 누적 최댓값을 list[int|float]로 반환; 원소 타입 보존; 빈 리스트이면 빈 리스트), `moving_average(values, window)` (슬라이딩 윈도 이동 평균 list[float] 반환; window<1이면 ValueError; 빈 리스트이면 빈 리스트; 각 위치 i에서 max(window, i+1)개 이전 값의 평균), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
+| `core/utils.py` | utils. last_updated: 2026-06-04 | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `percentile(values, p)` (p번째 백분위수를 선형 보간으로 float 반환; 빈 리스트이면 ValueError; p가 0~100 범위 밖이면 ValueError), `cumsum(values)` (각 위치까지의 누적 합을 list[float]로 반환; 빈 리스트이면 빈 리스트), `running_max(values)` (각 위치까지의 누적 최댓값을 list[int|float]로 반환; 원소 타입 보존; 빈 리스트이면 빈 리스트), `moving_average(values, window)` (슬라이딩 윈도 이동 평균 list[float] 반환; window<1이면 ValueError; 빈 리스트이면 빈 리스트; 각 위치 i에서 max(window, i+1)개 이전 값의 평균), `geometric_mean(values)` (기하평균 float 반환; 빈 리스트이면 ValueError; 음수 값이면 ValueError; 0 포함이면 0.0; log-sum-exp 계산), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외) |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
+| `core/right_sized_router.py` | RSE 슬라이스1 — LLM 분류 + 결정적 안전 floor 강제. `classify(task, workspace, *, changed_files)→RouteDecision`. Floor 1: self-mod→isolation≥worktree. Floor 2: blast_radius Tier3→design+review+cross_review 강제. 보수적 fallback(예외/{}→full+worktree). `is_light()` True → `_run_develop_light` 경로(leaf codegen). last_updated: 2026-06-04 | `RouteDecision`, `classify()`, `_apply_safety_floors()`, `_fallback_decision()`, `_validate_raw()`, `_build_prompt()`, `LIGHT_STAGES`, `STAGE_VOCAB`, `ISOLATION_LEVELS` |
 | `core/architect_agent.py` | §17 Step 19 — Triad 合(Synthesis) Architect executor. TriadCriticReport findings를 Master_Blueprint.md §섹션 + accepted ADR로 검증하여 ACCEPT/REJECT 결정. prefix false match 방지(`(?![\d.])` lookahead), set 기반 중복 키워드 제거, deepcopy 불변성. last_updated: 2026-05-25 | `architect_fn()`, `_resolve_finding()`, `_extract_section()`, `_load_accepted_adrs()`, `_patch_final_plan()` |
 ### 서브디렉토리
 
@@ -1052,7 +1053,7 @@ run_factory_cli.main()
 | 클래스 | 역할 |
 |--------|------|
 | `DogfoodPhase` | Option 2 active phases: PENDING / ISOLATE / DEVELOP / VERIFY / REVIEW / FINALIZE / MERGE / COMPLETE / BLOCKED. 레거시(state-file 역직렬화용, `_PHASE_ORDER` 제외): INTERVIEW / RESEARCH_BRIEF / RESEARCH / SPEC / PREMORTEM / PLAN / IMPLEMENT. |
-| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()`. `develop_changed_paths`: DEVELOP phase 결과 파일 목록(merge allowlist 원본). `isolation_status`: pending\|ready\|failed\|cleaned\|worktree_removed\|cleanup_failed. `cleanup_skip_reason`: cleanup_failed 라벨 구분 — `"wt_never_created"`(branch 삭제 의도적 생략) vs `""`(실제 실패). |
+| `DogfoodState` | 영속화 상태 — source/worktree/runtime_workspace 3-path 분리. `save_state()` atomic write (`tmp.replace`), `load_state()`. `develop_changed_paths`: DEVELOP phase 결과 파일 목록(merge allowlist 원본). `route_decision: dict`: RSE 슬라이스1 라우터 분류 결과(to_dict 직렬화, 감사·재시작 목적). `isolation_status`: pending\|ready\|failed\|cleaned\|worktree_removed\|cleanup_failed. `cleanup_skip_reason`: cleanup_failed 라벨 구분 — `"wt_never_created"`(branch 삭제 의도적 생략) vs `""`(실제 실패). |
 | `MergePolicy` | auto_policy / manual / never + `allow_partial_impl: bool = False` + `cleanup_worktree_on_block: bool = False`. `__post_init__`: mode ∈ `VALID_MERGE_MODES` 아니면 ValueError(fail-closed, auto fallthrough 금지) + `allow_partial_impl + auto_policy` 조합 ValueError. |
 | `VerifyResult` / `ReviewDecision` | 검증/리뷰 결과 (passed/retry/block, accept/reject) |
 
@@ -1067,7 +1068,14 @@ run_factory_cli.main()
 | `_check_merge_policy(state, policy, changed_files, ...)` | merge 게이트 — scope/dirty/drift/dogfood_commit/denied/allowed 검사. **inv1 fail-closed**: `allowed_paths=[]`이고 `changed_files`가 있으면 즉시 REJECT(deny-all). **allowed_paths는 경계 매칭** (`f == p or f.startswith(p.rstrip("/") + "/")`) — plain `startswith`는 `core/utils.py.bak`를 통과시키는 fail-open이라 제거. |
 | `run_phase(state, **kwargs)` | 단일 phase 실행. DEVELOP: `project_pipeline=<pipeline>` kwarg 필수. |
 | `advance_phase` / `block_run` | 상태 전이. `retry_run`은 존재하나 Option 2 머신에서 호출 안 함(inv3). |
-| `_run_develop_phase(state, pipeline)` | DEVELOP phase 실행 — isolation env 설정(AF_DISABLE_REGISTRY_WRITE=1 / AF_SELF_RUN=1 / AGENT_PROJECT_ROOT=worktree)→pipeline.run() 위임 → try/finally로 env 복원(inv5). pipeline 결과에서 `changed_files` 추출 → `state.develop_changed_paths` 저장(inv1 allowlist 원본). |
+| `_run_develop_phase(state, pipeline)` | DEVELOP phase 라우터 (RSE 슬라이스1, 2026-06-04). `right_sized_router.classify(task, cwd, changed_files=scope)` 호출 → `_record_route_decision(state, route)` → `route.is_light() and scope` 면 `_run_develop_light` 경량 경로, 아니면 `_run_develop_full` full 경로. scope=[] → 안전상 full 강제. |
+| `_run_develop_full(state, pipeline)` | Full DEVELOP: `_develop_isolation_env(worktree)` CM 안에서 `pipeline.run()` 위임 → `_changed_files_fallback` → `_normalize_develop_result`. 기존 single-body 추출. |
+| `_run_develop_light(state)` | Light DEVELOP: `compile_spec → run_premortem → build_plan → _run_implement_phase`. `_develop_isolation_env`로 full과 동일 격리(registry write 차단/worktree skill lookup). VERIFY/MERGE가 동일 normalize shape 소비. |
+| `_develop_isolation_env(worktree)` | Context manager — `_ISO_ENV_KEYS`(AF_DISABLE_REGISTRY_WRITE/AF_SELF_RUN/AGENT_PROJECT_ROOT/AF_SKIP_DOMAIN_REVIEW)를 worktree-confine 값으로 설정, 종료 시 무조건 복원(inv5). full·light 공통 사용. |
+| `_changed_files_fallback(state, worktree)` | git diff base_ref..HEAD → git status --porcelain 순서로 changed files 파생. full·light 공통 사용. |
+| `_derive_verify_cmds(changed)` | 변경 파일에서 pytest 명령 파생(test_ 포함 파일 → 파일 한정, 없으면 tests/ 전체). |
+| `_intended_scope(task)` | spec_compiler._scope_from_intent(task) 래퍼 — 파일경로 토큰 추출(결정적). scope=[] 시 classify가 low-confidence 처리. |
+| `_record_route_decision(state, route)` | route.to_dict()를 state.route_decision에 기록(감사·재시작 목적). |
 | `prepare_isolated_worktree(state)` | `git worktree add` 1-retry + ISOLATE. **CRLF fix(2026-06-01)**: worktree 생성 직후 `git -c core.autocrlf=false update-index --refresh` **일회성 override** — Windows `autocrlf=true`가 bare-`\r` 누적 blob에 남기는 phantom stat-cache dirty(blob==index==WC인데 ` M`) 제거. dogfood auto-merge가 CRLF 오탐으로 BLOCK되던 근원 차단. **영구 `git config` 기록 안 함** — linked worktree는 source 레포와 `.git`을 공유하므로 `git config`(`--worktree` 없이)는 shared config를 오염시킴 → `-c` 일회성으로 source 레포 무영향(real-git 통합 테스트로 불변 검증). |
 | `_git_bytes(args, cwd, ...)` | `_git`의 raw-bytes 변형(`text=False`) — universal-newline 변환 없이 blob을 그대로 읽기 위한 헬퍼. |
 | `_is_crlf_only_diff(filepath, cwd)` | 변경이 CR/LF 노이즈뿐인지 판정. 1차 `git diff --ignore-cr-at-eol` empty. **2차 방어선(2026-06-01)**: blob(`HEAD:`, `_git_bytes` **raw bytes**)·working-copy `read_bytes()`를 `\r` 제거 후 **bytes 비교** — `text=True`가 `\r\r\n`→`\n\n`으로 변환해 `.replace`를 무력화하는 함정을 회피, doubled-CR(`\r\r\n`)도 노이즈로 인식. untracked/예외→fail-closed(real change 간주). |
@@ -1109,14 +1117,14 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-03; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-04; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, control_plane_llm.py, cli.py, test_cli_providers.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/control_plane_llm.py` | core/control_plane_llm.py ========================= Control-plane(Lilith, StrategyEvaluator)용 LLM 인터페이스. | `ControlPlaneLLM` |
-| `core/providers/cli.py` | cli | `CliChatRequest`, `CliProviderSpec`, `get_cli_provider_spec()`, `compose_cli_prompt()`, `build_cli_command()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1663,6 +1671,9 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1) |
+| 2026-06-04 | v1.2.37 | feat(utils): `geometric_mean(values)` 신설 — 기하평균 float 반환. 빈 리스트이면 ValueError. 음수 값이면 ValueError. 0 포함이면 0.0. log-sum-exp 수치 안정성. `TestGeometricMean` 10건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
+| 2026-06-04 | v1.2.37 | feat(rse-slice1): Right-Sized Execution 슬라이스1 구현 — `core/right_sized_router.py` 신규(LLM 분류+안전 floor+보수적 fallback). `core/dogfood.py` `_run_develop_phase` 라우터화: `_develop_isolation_env` CM + `_run_develop_full` + `_run_develop_light` + `_intended_scope` + `_record_route_decision` + `_changed_files_fallback` + `_derive_verify_cmds` + `_normalize_develop_result` 신규. `DogfoodState.route_decision` 필드+직렬화. `af.spec` hiddenimports 추가. 테스트 9+8=17건 신규(RED→GREEN). §0/§3.13/§12 갱신. 3-Tier 예정. — core/right_sized_router.py, core/dogfood.py, tests/test_right_sized_router.py, tests/test_dogfood.py, af.spec, Master_Blueprint.md |
 | 2026-06-03 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, control_plane_llm.py, cli.py, test_cli_providers.py |
 | 2026-06-03 | v1.2.36 | fix(dogfood): control-plane source-write leak 차단 — `CliChatRequest`에 `allow_file_edit: bool = True` 필드 추가(하위 호환). `build_cli_command()`에서 `allow_file_edit=False` 시 claude_cli의 `--permission-mode bypassPermissions` 제거(gemini_cli headless 실행 플래그는 유지). `ControlPlaneLLM._generate_via_cli()`에 `allow_file_edit=False` 전달 — Lilith stall 복구 시 claude_cli가 source root에서 bypassPermissions로 실행되어 source 파일을 직접 수정하던 dogfood 격리 누수 차단. 3-Tier: af-critic PASS / af-cross-review BLOCK→fixed(gemini headless hang) / af-test-runner PASS(2723+4). — core/providers/cli.py, core/control_plane_llm.py, tests/test_cli_providers.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |

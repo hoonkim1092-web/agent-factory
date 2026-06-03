@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-03T23:58:57+09:00
-source_commit: d3633575
+generated_at: 2026-06-04T00:44:44+09:00
+source_commit: cd6ffe78
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -195,10 +195,11 @@ sources:
 | `core/terminal_visualizer.py` | terminal visualizer | Master_Blueprint.md §0 |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | Master_Blueprint.md §0 |
 | `core/tool_runtime.py` | tool runtime | Master_Blueprint.md §0 |
-| `core/utils.py` | utils. last_updated: 2026-06-03 | Master_Blueprint.md §0 |
+| `core/utils.py` | utils. last_updated: 2026-06-04 | Master_Blueprint.md §0 |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | Master_Blueprint.md §0 |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
+| `core/right_sized_router.py` | RSE 슬라이스1 — LLM 분류 + 결정적 안전 floor 강제. `classify(task, workspace, *, changed_files)→RouteDecision`. Floor 1: self-mod→isolation≥worktree. Floor 2: blast_radius Tier3→design+review+cross_review 강제. 보수적 fallback(예외/{}→full+worktree). `is_light()` True → `_run_develop_light` 경로(leaf codegen). last_updated: 2026-06-04 | Master_Blueprint.md §0 |
 | `core/architect_agent.py` | §17 Step 19 — Triad 合(Synthesis) Architect executor. TriadCriticReport findings를 Master_Blueprint.md §섹션 + accepted ADR로 검증하여 ACCEPT/REJECT 결정. prefix false match 방지(`(?![\d.])` lookahead), set 기반 중복 키워드 제거, deepcopy 불변성. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
 
 ## §3 서브시스템

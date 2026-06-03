@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean
 from core.utils import test_file_for as _test_file_for
 
 
@@ -537,3 +537,41 @@ class TestMovingAverage:
     def test_window_1_미만이면_ValueError(self):
         with pytest.raises(ValueError):
             moving_average([1, 2, 3], 0)
+
+
+class TestGeometricMean:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            geometric_mean([])
+
+    def test_음수_값이면_ValueError(self):
+        with pytest.raises(ValueError):
+            geometric_mean([1, 2, -3])
+
+    def test_단일_요소(self):
+        assert geometric_mean([4.0]) == pytest.approx(4.0)
+
+    def test_양수_정수_2개(self):
+        # geometric_mean([4, 9]) = sqrt(36) = 6.0
+        assert geometric_mean([4, 9]) == pytest.approx(6.0)
+
+    def test_세_요소(self):
+        # geometric_mean([2, 8, 4]) = (64)^(1/3) = 4.0
+        assert geometric_mean([2, 8, 4]) == pytest.approx(4.0)
+
+    def test_모두_같은_값은_그_값_반환(self):
+        assert geometric_mean([5, 5, 5]) == pytest.approx(5.0)
+
+    def test_0_포함이면_0_반환(self):
+        assert geometric_mean([0, 4, 9]) == pytest.approx(0.0)
+
+    def test_부동소수점_입력(self):
+        # geometric_mean([1.0, 100.0]) = 10.0
+        assert geometric_mean([1.0, 100.0]) == pytest.approx(10.0)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(geometric_mean([4, 9]), float)
+
+    def test_산술평균보다_작거나_같음(self):
+        values = [1, 2, 3, 4, 5]
+        assert geometric_mean(values) <= sum(values) / len(values)

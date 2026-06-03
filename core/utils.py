@@ -225,6 +225,18 @@ def moving_average(values: list[int | float], window: int) -> list[float]:
     return result
 
 
+def geometric_mean(values: list[int | float]) -> float:
+    """기하평균을 float로 반환한다. 빈 리스트이면 ValueError. 음수 값이 포함되면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 기하평균을 계산할 수 없습니다.")
+    for v in values:
+        if v < 0:
+            raise ValueError(f"기하평균은 음수 값을 허용하지 않습니다: {v}")
+    if any(v == 0 for v in values):
+        return 0.0
+    return math.exp(sum(math.log(v) for v in values) / len(values))
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
