@@ -1671,6 +1671,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-04 | v1.2.34 | chore(af): code update — af.spec |
 | 2026-06-04 | v1.2.34 | chore(af): code update — af.spec, dogfood.py, right_sized_router.py, 2026-06-04-001515-right_sized_router-code-review.md, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.37 | feat(utils): `geometric_mean(values)` 신설 — 기하평균 float 반환. 빈 리스트이면 ValueError. 음수 값이면 ValueError. 0 포함이면 0.0. log-sum-exp 수치 안정성. `TestGeometricMean` 10건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
