@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-04T01:08:26+09:00
-source_commit: 4f5f320e
+generated_at: 2026-06-04T01:09:30+09:00
+source_commit: 098a9bd5
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -9,7 +9,7 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `4f5f320e`
+> source_commit: `098a9bd5`
 > 관련: [[index]] | [[architecture]] | [[review_patterns]]
 
 ## Master_Blueprint.md
