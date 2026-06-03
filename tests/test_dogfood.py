@@ -127,7 +127,7 @@ def test_state_to_dict_keys(tmp_path):
         "isolation_status", "cleanup_skip_reason", "merge_status", "merge_mode",
         "dogfood_commit", "merged_commit",
         "interview_path", "research_brief_path", "research_path", "spec_path", "plan_path",
-        "develop_changed_paths",
+        "develop_changed_paths", "route_decision",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria",
         "budget_consumed", "budget_max_tokens", "budget_stopped", "budget_project_id",
@@ -2064,3 +2064,256 @@ class TestCheckMergePolicyDeniedPaths:
                                   allowed=[".af_runtime/"])
         assert not ok
         assert "denied path" in reason
+
+
+# ---------------------------------------------------------------------------
+# Right-Sized Router integration — §5.2 (7 inv cases, test-first)
+# ---------------------------------------------------------------------------
+
+import os as _os
+import core.right_sized_router as _rsr
+from core.dogfood import _run_develop_phase, DogfoodPhase, DogfoodState
+
+
+def _dev_state(tmp_path, task: str = "add func to scripts/utils.py") -> DogfoodState:
+    """DogfoodState with isolation ready + a real worktree dir."""
+    worktree = tmp_path / "worktree"
+    worktree.mkdir(parents=True, exist_ok=True)
+    st = DogfoodState(
+        run_id="test-rsr-001",
+        task=task,
+        phase=DogfoodPhase.DEVELOP,
+        source_workspace=str(tmp_path),
+        runtime_workspace=str(tmp_path / "runtime"),
+    )
+    st.isolation_status = "ready"
+    st.worktree_workspace = str(worktree)
+    return st
+
+
+def _light_decision() -> _rsr.RouteDecision:
+    return _rsr.RouteDecision(
+        isolation="source",
+        required_stages=["plan", "implement", "test"],
+        review_depth="none",
+        confidence=0.9,
+        reason="leaf task",
+        source="llm",
+    )
+
+
+def _full_decision() -> _rsr.RouteDecision:
+    return _rsr.RouteDecision(
+        isolation="worktree",
+        required_stages=list(_rsr.STAGE_VOCAB),
+        review_depth="deep",
+        confidence=0.0,
+        reason="fallback",
+        source="fallback",
+    )
+
+
+def _stub_light_internals(monkeypatch, tmp_path):
+    """Patch compile_spec/run_premortem/build_plan/_run_implement_phase for light path."""
+    import core.dogfood as _df
+
+    fake_spec = MagicMock()
+    fake_spec.success_criteria = ["test passes"]
+    fake_premortem = MagicMock()
+
+    fake_plan = MagicMock()
+    fake_plan.to_dict.return_value = {
+        "steps": [{"id": "s1", "action": "add func", "commands": []}],
+        "verification_requirements": ["python -m pytest tests/test_utils.py -q"],
+    }
+
+    monkeypatch.setattr("core.spec_compiler.compile_spec", lambda *a, **kw: fake_spec)
+    monkeypatch.setattr("core.premortem.run_premortem", lambda spec: fake_premortem)
+    monkeypatch.setattr("core.planner.build_plan", lambda spec, pm: fake_plan)
+    monkeypatch.setattr(_df, "_run_implement_phase", lambda state, ctx: {
+        "ok": True,
+        "actual_changed": ["scripts/utils.py"],
+        "executed": [],
+        "failures": [],
+        "skipped_no_commands": [],
+    })
+
+
+# inv-LIGHT-ROUTE: classify→light → pipeline.run 미호출, light 경로 사용
+def test_inv_light_route(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+    _stub_light_internals(monkeypatch, tmp_path)
+
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(generate_json=lambda *a, **kw: {
+        "isolation": "source",
+        "required_stages": ["plan", "implement", "test"],
+        "review_depth": "none",
+        "confidence": 0.9,
+        "reason": "leaf",
+    }))
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True}
+
+    result = _run_develop_phase(state, mock_pipeline)
+
+    # Full pipeline must NOT run
+    mock_pipeline.run.assert_not_called()
+    # Result has required keys
+    assert "ok" in result
+    assert "steps" in result
+
+
+# inv-FULL-ROUTE: classify→full(fallback) → pipeline.run 호출 (회귀)
+def test_inv_full_route(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+
+    # stub classify to always return full/fallback
+    monkeypatch.setattr(_rsr, "classify", lambda *a, **kw: _full_decision())
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": ["scripts/utils.py"]}
+
+    result = _run_develop_phase(state, mock_pipeline)
+
+    mock_pipeline.run.assert_called_once()
+    assert "ok" in result
+
+
+# inv-NORM: light·full 양쪽 develop_result에 ok/verification_requirements/steps 키 존재
+def test_inv_norm_light(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+    _stub_light_internals(monkeypatch, tmp_path)
+
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(generate_json=lambda *a, **kw: {
+        "isolation": "source",
+        "required_stages": ["plan", "implement", "test"],
+        "review_depth": "none",
+        "confidence": 0.9,
+        "reason": "leaf",
+    }))
+
+    mock_pipeline = MagicMock()
+    result = _run_develop_phase(state, mock_pipeline)
+
+    for key in ("ok", "steps", "verification_requirements"):
+        assert key in result, f"missing key: {key}"
+
+
+def test_inv_norm_full(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+    monkeypatch.setattr(_rsr, "classify", lambda *a, **kw: _full_decision())
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": []}
+    result = _run_develop_phase(state, mock_pipeline)
+
+    for key in ("ok", "steps", "verification_requirements"):
+        assert key in result, f"missing key: {key}"
+
+
+# inv-RECORD: run後 state.route_decision 비어있지 않음
+def test_inv_record(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+    monkeypatch.setattr(_rsr, "classify", lambda *a, **kw: _full_decision())
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": []}
+
+    _run_develop_phase(state, mock_pipeline)
+
+    assert hasattr(state, "route_decision")
+    assert state.route_decision  # not empty dict
+
+
+# inv-FLOOR-E2E: Tier3 scope → blast_radius floor → full (under-route 차단)
+def test_inv_floor_e2e(monkeypatch, tmp_path):
+    # scripts/review_gate.py is Tier3 — floor must block light
+    state = _dev_state(tmp_path, task="tweak scripts/review_gate.py logic")
+
+    # LLM naively says light
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(generate_json=lambda *a, **kw: {
+        "isolation": "source",
+        "required_stages": ["plan", "implement", "test"],
+        "review_depth": "none",
+        "confidence": 0.95,
+        "reason": "looks simple",
+    }))
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": ["scripts/review_gate.py"]}
+
+    _run_develop_phase(state, mock_pipeline)
+
+    # Tier3 floor → full pipeline must run
+    mock_pipeline.run.assert_called_once()
+    # route_decision should record floor
+    rd = state.route_decision
+    assert rd
+    assert any("blast_radius_tier3" in f for f in rd.get("floors_applied", []))
+
+
+# inv-NOSCOPE: task에 파일경로 없음(scope=[]) → _run_develop_full
+def test_inv_noscope(monkeypatch, tmp_path):
+    # Task has no file-path tokens → _scope_from_intent returns []
+    state = _dev_state(tmp_path, task="add geometric_mean function")
+
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(generate_json=lambda *a, **kw: {
+        "isolation": "source",
+        "required_stages": ["plan", "implement", "test"],
+        "review_depth": "none",
+        "confidence": 0.9,
+        "reason": "leaf",
+    }))
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": []}
+
+    _run_develop_phase(state, mock_pipeline)
+
+    # scope=[] → _run_develop_full → pipeline.run called
+    mock_pipeline.run.assert_called_once()
+
+
+# inv-ISO-ENV: light 경로 실행 중 격리 env 설정·복원 검증 (cross-review High)
+def test_inv_iso_env(monkeypatch, tmp_path):
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+    _stub_light_internals(monkeypatch, tmp_path)
+
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(generate_json=lambda *a, **kw: {
+        "isolation": "source",
+        "required_stages": ["plan", "implement", "test"],
+        "review_depth": "none",
+        "confidence": 0.9,
+        "reason": "leaf",
+    }))
+
+    env_during: dict[str, str | None] = {}
+
+    import core.dogfood as _df
+
+    original_impl = _df._run_implement_phase
+
+    def _capturing_impl(st, ctx):
+        env_during["AF_DISABLE_REGISTRY_WRITE"] = _os.environ.get("AF_DISABLE_REGISTRY_WRITE")
+        env_during["AGENT_PROJECT_ROOT"] = _os.environ.get("AGENT_PROJECT_ROOT")
+        env_during["AF_SELF_RUN"] = _os.environ.get("AF_SELF_RUN")
+        return {"ok": True, "actual_changed": [], "executed": [], "failures": [], "skipped_no_commands": []}
+
+    monkeypatch.setattr(_df, "_run_implement_phase", _capturing_impl)
+
+    prior_disable = _os.environ.get("AF_DISABLE_REGISTRY_WRITE")
+    prior_root = _os.environ.get("AGENT_PROJECT_ROOT")
+
+    mock_pipeline = MagicMock()
+    _run_develop_phase(state, mock_pipeline)
+
+    # During light execution env vars should have been set
+    assert env_during.get("AF_DISABLE_REGISTRY_WRITE") == "1"
+    assert env_during.get("AF_SELF_RUN") == "1"
+    worktree = state.worktree_workspace
+    assert env_during.get("AGENT_PROJECT_ROOT") == worktree
+
+    # After completion env vars should be restored
+    assert _os.environ.get("AF_DISABLE_REGISTRY_WRITE") == prior_disable
+    assert _os.environ.get("AGENT_PROJECT_ROOT") == prior_root

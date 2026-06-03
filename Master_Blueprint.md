@@ -1119,12 +1119,12 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-04; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1)
+최근 자동 갱신 컨텍스트: chore(af): code update — af.spec, dogfood.py, right_sized_router.py, 2026-06-04-001515-right_sized_router-code-review.md, test_dogfood.py (+1)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
 | `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/right_sized_router.py` | core/right_sized_router.py — AF Right-Sized Execution 라우터 (슬라이스 1). | `RouteDecision`, `classify()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1671,6 +1671,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-04 | v1.2.34 | chore(af): code update — af.spec, dogfood.py, right_sized_router.py, 2026-06-04-001515-right_sized_router-code-review.md, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.37 | feat(utils): `geometric_mean(values)` 신설 — 기하평균 float 반환. 빈 리스트이면 ValueError. 음수 값이면 ValueError. 0 포함이면 0.0. log-sum-exp 수치 안정성. `TestGeometricMean` 10건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-04 | v1.2.37 | feat(rse-slice1): Right-Sized Execution 슬라이스1 구현 — `core/right_sized_router.py` 신규(LLM 분류+안전 floor+보수적 fallback). `core/dogfood.py` `_run_develop_phase` 라우터화: `_develop_isolation_env` CM + `_run_develop_full` + `_run_develop_light` + `_intended_scope` + `_record_route_decision` + `_changed_files_fallback` + `_derive_verify_cmds` + `_normalize_develop_result` 신규. `DogfoodState.route_decision` 필드+직렬화. `af.spec` hiddenimports 추가. 테스트 9+8=17건 신규(RED→GREEN). §0/§3.13/§12 갱신. 3-Tier 예정. — core/right_sized_router.py, core/dogfood.py, tests/test_right_sized_router.py, tests/test_dogfood.py, af.spec, Master_Blueprint.md |

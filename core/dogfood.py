@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import sys
+from contextlib import contextmanager
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -163,6 +164,8 @@ class DogfoodState:
     plan_path: str = ""
     # develop phase output: files changed inside the worktree (merge allowlist source)
     develop_changed_paths: list[str] = field(default_factory=list)
+    # right-sized router classification recorded for auditability
+    route_decision: dict = field(default_factory=dict)
 
     # runtime tracking
     attempts: int = 0
@@ -215,6 +218,7 @@ class DogfoodState:
             "spec_path": self.spec_path,
             "plan_path": self.plan_path,
             "develop_changed_paths": list(self.develop_changed_paths),
+            "route_decision": dict(self.route_decision),
             "attempts": self.attempts,
             "last_failure": self.last_failure,
             "next_action": self.next_action,
@@ -252,6 +256,7 @@ class DogfoodState:
             spec_path=data.get("spec_path", ""),
             plan_path=data.get("plan_path", ""),
             develop_changed_paths=list(data.get("develop_changed_paths") or []),
+            route_decision=dict(data.get("route_decision") or {}),
             attempts=data.get("attempts", 0),
             last_failure=data.get("last_failure", ""),
             next_action=data.get("next_action", ""),
@@ -1623,42 +1628,32 @@ _ISO_ENV_KEYS: Final[tuple[str, ...]] = (
 )
 
 
-def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
-    """Invoke the injected ProjectPipeline inside the isolated worktree.
+@contextmanager
+def _develop_isolation_env(worktree: str):
+    """Set _ISO_ENV_KEYS to worktree-confine values and restore on exit (inv5).
 
-    Sets the reused F12/self-run guards around the call and restores prior
-    env unconditionally via try/finally (inv5). Changed files are stored in
-    state.develop_changed_paths for the merge allowlist (inv1).
-
-    Reads (skill lookup) stay global; writes (registry/workflow/files) are
-    confined to the worktree or globally blocked.
+    Used by both _run_develop_full and _run_develop_light so registry write
+    blocking and skill-lookup root apply equally to both paths.
     """
-    if pipeline is None:
-        raise ValueError("project_pipeline is required for DEVELOP phase")
-    worktree = state.worktree_workspace or state.source_workspace
     prior: dict[str, str | None] = {k: os.environ.get(k) for k in _ISO_ENV_KEYS}
     try:
         os.environ["AF_DISABLE_REGISTRY_WRITE"] = "1"
         os.environ["AF_SELF_RUN"] = "1"
         os.environ["AGENT_PROJECT_ROOT"] = worktree
         os.environ["AF_SKIP_DOMAIN_REVIEW"] = "1"
-        result = pipeline.run(
-            task_input=state.task,
-            workspace=worktree,
-            runtime_workspace=state.runtime_workspace,
-        )
+        yield
     finally:
         for k, v in prior.items():
             if v is None:
                 os.environ.pop(k, None)
             else:
                 os.environ[k] = v
-    # Primary: pipeline may expose changed_files (e.g. test doubles / future API).
-    # Fallback 1: committed changes — git diff base_ref..HEAD.
-    # Fallback 2: working-tree changes — git status (pipeline writes files but
-    #             commits them later in FINALIZE; we need them for VERIFY).
-    changed: list[str] = list(result.get("changed_files") or [])
-    if not changed and state.base_ref:
+
+
+def _changed_files_fallback(state: DogfoodState, worktree: str) -> list[str]:
+    """Derive changed files from git when pipeline doesn't report them."""
+    changed: list[str] = []
+    if state.base_ref:
         try:
             diff_out = _git(
                 ["diff", "--name-only", state.base_ref, "HEAD"],
@@ -1676,40 +1671,122 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
             for line in status_out.splitlines():
                 if len(line) > 3:
                     fname = line[3:].strip()
-                    # Skip planning/ and hidden dirs — only source + test files
                     if fname and not fname.startswith(("planning/", ".af", ".")):
                         changed.append(fname)
         except Exception:
             pass
-    state.develop_changed_paths = changed
+    return changed
 
-    # Normalize so run_all and VERIFY consume a consistent shape.
-    # Real pipeline uses "ok"/"reason"; fake pipelines may expose "status".
+
+def _derive_verify_cmds(changed: list[str]) -> list[str]:
+    """Derive pytest commands from changed file list (extracted from _run_develop_full)."""
+    test_files = [
+        f for f in changed
+        if "test_" in Path(f).name or "/tests/" in f or f.startswith("tests/")
+    ]
+    if test_files:
+        return ["python -m pytest " + " ".join(test_files) + " -q --tb=short"]
+    return ["python -m pytest tests/ -q --tb=short"]
+
+
+def _normalize_develop_result(
+    result: dict[str, Any], changed: list[str],
+) -> dict[str, Any]:
+    """Apply consistent normalization (ok/verification_requirements/steps) to DEVELOP result."""
     normalized: dict[str, Any] = dict(result)
     if "ok" not in normalized:
         status = normalized.get("status", "ok")
         normalized["ok"] = status not in ("blocked", "failed", "error")
-
-    # Derive independent verification commands from changed test files so VERIFY
-    # can re-run them without relying on pipeline self-report (addresses BLOCK 2).
     if "verification_requirements" not in normalized and changed:
-        test_files = [
-            f for f in changed
-            if "test_" in Path(f).name or "/tests/" in f or f.startswith("tests/")
-        ]
-        if test_files:
-            normalized["verification_requirements"] = [
-                "python -m pytest " + " ".join(test_files) + " -q --tb=short"
-            ]
-        else:
-            normalized["verification_requirements"] = ["python -m pytest tests/ -q --tb=short"]
-
-    # Synthetic step ensures F-PHASE-COMPLETE guard fires when verification_requirements
-    # are missing or all-placeholder — prevents VERIFY silently passing with no evidence.
+        normalized["verification_requirements"] = _derive_verify_cmds(changed)
     if "steps" not in normalized:
         normalized["steps"] = [{"id": "pipeline_run"}] if changed else []
-
     return normalized
+
+
+def _intended_scope(task: str) -> list[str]:
+    """Derive scope file paths from task intent string (no LLM, deterministic).
+
+    Delegates to spec_compiler._scope_from_intent which extracts tokens with
+    a known file extension and a path separator.  Bare function names return [].
+    """
+    from core.spec_compiler import _scope_from_intent
+    return _scope_from_intent(task)
+
+
+def _record_route_decision(state: DogfoodState, route: Any) -> None:
+    """Store route classification in state for auditability."""
+    state.route_decision = route.to_dict()
+
+
+def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
+    """Full DEVELOP path: delegate to ProjectPipeline inside isolation env."""
+    worktree = state.worktree_workspace or state.source_workspace
+    with _develop_isolation_env(worktree):
+        result = pipeline.run(
+            task_input=state.task,
+            workspace=worktree,
+            runtime_workspace=state.runtime_workspace,
+        )
+    changed: list[str] = list(result.get("changed_files") or [])
+    if not changed:
+        changed = _changed_files_fallback(state, worktree)
+    state.develop_changed_paths = changed
+    return _normalize_develop_result(result, changed)
+
+
+def _run_develop_light(state: DogfoodState) -> dict[str, Any]:
+    """Light DEVELOP path: deterministic builders + AI codegen, no ProjectPipeline.
+
+    compile_spec → run_premortem → build_plan → _run_implement_phase.
+    Same _develop_isolation_env as full path (registry write blocked, skill lookup
+    root = worktree) — cross-review High finding compliance.
+    """
+    from core.spec_compiler import compile_spec
+    from core.premortem import run_premortem
+    from core.planner import build_plan
+
+    worktree = state.worktree_workspace or state.source_workspace
+    spec = compile_spec({"task_input": state.task}, None, None)
+    premortem = run_premortem(spec)
+    plan = build_plan(spec, premortem)
+    plan_d = plan.to_dict()
+
+    plan_path = _artifact_path(state, ARTIFACT_PLAN)
+    atomic_write_json(plan_path, plan_d)
+    state.plan_path = str(plan_path)
+    state.completion_criteria = list(spec.success_criteria)
+
+    with _develop_isolation_env(worktree):
+        impl = _run_implement_phase(state, {"plan_dict": plan_d})
+
+    changed = list(impl.get("actual_changed") or [])
+    if not changed:
+        changed = _changed_files_fallback(state, worktree)
+    state.develop_changed_paths = changed
+
+    base: dict[str, Any] = dict(plan_d)
+    base["ok"] = bool(impl.get("ok", False))
+    return _normalize_develop_result(base, changed)
+
+
+def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
+    """Route DEVELOP to light (leaf codegen) or full (ProjectPipeline) path.
+
+    Calls right_sized_router.classify then applies safety floors.  Decision is
+    recorded in state.route_decision.  scope=[] or non-light decision → full.
+    """
+    if pipeline is None:
+        raise ValueError("project_pipeline is required for DEVELOP phase")
+
+    from core.right_sized_router import classify
+    scope = _intended_scope(state.task)
+    route = classify(state.task, state._cwd(), changed_files=scope)
+    _record_route_decision(state, route)
+
+    if route.is_light() and scope:
+        return _run_develop_light(state)
+    return _run_develop_full(state, pipeline)
 
 
 def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str, Any]:
