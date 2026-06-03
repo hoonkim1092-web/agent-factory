@@ -1654,8 +1654,9 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
             else:
                 os.environ[k] = v
     # Primary: pipeline may expose changed_files (e.g. test doubles / future API).
-    # Fallback: git diff --name-only base_ref..HEAD in the worktree — reliable for
-    # production where ProjectPipeline.run() does not return changed_files.
+    # Fallback 1: committed changes — git diff base_ref..HEAD.
+    # Fallback 2: working-tree changes — git status (pipeline writes files but
+    #             commits them later in FINALIZE; we need them for VERIFY).
     changed: list[str] = list(result.get("changed_files") or [])
     if not changed and state.base_ref:
         try:
@@ -1664,6 +1665,20 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
                 cwd=worktree,
             ).stdout.strip()
             changed = [f for f in diff_out.splitlines() if f]
+        except Exception:
+            pass
+    if not changed:
+        try:
+            status_out = _git(
+                ["status", "--porcelain", "-u", "--no-renames"],
+                cwd=worktree,
+            ).stdout.strip()
+            for line in status_out.splitlines():
+                if len(line) > 3:
+                    fname = line[3:].strip()
+                    # Skip planning/ and hidden dirs — only source + test files
+                    if fname and not fname.startswith(("planning/", ".af", ".")):
+                        changed.append(fname)
         except Exception:
             pass
     state.develop_changed_paths = changed
