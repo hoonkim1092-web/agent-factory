@@ -114,3 +114,59 @@ LLM Wiki + Obsidian 전체 목표 -> Right-Sized Execution 준비 후 dogfood �
 - 기존 `express_router`를 top-level route 용도로만 둘지, dogfood 내부 complexity signal 일부로 재사용할지?
 - 경량 codegen 경로는 기존 dogfood implement executor를 재사용할지, AgentRunner 단일 호출로 둘지?
 - `terminal_per_agent=True`는 project task에만 허용할지?
+
+## Converged Design (2026-06-03 세션 합의)
+
+설계 대화로 아래가 확정됨. 위 Open Questions를 해소/대체한다.
+
+### Stage-Aware RightSizedRouter
+
+"작냐/크냐" 단일 축이 아니라 **필요한 stage를 고른다**. 작업량이 작아도 설계/리뷰가 필요할 수 있기 때문이다(예: `allow_file_edit=False` 1줄 = 보안 변경, pre-commit 7줄 = hook/EOL 위험). 따라서 동사·파일명·토큰 룰로는 불가 — LLM이 의도·범위·위험·설계필요도를 종합 판단해야 한다.
+
+출력 shape:
+```
+{ isolation, required_stages, review_depth, confidence, reason }
+  isolation: none | source | worktree | dogfood
+  required_stages ⊆ [research, design(spec/premortem), plan, implement, test, review, cross_review]
+  review_depth: 검토 강도
+```
+엔진: `ControlPlaneLLM.generate_json()` (`allow_file_edit=False`, 파일편집 없이 JSON 판단만). **하드코딩 토큰 룰 아님 — 지능형 하네스.**
+
+### 두 결정적 안전 floor (LLM 위 — 기존 메커니즘 재사용)
+
+- **isolation 하한**: self-mod 감지(`workspace == agent-factory` + `core/`·`.githooks/` 등 변경) → 최소 `worktree`. LLM이 `source`로 오판해도 override. **source-write leak 재발 방지**(이번 세션에 막은 그 leak을 라우터가 되열지 않도록).
+- **review/design 하한**: `scripts/blast_radius.py` tier 재사용. Tier3 파일(core/provider/permission/hook/auth/merge)은 코드량이 작아도 design+review+cross_review 강제 포함.
+- "하드코딩 금지"는 **경로 선택**에 적용되고, **안전 하한은 결정적**이어야 한다(서로 다른 층).
+
+### 보수적 비대칭 fallback
+
+LLM 예외 / JSON 파싱 실패 / confidence < 임계 / 근거 부족 → `required_stages = full`, `isolation = worktree`. **"research는 생략 가능해도 design/review는 안 낮춘다."** under-route(큰 일을 작게 처리)는 절대 금지 — 경량화는 확신할 때만.
+
+### 기존 코드 정합 (사실 확인)
+
+- `express_router._PHASES` = stage 어휘·preset이 **이미 존재**(direct/light/full/dogfood 각 phase 리스트) → 재사용. 정적 mode 고정 → LLM 지능형 선택으로 전환. 하드코딩 라우팅 로직은 은퇴.
+- dogfood phase dispatch는 **모듈러**(`_run_implement/verify/review_phase` 개별 핸들러) → stage 부분집합 실행 가능.
+- `ProjectPipeline.run(task_input, workspace, runtime_workspace)`는 **monolithic**(stage 선택 파라미터 없음) → 임의 stage 조합(no-research pipeline 등)은 리팩토링 필요 = **슬라이스 2**.
+
+### 슬라이스 경계 (over-build 방지)
+
+- **슬라이스 1 실행 = 보수적 2-way**: `required_stages ⊆ {plan, implement, test}` + 고신뢰 → dogfood 네이티브 light(`build_plan→_run_implement_phase→_run_verify_phase`). 그 외(design/research 필요·sensitive area·저신뢰) → 기존 `ProjectPipeline.run()`. **"작아도 설계 필요"는 슬라이스 1에서 full pipeline로** 보낸다(분리 실행은 슬라이스 2).
+- **슬라이스 2**: `ProjectPipeline`에 stage-선택 파라미터 → no-research pipeline 등 임의 조합. 슬라이스 1 경험적 검증 후 가치 판정.
+
+### 구현 단계 (다음 세션 진입점)
+
+```
+Step 1  core/right_sized_router.py — classify(task, workspace, *, changed_files=None)
+        -> RouteDecision{isolation, required_stages, review_depth, confidence, reason}
+        ControlPlaneLLM.generate_json() 사용, injectable(_router_llm 모듈 전역)
+Step 2  안전 floor: self-mod → isolation>=worktree / blast_radius Tier3 → design+review+cross_review 강제 (LLM override)
+Step 3  보수적 fallback: 실패/저신뢰 → required_stages=full, isolation=worktree
+Step 4  하네스 테스트(LLM stub injectable): light/full 분기 / floor override(source→worktree, Tier3→cross_review) / invalid JSON·low-conf·예외 → full fallback
+Step 5  dogfood DEVELOP 연결: _run_develop_phase 진입부 classify →
+          required_stages⊆{plan,implement,test}&고신뢰 → 네이티브 light, else → ProjectPipeline.run()
+          분류+floor override 이유를 dogfood state/artifact 기록
+Step 6  acceptance: 실제 dogfood run — geometric_mean(leaf)→light(orchestrator/터미널 0) /
+          sensitive 1줄 변경→blast_radius floor로 full / LLM실패 주입→full fallback
+Step 7  (슬라이스 2, 별도) ProjectPipeline stage-선택 파라미터 → 임의 stage 조합
+```
+설계 Opus → 구현 `/model sonnet`. `core/` Tier3 → test-first + 3-Tier(cross-review 포함).
