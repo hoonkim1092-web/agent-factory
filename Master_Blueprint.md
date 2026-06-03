@@ -1110,7 +1110,7 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-03; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — provider_detect.py, test_provider_detect.py
+최근 자동 갱신 컨텍스트: chore(core): code update — provider_detect.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
@@ -1661,6 +1661,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-03 | v1.2.34 | chore(core): code update — provider_detect.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — provider_detect.py, test_provider_detect.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — dogfood.py |
 | 2026-06-03 | v1.2.34 | chore(agent_launcher): code update — agent_launcher.py, dogfood.py, test_dogfood_realignment.py |
