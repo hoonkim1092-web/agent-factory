@@ -209,6 +209,22 @@ def running_max(values: list[int | float]) -> list[int | float]:
     return result
 
 
+def moving_average(values: list[int | float], window: int) -> list[float]:
+    """슬라이딩 윈도 이동 평균을 float 리스트로 반환한다.
+
+    각 위치 i에서 최대 window개의 이전 값(자신 포함)의 평균을 계산한다.
+    window < 1이면 ValueError. 빈 리스트이면 빈 리스트 반환.
+    """
+    if window < 1:
+        raise ValueError(f"window는 1 이상이어야 합니다: {window}")
+    result: list[float] = []
+    for i in range(len(values)):
+        start = max(0, i - window + 1)
+        segment = values[start:i + 1]
+        result.append(sum(segment) / len(segment))
+    return result
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

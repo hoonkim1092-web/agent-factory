@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average
 from core.utils import test_file_for as _test_file_for
 
 
@@ -502,3 +502,38 @@ class TestRunningMax:
     def test_마지막_값은_전체_최댓값(self):
         values = [3, 7, 2, 9, 4]
         assert running_max(values)[-1] == max(values)
+
+
+class TestMovingAverage:
+    def test_빈_리스트는_빈_리스트_반환(self):
+        assert moving_average([], 3) == []
+
+    def test_window_1은_원소별_float_캐스트(self):
+        assert moving_average([1, 2, 3], 1) == [1.0, 2.0, 3.0]
+
+    def test_window가_길이보다_크면_누진_평균(self):
+        result = moving_average([1, 2, 3], 5)
+        assert result[0] == pytest.approx(1.0)
+        assert result[1] == pytest.approx(1.5)
+        assert result[2] == pytest.approx(2.0)
+
+    def test_window가_길이와_같으면_단일_통과_평균(self):
+        result = moving_average([1, 2, 3], 3)
+        assert len(result) == 1 or result[-1] == pytest.approx(2.0)
+        assert result[-1] == pytest.approx(2.0)
+
+    def test_정수_입력은_float_반환(self):
+        result = moving_average([4, 8, 6], 2)
+        assert all(isinstance(v, float) for v in result)
+
+    def test_부동소수점_정밀도(self):
+        result = moving_average([1.0, 2.0, 3.0], 2)
+        assert result == pytest.approx([1.0, 1.5, 2.5])
+
+    def test_음수값(self):
+        result = moving_average([-3, -1, -2], 2)
+        assert result == pytest.approx([-3.0, -2.0, -1.5])
+
+    def test_window_1_미만이면_ValueError(self):
+        with pytest.raises(ValueError):
+            moving_average([1, 2, 3], 0)

@@ -1110,11 +1110,10 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-03; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1662,6 +1661,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-03 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-03 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, utils.py, test_utils.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — provider_detect.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — provider_detect.py, test_provider_detect.py |
