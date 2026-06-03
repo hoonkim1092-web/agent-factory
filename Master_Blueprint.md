@@ -879,13 +879,14 @@ P4a BLOCK 0건 보장: yaml의 P4 rule(`owner_role_mismatch`, `evidence_quality_
 **LLM 엔진:** `ControlPlaneLLM` (CLI-first, API-fallback) — GOOGLE_API_KEY 없이도 동작
 
 ### §3.8.1 ControlPlaneLLM (`core/control_plane_llm.py`)
-<!-- last_updated: 2026-04-10 (CLI timeout 120→300초) -->
+<!-- last_updated: 2026-06-03 (allow_file_edit=False 격리 차단) -->
 
 Control-plane(Lilith, Evaluator)용 LLM 인터페이스.
 
 **해결 순서:** CLI providers (claude_cli > gemini_cli > codex_cli) → Gemini API → 빈 결과
 **인터페이스:** `generate(prompt) → str`, `generate_json(prompt) → dict`
 **CLI 실패 시:** infra 실패면 다음 CLI로 failover
+**격리 안전성:** `_generate_via_cli()` 호출 시 `allow_file_edit=False` — claude_cli의 `--permission-mode bypassPermissions` 플래그 제거, control-plane JSON 결정 호출에서 파일편집 불가 (dogfood source-write leak 차단)
 
 > **설계 결정: 프로바이더 우선순위 분리**
 > - Control-plane (`ControlPlaneLLM`): Claude 우선 — 정확한 JSON 판정이 핵심
@@ -1110,11 +1111,12 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-03; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, control_plane_llm.py, cli.py, test_cli_providers.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/control_plane_llm.py` | core/control_plane_llm.py ========================= Control-plane(Lilith, StrategyEvaluator)용 LLM 인터페이스. | `ControlPlaneLLM` |
+| `core/providers/cli.py` | cli | `CliChatRequest`, `CliProviderSpec`, `get_cli_provider_spec()`, `compose_cli_prompt()`, `build_cli_command()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1661,6 +1663,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-03 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, control_plane_llm.py, cli.py, test_cli_providers.py |
+| 2026-06-03 | v1.2.36 | fix(dogfood): control-plane source-write leak 차단 — `CliChatRequest`에 `allow_file_edit: bool = True` 필드 추가(하위 호환). `build_cli_command()`에서 `allow_file_edit=False` 시 claude_cli의 `--permission-mode bypassPermissions` 제거(gemini_cli headless 실행 플래그는 유지). `ControlPlaneLLM._generate_via_cli()`에 `allow_file_edit=False` 전달 — Lilith stall 복구 시 claude_cli가 source root에서 bypassPermissions로 실행되어 source 파일을 직접 수정하던 dogfood 격리 누수 차단. 3-Tier: af-critic PASS / af-cross-review BLOCK→fixed(gemini headless hang) / af-test-runner PASS(2723+4). — core/providers/cli.py, core/control_plane_llm.py, tests/test_cli_providers.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-03 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, utils.py, test_utils.py |
 | 2026-06-03 | v1.2.34 | chore(core): code update — provider_detect.py |

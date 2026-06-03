@@ -121,6 +121,7 @@ class ControlPlaneLLM:
                     task_input=prompt,
                     workspace=os.getcwd(),
                     timeout_sec=300,
+                    allow_file_edit=False,  # control-plane은 JSON 결정만 — 파일편집 도구 차단
                 ))
             except Exception as exc:
                 print(f"[ControlPlaneLLM] CLI {provider_id} exception: {exc}")

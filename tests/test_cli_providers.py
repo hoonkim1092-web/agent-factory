@@ -944,3 +944,44 @@ def test_collect_git_context_returns_empty_for_non_git_dir(tmp_path, monkeypatch
     non_git_dir.mkdir()
     result = _collect_git_context(str(non_git_dir))
     assert result == ""
+
+
+class TestAllowFileEdit:
+    """allow_file_edit 필드: claude_cli는 bypassPermissions 제어, gemini_cli headless 플래그는 유지."""
+
+    def _build(self, provider_id: str, allow_file_edit: bool):
+        from core.providers.cli import CliChatRequest, build_cli_command
+        return build_cli_command(
+            CliChatRequest(
+                provider_id=provider_id,
+                model="test-model",
+                system_prompt="sys",
+                task_input="task",
+                workspace="D:/workspace",
+                allow_file_edit=allow_file_edit,
+            )
+        )
+
+    def test_claude_allow_file_edit_true_includes_bypass_permissions(self):
+        cmd = self._build("claude_cli", allow_file_edit=True)
+        assert "--permission-mode" in cmd
+        assert "bypassPermissions" in cmd
+
+    def test_claude_allow_file_edit_false_excludes_bypass_permissions(self):
+        # control-plane JSON 결정 호출 — 파일편집 도구 차단
+        cmd = self._build("claude_cli", allow_file_edit=False)
+        assert "--permission-mode" not in cmd
+        assert "bypassPermissions" not in cmd
+
+    def test_gemini_allow_file_edit_false_still_includes_headless_flags(self):
+        # gemini_cli의 headless 실행 플래그는 allow_file_edit=False여도 유지 (hang 방지)
+        cmd = self._build("gemini_cli", allow_file_edit=False)
+        assert "--sandbox" in cmd
+        assert "--approval-mode" in cmd
+        assert "yolo" in cmd
+
+    def test_gemini_allow_file_edit_true_includes_headless_flags(self):
+        cmd = self._build("gemini_cli", allow_file_edit=True)
+        assert "--sandbox" in cmd
+        assert "--approval-mode" in cmd
+        assert "yolo" in cmd

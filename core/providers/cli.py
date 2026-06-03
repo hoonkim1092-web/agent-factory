@@ -37,6 +37,7 @@ class CliChatRequest:
     run_id: str = ""
     timeout_sec: int = 0  # 0이면 _default_cli_timeout_sec() 사용
     auto_approve: bool = False
+    allow_file_edit: bool = True  # False이면 headless_edit_flags 제외(control-plane JSON 전용 호출)
 
     @property
     def effective_timeout_sec(self) -> int:
@@ -675,7 +676,10 @@ def build_cli_command(request: CliChatRequest) -> list[str]:
     if _should_include_model(request, spec):
         cmd.extend([spec.model_flag, str(request.model)])
     if spec.headless_edit_flags:
-        cmd.extend(spec.headless_edit_flags)
+        # allow_file_edit=False는 claude_cli의 bypassPermissions만 차단.
+        # gemini_cli의 headless 실행 플래그(--sandbox --approval-mode yolo)는 유지해야 hang을 막는다.
+        if request.allow_file_edit or spec.provider_id != "claude_cli":
+            cmd.extend(spec.headless_edit_flags)
     cmd.extend(_build_workspace_access_flags(request, spec))
     if spec.fixed_flags:
         cmd.extend(spec.fixed_flags)
