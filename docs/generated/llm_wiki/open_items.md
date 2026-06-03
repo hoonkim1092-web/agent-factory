@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-03T23:33:49+09:00
-source_commit: a3697659
+generated_at: 2026-06-03T23:58:57+09:00
+source_commit: d3633575
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -16,7 +16,6 @@ sources:
 
 - (L5) > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
 - (L6) > - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
-- (L10) > - **🎯 다음 세션 진입점 = AF Right-Sized Execution**: **방향 설계만 수렴**(2026-06-03 세션) — **상세(파일·함수 레벨) 설계는 아직. 다음 세션 첫 작업 = 상세 설계(Opus) → 그 다음 구현(Sonnet).** "재논의 금지"는 *방향*에 한함(Stage-Aware+floor+fallback 확정); 상
 - (L14) >   - **🔬 격리 누수 원인 진단 (팩트 확정)**: worker dispatch는 **무죄** — runs/*/task.json 22개 전부 `workspace=worktree` 확인. dogfood_state worktree 경로 정상. **진짜 범인 = `core/control_plane_llm.py:122` `workspace=os.getcwd
 - (L17) - **🆕 신규 발견 (leak과 별개, 미수정) — 📌 TODO 등록**: **DEVELOP phase 비수렴** — Option 2가 dogfood DEVELOP을 전체 `ProjectPipeline.run()`에 위임하는데, trivial leaf 함수(`geometric_mean`)에도 designer/qa_engineer 등 멀티에이전트 프로젝트를
 - (L18) - **⚠️ 처방 제약 (사용자 지시 2026-06-03)**: **단순 캡/비활성화로 처리 금지.** `terminal_per_agent=False` + `max_cycles` 하드 캡 같은 단순 처방은 큰 task에서 정당한 멀티에이전트 작업까지 잘라버림. **지능형으로 바꿔야 함** — task 복잡도(leaf 함수 1개 vs 멀티모듈 프로젝트)를 인
@@ -49,4 +48,4 @@ sources:
 - (L616) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
 - (L703) 1. 완료 작업 / 다음 진입점 갱신
 
-Source: `NEXT_STEPS.md` (34건 추출)
+Source: `NEXT_STEPS.md` (33건 추출)
