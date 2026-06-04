@@ -167,14 +167,13 @@ def _is_self_modification(workspace: str, changed_files: list[str]) -> bool:
 def _max_tier(changed_files: list[str], workspace: str) -> int:
     """scope 파일들의 blast_radius Tier 최댓값.
 
-    classify_path (path-only, 결정적) 사용 — 신규 파일도 분류 가능.
-    설계 §1.2: classify_with_content는 파일 읽음, 신규 파일엔 부적합.
-    workspace 파라미터는 시그니처 호환성을 위해 유지.
+    classify_with_content 사용 — 내용 기반 Tier3 상향 포함.
+    신규(nonexistent) 파일은 classify_with_content가 Tier2로 fallback.
     """
     if not changed_files:
         return 0
-    from scripts.blast_radius import classify_path
-    return max(classify_path(f) for f in changed_files)
+    from scripts.blast_radius import classify_with_content
+    return max(classify_with_content(f, workspace) for f in changed_files)
 
 
 # ---------------------------------------------------------------------------

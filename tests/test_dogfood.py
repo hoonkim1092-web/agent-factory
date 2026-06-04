@@ -2317,3 +2317,26 @@ def test_inv_iso_env(monkeypatch, tmp_path):
     # After completion env vars should be restored
     assert _os.environ.get("AF_DISABLE_REGISTRY_WRITE") == prior_disable
     assert _os.environ.get("AGENT_PROJECT_ROOT") == prior_root
+
+
+# Case 3 seam: _router_llm 예외 → fallback → pipeline.run 단일 호출
+def test_router_exc_fallback_to_pipeline(monkeypatch, tmp_path):
+    """_router_llm raises → classify falls back to full decision → pipeline.run called once."""
+    state = _dev_state(tmp_path, task="add helper to scripts/utils.py")
+
+    # Make the LLM raise to trigger fallback path
+    monkeypatch.setattr(_rsr, "_router_llm", MagicMock(
+        generate_json=MagicMock(side_effect=RuntimeError("LLM unavailable"))
+    ))
+
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = {"ok": True, "changed_files": ["scripts/utils.py"]}
+
+    result = _run_develop_phase(state, mock_pipeline)
+
+    # Fallback must route to full pipeline
+    mock_pipeline.run.assert_called_once()
+    assert "ok" in result
+    # route_decision should be recorded with fallback source
+    assert state.route_decision
+    assert state.route_decision.get("source") == "fallback"
