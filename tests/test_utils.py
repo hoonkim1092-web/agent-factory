@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance
 from core.utils import test_file_for as _test_file_for
 
 
@@ -699,3 +699,42 @@ class TestInterquartileRange:
 
     def test_반환_타입은_float(self):
         assert isinstance(interquartile_range([1, 2, 3, 4, 5]), float)
+
+
+class TestCovariance:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            covariance([], [])
+
+    def test_길이_불일치는_ValueError(self):
+        with pytest.raises(ValueError):
+            covariance([1, 2], [1])
+
+    def test_단일_원소는_0(self):
+        assert covariance([5], [5]) == pytest.approx(0.0)
+
+    def test_양수_공분산(self):
+        # xs와 ys가 같이 증가하면 양수 공분산
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [2.0, 4.0, 5.0, 4.0, 5.0]
+        assert covariance(xs, ys) > 0
+
+    def test_음수_공분산(self):
+        # xs가 증가할 때 ys가 감소하면 음수 공분산
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [5.0, 4.0, 3.0, 2.0, 1.0]
+        assert covariance(xs, ys) < 0
+
+    def test_자기자신과의_공분산은_분산과_동일(self):
+        values = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+        assert covariance(values, values) == pytest.approx(variance(values))
+
+    def test_두_원소_표준(self):
+        xs = [1.0, 3.0]
+        ys = [2.0, 4.0]
+        # mean_x=2.0, mean_y=3.0
+        # (1-2)*(2-3) + (3-2)*(4-3) = 1+1=2; / 2 = 1.0
+        assert covariance(xs, ys) == pytest.approx(1.0)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(covariance([1, 2, 3], [4, 5, 6]), float)

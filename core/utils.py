@@ -274,6 +274,21 @@ def interquartile_range(values: list[int | float]) -> float:
     return percentile(values, 75.0) - percentile(values, 25.0)
 
 
+def covariance(xs: list[int | float], ys: list[int | float]) -> float:
+    """두 수열의 모집단 공분산(population covariance)을 float로 반환한다.
+
+    xs와 ys의 길이가 다르면 ValueError. 빈 리스트이면 ValueError.
+    """
+    if not xs or not ys:
+        raise ValueError("빈 리스트에서 공분산을 계산할 수 없습니다.")
+    if len(xs) != len(ys):
+        raise ValueError(f"xs와 ys의 길이가 다릅니다: {len(xs)} != {len(ys)}")
+    n = len(xs)
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+    return sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / n
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
