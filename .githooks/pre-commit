@@ -9,9 +9,11 @@
 #   5. Commit proceeds.
 
 BLUEPRINT="Master_Blueprint.md"
-STAGED=$(git diff --cached --name-only)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 VENV_PYTHON="${REPO_ROOT}/.venv/bin/python3"
+# Normalize staged text files per .gitattributes (CRLF guard — Windows open("w") writes CRLF).
+git diff --cached --name-only --diff-filter=ACMR | xargs -r git add --renormalize -- 2>/dev/null || true
+STAGED=$(git diff --cached --name-only)
 
 if [ -x "$VENV_PYTHON" ]; then
     HOOK_PY="$VENV_PYTHON"
