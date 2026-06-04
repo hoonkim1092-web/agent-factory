@@ -8,9 +8,11 @@ import pytest
 
 from scripts.agent_model_selector import (
     _DEFAULTS,
+    _TIER_TO_MODEL_ID,
     clear_pending_escalation,
     get_pending_escalation,
     log_routing,
+    resolve_model_id,
     select_model,
     store_pending_escalation,
 )
@@ -97,6 +99,34 @@ class TestPendingEscalation:
         state_path.parent.mkdir(exist_ok=True)
         state_path.write_text("not-json-{{{")
         assert get_pending_escalation(str(tmp_path)) is None
+
+
+class TestResolveModelId:
+    def test_sonnet_returns_full_id(self):
+        assert resolve_model_id("sonnet") == _TIER_TO_MODEL_ID["sonnet"]
+
+    def test_opus_returns_full_id(self):
+        assert resolve_model_id("opus") == _TIER_TO_MODEL_ID["opus"]
+
+    def test_haiku_returns_full_id(self):
+        assert resolve_model_id("haiku") == _TIER_TO_MODEL_ID["haiku"]
+
+    def test_full_id_passthrough(self):
+        full = "claude-sonnet-4-6"
+        assert resolve_model_id(full) == full
+
+    def test_unknown_tier_passthrough(self):
+        assert resolve_model_id("claude-experimental") == "claude-experimental"
+
+    def test_empty_returns_claude_default(self):
+        assert resolve_model_id("") == "claude"
+
+    def test_none_returns_claude_default(self):
+        assert resolve_model_id(None) == "claude"  # type: ignore[arg-type]
+
+    def test_case_insensitive(self):
+        assert resolve_model_id("Sonnet") == _TIER_TO_MODEL_ID["sonnet"]
+        assert resolve_model_id("HAIKU") == _TIER_TO_MODEL_ID["haiku"]
 
 
 class TestLogRouting:

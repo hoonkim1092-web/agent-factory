@@ -44,6 +44,24 @@ def _detect_workspace() -> str:
     return os.getcwd()
 
 
+def _inject_model_override(agent_list: str, pending: "dict | None") -> str:
+    """P4.5b: pending escalation이 있으면 해당 에이전트에 [model=<id>] 접미사 주입 (순수 함수)."""
+    if not pending:
+        return agent_list
+    agent = pending.get("agent", "")
+    model = pending.get("model", "")
+    if not agent or not model or f"{agent}[model=" in agent_list or agent not in agent_list:
+        return agent_list
+    try:
+        from agent_model_selector import resolve_model_id  # type: ignore
+        model_id = resolve_model_id(model)
+    except Exception:
+        return agent_list
+    if not model_id or model_id == "claude":
+        return agent_list
+    return agent_list.replace(agent, f"{agent}[model={model_id}]", 1)
+
+
 def _agents_for_tier(tier: int, t3_skip_allowed: bool = False) -> tuple[str, str]:
     """(agent_list_str, instruction) 반환."""
     if tier == 1:
@@ -183,6 +201,24 @@ def main() -> None:
         except Exception:
             t3_skip_allowed = False
         agent_list, instruction = _agents_for_tier(blast_tier, t3_skip_allowed)
+
+        # P4.5b: 이전 라운드 escalation이 저장돼 있으면 해당 에이전트에 model override 주입
+        _esc_applied = False
+        _clear_esc_fn = None
+        try:
+            from agent_model_selector import (  # type: ignore
+                get_pending_escalation,
+                clear_pending_escalation,
+            )
+            esc = get_pending_escalation(workspace)
+            annotated = _inject_model_override(agent_list, esc)
+            if annotated != agent_list:
+                agent_list = annotated
+                _esc_applied = True
+                _clear_esc_fn = lambda: clear_pending_escalation(workspace)  # noqa: E731
+        except Exception:
+            pass
+
         round_info = f" (round {round_count + 1}/{MAX_ROUNDS})"
 
         print(f"[af-review-pending] {len(files)}개 .py 파일이 교차검증 대기 중입니다{round_info}: {file_list}")
@@ -192,6 +228,13 @@ def main() -> None:
         # fired_at 기록 — 재발화 방지
         data["fired_at"] = time.time()
         _atomic_write(marker, data)
+
+        # escalation clear는 fired_at 영속화 성공 이후 — 실패 시 escalation 소실 방지
+        if _esc_applied and _clear_esc_fn is not None:
+            try:
+                _clear_esc_fn()
+            except Exception:
+                pass
 
     try:
         if _state_lock is not None:

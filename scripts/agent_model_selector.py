@@ -4,6 +4,7 @@ scripts/agent_model_selector.py
 P4.5b runtime model escalation helper.
 
 select_model(agent_name, triggers) → model short-name ("haiku"/"sonnet"/"opus").
+resolve_model_id(tier_or_id) → full Claude model ID (e.g. "claude-sonnet-4-6").
 Escalation 매트릭스 출처: ADR-20260515-114000-agent-model-routing-defaults-escalation.md
 """
 from __future__ import annotations
@@ -50,10 +51,30 @@ _ESCALATION_MATRIX: dict[str, dict] = {
     # af-cross-review: no escalation (orchestrator 역할, Sonnet 충분)
 }
 
+# claude CLI에 전달할 구체 모델 ID 매핑 (tier 단축명 → 현재 최신 모델 ID)
+# _should_include_model이 "claude" alias는 --model에서 제외하므로 구체 ID만 통과함.
+_TIER_TO_MODEL_ID: dict[str, str] = {
+    "opus":   "claude-opus-4-8",
+    "sonnet": "claude-sonnet-4-6",
+    "haiku":  "claude-haiku-4-5-20251001",
+}
+
 _QUEUE_DIR = ".af_review_queue"
 _STATE_FILE = "model_escalation_pending.json"
 _LOG_FILE = "model_routing.log"
 _EXPIRY_SEC = 600  # 10분 후 stale
+
+
+def resolve_model_id(tier_or_id: str) -> str:
+    """tier 단축명("haiku"/"sonnet"/"opus")을 claude CLI --model 전달용 전체 ID로 변환.
+
+    이미 전체 ID이면 그대로 반환. 알 수 없는 값도 그대로 반환.
+    빈 값이나 None은 "claude"(default 상속, _should_include_model이 --model 생략)를 반환.
+    """
+    t = str(tier_or_id or "").strip().lower()
+    if not t:
+        return "claude"
+    return _TIER_TO_MODEL_ID.get(t, tier_or_id)
 
 
 def select_model(agent_name: str, triggers: list[str]) -> str:

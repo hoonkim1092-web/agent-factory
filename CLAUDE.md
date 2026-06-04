@@ -122,6 +122,7 @@
 
 ### 교차검증 자동 실행
 - UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
+  - 에이전트 이름 뒤에 `[model=X]` 접미사가 있으면 Agent tool의 `model:` 파라미터에 해당 값을 전달한다 (P4.5b 사전강제: 이전 라운드 escalation 적용)
 - UserPromptSubmit hook이 `[af-design-review-pending]` 메시지를 출력하면, **반드시** af-cross-review **1개만** 실행한다 (설계문서 큐 자동 발화, scripts/check_design_pending.py)
 - **단일 설계문서** (docs/YYYY-MM-DD-*.md) 작성 후에는 **af-cross-review만** 실행한다 (2026-05-01 변경: af-critic은 설계문서에서 소스 중복 탐색 비용만 발생, 효과 없음)
 - **Work-item 문서 세트** (docs/work-items/<slug>/ 4개 문서) 작성·수정 후에는 af-doc-qa + af-cross-review **2개를 병렬 실행**한다
