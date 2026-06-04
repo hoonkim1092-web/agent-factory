@@ -267,7 +267,7 @@ def init_skill_dir(
             "updated_at": now,
         }
         meta_path = os.path.join(skill_dir, "meta.yaml")
-        with open(meta_path, "w", encoding="utf-8") as f:
+        with open(meta_path, "w", encoding="utf-8", newline="\n") as f:
             yaml.dump(meta, f, allow_unicode=True, default_flow_style=False)
         print(f"[OK] meta.yaml 생성됨: {meta_path}")
 
@@ -582,7 +582,7 @@ def _read_meta(skill_dir: str) -> dict:
 def _write_meta(skill_dir: str, meta: dict):
     """meta.yaml를 씁니다."""
     meta_path = os.path.join(skill_dir, "meta.yaml")
-    with open(meta_path, "w", encoding="utf-8") as f:
+    with open(meta_path, "w", encoding="utf-8", newline="\n") as f:
         yaml.dump(meta, f, allow_unicode=True, default_flow_style=False)
 
 

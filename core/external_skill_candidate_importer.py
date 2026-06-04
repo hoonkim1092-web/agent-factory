@@ -302,7 +302,7 @@ def merge_install_candidates(
     registry["install_candidates"] = dict(sorted(merged.items(), key=lambda item: item[0]))
     if not check_only:
         os.makedirs(os.path.dirname(registry_path), exist_ok=True)
-        with open(registry_path, "w", encoding="utf-8") as handle:
+        with open(registry_path, "w", encoding="utf-8", newline="\n") as handle:
             yaml.safe_dump(registry, handle, allow_unicode=True, sort_keys=False)
     return registry
 

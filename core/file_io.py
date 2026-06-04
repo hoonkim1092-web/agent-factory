@@ -93,7 +93,7 @@ def read_yaml(path: str) -> dict:
 
 def write_yaml(path: str, data: dict):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
     try:
         st = os.stat(path)
@@ -116,7 +116,7 @@ def write_yaml(path: str, data: dict):
 # =============================================================================
 def write_text(path: str, content: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(content)
 
 

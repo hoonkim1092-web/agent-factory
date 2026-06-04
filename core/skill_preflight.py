@@ -303,7 +303,7 @@ class PreflightEvaluator:
                 from core.utils import now_iso
                 skill_entry["updated_at"] = now_iso()
 
-                with open(registry_path, "w", encoding="utf-8") as f:
+                with open(registry_path, "w", encoding="utf-8", newline="\n") as f:
                     yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=True)
 
                 updated = True

@@ -1119,10 +1119,15 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-04; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, external_skill_candidate_importer.py, file_io.py, skill_creator.py, skill_enricher.py (+3)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
+| `core/external_skill_candidate_importer.py` | external skill candidate importer | — |
+| `core/file_io.py` | core/file_io.py =============== 파일 I/O 전담 모듈: YAML/Text 읽기·쓰기 + LRU 캐시. | `read_yaml()`, `write_yaml()`, `write_text()` |
+| `core/skill_creator.py` | skill creator | — |
+| `core/skill_enricher.py` | core/skill_enricher.py ====================== 스킬 메타데이터 자동 보강 엔진. | `meta_quality_score()`, `enrich_skill_metadata()`, `bulk_enrich_all_skills()` |
+| `core/skill_preflight.py` | Pre-flight Evaluator (Phase 5b) 스킬을 레지스트리에 active로 등록하기 전에 N번 반복 실행하여 신뢰도 점수를 매기는 독립된 오프라인 Evals 도구. | `PreflightResult`, `PreflightEvaluator`, `cli_main()` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1670,6 +1675,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, external_skill_candidate_importer.py, file_io.py, skill_creator.py, skill_enricher.py (+3) |
+| 2026-06-04 | v1.2.34 | fix(crlf): Windows yaml 쓰기 CRLF 근본 수정 — `file_io.write_yaml`·`write_text` + `skill_creator`(2곳)·`skill_enricher`·`skill_preflight`·`external_skill_candidate_importer` yaml open에 `newline="\\n"` 추가. `skills/registry.yaml`·`new_skill/meta.yaml` 기존 CRLF 정규화. §3.6 갱신. — core/file_io.py, core/skill_creator.py, core/skill_enricher.py, core/skill_preflight.py, core/external_skill_candidate_importer.py |
 | 2026-06-04 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, agent_runner.py, dynamic_orchestrator.py, utils.py, test_inject_review_tasks_e2e_command.py (+1) |
 | 2026-06-04 | v1.2.34 | feat(wi-1): provider_id 보존 — `agent_runner.py` 4개 성공 경로에 `"provider_id"` 필드 명시 추가. `dynamic_orchestrator.py` `_inject_review_tasks_if_needed`에 `provider_id: str = ""` 파라미터 추가 + `completed_task["provider_id"]` 포함. 일반 경로(line 841)·FSA 복구 경로(line 954) 모두 `result.get("provider_id") or result.get("reason")`로 전달. `test_inject_review_tasks_provider_id_routing`·`test_inject_review_tasks_provider_id_missing_defaults_to_first` 2건 신규. 3-Tier: af-critic WARN(FSA reason 버그 발견→수정) / af-cross-review BLOCK(수정) / af-test-runner PASS(68). §3.1 갱신. — core/agent_runner.py, core/dynamic_orchestrator.py, tests/test_inject_review_tasks_e2e_command.py |
