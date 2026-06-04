@@ -225,12 +225,12 @@ class DynamicOrchestrator:
         prefix = text.split(":", 1)[0]
         return safe_id(prefix)
 
-    async def _inject_review_tasks_if_needed(self, workspace: str, task_id: str, role: str) -> None:
+    async def _inject_review_tasks_if_needed(self, workspace: str, task_id: str, role: str, provider_id: str = "") -> None:
         """build 태스크 완료 시 code_review + cross_validate 태스크를 board에 주입하고 역할을 등록한다."""
         try:
             # inject_review_tasks 내부에서 locked_file로 board를 읽으므로 여기서는 읽지 않음
             # completed_task를 task_id/role로 직접 구성하여 이중 read 방지
-            completed_task = {"task_id": task_id, "owner_role": role, "phase": "build"}
+            completed_task = {"task_id": task_id, "owner_role": role, "phase": "build", "provider_id": provider_id}
             # board에서 module_id를 가져오기 위해 한 번만 읽음 (inject_review_tasks 내부 lock에서 재확인)
             board = load_project_board(workspace)
             for t in (board.get("tasks") or []):
@@ -838,7 +838,7 @@ class DynamicOrchestrator:
                 if self._visualizer and not self.terminal_per_agent:
                     self._visualizer.mark_completed(role)
                 # 코드 리뷰 + 교차검증 태스크 자동 주입
-                await self._inject_review_tasks_if_needed(target_workspace, task_id, role)
+                await self._inject_review_tasks_if_needed(target_workspace, task_id, role, provider_id=str(result.get("provider_id") or result.get("reason") or ""))
                 self._sync_manifest()
             else:
                 reason = result.get("reason", "Unknown error") if result else "No result"
@@ -951,7 +951,7 @@ class DynamicOrchestrator:
                                         changes_summary=f"FSA recovered subtask: {subtask[:50]}",
                                     )
                                 print_agent_msg(role, "FSA 복구 성공", "✅")
-                                await self._inject_review_tasks_if_needed(target_workspace, task_id, role)
+                                await self._inject_review_tasks_if_needed(target_workspace, task_id, role, provider_id=str(fsa_result.get("provider_id") or fsa_result.get("reason") or ""))
                             else:
                                 fsa_reason = fsa_result.get("reason", reason)
                                 _maxed = _ll.is_maxed(_lineage_id)

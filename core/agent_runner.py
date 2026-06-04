@@ -1222,6 +1222,7 @@ class AgentRunner:
                     result = {
                         "ok": True,
                         "reason": provider_id,
+                        "provider_id": provider_id,
                         "latency_ms": int((time.time() - started) * 1000),
                         "approval_rejects": approval_rejects,
                     }
@@ -1278,6 +1279,7 @@ class AgentRunner:
                     result = {
                         "ok": True,
                         "reason": "openai",
+                        "provider_id": "openai",
                         "latency_ms": int((time.time() - started) * 1000),
                         "approval_rejects": approval_rejects,
                     }
@@ -1308,6 +1310,7 @@ class AgentRunner:
                     result = {
                         "ok": True,
                         "reason": "anthropic",
+                        "provider_id": "anthropic",
                         "latency_ms": int((time.time() - started) * 1000),
                         "approval_rejects": approval_rejects,
                     }
@@ -1517,7 +1520,7 @@ class AgentRunner:
                         f"compressed={_cwm_stats['history']['compressed_entries']} "
                         f"saved={_cwm_stats['history']['saved_tokens']}tok")
             print("Agent Execution Finished.")
-            result = {"ok": True, "reason": "gemini", "latency_ms": int((time.time() - started) * 1000), "approval_rejects": approval_rejects}
+            result = {"ok": True, "reason": "gemini", "provider_id": "gemini", "latency_ms": int((time.time() - started) * 1000), "approval_rejects": approval_rejects}
             # Phase 3: post-execute hook
             result = bus.run_post_execute(agent_state, result)
             _flush_trace(result)

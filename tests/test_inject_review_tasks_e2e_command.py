@@ -79,3 +79,63 @@ def test_inject_review_tasks_e2e_command():
                 assert e2e.startswith("# TODO"), (
                     f"{phase} task의 e2e_command가 # TODO로 시작해야 함: {e2e!r}"
                 )
+
+
+def test_inject_review_tasks_provider_id_routing():
+    """provider_id가 completed_task에 포함되면 pick_review_provider에 전달되어야 한다."""
+    with tempfile.TemporaryDirectory() as tmp:
+        slug = "auth-module"
+        _seed_board(tmp, slug)
+
+        completed_task = {
+            "task_id": "T-001",
+            "phase": "build",
+            "module_id": slug,
+            "owner_role": "backend_dev",
+            "provider_id": "claude_cli",
+        }
+
+        captured: list[str] = []
+
+        def _fake_pick(author: str) -> str:
+            captured.append(author)
+            return "codex"
+
+        with patch("core.providers.registry.detect_installed_cli_providers", return_value=["claude_cli", "codex"]):
+            with patch("core.providers.registry.pick_review_provider", side_effect=_fake_pick):
+                from core.project_task_board import inject_review_tasks
+                inject_review_tasks(tmp, completed_task)
+
+        assert captured == ["claude_cli"], (
+            f"pick_review_provider는 author_provider='claude_cli'로 호출되어야 함, got: {captured}"
+        )
+
+
+def test_inject_review_tasks_provider_id_missing_defaults_to_first():
+    """provider_id 없으면 available[0]을 author_provider로 사용한다."""
+    with tempfile.TemporaryDirectory() as tmp:
+        slug = "auth-module2"
+        _seed_board(tmp, slug)
+
+        completed_task = {
+            "task_id": "T-001",
+            "phase": "build",
+            "module_id": slug,
+            "owner_role": "backend_dev",
+            # provider_id 없음
+        }
+
+        captured: list[str] = []
+
+        def _fake_pick(author: str) -> str:
+            captured.append(author)
+            return "codex"
+
+        with patch("core.providers.registry.detect_installed_cli_providers", return_value=["claude_cli", "codex"]):
+            with patch("core.providers.registry.pick_review_provider", side_effect=_fake_pick):
+                from core.project_task_board import inject_review_tasks
+                inject_review_tasks(tmp, completed_task)
+
+        assert captured == ["claude_cli"], (
+            f"provider_id 없으면 available[0]='claude_cli'로 폴백해야 함, got: {captured}"
+        )
