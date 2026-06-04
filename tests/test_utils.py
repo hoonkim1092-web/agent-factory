@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, weighted_mean
 from core.utils import test_file_for as _test_file_for
 
 
@@ -575,3 +575,50 @@ class TestGeometricMean:
     def test_산술평균보다_작거나_같음(self):
         values = [1, 2, 3, 4, 5]
         assert geometric_mean(values) <= sum(values) / len(values)
+
+
+class TestWeightedMean:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            weighted_mean([], [])
+
+    def test_길이_불일치는_ValueError(self):
+        with pytest.raises(ValueError):
+            weighted_mean([1, 2, 3], [1, 2])
+
+    def test_음수_weight는_ValueError(self):
+        with pytest.raises(ValueError):
+            weighted_mean([1, 2], [1, -1])
+
+    def test_weight_합이_0이면_ValueError(self):
+        with pytest.raises(ValueError):
+            weighted_mean([1, 2], [0, 0])
+
+    def test_균등_weight는_산술평균과_동일(self):
+        values = [1.0, 2.0, 3.0, 4.0, 5.0]
+        weights = [1.0, 1.0, 1.0, 1.0, 1.0]
+        assert weighted_mean(values, weights) == pytest.approx(3.0)
+
+    def test_단일_요소(self):
+        assert weighted_mean([7.0], [1.0]) == pytest.approx(7.0)
+
+    def test_두_원소_동등_가중(self):
+        assert weighted_mean([0.0, 10.0], [1.0, 1.0]) == pytest.approx(5.0)
+
+    def test_첫_원소에_집중_가중(self):
+        assert weighted_mean([0.0, 10.0], [9.0, 1.0]) == pytest.approx(1.0)
+
+    def test_마지막_원소에_집중_가중(self):
+        assert weighted_mean([0.0, 10.0], [1.0, 9.0]) == pytest.approx(9.0)
+
+    def test_정수_입력도_float_반환(self):
+        result = weighted_mean([2, 4], [1, 3])
+        assert isinstance(result, float)
+        assert result == pytest.approx(3.5)
+
+    def test_0_weight_원소는_기여_없음(self):
+        assert weighted_mean([100.0, 5.0], [0.0, 1.0]) == pytest.approx(5.0)
+
+    def test_비정규화_weight도_동작(self):
+        # values=[1, 3], weights=[2, 6] → (1*2+3*6)/8 = 20/8 = 2.5
+        assert weighted_mean([1.0, 3.0], [2.0, 6.0]) == pytest.approx(2.5)

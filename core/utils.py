@@ -237,6 +237,26 @@ def geometric_mean(values: list[int | float]) -> float:
     return math.exp(sum(math.log(v) for v in values) / len(values))
 
 
+def weighted_mean(values: list[int | float], weights: list[int | float]) -> float:
+    """가중 평균을 float로 반환한다.
+
+    values와 weights의 길이가 다르면 ValueError. 빈 리스트이면 ValueError.
+    weights의 합이 0이면 ValueError. 음수 weight는 허용하지 않는다.
+    """
+    if not values:
+        raise ValueError("빈 리스트에서 가중 평균을 계산할 수 없습니다.")
+    if len(values) != len(weights):
+        raise ValueError(
+            f"values와 weights의 길이가 다릅니다: {len(values)} != {len(weights)}"
+        )
+    if any(w < 0 for w in weights):
+        raise ValueError("weights는 음수를 허용하지 않습니다.")
+    total_weight = sum(weights)
+    if total_weight == 0:
+        raise ValueError("weights의 합이 0이면 가중 평균을 계산할 수 없습니다.")
+    return sum(v * w for v, w in zip(values, weights)) / total_weight
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

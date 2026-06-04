@@ -1119,11 +1119,10 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-04; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, right_sized_router.py, utils.py, test_dogfood.py (+1)
+최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/right_sized_router.py` | core/right_sized_router.py — AF Right-Sized Execution 라우터 (슬라이스 1). | `RouteDecision`, `classify()` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1671,6 +1670,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-04 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, right_sized_router.py, utils.py, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.37 | fix(rse-slice1): `_max_tier` classify_with_content 교체 + Case3 seam 테스트 — `_max_tier`에서 `classify_path`(path-only) → `classify_with_content`(content 기반 Tier3 상향 포함)로 교체. 신규 파일은 OSError catch로 Tier2 fallback 안전. `test_router_exc_fallback_to_pipeline` 추가: `_router_llm` 예외→fallback→pipeline.run 단일 흐름 + state.route_decision source="fallback" 검증. 3-Tier: af-critic WARN / af-cross-review PASS / af-test-runner PASS. §0/§12 갱신. — core/right_sized_router.py, tests/test_dogfood.py |
 | 2026-06-04 | v1.2.37 | feat(utils): `weighted_mean(values, weights)` 신설 — 가중 평균 float 반환. 빈 리스트이면 ValueError. 길이 불일치이면 ValueError. 음수 weight이면 ValueError. weight 합이 0이면 ValueError. `TestWeightedMean` 12건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
