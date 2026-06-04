@@ -267,6 +267,13 @@ def weighted_mean(values: list[int | float], weights: list[int | float]) -> floa
     return sum(v * w for v, w in zip(values, weights)) / total_weight
 
 
+def interquartile_range(values: list[int | float]) -> float:
+    """사분위 범위(IQR = Q3 − Q1)를 float로 반환한다. 빈 리스트이면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 IQR을 계산할 수 없습니다.")
+    return percentile(values, 75.0) - percentile(values, 25.0)
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

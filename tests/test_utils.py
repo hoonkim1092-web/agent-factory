@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range
 from core.utils import test_file_for as _test_file_for
 
 
@@ -665,3 +665,37 @@ class TestWeightedMean:
     def test_비정규화_weight도_동작(self):
         # values=[1, 3], weights=[2, 6] → (1*2+3*6)/8 = 20/8 = 2.5
         assert weighted_mean([1.0, 3.0], [2.0, 6.0]) == pytest.approx(2.5)
+
+
+class TestInterquartileRange:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            interquartile_range([])
+
+    def test_단일_요소는_0(self):
+        assert interquartile_range([5]) == pytest.approx(0.0)
+
+    def test_모든_동일값은_0(self):
+        assert interquartile_range([3, 3, 3, 3]) == pytest.approx(0.0)
+
+    def test_5원소_표준(self):
+        # sorted=[1,2,3,4,5], Q1=idx 1.0→s[1]=2.0, Q3=idx 3.0→s[3]=4.0, IQR=2.0
+        assert interquartile_range([1, 2, 3, 4, 5]) == pytest.approx(2.0)
+
+    def test_3원소(self):
+        # sorted=[1,2,3], Q1=idx 0.5→1.5, Q3=idx 1.5→2.5, IQR=1.0
+        assert interquartile_range([1, 2, 3]) == pytest.approx(1.0)
+
+    def test_비정렬_입력(self):
+        assert interquartile_range([5, 1, 4, 2, 3]) == pytest.approx(2.0)
+
+    def test_음수_포함(self):
+        # sorted=[-4,-2,0,2,4], Q1=idx 1.0→-2.0, Q3=idx 3.0→2.0, IQR=4.0
+        assert interquartile_range([-4, -2, 0, 2, 4]) == pytest.approx(4.0)
+
+    def test_부동소수점_입력(self):
+        # sorted=[1.0,2.0,3.0,4.0], Q1=idx 0.75→1.75, Q3=idx 2.25→3.25, IQR=1.5
+        assert interquartile_range([1.0, 2.0, 3.0, 4.0]) == pytest.approx(1.5)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(interquartile_range([1, 2, 3, 4, 5]), float)

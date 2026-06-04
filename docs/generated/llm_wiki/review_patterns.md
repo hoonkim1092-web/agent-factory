@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-04T23:47:38+09:00
-source_commit: 35b761ae
+generated_at: 2026-06-04T23:48:10+09:00
+source_commit: 3060e9a5
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
