@@ -237,6 +237,16 @@ def geometric_mean(values: list[int | float]) -> float:
     return math.exp(sum(math.log(v) for v in values) / len(values))
 
 
+def harmonic_mean(values: list[int | float]) -> float:
+    """조화평균을 float로 반환한다. 빈 리스트이면 ValueError. 0 이하 값이 포함되면 ValueError."""
+    if not values:
+        raise ValueError("빈 리스트에서 조화평균을 계산할 수 없습니다.")
+    for v in values:
+        if v <= 0:
+            raise ValueError(f"조화평균은 양수 값만 허용합니다: {v}")
+    return len(values) / sum(1.0 / v for v in values)
+
+
 def weighted_mean(values: list[int | float], weights: list[int | float]) -> float:
     """가중 평균을 float로 반환한다.
 

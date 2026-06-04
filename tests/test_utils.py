@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, weighted_mean
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean
 from core.utils import test_file_for as _test_file_for
 
 
@@ -575,6 +575,49 @@ class TestGeometricMean:
     def test_산술평균보다_작거나_같음(self):
         values = [1, 2, 3, 4, 5]
         assert geometric_mean(values) <= sum(values) / len(values)
+
+
+class TestHarmonicMean:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            harmonic_mean([])
+
+    def test_0_값이면_ValueError(self):
+        with pytest.raises(ValueError):
+            harmonic_mean([1, 0, 3])
+
+    def test_음수_값이면_ValueError(self):
+        with pytest.raises(ValueError):
+            harmonic_mean([1, -2, 3])
+
+    def test_단일_요소(self):
+        assert harmonic_mean([5.0]) == pytest.approx(5.0)
+
+    def test_모두_같은_값은_그_값_반환(self):
+        assert harmonic_mean([4, 4, 4]) == pytest.approx(4.0)
+
+    def test_두_원소_표준(self):
+        # HM([1, 4]) = 2 / (1/1 + 1/4) = 2 / 1.25 = 1.6
+        assert harmonic_mean([1, 4]) == pytest.approx(1.6)
+
+    def test_세_원소(self):
+        # HM([1, 2, 4]) = 3 / (1 + 0.5 + 0.25) = 3 / 1.75 ≈ 1.7142...
+        assert harmonic_mean([1, 2, 4]) == pytest.approx(12.0 / 7.0)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(harmonic_mean([1, 2, 3]), float)
+
+    def test_산술평균_이하(self):
+        values = [1, 2, 3, 4, 5]
+        assert harmonic_mean(values) <= sum(values) / len(values)
+
+    def test_기하평균_이하(self):
+        values = [1, 2, 3, 4, 5]
+        assert harmonic_mean(values) <= geometric_mean(values)
+
+    def test_부동소수점_입력(self):
+        # HM([2.0, 2.0]) = 2.0
+        assert harmonic_mean([2.0, 2.0]) == pytest.approx(2.0)
 
 
 class TestWeightedMean:
