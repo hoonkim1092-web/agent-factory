@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-04T18:06:03+09:00
-source_commit: 8849193c
+generated_at: 2026-06-04T18:21:40+09:00
+source_commit: 82cc7fb8
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -23,7 +23,7 @@ sources:
 - (L26) - **🎯 다음 세션 진입점**: leak 검증 종료(PASS). ① product-value work-item 선정으로 전환 또는 ② DEVELOP 비수렴 이슈(위 신규 발견) 경량화 — 단 후자는 내부배관이므로 product 방향 확정 후 우선순위 판정.
 - (L27) > - **🔧 모델/Provider 라우팅 결함 4건 (2026-06-02 분석, 큐 등록 — 착수: product-value work-item 다음)**: 5턴 deliberation(Claude+Codex 교차)으로 코드 확정. **핵심 사실**: ① 단일 claude_cli 환경에선 `_should_include_model`(cli.py:647)이 `
 - (L28) > - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
-- (L31) > 마지막 업데이트: **2026-06-03 KST (Windows)** — **source-write leak 차단 완료(`f4da6ce8`)**. CliChatRequest allow_file_edit=False로 control-plane claude_cli의 bypassPermissions 제거. 다음: 재검증 T3 dogfood run 또는 prod
+- (L31) > 마지막 업데이트: **2026-06-04 KST (Windows)** — **RSE 슬라이스1 전체 마감 완료(`82cc7fb8`)**. 안전 갭 수정(`_max_tier` classify_with_content 교체) + Case3 seam 테스트 + `weighted_mean` dogfood 산출물 커밋 + docs/reviews 6건 커밋. **다
 - (L33) > **다음 세션 최우선 진입점**: **dogfood detector 인프라 검증 완료 (2026-06-02) — 다음은 ① 실가치 work-item 선정 또는 ② 저우선 정리**. 북극성 epic("AF가 AF를 개발하는 완성 루프")의 `investigation → AI 프롬프트 → production 코드` 고리가 실제 run에서 닫힘이 직접 관측됨
 - (L40) >    - **R18 detector 추가 보류**: 후보 3종 전부 부적합 — `mutable_default_arg`(repo 0건), `broad_except`(의도적 best-effort 1050건, CLAUDE.md 명문화), `unused_import`(TYPE_CHECKING/`__all__` false-positive 97건). detecto
 - (L43) >    - **다음**: R18 재평가 (배선 실효성 확정 → R18 게이트 해제됨). 선택적: R15~R17을 change-relative(변경 함수 한정)로 좁힐지 설계 검토 — 단 whole-file 스캔도 "파일 수정 시 기존 복잡도 인지" 의도로는 정당, 우선순위 낮음.
