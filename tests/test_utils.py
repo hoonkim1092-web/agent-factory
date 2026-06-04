@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation
 from core.utils import test_file_for as _test_file_for
 
 
@@ -738,3 +738,41 @@ class TestCovariance:
 
     def test_반환_타입은_float(self):
         assert isinstance(covariance([1, 2, 3], [4, 5, 6]), float)
+
+
+class TestPearsonCorrelation:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            pearson_correlation([], [])
+
+    def test_길이_불일치는_ValueError(self):
+        with pytest.raises(ValueError):
+            pearson_correlation([1, 2], [1])
+
+    def test_완전_양수_상관(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [2.0, 4.0, 6.0, 8.0, 10.0]
+        assert pearson_correlation(xs, ys) == pytest.approx(1.0)
+
+    def test_완전_음수_상관(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [5.0, 4.0, 3.0, 2.0, 1.0]
+        assert pearson_correlation(xs, ys) == pytest.approx(-1.0)
+
+    def test_상수_xs는_0(self):
+        assert pearson_correlation([3.0, 3.0, 3.0], [1.0, 2.0, 3.0]) == pytest.approx(0.0)
+
+    def test_상수_ys는_0(self):
+        assert pearson_correlation([1.0, 2.0, 3.0], [5.0, 5.0, 5.0]) == pytest.approx(0.0)
+
+    def test_단일_원소는_0(self):
+        assert pearson_correlation([5], [5]) == pytest.approx(0.0)
+
+    def test_범위는_마이너스1에서_1_사이(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [2.0, 4.0, 5.0, 4.0, 5.0]
+        r = pearson_correlation(xs, ys)
+        assert -1.0 <= r <= 1.0
+
+    def test_반환_타입은_float(self):
+        assert isinstance(pearson_correlation([1, 2, 3], [4, 5, 6]), float)

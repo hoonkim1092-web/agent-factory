@@ -289,6 +289,23 @@ def covariance(xs: list[int | float], ys: list[int | float]) -> float:
     return sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / n
 
 
+def pearson_correlation(xs: list[int | float], ys: list[int | float]) -> float:
+    """피어슨 상관계수(Pearson r)를 float로 반환한다.
+
+    xs와 ys의 길이가 다르면 ValueError. 빈 리스트이면 ValueError.
+    어느 한쪽의 표준편차가 0이면 0.0 반환(상관 없음). 반환값 범위: [-1.0, 1.0].
+    """
+    if not xs or not ys:
+        raise ValueError("빈 리스트에서 상관계수를 계산할 수 없습니다.")
+    if len(xs) != len(ys):
+        raise ValueError(f"xs와 ys의 길이가 다릅니다: {len(xs)} != {len(ys)}")
+    sd_x = std_dev(xs)
+    sd_y = std_dev(ys)
+    if sd_x == 0.0 or sd_y == 0.0:
+        return 0.0
+    return covariance(xs, ys) / (sd_x * sd_y)
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:
