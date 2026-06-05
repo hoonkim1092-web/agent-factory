@@ -55,6 +55,11 @@ class AgentSpecializer:
         # 2. 작업 관련 스킬만 필터링
         agent["skills"] = self._select_task_skills(base_agent, task_meta)
 
+        # 3. cross_validate 태스크: review_provider → force_provider 주입
+        review_prov = str(task_meta.get("review_provider") or "").strip()
+        if review_prov:
+            agent["force_provider"] = review_prov
+
         return agent
 
     # ------------------------------------------------------------------

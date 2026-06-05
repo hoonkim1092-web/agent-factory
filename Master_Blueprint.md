@@ -543,12 +543,15 @@ else:                         → "completed"
 ---
 
 ### §3.3 AgentRunner (`core/agent_runner.py`)
-<!-- last_updated: 2026-04-10 (CLI 멀티 프로바이더 감지 + timeout 증가 + 진행 표시) -->
+<!-- last_updated: 2026-06-05 (WI-2: force_provider 우선 처리) -->
 
 **클래스:** `AgentRunner`
 
-**역할 기반 프로바이더 라우팅 (`line 958-969`):**
-**Workspace split (F17, 2026-05-15):** `run(..., workspace=None, runtime_workspace=None)` supports separated user-work and internal-state roots. Provider cwd, tool context, and user file edits use `workspace`; runs/data/artifacts, runtime feedback, memory adapters, and trace logs use `runtime_workspace` when supplied. Ad-hoc self-run passes `workspace=os.getcwd()` and `runtime_workspace=PROJECT_ROOT`.
+**Provider 선택 우선순위 (`run()` 내부):**
+1. `agent["force_provider"]` 설정 시: `detect_available_cli_providers()`로 가용 확인 → 가용이면 해당 단일 provider 사용, **미가용이면 `{"ok": False, "reason": "force_provider '...' unavailable"}` 조기 반환** (silent fallback 금지).
+2. `force_provider` 없음: 기존 role-based `pick_provider(agent_config=agent)` 선택.
+
+**Workspace split (F17, 2026-05-15):** `run(..., workspace=None, runtime_workspace=None)` supports separated user-work and internal-state roots.
 
 ```python
 preferred = self.mr.pick_provider(agent_config=agent)
@@ -565,9 +568,11 @@ cli_providers = [preferred] + [fallbacks...]
 ---
 
 ### §3.4 AgentSpecializer (`core/agent_specializer.py`)
-<!-- last_updated: 2026-04-24 -->
+<!-- last_updated: 2026-06-05 (WI-2: review_provider → force_provider 주입) -->
 
 **메서드:** `specialize(base_agent, task_meta, workspace)`
+
+`task_meta["review_provider"]` 가 설정된 경우 `agent["force_provider"]` 에 복사한다 (cross_validate 태스크에서 지정 provider 강제 실행 연결). `base_agent`는 `deepcopy`로 보호되어 변이되지 않는다.
 
 시스템 프롬프트 구성 순서:
 1. 역할 페르소나 (200자 요약)
@@ -1120,11 +1125,13 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-05; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(CLAUDE): code update — CLAUDE.md, Master_Blueprint.md, utils.py, agent_model_selector.py, check_pending_review.py (+2)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, agent_specializer.py, project_task_board.py (+3)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/agent_runner.py` | agent runner | `FallbackRejectedError`, `AgentRunner` |
+| `core/agent_specializer.py` | AgentSpecializer — 1 Agent per 1 Task 특화 시스템. | `AgentSpecializer` |
+| `core/project_task_board.py` | project task board | `compute_max_cycles()`, `default_planning_steps()`, `module_outcome_from_board()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1671,6 +1678,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, agent_specializer.py, project_task_board.py (+3) |
+| 2026-06-05 | v1.2.35 | feat(WI-2): review_provider runtime enforcement — `inject_review_tasks` 가드를 `detect_available_cli_providers`로 정합, `AgentSpecializer.specialize()`에 `review_provider→force_provider` 주입, `AgentRunner.run()`에 force_provider 우선 처리(unavailable → 명시 실패). 3-Tier af-critic PASS/af-cross-review BLOCK→fixed/af-test-runner PASS(72). §3.3·§3.4 갱신. — core/agent_runner.py, core/agent_specializer.py, core/project_task_board.py, tests/test_agent_specializer.py, tests/test_agent_runner_force_provider.py |
 | 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.py, af.spec, agent_launcher.py, af_doctor.py (+1) |
 | 2026-06-05 | v1.2.34 | feat(af-doctor): AF 실행 환경 진단 CLI 신규 — `scripts/af_doctor.py` (7개 체크·ok/warn/fail·--fast/--refresh/--json/--strict), `agent_launcher.py` doctor 서브커맨드 추가, `af.py` doctor 리디렉션, `af.spec` hiddenimports 추가. 3-Tier WARN/PASS/PASS. §0 갱신. — scripts/af_doctor.py, agent_launcher.py, af.py, af.spec, tests/test_af_doctor.py |
 | 2026-06-05 | v1.2.34 | chore(CLAUDE): code update — CLAUDE.md, Master_Blueprint.md, utils.py, agent_model_selector.py, check_pending_review.py (+2) |

@@ -1126,8 +1126,8 @@ def inject_review_tasks(workspace: str, completed_task: dict[str, Any]) -> list[
         # Cross Validate 태스크 (CLI 2개 이상일 때만)
         last_review_id = cr_task_id
         try:
-            from core.providers.registry import detect_installed_cli_providers, pick_review_provider
-            available = detect_installed_cli_providers()
+            from core.providers.registry import detect_available_cli_providers, pick_review_provider
+            available = detect_available_cli_providers()
             available_count = len(available)
         except Exception:
             available = []

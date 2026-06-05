@@ -1098,15 +1098,23 @@ class AgentRunner:
         role_summary = agent.get("role", "") or (agent.get("identity", {}) or {}).get("role_summary", "")
         agent_name = agent.get("name", "")
 
-        # 역할 기반 최적 프로바이더를 첫 번째에, 나머지를 폴백으로 정렬
-        if len(all_cli_providers) > 1:
-            preferred = self.mr.pick_provider(agent_config=agent)
-            if preferred and preferred in all_cli_providers:
-                cli_providers = [preferred] + [p for p in all_cli_providers if p != preferred]
+        # force_provider: cross_validate 등 태스크 지정 provider 강제 (review_provider 연결)
+        _force_prov = str(agent.get("force_provider") or "").strip()
+        if _force_prov:
+            _avail = detect_available_cli_providers()
+            if _force_prov not in _avail:
+                return {"ok": False, "reason": f"force_provider '{_force_prov}' unavailable", "provider_id": ""}
+            cli_providers = [_force_prov]
+        else:
+            # 역할 기반 최적 프로바이더를 첫 번째에, 나머지를 폴백으로 정렬
+            if len(all_cli_providers) > 1:
+                preferred = self.mr.pick_provider(agent_config=agent)
+                if preferred and preferred in all_cli_providers:
+                    cli_providers = [preferred] + [p for p in all_cli_providers if p != preferred]
+                else:
+                    cli_providers = all_cli_providers
             else:
                 cli_providers = all_cli_providers
-        else:
-            cli_providers = all_cli_providers
         engine_id = _infer_engine_id(role_summary or agent_name)
 
         # preferred provider 미구독 시 가용 provider 기반 engine으로 fallback

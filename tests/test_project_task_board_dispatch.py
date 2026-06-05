@@ -375,3 +375,54 @@ def test_clean_list_list_input_unchanged():
 def test_clean_list_none_returns_empty():
     from core.project_task_board import _clean_list
     assert _clean_list(None) == []
+
+
+# ----- inject_review_tasks: review_provider 연결 (WI-2) -----
+
+
+def _write_board(tmp_path, tasks: list) -> None:
+    import json
+    from core.project_task_board import BOARD_FILENAME
+    (tmp_path / BOARD_FILENAME).write_text(json.dumps({"tasks": tasks}), encoding="utf-8")
+
+
+def _completed_build(module_id: str = "backend_dev_module_1", provider_id: str = "claude_cli") -> dict:
+    return {
+        "task_id": f"{module_id}_build",
+        "owner_role": "backend_dev",
+        "phase": "build",
+        "module_id": module_id,
+        "provider_id": provider_id,
+    }
+
+
+def test_inject_review_tasks_single_available_provider_no_cross_validate(tmp_path, monkeypatch):
+    # 가용 provider 1개 → cross_validate 태스크 미생성
+    monkeypatch.setattr("core.providers.registry.detect_available_cli_providers", lambda: ["claude_cli"])
+    _write_board(tmp_path, [{"task_id": "backend_dev_module_1_build", "owner_role": "backend_dev",
+                              "module_id": "backend_dev_module_1", "phase": "build",
+                              "status": "completed", "depends_on": []}])
+    from core.project_task_board import inject_review_tasks
+    result = inject_review_tasks(str(tmp_path), _completed_build())
+    phases = [t["phase"] for t in result]
+    assert "cross_validate" not in phases
+
+
+def test_inject_review_tasks_two_available_providers_sets_review_provider(tmp_path, monkeypatch):
+    # 가용 provider 2개 → cross_validate 태스크 생성 + review_provider 필드 설정
+    monkeypatch.setattr(
+        "core.providers.registry.detect_available_cli_providers",
+        lambda: ["claude_cli", "codex_cli"],
+    )
+    monkeypatch.setattr(
+        "core.providers.registry.pick_review_provider",
+        lambda author: "codex_cli",
+    )
+    _write_board(tmp_path, [{"task_id": "backend_dev_module_1_build", "owner_role": "backend_dev",
+                              "module_id": "backend_dev_module_1", "phase": "build",
+                              "status": "completed", "depends_on": []}])
+    from core.project_task_board import inject_review_tasks
+    result = inject_review_tasks(str(tmp_path), _completed_build(provider_id="claude_cli"))
+    cv_tasks = [t for t in result if t["phase"] == "cross_validate"]
+    assert len(cv_tasks) == 1
+    assert cv_tasks[0]["review_provider"] == "codex_cli"
