@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation
 from core.utils import test_file_for as _test_file_for
 
 
@@ -776,3 +776,44 @@ class TestPearsonCorrelation:
 
     def test_반환_타입은_float(self):
         assert isinstance(pearson_correlation([1, 2, 3], [4, 5, 6]), float)
+
+
+class TestSpearmanCorrelation:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            spearman_correlation([], [])
+
+    def test_길이_불일치는_ValueError(self):
+        with pytest.raises(ValueError):
+            spearman_correlation([1, 2], [1])
+
+    def test_완전_양수_상관(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [2.0, 4.0, 6.0, 8.0, 10.0]
+        assert spearman_correlation(xs, ys) == pytest.approx(1.0)
+
+    def test_완전_음수_상관(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [5.0, 4.0, 3.0, 2.0, 1.0]
+        assert spearman_correlation(xs, ys) == pytest.approx(-1.0)
+
+    def test_상수_xs는_0(self):
+        assert spearman_correlation([3.0, 3.0, 3.0], [1.0, 2.0, 3.0]) == pytest.approx(0.0)
+
+    def test_단일_원소는_0(self):
+        assert spearman_correlation([5], [5]) == pytest.approx(0.0)
+
+    def test_범위는_마이너스1에서_1_사이(self):
+        xs = [1.0, 2.0, 3.0, 4.0, 5.0]
+        ys = [2.0, 4.0, 5.0, 4.0, 5.0]
+        r = spearman_correlation(xs, ys)
+        assert -1.0 <= r <= 1.0
+
+    def test_동점_처리(self):
+        xs = [1.0, 1.0, 3.0, 3.0]
+        ys = [1.0, 2.0, 3.0, 4.0]
+        r = spearman_correlation(xs, ys)
+        assert -1.0 <= r <= 1.0
+
+    def test_반환_타입은_float(self):
+        assert isinstance(spearman_correlation([1, 2, 3], [4, 5, 6]), float)

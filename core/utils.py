@@ -306,6 +306,35 @@ def pearson_correlation(xs: list[int | float], ys: list[int | float]) -> float:
     return covariance(xs, ys) / (sd_x * sd_y)
 
 
+def spearman_correlation(xs: list[int | float], ys: list[int | float]) -> float:
+    """스피어만 순위 상관계수를 float로 반환한다.
+
+    xs와 ys의 길이가 다르면 ValueError. 빈 리스트이면 ValueError.
+    어느 한쪽 순위의 표준편차가 0이면 0.0 반환. 반환값 범위: [-1.0, 1.0].
+    동점 처리: 동점 원소에는 평균 순위를 부여한다.
+    """
+    if not xs or not ys:
+        raise ValueError("빈 리스트에서 상관계수를 계산할 수 없습니다.")
+    if len(xs) != len(ys):
+        raise ValueError(f"xs와 ys의 길이가 다릅니다: {len(xs)} != {len(ys)}")
+
+    def _rank(values: list[int | float]) -> list[float]:
+        indexed = sorted(range(len(values)), key=lambda i: values[i])
+        ranks = [0.0] * len(values)
+        i = 0
+        while i < len(indexed):
+            j = i
+            while j + 1 < len(indexed) and values[indexed[j + 1]] == values[indexed[i]]:
+                j += 1
+            avg_rank = (i + j) / 2 + 1.0
+            for k in range(i, j + 1):
+                ranks[indexed[k]] = avg_rank
+            i = j + 1
+        return ranks
+
+    return pearson_correlation(_rank(xs), _rank(ys))
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

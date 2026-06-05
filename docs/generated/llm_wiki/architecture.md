@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-05T19:04:34+09:00
-source_commit: d29f298d
+generated_at: 2026-06-05T21:11:10+09:00
+source_commit: e21d7661
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -177,7 +177,7 @@ sources:
 | `core/critic_skill_router.py` | Tier 2 Phase 3 단계 1 — 변경 파일 → 영역 → SKILL ID 매핑 | Master_Blueprint.md §0 |
 | `core/retrieval_router.py` | retrieval router | Master_Blueprint.md §0 |
 | `core/review_report.py` | review report (Tier 2 Phase 2: `ReviewerResult.vendor_mode` 필드 추가) | Master_Blueprint.md §0 |
-| `core/review_runner.py` | review runner (Tier 2 Phase 2: `_extract_vendor_label()` + single-vendor notice) | Master_Blueprint.md §0 |
+| `core/review_runner.py` | review runner (WI-4: `_run_provider` → `execute_cli_chat` 위임. Tier 2 Phase 2: `_extract_vendor_label()` + single-vendor notice) | Master_Blueprint.md §0 |
 | `core/role_decomposer.py` | role decomposer | Master_Blueprint.md §0 |
 | `core/rubric_compiler.py` | rubric compiler | Master_Blueprint.md §0 |
 | `core/runner.py` | runner | Master_Blueprint.md §0 |
@@ -196,7 +196,7 @@ sources:
 | `core/terminal_visualizer.py` | terminal visualizer | Master_Blueprint.md §0 |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | Master_Blueprint.md §0 |
 | `core/tool_runtime.py` | tool runtime | Master_Blueprint.md §0 |
-| `core/utils.py` | utils. last_updated: 2026-06-05 (pearson_correlation 추가) | Master_Blueprint.md §0 |
+| `core/utils.py` | utils. last_updated: 2026-06-05 (spearman_correlation 추가) | Master_Blueprint.md §0 |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | Master_Blueprint.md §0 |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
