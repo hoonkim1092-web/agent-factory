@@ -1126,12 +1126,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-05; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, review_runner.py, utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(NEXT_STEPS): code update — NEXT_STEPS.md, review_runner.py, test_review_runner_execute_cli.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
 | `core/review_runner.py` | core/review_runner.py ====================== 교차검증 리뷰 실행 유틸리티 — core/ 레이어에서 안전하게 import 가능. | `detect_providers()`, `detect_blocked_providers()`, `select_review_pair()` |
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1679,6 +1678,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-05 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, review_runner.py, test_review_runner_execute_cli.py |
 | 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, review_runner.py, utils.py, test_utils.py |
 | 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, project_pipeline.py, right_sized_router.py, test_rse_slice2.py (+1) |
 | 2026-06-05 | v1.2.34 | feat(RSE-slice2): ProjectPipeline stage gate — `_stage_enabled` helper + STAGE_* 명명 상수(right_sized_router SSOT) + research/doc-review 조건부 skip + dogfood `_run_develop_full` route 전달. 강제테스트 4종+gate 13종 = 신규 19케이스 PASS. 3-Tier pending. §3.1·§3.13·§10 갱신. — core/right_sized_router.py, core/project_pipeline.py, core/dogfood.py, tests/test_rse_slice2.py, Master_Blueprint.md |
