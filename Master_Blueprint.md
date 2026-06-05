@@ -70,6 +70,7 @@
 | `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | `CLASSIFIER_VERSION`, `classify_t3_requirement()`, `record_skip_telemetry()` |
 | `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | `append_metric()`, `append_skip_audit()`, `compute_report()`, `compute_t3_telemetry_skip()` |
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | `main()` |
+| `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | `DoctorResult`, `run_checks()`, `format_text()`, `format_json()`, `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1670,6 +1671,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.py, af.spec, agent_launcher.py, af_doctor.py (+1) |
+| 2026-06-05 | v1.2.34 | feat(af-doctor): AF 실행 환경 진단 CLI 신규 — `scripts/af_doctor.py` (7개 체크·ok/warn/fail·--fast/--refresh/--json/--strict), `agent_launcher.py` doctor 서브커맨드 추가, `af.py` doctor 리디렉션, `af.spec` hiddenimports 추가. 3-Tier WARN/PASS/PASS. §0 갱신. — scripts/af_doctor.py, agent_launcher.py, af.py, af.spec, tests/test_af_doctor.py |
 | 2026-06-05 | v1.2.34 | chore(CLAUDE): code update — CLAUDE.md, Master_Blueprint.md, utils.py, agent_model_selector.py, check_pending_review.py (+2) |
 | 2026-06-05 | v1.2.41 | feat(utils): `pearson_correlation(xs, ys)` 신설 — 피어슨 상관계수 float 반환. 범위 [-1.0, 1.0]. 빈 리스트이면 ValueError. 길이 불일치이면 ValueError. std_dev 0이면 0.0. `TestPearsonCorrelation` 9건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py |

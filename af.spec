@@ -107,6 +107,7 @@ a = Analysis(
         'core.right_sized_router',
         # ── scripts (right_sized_router Floor 2 런타임 import) ──
         'scripts.blast_radius',
+        'scripts.af_doctor',
         'core.interactive_chat',
         # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
         'core.ise_analyzer',
