@@ -107,7 +107,7 @@ research_agent = build_bootstrap_agent("research_director")
 risk_level = str((route or {}).get("risk_level") or "normal").strip()
 comparison_mode = bool((route or {}).get("comparison_mode", False))
 research_evidence: dict = {}
-if _stage_enabled(route, "research"):
+if _stage_enabled(route, STAGE_RESEARCH):   # STAGE_RESEARCH ← right_sized_router (SSOT, §6.1)
     collect_evidence = getattr(self.research, "collect_project_evidence", None)
     if callable(collect_evidence):
         ...  # 기존 verify_with_retry 블록 전체 (무변경)
@@ -132,7 +132,7 @@ brief 생성(`:797-829`)은 게이트 밖 — research 없이도 `evidence_bundl
 # -- 문서 교차검증 QA --
 cross_review_result = None
 _route = project_brief.get("route")   # ← slice2 신규: prepare_brief가 :825에서 보존
-if _stage_enabled(_route, "review", "cross_review"):
+if _stage_enabled(_route, STAGE_REVIEW, STAGE_CROSS_REVIEW):   # 상수 ← right_sized_router (SSOT, §6.1)
     try:
         from core.review_report import DocumentReviewSession
         ...  # 기존 블록 전체 (무변경)
@@ -197,6 +197,8 @@ def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
 
 ## 5. 테스트 계약 (test-first, Tier 3 → 3-Tier 필수)
 
+> 하드코딩·타입 SSOT **강제 테스트 4종**은 §6.1 C3 참조(E-SSOT-MEMBER/E-IMPORT-IDENTITY/E-NO-MAGIC/E-FLOOR-CONST) — 구현 Step 0에서 RED 선작성.
+
 ### 5.1 `tests/test_project_pipeline.py` (또는 신규 `test_project_pipeline_stage_gate.py`) — `_stage_enabled` 단위
 
 | ID | route | 호출 | 기대 |
@@ -237,8 +239,61 @@ acceptance (실제 dogfood run, 검증 레버 `AGENT_CHAT_PROVIDER=claude_cli`):
 ## 6. 동반 수정 (CLAUDE.md 규칙)
 
 - **신규 core/*.py 없음** → af.spec 변경 없음.
-- `Master_Blueprint.md` §3 project_pipeline 서브시스템(stage 게이트) + §10 Blast Radius(dogfood→project_pipeline route 전달) + §12 이력.
-- `RouteDecision` STAGE_VOCAB·is_light() 무변경(slice2는 소비만 추가).
+- `Master_Blueprint.md` §3 project_pipeline 서브시스템(stage 게이트) + right_sized_router(STAGE_* 상수) + §10 Blast Radius(project_pipeline→right_sized_router import, dogfood→project_pipeline route 전달) + §12 이력.
+- `RouteDecision`·`is_light()` 로직 무변경. `STAGE_VOCAB` **값 불변**(소비만 추가) — 단 §6.1 C1에 따라 명명 상수로 **구성만** 변경(리터럴 튜플 → 상수 튜플).
+
+---
+
+## 6.1 구현 제약 (강제 — 사용자 지시 2026-06-05)
+
+> 메모리 `feedback_no_hardcode_single_type_source`. **테스트로 강제**(주석 권고 아님 — Karpathy goal-driven).
+
+### C1. 하드코딩 금지 — stage 이름은 명명 상수로
+
+stage 이름 매직 리터럴(`"research"`, `"review"`, `"cross_review"` …)을 project_pipeline·dogfood에 직접 박지 않는다.
+`core/right_sized_router.py`에서 stage 이름을 **명명 상수로 승격**하고 `STAGE_VOCAB`를 그 상수들로 구성한다(값 불변 — 기존 테스트 GREEN):
+
+```python
+# core/right_sized_router.py (어휘 SSOT)
+STAGE_RESEARCH      = "research"
+STAGE_DESIGN        = "design"
+STAGE_PLAN          = "plan"
+STAGE_IMPLEMENT     = "implement"
+STAGE_TEST          = "test"
+STAGE_REVIEW        = "review"
+STAGE_CROSS_REVIEW  = "cross_review"
+STAGE_VOCAB: tuple[str, ...] = (
+    STAGE_RESEARCH, STAGE_DESIGN, STAGE_PLAN, STAGE_IMPLEMENT,
+    STAGE_TEST, STAGE_REVIEW, STAGE_CROSS_REVIEW,
+)
+LIGHT_STAGES = frozenset({STAGE_PLAN, STAGE_IMPLEMENT, STAGE_TEST})   # 기존 값 불변
+```
+
+소비처는 import해서만 쓴다:
+```python
+# core/project_pipeline.py
+from core.right_sized_router import STAGE_RESEARCH, STAGE_REVIEW, STAGE_CROSS_REVIEW
+```
+
+skip 시맨틱·floor의 forced 튜플(`right_sized_router._apply_safety_floors`의 `("design","review","cross_review")`)도
+상수로 치환(같은 어휘를 두 번 쓰지 않게). policy 분기를 호출처마다 박지 않고 `_stage_enabled` helper 한 곳으로 경유(이미 §3.1).
+
+### C2. 타입/어휘 단일 선언 — 재선언·재정의 금지
+
+`RouteDecision`, `STAGE_VOCAB`, `STAGE_*`, `ISOLATION_LEVELS`, `LIGHT_STAGES`의 SSOT는 `core/right_sized_router.py` **한 곳**.
+project_pipeline·dogfood는 **import해 소비만** 한다. 같은 이름의 dataclass/상수/어휘를 다른 모듈에서 재선언하거나
+값을 재정의하지 않는다(silent drift 차단). 새 stage/mode 이름을 소비처에서 임의 도입 금지.
+
+### C3. 강제 테스트 (§5에 포함)
+
+| ID | 강제 대상 | 방법 |
+|----|----------|------|
+| E-SSOT-MEMBER | 게이트가 쓰는 상수가 SSOT 어휘 멤버 | `assert STAGE_RESEARCH in STAGE_VOCAB` (REVIEW/CROSS_REVIEW 동일) |
+| E-IMPORT-IDENTITY | project_pipeline이 재선언 아닌 import | `import core.project_pipeline as pp, core.right_sized_router as r; assert pp.STAGE_RESEARCH is r.STAGE_RESEARCH` (객체 동일성 = 재정의 없음) |
+| E-NO-MAGIC | 매직 리터럴 미사용 | `tests`에서 `core/project_pipeline.py` 소스에 게이트 stage 리터럴(`"research"` 등)이 **상수 정의 없이** 등장하지 않음을 grep-assert (또는 ast로 `_stage_enabled` 인자가 Name 노드인지 검사) |
+| E-FLOOR-CONST | floor forced 튜플도 상수 | `_apply_safety_floors` 소스가 `("design","review","cross_review")` 리터럴 대신 상수 참조 |
+
+> E-NO-MAGIC/E-FLOOR-CONST는 회귀 방지용 — 추후 누가 리터럴을 다시 박으면 RED.
 
 ---
 
@@ -258,17 +313,21 @@ acceptance (실제 dogfood run, 검증 레버 `AGENT_CHAT_PROVIDER=claude_cli`):
 ## 8. 구현 순서 (Sonnet 핸드오프)
 
 ```
-1. tests: _stage_enabled 단위 7케이스 (RED) — §5.1
-2. project_pipeline.py: _stage_enabled helper 추가 (GREEN)
-3. tests: prepare_brief/prepare_documents 게이트 6케이스 (RED) — §5.2
-4. project_pipeline.py: research 게이트(prepare_brief) + doc-review 게이트(prepare_documents) (GREEN)
+0. tests: stage-name SSOT 강제 4케이스 (RED) — §6.1 C3 (E-SSOT-MEMBER/E-IMPORT-IDENTITY/E-NO-MAGIC/E-FLOOR-CONST)
+1. right_sized_router.py: STAGE_* 명명 상수 승격 + STAGE_VOCAB/LIGHT_STAGES를 상수로 구성 + floor forced 튜플 상수화 (GREEN, 값 불변 → 기존 router 테스트 GREEN 유지)
+2. tests: _stage_enabled 단위 7케이스 (RED) — §5.1
+3. project_pipeline.py: _stage_enabled helper 추가 + STAGE_* import (GREEN)
+4. tests: prepare_brief/prepare_documents 게이트 6케이스 (RED) — §5.2
+5. project_pipeline.py: research 게이트(prepare_brief) + doc-review 게이트(prepare_documents), 상수 참조 (GREEN)
    — 블록 들여쓰기만, 내부 무변경. research_evidence write/checkpoint는 게이트 밖 유지.
-5. tests: dogfood _run_develop_full 배선 2케이스 (RED) — §5.3
-6. dogfood.py: _run_develop_full에 route=state.route_decision or None 추가 (GREEN)
-7. Blueprint §3/§10/§12
-8. acceptance dogfood run 3종 (§5.3)
-9. 3-Tier: af-critic → af-cross-review → af-test-runner (core/ Tier3 → cross-review 필수)
+6. tests: dogfood _run_develop_full 배선 2케이스 (RED) — §5.3
+7. dogfood.py: _run_develop_full에 route=state.route_decision or None 추가 (GREEN)
+8. Blueprint §3/§10/§12
+9. acceptance dogfood run 3종 (§5.3)
+10. 3-Tier: af-critic → af-cross-review → af-test-runner (core/ Tier3 → cross-review 필수)
 ```
+
+> ⚠️ Step 1은 slice1 코드(`right_sized_router.py`) 수정 — 값 불변 리팩토링이나 core/ Tier3이므로 동일 3-Tier 게이트 적용.
 
 설계 = Opus(본 문서). 구현 = `/model sonnet`.
 ```
