@@ -1727,6 +1727,7 @@ def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
             task_input=state.task,
             workspace=worktree,
             runtime_workspace=state.runtime_workspace,
+            route=state.route_decision or None,
         )
     changed: list[str] = list(result.get("changed_files") or [])
     if not changed:

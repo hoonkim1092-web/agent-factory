@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from core.approval_gate import ApprovalGate
 from core.bootstrap_roles import ProjectPlanningDirector, build_bootstrap_agent
+from core.right_sized_router import STAGE_CROSS_REVIEW, STAGE_RESEARCH, STAGE_REVIEW
 from core.documentation_policy import ensure_documentation_files, write_project_todo
 from core.dynamic_orchestrator import DynamicOrchestrator
 from core.project_task_board import (
@@ -32,6 +33,18 @@ from core.work_item_parser import sync_board_from_work_items
 from core.agent_runner import _safe_print
 
 PROJECT_ROLE_BASELINE_SKILLS = ("file_handler", "core_memory")
+
+
+def _stage_enabled(route: "dict | None", *stage_names: str) -> bool:
+    """route.required_stages 기준으로 단계 실행 여부 판정.
+
+    required_stages 키 부재/빈 리스트 → True (전체 실행, 하위호환).
+    non-empty 리스트면 stage_names 중 하나라도 포함될 때만 True.
+    """
+    stages = (route or {}).get("required_stages")
+    if not stages:
+        return True
+    return any(n in stages for n in stage_names)
 
 
 class ResearchGateBlocked(RuntimeError):
@@ -727,69 +740,73 @@ class ProjectPipeline:
         risk_level = str((route or {}).get("risk_level") or "normal").strip()
         comparison_mode = bool((route or {}).get("comparison_mode", False))
         research_evidence: dict = {}
-        collect_evidence = getattr(self.research, "collect_project_evidence", None)
-        if callable(collect_evidence):
-            from core.research_verifier import ResearchVerifier
-            verifier = ResearchVerifier()
-            try:
-                _collect_kwargs = dict(
-                    workspace=target_workspace,
-                    risk_level=risk_level,
-                    comparison_mode=comparison_mode,
-                )
-                import inspect as _inspect
-                _ce_params = _inspect.signature(collect_evidence).parameters
-                _supports_risk = "risk_level" in _ce_params
+        if _stage_enabled(route, STAGE_RESEARCH):
+            collect_evidence = getattr(self.research, "collect_project_evidence", None)
+            if callable(collect_evidence):
+                from core.research_verifier import ResearchVerifier
+                verifier = ResearchVerifier()
+                try:
+                    _collect_kwargs = dict(
+                        workspace=target_workspace,
+                        risk_level=risk_level,
+                        comparison_mode=comparison_mode,
+                    )
+                    import inspect as _inspect
+                    _ce_params = _inspect.signature(collect_evidence).parameters
+                    _supports_risk = "risk_level" in _ce_params
 
-                def _evidence_fn(**kwargs):
-                    kw = dict(_collect_kwargs) | kwargs
-                    if not _supports_risk:
-                        kw.pop("risk_level", None)
-                        kw.pop("comparison_mode", None)
-                    try:
-                        return collect_evidence(task_input, **kw) or {}
-                    except TypeError:
-                        # old-style collector (e.g. test mock) doesn't accept hint_gaps
-                        kw.pop("hint_gaps", None)
+                    def _evidence_fn(**kwargs):
+                        kw = dict(_collect_kwargs) | kwargs
+                        if not _supports_risk:
+                            kw.pop("risk_level", None)
+                            kw.pop("comparison_mode", None)
                         try:
                             return collect_evidence(task_input, **kw) or {}
-                        except Exception as exc2:
-                            print(f"[ProjectPipeline] collect_project_evidence failed: {exc2}")
+                        except TypeError:
+                            # old-style collector (e.g. test mock) doesn't accept hint_gaps
+                            kw.pop("hint_gaps", None)
+                            try:
+                                return collect_evidence(task_input, **kw) or {}
+                            except Exception as exc2:
+                                print(f"[ProjectPipeline] collect_project_evidence failed: {exc2}")
+                                return {}
+                        except Exception as exc:
+                            print(f"[ProjectPipeline] collect_project_evidence failed: {exc}")
                             return {}
-                    except Exception as exc:
-                        print(f"[ProjectPipeline] collect_project_evidence failed: {exc}")
-                        return {}
 
-                research_evidence, _vr = verifier.verify_with_retry(
-                    evidence_fn=_evidence_fn,
-                    task_input=task_input,
-                )
-                if _vr.status != "pass":
-                    print(
-                        f"[ProjectPipeline] evidence quality={_vr.status} "
-                        f"score={_vr.score} gaps={_vr.gaps}"
+                    research_evidence, _vr = verifier.verify_with_retry(
+                        evidence_fn=_evidence_fn,
+                        task_input=task_input,
                     )
-                    try:
-                        from core.warning_registry import WarningRegistry as _WR
-                        _ev_slug = safe_id(task_input)[:40]
-                        _WR(workspace=state_workspace).record(
-                            project_slug=_ev_slug,
-                            rule_id="evidence_quality_warn",
-                            affected_phase="scope",
-                            count=len(_vr.gaps),
-                            severity="warn",
-                            extra={"score": _vr.score, "gaps": _vr.gaps},
-                            source_path="core/project_pipeline.py:757",
+                    if _vr.status != "pass":
+                        print(
+                            f"[ProjectPipeline] evidence quality={_vr.status} "
+                            f"score={_vr.score} gaps={_vr.gaps}"
                         )
-                    except Exception as _eqw_exc:
-                        print(f"[ProjectPipeline] warning_registry record skip (evidence_quality_warn): {_eqw_exc}")
-            except Exception as exc:
-                print(f"[ProjectPipeline] research verification failed: {exc}")
-                try:
-                    research_evidence = collect_evidence(task_input, workspace=target_workspace) or {}
-                    research_evidence.setdefault("_warnings", []).append(f"evidence_degraded: {exc}")
-                except Exception:
-                    research_evidence = {"_stage_degraded": "evidence_acquisition", "_warnings": [str(exc)]}
+                        try:
+                            from core.warning_registry import WarningRegistry as _WR
+                            _ev_slug = safe_id(task_input)[:40]
+                            _WR(workspace=state_workspace).record(
+                                project_slug=_ev_slug,
+                                rule_id="evidence_quality_warn",
+                                affected_phase="scope",
+                                count=len(_vr.gaps),
+                                severity="warn",
+                                extra={"score": _vr.score, "gaps": _vr.gaps},
+                                source_path="core/project_pipeline.py:757",
+                            )
+                        except Exception as _eqw_exc:
+                            print(f"[ProjectPipeline] warning_registry record skip (evidence_quality_warn): {_eqw_exc}")
+                except Exception as exc:
+                    print(f"[ProjectPipeline] research verification failed: {exc}")
+                    try:
+                        research_evidence = collect_evidence(task_input, workspace=target_workspace) or {}
+                        research_evidence.setdefault("_warnings", []).append(f"evidence_degraded: {exc}")
+                    except Exception:
+                        research_evidence = {"_stage_degraded": "evidence_acquisition", "_warnings": [str(exc)]}
+        else:
+            print("[ProjectPipeline] research stage skipped (route.required_stages)")
+        # research_evidence_path write + checkpoint는 게이트 밖 — 항상 기록(결정 E)
         research_evidence_path = os.path.join(planning_dir, "research_evidence.json")
         self._write_json(research_evidence_path, research_evidence)
         self._save_checkpoint(state_workspace, "evidence_acquisition", research_evidence)
@@ -1074,68 +1091,72 @@ class ProjectPipeline:
 
         # -- 문서 교차검증 QA --
         cross_review_result = None
-        try:
-            from core.review_report import DocumentReviewSession
-            _level = str(project_brief.get("pipeline_level", "dynamic"))
-            if _level != "starter":
-                _documents = {}
-                for _doc_name, _doc_path in work_item_files.items():
-                    if _doc_name.endswith(".md") and _doc_name != "approval-gate.md":
-                        try:
-                            with open(_doc_path, encoding="utf-8") as _df:
-                                _documents[_doc_name] = _df.read()
-                        except Exception:
-                            pass
+        _route = project_brief.get("route")  # prepare_brief가 :825에서 보존
+        if _stage_enabled(_route, STAGE_REVIEW, STAGE_CROSS_REVIEW):
+            try:
+                from core.review_report import DocumentReviewSession
+                _level = str(project_brief.get("pipeline_level", "dynamic"))
+                if _level != "starter":  # starter 레벨은 기존 가드 유지 (AND 게이트)
+                    _documents = {}
+                    for _doc_name, _doc_path in work_item_files.items():
+                        if _doc_name.endswith(".md") and _doc_name != "approval-gate.md":
+                            try:
+                                with open(_doc_path, encoding="utf-8") as _df:
+                                    _documents[_doc_name] = _df.read()
+                            except Exception:
+                                pass
 
-                if _documents:
-                    _session = DocumentReviewSession(
-                        workspace=target_workspace,
-                        slug=slug,
-                        level=_level,
-                        max_rounds=2 if _level == "enterprise" else 1,
-                    )
-                    for _round in range(1, _session.max_rounds + 1):
-                        _report = _session.run_review(
-                            documents=_documents,
-                            round_num=_round,
-                            project_brief=project_brief,
+                    if _documents:
+                        _session = DocumentReviewSession(
+                            workspace=target_workspace,
+                            slug=slug,
+                            level=_level,
+                            max_rounds=2 if _level == "enterprise" else 1,
                         )
-                        _verdict = (_report.judge.verdict if _report.judge else "PASS")
+                        for _round in range(1, _session.max_rounds + 1):
+                            _report = _session.run_review(
+                                documents=_documents,
+                                round_num=_round,
+                                project_brief=project_brief,
+                            )
+                            _verdict = (_report.judge.verdict if _report.judge else "PASS")
 
-                        if _verdict in ("PASS", "SKIP"):
-                            _rpath = _report.save(target_workspace) if _verdict == "PASS" else ""
-                            cross_review_result = {
-                                "verdict": _verdict,
-                                "confidence": 1.0,
-                                "report_path": _rpath,
-                            }
-                            break
+                            if _verdict in ("PASS", "SKIP"):
+                                _rpath = _report.save(target_workspace) if _verdict == "PASS" else ""
+                                cross_review_result = {
+                                    "verdict": _verdict,
+                                    "confidence": 1.0,
+                                    "report_path": _rpath,
+                                }
+                                break
 
-                        if _verdict == "WARN" or _round == _session.max_rounds:
-                            _rpath = _report.save(target_workspace)
-                            cross_review_result = {
-                                "verdict": "WARN",
-                                "confidence": 0.6,
-                                "report_path": "",
-                            }
-                            break
+                            if _verdict == "WARN" or _round == _session.max_rounds:
+                                _rpath = _report.save(target_workspace)
+                                cross_review_result = {
+                                    "verdict": "WARN",
+                                    "confidence": 0.6,
+                                    "report_path": "",
+                                }
+                                break
 
-                        if _report.judge and _report.judge.fix_instructions:
-                            from core.work_item_generator import _refine_document
-                            for _dtype, _instr in _report.judge.fix_instructions.items():
-                                if _dtype in _documents:
-                                    _documents[_dtype] = _refine_document(
-                                        original=_documents[_dtype],
-                                        feedback=_instr,
-                                        project_brief=project_brief,
-                                    )
-                                    if _dtype in work_item_files:
-                                        from core.file_io import write_text
-                                        write_text(work_item_files[_dtype], _documents[_dtype])
+                            if _report.judge and _report.judge.fix_instructions:
+                                from core.work_item_generator import _refine_document
+                                for _dtype, _instr in _report.judge.fix_instructions.items():
+                                    if _dtype in _documents:
+                                        _documents[_dtype] = _refine_document(
+                                            original=_documents[_dtype],
+                                            feedback=_instr,
+                                            project_brief=project_brief,
+                                        )
+                                        if _dtype in work_item_files:
+                                            from core.file_io import write_text
+                                            write_text(work_item_files[_dtype], _documents[_dtype])
 
-                    _safe_print(f"[Pipeline] doc cross-review: {cross_review_result}")
-        except Exception as _cr_err:
-            _safe_print(f"[Pipeline] doc cross-review skipped: {_cr_err}")
+                        _safe_print(f"[Pipeline] doc cross-review: {cross_review_result}")
+            except Exception as _cr_err:
+                _safe_print(f"[Pipeline] doc cross-review skipped: {_cr_err}")
+        else:
+            _safe_print("[Pipeline] doc cross-review skipped (route.required_stages)")
 
         planning_files = [
             to_portable_path(research_evidence_path),

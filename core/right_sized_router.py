@@ -12,16 +12,25 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# 어휘 상수
+# 어휘 상수 (SSOT — 소비처는 import해서만 쓴다)
 # ---------------------------------------------------------------------------
 
 ISOLATION_LEVELS: tuple[str, ...] = ("none", "source", "worktree", "dogfood")
 
+STAGE_RESEARCH:     str = "research"
+STAGE_DESIGN:       str = "design"
+STAGE_PLAN:         str = "plan"
+STAGE_IMPLEMENT:    str = "implement"
+STAGE_TEST:         str = "test"
+STAGE_REVIEW:       str = "review"
+STAGE_CROSS_REVIEW: str = "cross_review"
+
 STAGE_VOCAB: tuple[str, ...] = (
-    "research", "design", "plan", "implement", "test", "review", "cross_review",
+    STAGE_RESEARCH, STAGE_DESIGN, STAGE_PLAN, STAGE_IMPLEMENT,
+    STAGE_TEST, STAGE_REVIEW, STAGE_CROSS_REVIEW,
 )
 
-LIGHT_STAGES: frozenset[str] = frozenset({"plan", "implement", "test"})
+LIGHT_STAGES: frozenset[str] = frozenset({STAGE_PLAN, STAGE_IMPLEMENT, STAGE_TEST})
 
 _LIGHT_CONFIDENCE_THRESHOLD: float = 0.7
 
@@ -195,7 +204,7 @@ def _apply_safety_floors(
 
     # Floor 2: blast_radius Tier3 → design+review+cross_review 강제
     if changed_files and _max_tier(changed_files, workspace) >= 3:
-        forced = ("design", "review", "cross_review")
+        forced = (STAGE_DESIGN, STAGE_REVIEW, STAGE_CROSS_REVIEW)
         added = [s for s in forced if s not in decision.required_stages]
         if added:
             decision.required_stages = _stage_ordered_union(decision.required_stages, forced)
