@@ -60,6 +60,18 @@
 
 ## 필수 규칙
 
+### 타입 SSOT 규칙 (2026-06-05 추가)
+- **타입(dataclass, TypedDict, Protocol)은 한 파일에서만 선언한다.** 다른 파일에서 같은 이름의 타입이 필요하면 원천 파일에서 import한다.
+- 재선언 금지: 같은 클래스 이름을 여러 파일에 복사-붙여넣기 하지 않는다.
+- 위반 탐지: `tests/test_coding_conventions.py`의 `test_no_duplicate_type_names`가 자동으로 검출한다.
+- 기존 grandfathered 예외는 `KNOWN_TYPE_DUPLICATES` 허용 목록에만 등록하고 새 예외 추가는 사용자 승인 필요.
+
+### 절대경로 하드코딩 금지 규칙 (2026-06-05 추가)
+- **`/Users/`, `/home/`, `C:\`, `/root/`로 시작하는 절대경로를 코드에 직접 쓰지 않는다.**
+- `open()`, `Path()`, `os.path.*`, `os.makedirs()`, `shutil.*` 등 파일 조작 함수의 인자로 절대경로 리터럴 전달 금지.
+- 대신 `os.getcwd()`, `Path(__file__).parent`, 환경변수, 함수 파라미터를 사용한다.
+- 위반 탐지: `tests/test_coding_conventions.py`의 `test_no_hardcoded_abspath`가 자동으로 검출한다.
+
 ### 파이프라인 배포 동등성 규칙 (2026-05-13 추가)
 - **파이프라인 관련 기능은 배포 사용자 환경과 개발 환경에서 동일하게 동작해야 한다.**
 - 구현 완료 기준: API/함수 레이어가 아니라 **production 호출 경로** (`project_pipeline.py`, `agent_launcher.py` 등) 까지 end-to-end로 파라미터가 흘러들어가는지 반드시 확인

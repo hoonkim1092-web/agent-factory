@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import time
 from typing import TYPE_CHECKING
 
@@ -30,6 +29,12 @@ CLI_COMMANDS = {
 }
 
 _AUTONOMOUS_PROVIDERS = {"codex", "gemini"}
+
+_PROVIDER_ID_MAP = {
+    "claude": "claude_cli",
+    "codex": "codex_cli",
+    "gemini": "gemini_cli",
+}
 
 
 # ── 프로바이더 탐지 ──────────────────────────────────────────────────────────
@@ -91,44 +96,25 @@ def _load_prompt(workspace: str, name: str) -> str:
 
 # ── CLI 실행 ─────────────────────────────────────────────────────────────────
 
-def _resolve_cli(name: str) -> str:
-    resolved = shutil.which(name)
-    return resolved if resolved else name
-
-
-def _build_exec_command(provider: str) -> list[str]:
-    if provider == "codex":
-        return [_resolve_cli("codex"), "exec", "-s", "danger-full-access"]
-    elif provider == "claude":
-        return [_resolve_cli("claude"), "-p", "--output-format", "text"]
-    elif provider == "gemini":
-        return [_resolve_cli("gemini"), "-p"]
-    else:
-        return [_resolve_cli("codex"), "exec", "-s", "danger-full-access"]
-
-
 def _run_provider(provider: str, prompt: str, workspace: str) -> str:
-    """프로바이더 CLI 실행. 프롬프트는 stdin으로 전달."""
-    cmd = _build_exec_command(provider)
-    try:
-        result = subprocess.run(
-            cmd,
-            input=prompt.encode("utf-8"),
-            capture_output=True,
-            timeout=REVIEW_TIMEOUT,
-            cwd=workspace,
-        )
-        stdout = result.stdout.decode("utf-8", errors="replace").strip()
-        stderr = result.stderr.decode("utf-8", errors="replace").strip()
-        if not stdout and stderr:
-            return f"(provider error: {stderr[:500]})"
-        return stdout or "(empty response)"
-    except subprocess.TimeoutExpired:
-        return f"(timeout: {REVIEW_TIMEOUT}s)"
-    except FileNotFoundError:
-        return f"(provider not found: {provider})"
-    except Exception as e:
-        return f"(execution error: {e})"
+    """프로바이더 CLI 실행. execute_cli_chat 경유."""
+    from core.providers.cli import CliChatRequest, execute_cli_chat
+
+    provider_id = _PROVIDER_ID_MAP.get(provider, f"{provider}_cli")
+    request = CliChatRequest(
+        provider_id=provider_id,
+        model="",
+        system_prompt="",
+        task_input=prompt,
+        workspace=workspace or ".",
+        timeout_sec=REVIEW_TIMEOUT,
+        allow_file_edit=False,
+    )
+    result = execute_cli_chat(request)
+    if not result.get("ok"):
+        reason = result.get("reason") or "unknown_error"
+        return f"(provider error: {reason})"
+    return result.get("text") or "(empty response)"
 
 
 def _build_review_prompt(
