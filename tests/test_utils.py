@@ -7,6 +7,8 @@ os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 import pytest
 from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation
 from core.utils import test_file_for as _test_file_for
+from core.utils import get_external_skill_roots, get_codex_skill_roots
+from core.config_paths import SKILLS_DIR
 
 
 class TestTruncateText:
@@ -776,3 +778,71 @@ class TestPearsonCorrelation:
 
     def test_반환_타입은_float(self):
         assert isinstance(pearson_correlation([1, 2, 3], [4, 5, 6]), float)
+
+
+class TestGetExternalSkillRoots:
+    def test_반환값은_리스트(self):
+        result = get_external_skill_roots()
+        assert isinstance(result, list)
+
+    def test_반환_경로는_모두_절대경로(self):
+        for path in get_external_skill_roots():
+            assert os.path.isabs(path), f"절대 경로가 아님: {path}"
+
+    def test_중복_없음(self):
+        result = get_external_skill_roots()
+        lower = [p.lower() for p in result]
+        assert len(lower) == len(set(lower)), "중복 경로가 존재합니다"
+
+    def test_extra_roots_포함(self, tmp_path):
+        extra = str(tmp_path / "extra_skills")
+        result = get_external_skill_roots(extra_roots=[extra])
+        assert any(os.path.normcase(p) == os.path.normcase(os.path.normpath(os.path.abspath(extra))) for p in result)
+
+    def test_extra_roots_중복_제거(self, tmp_path):
+        extra = str(tmp_path / "dup_skills")
+        result = get_external_skill_roots(extra_roots=[extra, extra])
+        matched = [p for p in result if os.path.normcase(p) == os.path.normcase(os.path.normpath(os.path.abspath(extra)))]
+        assert len(matched) == 1
+
+    def test_env_AGENT_CODEX_SKILL_DIRS_반영(self, tmp_path, monkeypatch):
+        extra = str(tmp_path / "codex_env_skills")
+        monkeypatch.setenv("AGENT_CODEX_SKILL_DIRS", extra)
+        monkeypatch.delenv("AGENT_CLAUDE_SKILL_DIRS", raising=False)
+        result = get_external_skill_roots()
+        assert any(os.path.normcase(p) == os.path.normcase(os.path.normpath(os.path.abspath(extra))) for p in result)
+
+    def test_env_AGENT_CLAUDE_SKILL_DIRS_반영(self, tmp_path, monkeypatch):
+        extra = str(tmp_path / "claude_env_skills")
+        monkeypatch.setenv("AGENT_CLAUDE_SKILL_DIRS", extra)
+        monkeypatch.delenv("AGENT_CODEX_SKILL_DIRS", raising=False)
+        result = get_external_skill_roots()
+        assert any(os.path.normcase(p) == os.path.normcase(os.path.normpath(os.path.abspath(extra))) for p in result)
+
+    def test_CODEX_HOME_env_반영(self, tmp_path, monkeypatch):
+        codex_home = str(tmp_path / "codex_home")
+        monkeypatch.setenv("CODEX_HOME", codex_home)
+        result = get_external_skill_roots()
+        expected = os.path.normcase(os.path.normpath(os.path.join(codex_home, "skills")))
+        assert any(os.path.normcase(p) == expected for p in result)
+
+    def test_AF_SELF_RUN_SKILLS_DIR_제외(self, monkeypatch):
+        monkeypatch.setenv("AF_SELF_RUN", "1")
+        result = get_external_skill_roots()
+        skills_dir_norm = os.path.normcase(os.path.normpath(SKILLS_DIR))
+        assert not any(os.path.normcase(p) == skills_dir_norm for p in result)
+
+    def test_AF_SELF_RUN_미설정시_SKILLS_DIR_포함(self, monkeypatch):
+        monkeypatch.delenv("AF_SELF_RUN", raising=False)
+        result = get_external_skill_roots()
+        skills_dir_norm = os.path.normcase(os.path.normpath(SKILLS_DIR))
+        assert any(os.path.normcase(p) == skills_dir_norm for p in result)
+
+    def test_Windows에서_etc_codex_skills_없음(self):
+        if os.name != "nt":
+            pytest.skip("Windows 전용 테스트")
+        result = get_external_skill_roots()
+        assert not any("/etc/codex/skills" in p for p in result)
+
+    def test_get_codex_skill_roots_alias(self):
+        assert get_codex_skill_roots is get_external_skill_roots
