@@ -46,11 +46,30 @@ def _detect_manifests(root: Path) -> list[str]:
     return [c for c in candidates if (root / c).exists()]
 
 
+def _pyproject_has_pytest(path: Path) -> bool:
+    """pyproject.toml에 pytest 설정 섹션이 있으면 True. (build-only false positive 방지)"""
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    return "[tool.pytest" in text or "[pytest]" in text
+
+
 def _detect_test_indicators(root: Path) -> list[str]:
     found = []
-    for name in ["tests", "test", "pytest.ini", "pyproject.toml"]:
+    for name in ["tests", "test", "pytest.ini"]:
         if (root / name).exists():
             found.append(name)
+    # pyproject.toml은 존재만으로는 테스트 신호가 아니다 — pytest 섹션이 있을 때만 indicator
+    ppt = root / "pyproject.toml"
+    if ppt.exists() and _pyproject_has_pytest(ppt):
+        found.append("pyproject.toml")
+    # 루트에 표준 indicator가 없으면 하위 디렉터리의 test_*.py / *_test.py 파일로 보강.
+    # (plugin/mcp_server/test_*.py 처럼 테스트가 서브패키지에 흩어진 프로젝트 대응)
+    if not found:
+        nested = _find_nested_test_file(root)
+        if nested:
+            found.append(nested)
     return found
 
 
@@ -85,6 +104,8 @@ def _detect_entrypoint_candidates(root: Path) -> list[dict]:
     for py_file in sorted(root.glob("*.py")):
         if py_file.name == "__main__.py":
             continue  # 이미 위에서 별도 처리
+        if py_file.name.startswith("test_") or py_file.stem.endswith("_test"):
+            continue  # 테스트 스크립트는 진입점 후보가 아님
         try:
             text = py_file.read_text(encoding="utf-8", errors="ignore")
             if any(guard in text for guard in _MAIN_GUARDS):
@@ -121,6 +142,11 @@ def _detect_docs(root: Path) -> dict:
 # Risks
 # ---------------------------------------------------------------------------
 
+# doctor 체크 중 대상 프로젝트가 아니라 프로세스 cwd(AF 설치 위치)를 보는 항목.
+# inspect는 git 상태를 _git_info(root)로 대상 기준 따로 구하므로 doctor 표시/위험에서 제외한다.
+_DOCTOR_CWD_GIT_CHECKS = ("git_repo", "git_dirty")
+
+
 def _build_risks(
     doctor_checks: list[dict],
     git: dict,
@@ -140,7 +166,7 @@ def _build_risks(
 
     # doctor = AF 실행환경 진단 (provider/hook/pytest). git 관련 항목은 위에서 처리했으므로 제외
     for c in doctor_checks:
-        if c["name"] in ("git_repo", "git_dirty"):
+        if c["name"] in _DOCTOR_CWD_GIT_CHECKS:
             continue  # target git 상태는 git 섹션에서 처리
         if c["status"] == "fail":
             risks.append({
@@ -237,6 +263,21 @@ def _recommend_next_steps(ctx: dict) -> list[dict]:
 _EXCLUDE_DIRS = {".git", "__pycache__", ".venv", "venv", "node_modules", "dist", "build"}
 
 
+def _find_nested_test_file(root: Path) -> str | None:
+    """하위 디렉터리에서 첫 test_*.py / *_test.py 파일의 상대경로(POSIX)를 반환."""
+    try:
+        for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
+            # 정렬 — os.walk 방문 순서를 결정적으로 고정 (inspect는 deterministic 계약)
+            dirnames[:] = sorted(d for d in dirnames if d not in _EXCLUDE_DIRS)
+            for f in sorted(filenames):
+                if f.endswith(".py") and (f.startswith("test_") or f.endswith("_test.py")):
+                    rel = os.path.relpath(os.path.join(dirpath, f), str(root))
+                    return rel.replace(os.sep, "/")
+    except Exception:
+        return None
+    return None
+
+
 def _count_py_files(root: Path) -> int:
     # os.walk(followlinks=False) — symlink 순환 루프 방지
     try:
@@ -256,8 +297,9 @@ def _count_py_files(root: Path) -> int:
 def inspect_project(root: Path) -> dict:
     """컨텍스트 팩 생성. LLM/네트워크 없음.
 
-    주의: doctor 섹션은 프로세스 cwd를 진단한다(af_doctor가 cwd 고정).
-    root != cwd인 경우 git/python/docs 섹션은 root를, doctor 섹션은 cwd를 가리킨다.
+    doctor 섹션은 AF 실행 환경(provider/hook/pytest/dogfood) 진단이며 프로세스 cwd
+    기준이다. 대상 프로젝트의 git 상태는 _git_info(root)로 따로 구하고, doctor 표시에서
+    cwd-git 항목(_DOCTOR_CWD_GIT_CHECKS)은 제외해 대상/cwd 정보 혼선을 막는다.
     """
     root = root.resolve()
 
@@ -269,21 +311,27 @@ def inspect_project(root: Path) -> dict:
     except Exception as exc:
         doctor_data["error"] = str(exc)
 
+    # doctor 표시/위험에서 cwd-git 항목 제외 후 카운트 재계산 (대상 프로젝트 git은 git 섹션 담당)
+    doctor_checks = [c for c in doctor_data["checks"] if c["name"] not in _DOCTOR_CWD_GIT_CHECKS]
+    doctor_ok = sum(1 for c in doctor_checks if c["status"] == "ok")
+    doctor_warn = sum(1 for c in doctor_checks if c["status"] == "warn")
+    doctor_fail = sum(1 for c in doctor_checks if c["status"] == "fail")
+
     git = _git_info(root)
     manifests = _detect_manifests(root)
     test_indicators = _detect_test_indicators(root)
     entrypoint_candidates = _detect_entrypoint_candidates(root)
     docs = _detect_docs(root)
-    risks = _build_risks(doctor_data["checks"], git, test_indicators, docs)
+    risks = _build_risks(doctor_checks, git, test_indicators, docs)
     ctx = {
         "schema_version": 1,
         "project": {"root": str(root), "name": root.name, "language": "python"},
         "git": git,
         "doctor": {
-            "ok_count": doctor_data["ok_count"],
-            "warn_count": doctor_data["warn_count"],
-            "fail_count": doctor_data["fail_count"],
-            "checks": doctor_data["checks"],
+            "ok_count": doctor_ok,
+            "warn_count": doctor_warn,
+            "fail_count": doctor_fail,
+            "checks": doctor_checks,
         },
         "python": {
             "manifests": manifests,
@@ -327,7 +375,7 @@ def format_markdown(ctx: dict) -> str:
     else:
         lines.append("- git repo 아님")
 
-    lines += ["", f"## af doctor  ({d['fail_count']} fail / {d['warn_count']} warn / {d['ok_count']} ok)"]
+    lines += ["", f"## af doctor — AF 실행 환경  ({d['fail_count']} fail / {d['warn_count']} warn / {d['ok_count']} ok)"]
     for c in d["checks"]:
         lines.append(f"- [{_STATUS_ICON.get(c['status'], '?')}] {c['name']}: {c['detail']}")
 

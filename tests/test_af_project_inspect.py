@@ -6,8 +6,11 @@ from pathlib import Path
 import pytest
 
 from scripts.af_project_inspect import (
+    _DOCTOR_CWD_GIT_CHECKS,
     _detect_manifests,
     _detect_test_indicators,
+    _pyproject_has_pytest,
+    _find_nested_test_file,
     _detect_entrypoint_candidates,
     _detect_docs,
     _build_risks,
@@ -79,6 +82,106 @@ class TestDetectTestIndicators:
         (tmp_path / "pytest.ini").write_text("[pytest]", encoding="utf-8")
         assert "pytest.ini" in _detect_test_indicators(tmp_path)
 
+    def test_nested_test_prefix_file_detected(self, tmp_path: Path) -> None:
+        sub = tmp_path / "pkg" / "mcp"
+        sub.mkdir(parents=True)
+        (sub / "test_gate.py").write_text("def test_x(): pass", encoding="utf-8")
+        result = _detect_test_indicators(tmp_path)
+        assert result == ["pkg/mcp/test_gate.py"]
+
+    def test_nested_test_suffix_file_detected(self, tmp_path: Path) -> None:
+        sub = tmp_path / "server"
+        sub.mkdir()
+        (sub / "smoke_test.py").write_text("def test_x(): pass", encoding="utf-8")
+        result = _detect_test_indicators(tmp_path)
+        assert result == ["server/smoke_test.py"]
+
+    def test_root_indicator_skips_nested_scan(self, tmp_path: Path) -> None:
+        (tmp_path / "tests").mkdir()
+        sub = tmp_path / "pkg"
+        sub.mkdir()
+        (sub / "test_deep.py").write_text("", encoding="utf-8")
+        # 루트 indicator가 있으면 하위 스캔하지 않음 — nested 경로 미포함
+        assert _detect_test_indicators(tmp_path) == ["tests"]
+
+    def test_nested_non_test_py_ignored(self, tmp_path: Path) -> None:
+        sub = tmp_path / "pkg"
+        sub.mkdir()
+        (sub / "helper.py").write_text("", encoding="utf-8")
+        assert _detect_test_indicators(tmp_path) == []
+
+    def test_pyproject_with_pytest_section_detected(self, tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.pytest.ini_options]\ntestpaths = ['t']\n", encoding="utf-8"
+        )
+        assert "pyproject.toml" in _detect_test_indicators(tmp_path)
+
+    def test_pyproject_build_only_not_a_test_indicator(self, tmp_path: Path) -> None:
+        # pytest 섹션 없는 build-only pyproject.toml은 테스트 신호가 아님
+        (tmp_path / "pyproject.toml").write_text(
+            "[build-system]\nrequires = ['setuptools']\n", encoding="utf-8"
+        )
+        assert _detect_test_indicators(tmp_path) == []
+
+    def test_pyproject_build_only_falls_through_to_nested_scan(self, tmp_path: Path) -> None:
+        # build-only pyproject + 하위 test 파일 → nested scan이 작동해 감지
+        (tmp_path / "pyproject.toml").write_text("[build-system]\n", encoding="utf-8")
+        sub = tmp_path / "pkg"
+        sub.mkdir()
+        (sub / "test_x.py").write_text("", encoding="utf-8")
+        assert _detect_test_indicators(tmp_path) == ["pkg/test_x.py"]
+
+
+# ---------------------------------------------------------------------------
+# _pyproject_has_pytest
+# ---------------------------------------------------------------------------
+
+class TestPyprojectHasPytest:
+    def test_tool_pytest_section(self, tmp_path: Path) -> None:
+        p = tmp_path / "pyproject.toml"
+        p.write_text("[tool.pytest.ini_options]\n", encoding="utf-8")
+        assert _pyproject_has_pytest(p) is True
+
+    def test_bare_pytest_section(self, tmp_path: Path) -> None:
+        p = tmp_path / "pyproject.toml"
+        p.write_text("[pytest]\n", encoding="utf-8")
+        assert _pyproject_has_pytest(p) is True
+
+    def test_build_only_returns_false(self, tmp_path: Path) -> None:
+        p = tmp_path / "pyproject.toml"
+        p.write_text("[build-system]\nrequires = []\n", encoding="utf-8")
+        assert _pyproject_has_pytest(p) is False
+
+
+# ---------------------------------------------------------------------------
+# _find_nested_test_file
+# ---------------------------------------------------------------------------
+
+class TestFindNestedTestFile:
+    def test_none_when_no_tests(self, tmp_path: Path) -> None:
+        (tmp_path / "main.py").write_text("", encoding="utf-8")
+        assert _find_nested_test_file(tmp_path) is None
+
+    def test_returns_posix_relative_path(self, tmp_path: Path) -> None:
+        sub = tmp_path / "a" / "b"
+        sub.mkdir(parents=True)
+        (sub / "test_thing.py").write_text("", encoding="utf-8")
+        assert _find_nested_test_file(tmp_path) == "a/b/test_thing.py"
+
+    def test_excludes_pycache_and_venv(self, tmp_path: Path) -> None:
+        cache = tmp_path / "__pycache__"
+        cache.mkdir()
+        (cache / "test_cached.py").write_text("", encoding="utf-8")
+        assert _find_nested_test_file(tmp_path) is None
+
+    def test_deterministic_dir_order(self, tmp_path: Path) -> None:
+        # peer 디렉터리 둘 다 test 파일 보유 → 사전순 첫 디렉터리(a_pkg)가 결정적으로 선택돼야 함
+        for d in ["z_pkg", "m_pkg", "a_pkg"]:
+            sub = tmp_path / d
+            sub.mkdir()
+            (sub / "test_mod.py").write_text("", encoding="utf-8")
+        assert _find_nested_test_file(tmp_path) == "a_pkg/test_mod.py"
+
 
 # ---------------------------------------------------------------------------
 # _detect_entrypoint_candidates
@@ -120,6 +223,22 @@ class TestDetectEntrypointCandidates:
         (tmp_path / "__main__.py").write_text("", encoding="utf-8")
         result = _detect_entrypoint_candidates(tmp_path)
         assert all("evidence" in c for c in result)
+
+    def test_test_prefix_file_excluded(self, tmp_path: Path) -> None:
+        (tmp_path / "test_thing.py").write_text('if __name__ == "__main__": pass', encoding="utf-8")
+        result = _detect_entrypoint_candidates(tmp_path)
+        assert not any(c["path"] == "test_thing.py" for c in result)
+
+    def test_test_suffix_file_excluded(self, tmp_path: Path) -> None:
+        (tmp_path / "thing_test.py").write_text('if __name__ == "__main__": pass', encoding="utf-8")
+        result = _detect_entrypoint_candidates(tmp_path)
+        assert not any(c["path"] == "thing_test.py" for c in result)
+
+    def test_non_test_main_guard_still_detected(self, tmp_path: Path) -> None:
+        (tmp_path / "contest.py").write_text('if __name__ == "__main__": pass', encoding="utf-8")
+        result = _detect_entrypoint_candidates(tmp_path)
+        # "contest" 는 test_ 접두/_test 접미가 아니므로 정상 후보로 잡혀야 함
+        assert any(c["path"] == "contest.py" for c in result)
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +525,21 @@ class TestInspectProject:
         dumped = json.dumps(ctx)
         reloaded = json.loads(dumped)
         assert reloaded["schema_version"] == 1
+
+    def test_doctor_section_excludes_cwd_git_checks(self, tmp_path: Path) -> None:
+        # doctor 섹션은 AF 실행 환경 진단 — cwd-git 항목은 표시에서 제외돼야 함
+        # (대상 프로젝트 git은 ctx["git"]이 담당; cwd-git 누수가 사용자를 오도)
+        ctx = inspect_project(tmp_path)
+        check_names = {c["name"] for c in ctx["doctor"]["checks"]}
+        for name in _DOCTOR_CWD_GIT_CHECKS:
+            assert name not in check_names
+
+    def test_doctor_counts_match_filtered_checks(self, tmp_path: Path) -> None:
+        ctx = inspect_project(tmp_path)
+        checks = ctx["doctor"]["checks"]
+        assert ctx["doctor"]["ok_count"] == sum(1 for c in checks if c["status"] == "ok")
+        assert ctx["doctor"]["warn_count"] == sum(1 for c in checks if c["status"] == "warn")
+        assert ctx["doctor"]["fail_count"] == sum(1 for c in checks if c["status"] == "fail")
 
 
 # ---------------------------------------------------------------------------
