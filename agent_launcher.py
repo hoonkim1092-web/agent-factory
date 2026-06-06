@@ -934,6 +934,10 @@ def _build_arg_parser(ad_hoc_mode):
         sync_parser = sync_todo_sub.add_parser("sync-todo", help="board 상태로 .todo.md 재생성")
         sync_parser.add_argument("project_dir", help="프로젝트 디렉토리 경로")
         sync_parser.add_argument("--dry-run", action="store_true", help="diff만 출력, 파일 미수정")
+        inspect_parser = sync_todo_sub.add_parser("inspect", help="Python 프로젝트 컨텍스트 팩 생성")
+        inspect_parser.add_argument("path", nargs="?", default=".", help="대상 경로 (기본: 현재 디렉터리)")
+        inspect_parser.add_argument("--json", dest="json_out", action="store_true", help="JSON 출력")
+        inspect_parser.add_argument("--out", metavar="DIR", default=None, help="MD+JSON 파일 저장 디렉터리")
 
         dogfood_parser = subparsers.add_parser("dogfood", help="Dogfood 파이프라인 실행")
         dogfood_sub = dogfood_parser.add_subparsers(dest="dogfood_cmd", required=True)
@@ -998,7 +1002,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if _cli_mode == "subcommand":
-        if args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
+        if args.subcommand == "project" and getattr(args, "project_cmd", None) == "inspect":
+            from scripts.af_project_inspect import main as inspect_main
+            sys.exit(inspect_main([
+                getattr(args, "path", "."),
+                *(["--json"] if getattr(args, "json_out", False) else []),
+                *(["--out", args.out] if getattr(args, "out", None) else []),
+            ]))
+        elif args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
             from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
             from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map
             import os

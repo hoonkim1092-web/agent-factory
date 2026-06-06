@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from repo_shortcuts import resolve_repo_path
 
 # agent_launcher.py 서브커맨드로 라우팅할 af 명령 목록
-_LAUNCHER_SUBCOMMANDS = {"doctor"}
+_LAUNCHER_SUBCOMMANDS = {"doctor", "project"}
 
 
 def main() -> None:

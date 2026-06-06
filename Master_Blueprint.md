@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-05 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-06 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -71,6 +71,7 @@
 | `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | `append_metric()`, `append_skip_audit()`, `compute_report()`, `compute_t3_telemetry_skip()` |
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | `main()` |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | `DoctorResult`, `run_checks()`, `format_text()`, `format_json()`, `main()` |
+| `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음. doctor 재사용(run_checks fast). risks schema `{kind,severity,message,source}`. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | `inspect_project()`, `format_markdown()`, `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1679,6 +1680,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-06 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.py, af.spec, agent_launcher.py, af_project_inspect.py (+1) |
 | 2026-06-05 | v1.2.34 | chore(CLAUDE): code update — CLAUDE.md, Master_Blueprint.md, NEXT_STEPS.md, review_runner.py, utils.py (+9) |
 | 2026-06-05 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, review_runner.py, test_review_runner_execute_cli.py |
 | 2026-06-05 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, review_runner.py, utils.py, test_utils.py |
@@ -1892,6 +1894,7 @@ model_utils.py (독립 모듈)
 | 2026-05-21 | v1.2.28 | feat(B-1-후행): `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 명시 — required_capabilities=스킬조달신호, verification_focus=Evidence 하위 검증기준, skill_gap_hypotheses=reuse/enhance/forge계획신호, 새 ## 섹션 금지. 21 tests PASS (회귀 없음). |
 | 2026-05-21 | v1.2.28 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, work_item_generator.py, code-review.md, test_work_item_generator_structured_evidence.py |
 | 2026-05-21 | v1.2.28 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, work_item_generator.py, test_work_item_generator_structured_evidence.py |
+| 2026-06-06 | v1.2.28 | feat(project-inspect): `scripts/af_project_inspect.py` 신규 — `af project inspect [path]` 명령. LLM/네트워크 없음. `af_doctor.run_checks(fast=True)` 재사용(새 진단 로직 금지). risks: git_dirty(project 섹션 직접)/doctor_fail/doctor_warn/no_tests/no_readme. 진입점은 candidate+evidence 형식만. `os.walk(followlinks=False)` symlink 루프 방지. `af.py` `_LAUNCHER_SUBCOMMANDS`에 "project" 추가. `agent_launcher.py` `project inspect` 서브커맨드+dispatch 추가. 테스트 47건 신규. 3-Tier: af-critic WARN 수정 / af-cross-review BLOCK→fixed(doctor cwd 분리+중복 entrypoint 제거) / af-test-runner PASS(47). §0+§12 갱신. |
 | 2026-05-20 | v1.2.28 | fix(review-safety-followups #3+#4): `scripts/review_gate.py` CLI에 `--t3-required {yes,no,unknown}` 옵션 추가 — `_cli`의 `--record` 분기에서 `record_review_done(..., t3_required=args.t3_required)` 전달. 디버그·재현 시 af-critic advisory 수동 주입 가능(다른 agent는 무시, fail-closed 유지). `_T3_SKIP_CLASSIFIER_VERSION`을 리터럴에서 `scripts.t3_classifier.CLASSIFIER_VERSION`의 dual-import 패턴으로 단일소스화 — 한쪽만 bump 시 silent BLOCK 회귀 차단. 회귀 테스트 4건 신규(`test_cli_record_with_t3_required_advisory` 외 3건). 139 PASS. 3-Tier af-critic/af-cross-review/af-test-runner PASS. 근거: `docs/2026-05-20-af-dogfooding-review-safety-followups.md` #3·#4(status: DONE). |
 | 2026-05-20 | v1.2.28 | docs(review-safety-followups #1+#2): `scripts/t3_classifier.py` 모듈 docstring(7-9) 정정 — "annotations are preserved as semantic"로 실제 `_CosmeticAstNormalizer` 동작(docstring만 strip)과 일치시킴. `scripts/prompts/code_critic.txt:48` af-critic 프롬프트 정정 — `no` 허용 범위를 "annotation-only"에서 "comment/docstring/whitespace-only"로 좁히고 type annotation = semantic(runtime-observable) 명시. 분류기-프롬프트 시그널 정합. 3-Tier af-critic / af-cross-review PASS + af-test-runner 38 PASS. 근거: `docs/2026-05-20-af-dogfooding-review-safety-followups.md` #1·#2. |
 | 2026-05-20 | v1.2.28 | fix(text-integrity): tracked project YAML files contained committed literal carriage-return control characters (`\r\r\n` style), not semantic YAML changes. Added `repeated_carriage_return` / `bare_carriage_return` suspicious markers in `core/text_integrity.py` and regression coverage in `tests/test_text_integrity.py` so future changed files fail text-integrity before the churn reaches review. |

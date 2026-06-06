@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-05T22:42:57+09:00
-source_commit: 13b5ee83
+generated_at: 2026-06-06T09:31:49+09:00
+source_commit: 8bf70f08
 sources:
   - Master_Blueprint.md
   - docs/code_review/code-review.md
@@ -56,6 +56,7 @@ sources:
 | `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | Master_Blueprint.md §0 |
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | Master_Blueprint.md §0 |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | Master_Blueprint.md §0 |
+| `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음. doctor 재사용(run_checks fast). risks schema `{kind,severity,message,source}`. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | Master_Blueprint.md §0 |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | Master_Blueprint.md §0 |
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
