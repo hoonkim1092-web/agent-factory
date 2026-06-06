@@ -11,6 +11,7 @@ from scripts.af_project_inspect import (
     _detect_entrypoint_candidates,
     _detect_docs,
     _build_risks,
+    _recommend_next_steps,
     format_markdown,
     inspect_project,
     main as inspect_main,
@@ -215,6 +216,114 @@ class TestBuildRisks:
 
 
 # ---------------------------------------------------------------------------
+# _recommend_next_steps
+# ---------------------------------------------------------------------------
+
+_DUMMY_ENTRYPOINT = [{"path": "main.py", "kind": "__main__ guard", "confidence": "candidate", "evidence": "..."}]
+
+
+def _ctx_for_steps(
+    *,
+    fail: bool = False,
+    dirty: int = 0,
+    test_indicators: list | None = None,
+    readme: str | None = "README.md",
+    entrypoints: list | None = None,
+) -> dict:
+    risks: list[dict] = []
+    if fail:
+        risks.append({"kind": "doctor_fail", "severity": "fail", "message": "x", "source": "doctor"})
+    if dirty:
+        risks.append({"kind": "git_dirty", "severity": "warn", "message": f"{dirty}개", "source": "project"})
+    ep = entrypoints if entrypoints is not None else _DUMMY_ENTRYPOINT
+    return {
+        "project": {"root": "/tmp/proj", "name": "proj", "language": "python"},
+        "risks": risks,
+        "git": {"is_repo": True, "branch": "main", "dirty_count": dirty},
+        "doctor": {"ok_count": 1, "warn_count": 0, "fail_count": 0, "checks": []},
+        "python": {
+            "manifests": [],
+            "test_indicators": test_indicators if test_indicators is not None else ["tests"],
+            "entrypoint_candidates": ep,
+            "py_file_count": 5,
+        },
+        "docs": {"readme": readme, "docs_dir": None, "llm_wiki_dir": None},
+    }
+
+
+class TestRecommendNextSteps:
+    def test_all_ok_returns_ready(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps())
+        assert len(steps) == 1
+        assert steps[0]["kind"] == "ready"
+        assert steps[0]["priority"] == "p0"
+
+    def test_fail_risk_returns_fix_environment_p0(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(fail=True))
+        kinds = [s["kind"] for s in steps]
+        assert "fix_environment" in kinds
+        fix = next(s for s in steps if s["kind"] == "fix_environment")
+        assert fix["priority"] == "p0"
+
+    def test_dirty_worktree_returns_review_worktree_p1(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(dirty=3))
+        kinds = [s["kind"] for s in steps]
+        assert "review_worktree" in kinds
+        step = next(s for s in steps if s["kind"] == "review_worktree")
+        assert step["priority"] == "p1"
+
+    def test_no_test_indicators_returns_add_test_entrypoint_p1(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(test_indicators=[]))
+        kinds = [s["kind"] for s in steps]
+        assert "add_test_entrypoint" in kinds
+        step = next(s for s in steps if s["kind"] == "add_test_entrypoint")
+        assert step["priority"] == "p1"
+
+    def test_no_readme_returns_add_readme_p2(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(readme=None))
+        kinds = [s["kind"] for s in steps]
+        assert "add_readme" in kinds
+        step = next(s for s in steps if s["kind"] == "add_readme")
+        assert step["priority"] == "p2"
+
+    def test_no_entrypoints_returns_confirm_entrypoint_p2(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(entrypoints=[]))
+        kinds = [s["kind"] for s in steps]
+        assert "confirm_entrypoint" in kinds
+        step = next(s for s in steps if s["kind"] == "confirm_entrypoint")
+        assert step["priority"] == "p2"
+
+    def test_fail_and_dirty_both_appear(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(fail=True, dirty=2))
+        kinds = [s["kind"] for s in steps]
+        assert "fix_environment" in kinds
+        assert "review_worktree" in kinds
+
+    def test_ready_not_returned_when_issues_exist(self) -> None:
+        steps = _recommend_next_steps(_ctx_for_steps(dirty=1))
+        kinds = [s["kind"] for s in steps]
+        assert "ready" not in kinds
+
+    def test_steps_have_required_fields(self) -> None:
+        for ctx in [
+            _ctx_for_steps(),
+            _ctx_for_steps(fail=True),
+            _ctx_for_steps(dirty=1, test_indicators=[], readme=None, entrypoints=[]),
+        ]:
+            for step in _recommend_next_steps(ctx):
+                assert "priority" in step
+                assert "kind" in step
+                assert "action" in step
+
+    def test_markdown_includes_recommended_section(self) -> None:
+        ctx = _ctx_for_steps(dirty=1)
+        ctx["recommended_next_steps"] = _recommend_next_steps(ctx)
+        md = format_markdown(ctx)
+        assert "Recommended next steps" in md
+        assert "review_worktree" in md
+
+
+# ---------------------------------------------------------------------------
 # format_markdown
 # ---------------------------------------------------------------------------
 
@@ -268,7 +377,7 @@ class TestInspectProject:
 
     def test_required_keys_present(self, tmp_path: Path) -> None:
         ctx = inspect_project(tmp_path)
-        for key in ("project", "git", "doctor", "python", "docs", "risks"):
+        for key in ("project", "git", "doctor", "python", "docs", "risks", "recommended_next_steps"):
             assert key in ctx, f"missing key: {key}"
 
     def test_project_name_matches_dir(self, tmp_path: Path) -> None:

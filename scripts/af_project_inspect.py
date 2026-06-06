@@ -176,6 +176,60 @@ def _build_risks(
     return risks
 
 
+def _recommend_next_steps(ctx: dict) -> list[dict]:
+    """Return deterministic, user-actionable follow-ups for inspect output."""
+    risks = ctx["risks"]
+    git = ctx["git"]
+    python_info = ctx["python"]
+    docs = ctx["docs"]
+
+    steps: list[dict] = []
+
+    if any(r["severity"] == "fail" for r in risks):
+        steps.append({
+            "priority": "p0",
+            "kind": "fix_environment",
+            "action": "Run `af doctor --fast` and fix failing checks before starting an AF run.",
+        })
+
+    if git.get("dirty_count", 0) > 0:
+        steps.append({
+            "priority": "p1",
+            "kind": "review_worktree",
+            "action": "Review or commit current git changes so AF can distinguish its own edits.",
+        })
+
+    if not python_info.get("test_indicators"):
+        steps.append({
+            "priority": "p1",
+            "kind": "add_test_entrypoint",
+            "action": "Add a minimal `tests/` directory or pytest configuration before delegating changes.",
+        })
+
+    if not docs.get("readme"):
+        steps.append({
+            "priority": "p2",
+            "kind": "add_readme",
+            "action": "Add a README with project purpose, setup, and expected development workflow.",
+        })
+
+    if not python_info.get("entrypoint_candidates"):
+        steps.append({
+            "priority": "p2",
+            "kind": "confirm_entrypoint",
+            "action": "Identify the main CLI/app entrypoint so AF can target verification commands.",
+        })
+
+    if not steps:
+        steps.append({
+            "priority": "p0",
+            "kind": "ready",
+            "action": "Project looks ready for a small AF dogfood run or scoped implementation task.",
+        })
+
+    return steps
+
+
 # ---------------------------------------------------------------------------
 # File scale
 # ---------------------------------------------------------------------------
@@ -221,8 +275,7 @@ def inspect_project(root: Path) -> dict:
     entrypoint_candidates = _detect_entrypoint_candidates(root)
     docs = _detect_docs(root)
     risks = _build_risks(doctor_data["checks"], git, test_indicators, docs)
-
-    return {
+    ctx = {
         "schema_version": 1,
         "project": {"root": str(root), "name": root.name, "language": "python"},
         "git": git,
@@ -241,6 +294,9 @@ def inspect_project(root: Path) -> dict:
         "docs": docs,
         "risks": risks,
     }
+    ctx["recommended_next_steps"] = _recommend_next_steps(ctx)
+
+    return ctx
 
 
 # ---------------------------------------------------------------------------
@@ -299,6 +355,10 @@ def format_markdown(ctx: dict) -> str:
     else:
         lines.append("- 없음")
 
+    lines += ["", "## Recommended next steps"]
+    for step in ctx.get("recommended_next_steps", []):
+        lines.append(f"- [{step['priority']}] **{step['kind']}**: {step['action']}")
+
     return "\n".join(lines)
 
 
@@ -307,6 +367,8 @@ def format_markdown(ctx: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(
         prog="af project inspect",
         description="Python 프로젝트 컨텍스트 팩 생성 (LLM/네트워크 없음)",
