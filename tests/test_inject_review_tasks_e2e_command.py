@@ -63,7 +63,7 @@ def test_inject_review_tasks_e2e_command():
 
         # CLI provider detection: 2개 이상으로 mock (cross_validate도 주입)
         # inject_review_tasks 내부에서 지역 import하므로 실제 모듈 경로를 patch
-        with patch("core.providers.registry.detect_installed_cli_providers", return_value=["claude", "gemini"]):
+        with patch("core.providers.registry.detect_available_cli_providers", return_value=["claude", "gemini"]):
             with patch("core.providers.registry.pick_review_provider", return_value="gemini"):
                 from core.project_task_board import inject_review_tasks
                 review_tasks = inject_review_tasks(tmp, completed_task)
@@ -101,7 +101,7 @@ def test_inject_review_tasks_provider_id_routing():
             captured.append(author)
             return "codex"
 
-        with patch("core.providers.registry.detect_installed_cli_providers", return_value=["claude_cli", "codex"]):
+        with patch("core.providers.registry.detect_available_cli_providers", return_value=["claude_cli", "codex"]):
             with patch("core.providers.registry.pick_review_provider", side_effect=_fake_pick):
                 from core.project_task_board import inject_review_tasks
                 inject_review_tasks(tmp, completed_task)
@@ -131,7 +131,7 @@ def test_inject_review_tasks_provider_id_missing_defaults_to_first():
             captured.append(author)
             return "codex"
 
-        with patch("core.providers.registry.detect_installed_cli_providers", return_value=["claude_cli", "codex"]):
+        with patch("core.providers.registry.detect_available_cli_providers", return_value=["claude_cli", "codex"]):
             with patch("core.providers.registry.pick_review_provider", side_effect=_fake_pick):
                 from core.project_task_board import inject_review_tasks
                 inject_review_tasks(tmp, completed_task)

@@ -185,6 +185,40 @@ def _parse_code_review(text: str) -> list[dict]:
     return sections
 
 
+def _slugify_code_review_section(section_id: str) -> str:
+    return "section-" + section_id.replace(".", "-")
+
+
+def _split_code_review_sections(text: str) -> list[dict]:
+    """Split docs/code_review/code-review.md into section pages for Obsidian."""
+    lines = text.splitlines()
+    matches = [
+        (i, line)
+        for i, line in enumerate(lines)
+        if re.match(r"^###\s+\d+\.\d+\s+", line)
+    ]
+    sections: list[dict] = []
+    seen: dict[str, int] = {}
+    for pos, (start, heading_line) in enumerate(matches):
+        end = matches[pos + 1][0] if pos + 1 < len(matches) else len(lines)
+        heading = heading_line.removeprefix("###").strip()
+        section_id = heading.split(maxsplit=1)[0]
+        slug = _slugify_code_review_section(section_id)
+        seen[slug] = seen.get(slug, 0) + 1
+        if seen[slug] > 1:
+            slug = f"{slug}-{seen[slug]}"
+        sections.append(
+            {
+                "id": section_id,
+                "heading": heading,
+                "slug": slug,
+                "line": start + 1,
+                "content": "\n".join(lines[start:end]).rstrip() + "\n",
+            }
+        )
+    return sections
+
+
 # ---------------------------------------------------------------------------
 # 파서 — NEXT_STEPS.md
 # ---------------------------------------------------------------------------
@@ -218,6 +252,7 @@ def _build_index(workspace: str, sources: list[str]) -> str:
         + "- [[open_items]] — 미완료/보류 항목 (best-effort)\n"
         + "- [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑\n"
         + "- [[blueprint/index]] — Master Blueprint 섹션별 전문\n"
+        + "- [[code_review/index]] — Code Review 섹션별 전문\n"
         + "- [[symbols]] — 코드베이스 top-level 심볼 (AST 추출)\n\n"
         + "## 사용법\n\n"
         + "Obsidian에서 이 디렉터리를 vault로 열면 `[[...]]` 링크로 탐색 가능.\n"
@@ -330,9 +365,39 @@ def _build_blueprint_section(workspace: str, section: dict) -> str:
     )
 
 
+def _build_code_review_index(workspace: str, sections: list[dict]) -> str:
+    fm = _make_frontmatter(workspace, [_CODE_REVIEW])
+    lines = [
+        "# Code Review 섹션 Index\n\n",
+        "> Source: docs/code_review/code-review.md 섹션 mirror\n",
+        "> 관련: [[index]] | [[review_patterns]] | [[source_refs]]\n\n",
+        "## 섹션\n\n",
+    ]
+    for section in sections:
+        lines.append(
+            f"- [[code_review/{section['slug']}|{section['heading']}]]"
+            f" - `docs/code_review/code-review.md:{section['line']}`\n"
+        )
+    return fm + "".join(lines)
+
+
+def _build_code_review_section(workspace: str, section: dict) -> str:
+    fm = _make_frontmatter(workspace, [_CODE_REVIEW])
+    return (
+        fm
+        + f"# {section['heading']}\n\n"
+        + f"> Source: `docs/code_review/code-review.md:{section['line']}`\n"
+        + "> 관련: [[code_review/index]] | [[review_patterns]] | [[source_refs]]\n\n"
+        + "````markdown\n"
+        + section["content"]
+        + "````\n"
+    )
+
+
 def _build_source_refs(workspace: str, sources: list[str],
                        bp: dict, cr_sections: list[dict],
-                       blueprint_sections: list[dict] | None = None) -> str:
+                       blueprint_sections: list[dict] | None = None,
+                       code_review_sections: list[dict] | None = None) -> str:
     fm = _make_frontmatter(workspace, sources)
     commit = _short_commit(workspace)
     lines = [
@@ -359,9 +424,15 @@ def _build_source_refs(workspace: str, sources: list[str],
         "\n## docs/code_review/code-review.md\n\n",
         "| 섹션 | 원본 경로 |\n",
         "|------|----------|\n",
+        "| 섹션 mirror | `code_review/*.md` |\n",
     ]
     for s in cr_sections:
-        lines.append(f"| §{s['id']} {s['name']} | `docs/code_review/code-review.md:{s['line']}` |\n")
+        mirror = ""
+        if code_review_sections:
+            match = next((section for section in code_review_sections if section["id"] == s["id"]), None)
+            if match:
+                mirror = f" / [[code_review/{match['slug']}]]"
+        lines.append(f"| §{s['id']} {s['name']} | `docs/code_review/code-review.md:{s['line']}`{mirror} |\n")
 
     lines += [
         "\n## NEXT_STEPS.md\n\n",
@@ -397,6 +468,7 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
     bp = _parse_blueprint(bp_text)
     blueprint_sections = _split_blueprint_sections(bp_text)
     cr_sections = _parse_code_review(cr_text)
+    code_review_sections = _split_code_review_sections(cr_text)
     open_items = _parse_open_items(ns_text)
 
     sources = [_BLUEPRINT, _CODE_REVIEW, _NEXT_STEPS]
@@ -406,12 +478,15 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
         "architecture.md": _build_architecture(workspace, sources, bp),
         "review_patterns.md": _build_review_patterns(workspace, sources, cr_sections),
         "open_items.md": _build_open_items(workspace, sources, open_items),
-        "source_refs.md": _build_source_refs(workspace, sources, bp, cr_sections, blueprint_sections),
+        "source_refs.md": _build_source_refs(workspace, sources, bp, cr_sections, blueprint_sections, code_review_sections),
         "symbols.md": _build_symbols(workspace, sources),
         "blueprint/index.md": _build_blueprint_index(workspace, blueprint_sections),
+        "code_review/index.md": _build_code_review_index(workspace, code_review_sections),
     }
     for section in blueprint_sections:
         pages[f"blueprint/{section['slug']}.md"] = _build_blueprint_section(workspace, section)
+    for section in code_review_sections:
+        pages[f"code_review/{section['slug']}.md"] = _build_code_review_section(workspace, section)
 
     blueprint_out = out_path / "blueprint"
     if blueprint_out.exists():
@@ -422,6 +497,17 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
         }
         for stale in blueprint_out.glob("*.md"):
             if stale.resolve() not in expected_blueprint:
+                stale.unlink()
+
+    code_review_out = out_path / "code_review"
+    if code_review_out.exists():
+        expected_code_review = {
+            (out_path / rel).resolve()
+            for rel in pages
+            if rel.startswith("code_review/")
+        }
+        for stale in code_review_out.glob("*.md"):
+            if stale.resolve() not in expected_code_review:
                 stale.unlink()
 
     for fname, content in pages.items():

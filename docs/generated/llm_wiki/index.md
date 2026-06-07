@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-07T21:32:06+09:00
-source_commit: 8552c501
+generated_at: 2026-06-07T21:54:29+09:00
+source_commit: 6c728e77
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -19,6 +19,7 @@ sources:
 - [[open_items]] — 미완료/보류 항목 (best-effort)
 - [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑
 - [[blueprint/index]] — Master Blueprint 섹션별 전문
+- [[code_review/index]] — Code Review 섹션별 전문
 - [[symbols]] — 코드베이스 top-level 심볼 (AST 추출)
 
 ## 사용법

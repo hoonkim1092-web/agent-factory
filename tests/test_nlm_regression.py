@@ -27,7 +27,7 @@ def test_nlm_auth_status_output_format():
     # regression_test_profile은 존재하지 않는 프로파일 → 실패 출력 확정
     result = subprocess.run(
         ["nlm", "auth", "status", "--profile", "regression_test_profile"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15,
     )
     combined = (result.stdout or "") + (result.stderr or "")
     assert any(p in combined for p in [
@@ -41,7 +41,7 @@ def test_nlm_notebook_help_subcommands_exist():
     """nlm notebook 서브커맨드 목록 회귀 — list/create/get/query 반드시 존재."""
     result = subprocess.run(
         ["nlm", "notebook", "--help"],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
     )
     combined = (result.stdout or "") + (result.stderr or "")
     for sub in ("list", "create", "get", "query"):

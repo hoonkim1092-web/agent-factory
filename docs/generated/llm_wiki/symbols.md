@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-07T21:32:06+09:00
-source_commit: 8552c501
+generated_at: 2026-06-07T21:54:30+09:00
+source_commit: 6c728e77
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4124,6 +4124,8 @@ _(no top-level symbols)_
 - `_slugify_blueprint_heading`
 - `_split_blueprint_sections`
 - `_parse_code_review`
+- `_slugify_code_review_section`
+- `_split_code_review_sections`
 - `_parse_open_items`
 - `_build_index`
 - `_build_architecture`
@@ -4132,6 +4134,8 @@ _(no top-level symbols)_
 - `_build_symbols`
 - `_build_blueprint_index`
 - `_build_blueprint_section`
+- `_build_code_review_index`
+- `_build_code_review_section`
 - `_build_source_refs`
 - `build`
 - `main`

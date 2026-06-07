@@ -15,6 +15,7 @@ from scripts.build_llm_wiki import (
     _parse_blueprint,
     _split_blueprint_sections,
     _parse_code_review,
+    _split_code_review_sections,
     _parse_open_items,
     build,
     _BLUEPRINT,
@@ -150,6 +151,19 @@ class TestParsers:
         for s in sections:
             assert s["line"] > 0
 
+    def test_code_review_sections_split_for_obsidian_pages(self):
+        sections = _split_code_review_sections(_SAMPLE_CODE_REVIEW)
+        slugs = [s["slug"] for s in sections]
+        assert "section-2-1" in slugs
+        assert "section-2-2" in slugs
+        assert any("Runtime Engine" in s["content"] for s in sections)
+
+    def test_code_review_duplicate_section_ids_get_unique_slugs(self):
+        sections = _split_code_review_sections(
+            "### 2.1 First\n\nA\n\n### 2.1 Second\n\nB\n"
+        )
+        assert [s["slug"] for s in sections] == ["section-2-1", "section-2-1-2"]
+
     def test_open_items_extracts_markers(self):
         items = _parse_open_items(_SAMPLE_NEXT_STEPS)
         texts = [i["text"] for i in items]
@@ -182,7 +196,7 @@ class TestBuild:
     # --- 기본 6개 + Blueprint 섹션 페이지 생성 ---
     def test_expected_pages_generated(self, tmp_path):
         pages = self._build_with_samples(tmp_path)
-        assert len(pages) == 11
+        assert len(pages) == 14
 
     def test_all_expected_files_exist(self, tmp_path):
         self._build_with_samples(tmp_path)
@@ -202,6 +216,12 @@ class TestBuild:
         assert "version: test" in overview
         assert "[[blueprint/overview|개요]]" in index
 
+    def test_code_review_expected_files_exist(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        out = tmp_path / "wiki" / "code_review"
+        for name in ("index.md", "section-2-1.md", "section-2-2.md"):
+            assert (out / name).exists(), f"code_review/{name} missing"
+
     def test_blueprint_section_pages_contain_source_content(self, tmp_path):
         self._build_with_samples(tmp_path)
         section = (tmp_path / "wiki" / "blueprint" / "section-0.md").read_text(encoding="utf-8")
@@ -217,6 +237,31 @@ class TestBuild:
 
     def test_stale_blueprint_generated_pages_are_removed(self, tmp_path):
         stale_dir = tmp_path / "wiki" / "blueprint"
+        stale_dir.mkdir(parents=True)
+        stale = stale_dir / "old-section.md"
+        stale.write_text("stale", encoding="utf-8")
+
+        self._build_with_samples(tmp_path)
+
+        assert not stale.exists()
+
+    def test_code_review_section_pages_contain_source_content(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        section = (tmp_path / "wiki" / "code_review" / "section-2-1.md").read_text(encoding="utf-8")
+        index = (tmp_path / "wiki" / "code_review" / "index.md").read_text(encoding="utf-8")
+        source_refs = (tmp_path / "wiki" / "source_refs.md").read_text(encoding="utf-8")
+        root_index = (tmp_path / "wiki" / "index.md").read_text(encoding="utf-8")
+
+        assert "docs/code_review/code-review.md:" in section
+        assert "````markdown" in section
+        assert "### 2.1" in section
+        assert "Runner" in section
+        assert "[[code_review/section-2-1|" in index
+        assert "[[code_review/section-2-1]]" in source_refs
+        assert "[[code_review/index]]" in root_index
+
+    def test_stale_code_review_generated_pages_are_removed(self, tmp_path):
+        stale_dir = tmp_path / "wiki" / "code_review"
         stale_dir.mkdir(parents=True)
         stale = stale_dir / "old-section.md"
         stale.write_text("stale", encoding="utf-8")

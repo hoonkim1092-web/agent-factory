@@ -1,0 +1,29 @@
+---
+generated_at: 2026-06-07T21:54:33+09:00
+source_commit: 6c728e77
+sources:
+  - "docs/code_review/code-review.md"
+---
+
+# 2.8 대화/연구 엔진
+
+> Source: `docs/code_review/code-review.md:188`
+> 관련: [[code_review/index]] | [[review_patterns]] | [[source_refs]]
+
+````markdown
+### 2.8 대화/연구 엔진
+
+| 파일 | 줄 | 역할 |
+|------|-----|------|
+| `interactive_chat.py` | 887 | 대화형 채팅 엔진 |
+| `researcher.py` | 894 | 연구 엔진 |
+| `conversation_manager.py` | 822 | 대화 관리자 |
+| `context_window_manager.py` | 633 | 컨텍스트 윈도우 관리. compaction 미구현 |
+| `conversation_prompts.py` | 166 | 대화 프롬프트 |
+| `conversation_room.py` | 215 | 대화 룸 |
+| `conversation_task_adapter.py` | 142 | 대화↔태스크 어댑터 |
+
+**문제점:**
+- `context_window_manager.py`: `should_compact()`, `compact()` 미구현 → v3 Phase 5B에서 추가
+- `interactive_chat.py`: 자동 compaction 트리거 없음 → v3 Phase 5B에서 추가
+````
