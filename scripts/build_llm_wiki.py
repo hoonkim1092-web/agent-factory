@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -17,6 +18,11 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    from scripts.codebase_symbols import build as _cs_build
+except ModuleNotFoundError:
+    from codebase_symbols import build as _cs_build
 
 # ---------------------------------------------------------------------------
 # 경로 상수 (POSIX 슬래시 리터럴 — OS 무관 frontmatter 안정성)
@@ -54,7 +60,7 @@ def _short_commit(workspace: str) -> str:
 def _make_frontmatter(workspace: str, sources: list[str]) -> str:
     commit = _short_commit(workspace)
     now = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-    src_lines = "\n".join(f"  - {s}" for s in sources)
+    src_lines = "\n".join(f"  - {json.dumps(s, ensure_ascii=False)}" for s in sources)
     return f"---\ngenerated_at: {now}\nsource_commit: {commit}\nsources:\n{src_lines}\n---\n\n"
 
 
@@ -102,6 +108,58 @@ def _parse_blueprint(text: str) -> dict:
             })
 
     return result
+
+
+def _slugify_blueprint_heading(heading: str) -> str:
+    if heading == "목차":
+        return "toc"
+    if heading == "유지보수 가이드":
+        return "maintenance-guide"
+    if heading.startswith("§"):
+        section_id = heading.split(maxsplit=1)[0]
+        return "section-" + section_id.removeprefix("§").replace(".", "-")
+    normalized = re.sub(r"[^0-9A-Za-z가-힣]+", "-", heading).strip("-").lower()
+    return normalized or "section"
+
+
+def _split_blueprint_sections(text: str) -> list[dict]:
+    """Master_Blueprint.md의 ## 섹션을 Obsidian 페이지 단위로 분할한다."""
+    lines = text.splitlines()
+    matches = [
+        (i, line)
+        for i, line in enumerate(lines)
+        if re.match(r"^##\s+", line)
+    ]
+    sections: list[dict] = []
+    if matches and matches[0][0] > 0:
+        preamble = "\n".join(lines[: matches[0][0]]).rstrip()
+        if preamble:
+            sections.append(
+                {
+                    "heading": "개요",
+                    "slug": "overview",
+                    "line": 1,
+                    "content": preamble + "\n",
+                }
+            )
+    seen: dict[str, int] = {}
+    for pos, (start, heading_line) in enumerate(matches):
+        end = matches[pos + 1][0] if pos + 1 < len(matches) else len(lines)
+        heading = heading_line.removeprefix("##").strip()
+        slug = _slugify_blueprint_heading(heading)
+        seen[slug] = seen.get(slug, 0) + 1
+        if seen[slug] > 1:
+            slug = f"{slug}-{seen[slug]}"
+        content = "\n".join(lines[start:end]).rstrip() + "\n"
+        sections.append(
+            {
+                "heading": heading,
+                "slug": slug,
+                "line": start + 1,
+                "content": content,
+            }
+        )
+    return sections
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +216,9 @@ def _build_index(workspace: str, sources: list[str]) -> str:
         + "- [[architecture]] — 모듈 구조 + 서브시스템 네비게이션\n"
         + "- [[review_patterns]] — 서브시스템별 코드 리뷰 패턴\n"
         + "- [[open_items]] — 미완료/보류 항목 (best-effort)\n"
-        + "- [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑\n\n"
+        + "- [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑\n"
+        + "- [[blueprint/index]] — Master Blueprint 섹션별 전문\n"
+        + "- [[symbols]] — 코드베이스 top-level 심볼 (AST 추출)\n\n"
         + "## 사용법\n\n"
         + "Obsidian에서 이 디렉터리를 vault로 열면 `[[...]]` 링크로 탐색 가능.\n"
         + "재생성: `python scripts/build_llm_wiki.py`\n\n"
@@ -231,8 +291,48 @@ def _build_open_items(workspace: str, sources: list[str], items: list[dict]) -> 
     return fm + "".join(lines)
 
 
+def _build_symbols(workspace: str, sources: list[str]) -> str:
+    fm = _make_frontmatter(workspace, sources + ["scripts/codebase_symbols.py", "**/*.py"])
+    header = (
+        "> Source: scripts/codebase_symbols.py (AST 추출, read-only)\n"
+        "> 관련: [[index]] | [[architecture]] | [[source_refs]]\n\n"
+    )
+    body = _cs_build(workspace)
+    return fm + header + body
+
+
+def _build_blueprint_index(workspace: str, sections: list[dict]) -> str:
+    fm = _make_frontmatter(workspace, [_BLUEPRINT])
+    lines = [
+        "# Master Blueprint — Section Index\n\n",
+        "> Source: Master_Blueprint.md 전체 섹션 분할\n",
+        "> 관련: [[index]] | [[architecture]] | [[source_refs]]\n\n",
+        "## Sections\n\n",
+    ]
+    for section in sections:
+        lines.append(
+            f"- [[blueprint/{section['slug']}|{section['heading']}]]"
+            f" — `Master_Blueprint.md:{section['line']}`\n"
+        )
+    return fm + "".join(lines)
+
+
+def _build_blueprint_section(workspace: str, section: dict) -> str:
+    fm = _make_frontmatter(workspace, [_BLUEPRINT])
+    return (
+        fm
+        + f"# {section['heading']}\n\n"
+        + f"> Source: `Master_Blueprint.md:{section['line']}`\n"
+        + "> 관련: [[blueprint/index]] | [[index]] | [[source_refs]]\n\n"
+        + "````markdown\n"
+        + section["content"]
+        + "````\n"
+    )
+
+
 def _build_source_refs(workspace: str, sources: list[str],
-                       bp: dict, cr_sections: list[dict]) -> str:
+                       bp: dict, cr_sections: list[dict],
+                       blueprint_sections: list[dict] | None = None) -> str:
     fm = _make_frontmatter(workspace, sources)
     commit = _short_commit(workspace)
     lines = [
@@ -244,7 +344,14 @@ def _build_source_refs(workspace: str, sources: list[str],
         "|------|----------|\n",
         "| §0 루트 파일 테이블 | `Master_Blueprint.md:§0 루트 파일` |\n",
         "| §0 core/ 파일 테이블 | `Master_Blueprint.md:§0 core/ 파일` |\n",
+        "| 섹션별 전문 mirror | `blueprint/*.md` |\n",
     ]
+    if blueprint_sections:
+        for section in blueprint_sections:
+            lines.append(
+                f"| {section['heading']} | `Master_Blueprint.md:{section['line']}`"
+                f" / [[blueprint/{section['slug']}]] |\n"
+            )
     for s in bp["subsystems"]:
         lines.append(f"| {s['id']} {s['name']} | `Master_Blueprint.md:{s['id']}` |\n")
 
@@ -262,6 +369,11 @@ def _build_source_refs(workspace: str, sources: list[str],
         "|------|----------|\n",
         "| 미완료/보류 항목 | `NEXT_STEPS.md` (마커 기반 추출) |\n",
         "| 세션 재개 가이드 | `NEXT_STEPS.md:1` |\n",
+        "\n## Codebase Symbols\n\n",
+        "| 항목 | 원본 경로 |\n",
+        "|------|----------|\n",
+        "| AST 심볼 추출기 | `scripts/codebase_symbols.py` |\n",
+        "| Python top-level classes/functions | `**/*.py` (runtime/cache/vendor 디렉터리 제외) |\n",
     ]
     return fm + "".join(lines)
 
@@ -283,6 +395,7 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
     ns_text = _read(_NEXT_STEPS)
 
     bp = _parse_blueprint(bp_text)
+    blueprint_sections = _split_blueprint_sections(bp_text)
     cr_sections = _parse_code_review(cr_text)
     open_items = _parse_open_items(ns_text)
 
@@ -293,12 +406,28 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
         "architecture.md": _build_architecture(workspace, sources, bp),
         "review_patterns.md": _build_review_patterns(workspace, sources, cr_sections),
         "open_items.md": _build_open_items(workspace, sources, open_items),
-        "source_refs.md": _build_source_refs(workspace, sources, bp, cr_sections),
+        "source_refs.md": _build_source_refs(workspace, sources, bp, cr_sections, blueprint_sections),
+        "symbols.md": _build_symbols(workspace, sources),
+        "blueprint/index.md": _build_blueprint_index(workspace, blueprint_sections),
     }
+    for section in blueprint_sections:
+        pages[f"blueprint/{section['slug']}.md"] = _build_blueprint_section(workspace, section)
+
+    blueprint_out = out_path / "blueprint"
+    if blueprint_out.exists():
+        expected_blueprint = {
+            (out_path / rel).resolve()
+            for rel in pages
+            if rel.startswith("blueprint/")
+        }
+        for stale in blueprint_out.glob("*.md"):
+            if stale.resolve() not in expected_blueprint:
+                stale.unlink()
 
     for fname, content in pages.items():
         target = out_path / fname
-        fd, tmp = tempfile.mkstemp(dir=out_path, suffix=".tmp")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=target.parent, suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(content)

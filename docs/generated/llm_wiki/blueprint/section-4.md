@@ -1,0 +1,75 @@
+---
+generated_at: 2026-06-07T21:32:08+09:00
+source_commit: 8552c501
+sources:
+  - "Master_Blueprint.md"
+---
+
+# §4 자가진화 루프
+
+> Source: `Master_Blueprint.md:1140`
+> 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
+
+````markdown
+## §4 자가진화 루프
+
+### 완전한 루프 추적
+
+```
+태스크 실패 감지
+  │
+  ├─ [DynamicOrchestrator] _cross_verified_evaluate()
+  │   └─ CrossVerificationLoop.run()
+  │       ├─ 병렬 실행 → 결과 수집
+  │       ├─ 순환 피어 리뷰
+  │       ├─ Opus 판정 → failure_patterns 추출
+  │       └─ verdict 반환
+  │
+  ├─ [DynamicOrchestrator] _try_evolve_from_patterns(failure_patterns)
+  │   ├─ 패턴 키워드 → 스킬 이름 매핑
+  │   └─ evolve_skill(skill_dir, feedback)
+  │       ├─ .bak 백업 생성
+  │       ├─ LLM으로 개선 코드 생성
+  │       ├─ quick_guard() AST 검증
+  │       ├─ run_isolated() 샌드박스 테스트
+  │       └─ version bump (0.x.y → 0.x.(y+1))
+  │
+  ├─ [SkillEvolutionBus] on_skill_evolved() → 7단계 캐시 무효화
+  │
+  ├─ [재시도] _task_retry_count 확인
+  │   └─ count >= 3 → SKIP (스킵 후 다음 태스크)
+  │
+  └─ 다음 사이클에서 진화된 스킬로 재실행
+```
+
+### 스킬 자동 품질 감사 (백그라운드)
+
+`SkillSelfEvolutionHook` (실행 우선순위=80):
+- 에이전트 10회 실행마다 → `bulk_enrich_all_skills(max_skills=5)`
+- 품질 점수 < 0.5인 스킬 자동 메타데이터 개선
+- 백그라운드 스레드에서 실행 (메인 파이프라인 블로킹 없음)
+
+**품질 점수 공식:**
+```
+description(>10자)  +0.20
+when_to_use         +0.20
+keywords            +0.20
+semantic_tags       +0.20
+category(비기본값)   +0.10
+when_NOT_to_use     +0.10
+──────────────────────────
+최대                  1.0
+```
+
+### 자동 코드 리뷰 + 문서 업데이트 (백그라운드)
+
+`CodeReviewDocHook` (실행 우선순위=85):
+- 에이전트 실행 성공(`result["ok"]==True`) 후 자동 트리거
+- `git diff`로 변경 파일 감지 → `ControlPlaneLLM`으로 코드 리뷰
+- `docs/code_review.md`에 리뷰 결과 append
+- `docs/change_history.md`에 변경 이력 append
+- LLM 미사용 시 파일 목록만 기록 (graceful degradation)
+- 백그라운드 daemon 스레드 (메인 파이프라인 블로킹 없음, Lock으로 중복 방지)
+
+---
+````

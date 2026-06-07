@@ -1,15 +1,15 @@
 ---
-generated_at: 2026-06-07T19:45:13+09:00
-source_commit: fe08d13b
+generated_at: 2026-06-07T21:32:06+09:00
+source_commit: 8552c501
 sources:
-  - Master_Blueprint.md
-  - docs/code_review/code-review.md
-  - NEXT_STEPS.md
+  - "Master_Blueprint.md"
+  - "docs/code_review/code-review.md"
+  - "NEXT_STEPS.md"
 ---
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `fe08d13b`
+> source_commit: `8552c501`
 > 관련: [[index]] | [[architecture]] | [[review_patterns]]
 
 ## Master_Blueprint.md
@@ -18,6 +18,23 @@ sources:
 |------|----------|
 | §0 루트 파일 테이블 | `Master_Blueprint.md:§0 루트 파일` |
 | §0 core/ 파일 테이블 | `Master_Blueprint.md:§0 core/ 파일` |
+| 섹션별 전문 mirror | `blueprint/*.md` |
+| 개요 | `Master_Blueprint.md:1` / [[blueprint/overview]] |
+| 목차 | `Master_Blueprint.md:9` / [[blueprint/toc]] |
+| §0 빠른 참조 테이블 | `Master_Blueprint.md:27` / [[blueprint/section-0]] |
+| §1 아키텍처 개요 | `Master_Blueprint.md:239` / [[blueprint/section-1]] |
+| §2 실행 흐름 | `Master_Blueprint.md:275` / [[blueprint/section-2]] |
+| §3 핵심 서브시스템 | `Master_Blueprint.md:430` / [[blueprint/section-3]] |
+| §4 자가진화 루프 | `Master_Blueprint.md:1140` / [[blueprint/section-4]] |
+| §5 에이전트 간 통신 | `Master_Blueprint.md:1202` / [[blueprint/section-5]] |
+| §6 모델 라우팅 | `Master_Blueprint.md:1233` / [[blueprint/section-6]] |
+| §7 안전장치 | `Master_Blueprint.md:1269` / [[blueprint/section-7]] |
+| §8 빌드 & 배포 | `Master_Blueprint.md:1418` / [[blueprint/section-8]] |
+| §9 설정 레퍼런스 | `Master_Blueprint.md:1537` / [[blueprint/section-9]] |
+| §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1593` / [[blueprint/section-10]] |
+| §11 알려진 제약·이슈 | `Master_Blueprint.md:1647` / [[blueprint/section-11]] |
+| §12 변경 이력 | `Master_Blueprint.md:1679` / [[blueprint/section-12]] |
+| 유지보수 가이드 | `Master_Blueprint.md:2836` / [[blueprint/maintenance-guide]] |
 | §3.1 ProjectPipeline | `Master_Blueprint.md:§3.1` |
 | §3.2 DynamicOrchestrator | `Master_Blueprint.md:§3.2` |
 | §3.3 AgentRunner | `Master_Blueprint.md:§3.3` |
@@ -65,3 +82,10 @@ sources:
 |------|----------|
 | 미완료/보류 항목 | `NEXT_STEPS.md` (마커 기반 추출) |
 | 세션 재개 가이드 | `NEXT_STEPS.md:1` |
+
+## Codebase Symbols
+
+| 항목 | 원본 경로 |
+|------|----------|
+| AST 심볼 추출기 | `scripts/codebase_symbols.py` |
+| Python top-level classes/functions | `**/*.py` (runtime/cache/vendor 디렉터리 제외) |

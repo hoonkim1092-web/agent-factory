@@ -1,0 +1,45 @@
+---
+generated_at: 2026-06-07T21:32:09+09:00
+source_commit: 8552c501
+sources:
+  - "Master_Blueprint.md"
+---
+
+# §11 알려진 제약·이슈
+
+> Source: `Master_Blueprint.md:1647`
+> 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
+
+````markdown
+## §11 알려진 제약·이슈
+
+### 현재 제약사항
+
+| 항목 | 내용 | 해결 방안 |
+|------|------|----------|
+| **Self-hosting 제한** | af.exe는 자기 소스(`core/*.py`)를 수정 불가 | 소스 모드(`python run_factory_cli.py`)로 실행 |
+| **GOOGLE_API_KEY 없음** | ~~Lilith LLM 실패 → cycle 낭비~~ **해결됨**: ControlPlaneLLM이 CLI-first로 동작 | — |
+| **TCP Broker 미연결** | agent_worker.py가 TCP 브로커에 실제 연결 안 함 | 파일 기반 Mailbox는 정상 동작 |
+| **max_cycles 소진** | ~~Lilith LLM 오류 누적 시 사이클 낭비~~ **완화됨**: `compute_max_cycles()` 동적 산정(max(30, pending*3)), infra 실패 즉시 종료, ControlPlaneLLM CLI fallback | — |
+| **cross_verification level** | DynamicOrchestrator에서 항상 dynamic(1라운드) 고정 | enterprise 모드 옵션 추가 가능 |
+| **LFS zip 빌드 반복** | 매 버전마다 44MB zip LFS 푸시 필요 | 릴리스 asset URL 사용 시 PowerShell 리다이렉트 실패 |
+
+### 에러 코드 해설
+
+| 에러 | 원인 | 수정 위치 |
+|------|------|----------|
+| `worker_exited_code_2` | frozen exe에서 `python agent_worker.py` 실행 시도 | `dynamic_orchestrator.py:515` frozen 분기 |
+| `stopped_max_cycles` | `compute_max_cycles()` 사이클 내 완료 못함 (기본 max(30, pending*3)) | Lilith LLM 실패율, 태스크 재시도 횟수 확인 |
+| `worker_timeout` | 에이전트 3600초 초과 | `dynamic_orchestrator.py:526` max_wait 조정 |
+| `worker_result_corrupt` | worker가 이미 종료됐지만 result.json이 부분 기록(corrupt) 상태 — 이전에는 3600초 폴링 대기. 수정(2026-05-17): `agent_worker.py` atomic write + corrupt 감지 시 `proc.poll() is not None`이면 즉시 반환. `failure_classifier._INFRA_PATTERNS`에 등록 — 미등록 시 IMPLEMENTATION 분류로 FSA 재시도 유발됨 | `core/dynamic_orchestrator.py` polling loop / `core/agent_worker.py` tempfile+os.replace / `core/failure_classifier.py` |
+| `empty_llm_response` | LLM 호출 실패 (API 키 없음 등) | 환경 변수 및 CLI 설치 확인 |
+| 다운로드 연결 끊김 | GitHub release asset 리다이렉트 실패 | raw LFS URL 사용 (`install-af.ps1:98`) |
+| `NameError: name '_safe_print' is not defined` | `core/project_pipeline.py` 780/782/848/850이 `_safe_print`를 미import — plan verify WARN + structural gate 예외 + doc cross-review 예외 분기에서만 노출됨 | `core/agent_runner.py`에서 import (`from core.agent_runner import _safe_print`) — 2026-04-15 fix |
+| 파이프라인이 `src/` 구현 태스크에 도달 못 하고 Cycle 30에 exit | `core/project_task_board.py::next_board_tasks`의 정렬 key가 `(phase, module_id, task_id)`로 phase 우선이었음 → 모든 모듈의 scope를 먼저 소화하다가 `max_cycles=30` 소진. 실측(`lotto-pattern-predictor`, 2026-04-15): 24 태스크 중 scope 4개만 완료, build 단계 0건. | 정렬을 `(_module_sort_key(module_id), phase, task_id)` 순으로 변경해 module waterfall로 전환 + `dynamic_orchestrator._orchestration_loop`의 `max_cycles`를 `max(30, pending*3)`로 동적화 — 2026-04-15 fix |
+| `SessionStart:startup hook error` + `ModuleNotFoundError: No module named 'yaml'` | Claude native hook가 절대경로 Homebrew `python3.14`로 `scripts/cli_hook_bridge.py`를 직접 실행했고, 해당 인터프리터에 `PyYAML`이 없어 `core.providers.__init__` import 단계에서 즉시 실패. legacy unnamed hook와 빈 hook group이 `.claude/settings.local.json`에 누적되어 같은 에러가 반복 노출됨. | `core/providers/session_adapter.py`가 hook 명령을 `python3 scripts/hook_runner.py cli_hook_bridge ...` 경유로 생성하도록 변경해 프로젝트 `.venv` Python을 다시 찾게 함 + legacy bridge hook/빈 group 자동 정리 — 2026-04-16 fix |
+| **PostToolUse hook no-op** (증상: `[af-review-pending]` 트리거 0회) | PostToolUse 훅 명령이 `$TOOL_INPUT_file_path` 환경변수를 참조하지만 Claude Code는 hook 데이터를 **stdin JSON**으로만 전달 → `$fp`가 항상 빈 문자열 → `case "$fp" in *.py)` 매칭 실패 → 전체 no-op. 세션 통계 상 PostToolUse 0회 발화. 감지: `.af_review_queue/hook_events.log` 없음 + `.af_review_queue/pending_agent_review.json` 없음 | `.claude/settings.local.json`의 5개 PostToolUse 명령을 `python3 scripts/hook_runner.py post_edit_*` builtin 형식으로 교체. `hook_runner.py`에 `_BUILTINS` 분기 테이블 + `_read_hook_stdin_once()` + `_extract_file_path()` 신설해 stdin JSON을 파싱하여 파일 경로를 추출 — 2026-04-17 fix |
+| **review-gate: 첫 커밋(HEAD~1 없음)** | `post_commit_clear` hook이 `git diff HEAD~1 --name-only`를 실행하는데, 레포 첫 커밋에서는 HEAD~1이 없어 returncode != 0 → `clear_committed_files` 미호출 → 큐 잔류 | `_post_commit_clear`에서 returncode != 0이면 즉시 return 0(fail-open). 큐가 남아도 다음 커밋 성공 시 정리되므로 실질적 영향 없음 |
+| **review-gate: 병렬 tier 기록 경쟁** | af-test-runner·af-critic·af-cross-review 세 에이전트가 동시에 `record_review_done()`을 호출하면 JSON 덮어쓰기로 일부 tier 유실 가능 | `_state_lock()` fcntl exclusive lock (POSIX 전용; Windows는 best-effort no-op) + atomic rename으로 해결. TOCTOU 방지: files_snapshot은 락 내부 최신 state에서 읽음 |
+
+---
+````

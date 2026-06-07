@@ -13,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from scripts.build_llm_wiki import (
     _parse_blueprint,
+    _split_blueprint_sections,
     _parse_code_review,
     _parse_open_items,
     build,
@@ -26,6 +27,9 @@ from scripts.build_llm_wiki import (
 # 픽스처 — 최소 원본 텍스트
 # ---------------------------------------------------------------------------
 _SAMPLE_BLUEPRINT = """\
+# Agent Factory — Master Blueprint
+<!-- last_updated: 2026-06-07 | version: test -->
+
 ## §0 빠른 참조 테이블
 
 ### 루트 파일
@@ -113,6 +117,23 @@ class TestParsers:
         s31 = next(s for s in bp["subsystems"] if s["id"] == "§3.1")
         assert s31["file"] == "core/project_pipeline.py"
 
+    def test_blueprint_sections_split_for_obsidian_pages(self):
+        sections = _split_blueprint_sections(_SAMPLE_BLUEPRINT + "\n## 목차\n\n- item\n\n## 유지보수 가이드\n\n내용.\n")
+        headings = [s["heading"] for s in sections]
+        slugs = [s["slug"] for s in sections]
+        assert "목차" in headings
+        assert "개요" in headings
+        assert "§0 빠른 참조 테이블" in headings
+        assert "§1 아키텍처 개요" in headings
+        assert "§3 핵심 서브시스템" in headings
+        assert "유지보수 가이드" in headings
+        assert "overview" in slugs
+        assert "toc" in slugs
+        assert "section-0" in slugs
+        assert "section-1" in slugs
+        assert "section-3" in slugs
+        assert "maintenance-guide" in slugs
+
     def test_code_review_extracts_sections(self):
         sections = _parse_code_review(_SAMPLE_CODE_REVIEW)
         ids = [s["id"] for s in sections]
@@ -155,23 +176,91 @@ class TestBuild:
         (tmp_path / "NEXT_STEPS.md").write_text(_SAMPLE_NEXT_STEPS, encoding="utf-8")
         return build(workspace=str(tmp_path), out_dir=out_sub)
 
-    # --- 5개 파일 생성 ---
-    def test_five_pages_generated(self, tmp_path):
+    def _generated_files(self, root: Path) -> list[Path]:
+        return sorted(p for p in root.rglob("*.md") if p.is_file())
+
+    # --- 기본 6개 + Blueprint 섹션 페이지 생성 ---
+    def test_expected_pages_generated(self, tmp_path):
         pages = self._build_with_samples(tmp_path)
-        assert len(pages) == 5
+        assert len(pages) == 11
 
     def test_all_expected_files_exist(self, tmp_path):
         self._build_with_samples(tmp_path)
         out = tmp_path / "wiki"
         for name in ("index.md", "architecture.md", "review_patterns.md",
-                     "open_items.md", "source_refs.md"):
+                     "open_items.md", "source_refs.md", "symbols.md"):
             assert (out / name).exists(), f"{name} 미생성"
+        for name in ("index.md", "overview.md", "section-0.md", "section-1.md", "section-3.md"):
+            assert (out / "blueprint" / name).exists(), f"blueprint/{name} 미생성"
+
+    def test_blueprint_overview_contains_preamble(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        overview = (tmp_path / "wiki" / "blueprint" / "overview.md").read_text(encoding="utf-8")
+        index = (tmp_path / "wiki" / "blueprint" / "index.md").read_text(encoding="utf-8")
+
+        assert "# Agent Factory — Master Blueprint" in overview
+        assert "version: test" in overview
+        assert "[[blueprint/overview|개요]]" in index
+
+    def test_blueprint_section_pages_contain_source_content(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        section = (tmp_path / "wiki" / "blueprint" / "section-0.md").read_text(encoding="utf-8")
+        index = (tmp_path / "wiki" / "blueprint" / "index.md").read_text(encoding="utf-8")
+        source_refs = (tmp_path / "wiki" / "source_refs.md").read_text(encoding="utf-8")
+
+        assert "Master_Blueprint.md:" in section
+        assert "````markdown" in section
+        assert "## §0 빠른 참조 테이블" in section
+        assert "`agent_launcher.py`" in section
+        assert "[[blueprint/section-0|§0 빠른 참조 테이블]]" in index
+        assert "[[blueprint/section-0]]" in source_refs
+
+    def test_stale_blueprint_generated_pages_are_removed(self, tmp_path):
+        stale_dir = tmp_path / "wiki" / "blueprint"
+        stale_dir.mkdir(parents=True)
+        stale = stale_dir / "old-section.md"
+        stale.write_text("stale", encoding="utf-8")
+
+        self._build_with_samples(tmp_path)
+
+        assert not stale.exists()
+
+    def test_symbols_page_contains_ast_content(self, tmp_path):
+        """symbols.md는 AST 추출 심볼을 포함한다 — 실제 .py fixture로 검증."""
+        # .py 파일을 workspace에 추가해 _cs_build()가 실제 심볼을 추출하도록 한다
+        (tmp_path / "sample_mod.py").write_text(
+            "class WikiEngine:\n    pass\n\ndef wiki_run():\n    return 1\n",
+            encoding="utf-8",
+        )
+        self._build_with_samples(tmp_path)
+        symbols = (tmp_path / "wiki" / "symbols.md").read_text(encoding="utf-8")
+        assert "Codebase Symbols" in symbols
+        assert "[[index]]" in symbols
+        # _cs_build()가 실제로 연결돼 심볼을 추출했는지 확인
+        assert "sample_mod.py" in symbols
+        assert "WikiEngine" in symbols
+        assert "wiki_run" in symbols
+        assert "scripts/codebase_symbols.py" in symbols
+        assert "**/*.py" in symbols
+
+    def test_source_refs_includes_symbols_sources(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        source_refs = (tmp_path / "wiki" / "source_refs.md").read_text(encoding="utf-8")
+        assert "Codebase Symbols" in source_refs
+        assert "scripts/codebase_symbols.py" in source_refs
+        assert "**/*.py" in source_refs
+
+    def test_frontmatter_quotes_glob_sources(self, tmp_path):
+        self._build_with_samples(tmp_path)
+        symbols = (tmp_path / "wiki" / "symbols.md").read_text(encoding="utf-8")
+        assert '- "**/*.py"' in symbols
+        assert "- **/*.py" not in symbols
 
     # --- source reference ---
     def test_each_page_has_source_ref(self, tmp_path):
         self._build_with_samples(tmp_path)
         out = tmp_path / "wiki"
-        for fname in out.iterdir():
+        for fname in self._generated_files(out):
             content = fname.read_text(encoding="utf-8")
             assert "Source" in content, f"{fname.name}에 Source ref 없음"
 
@@ -180,7 +269,7 @@ class TestBuild:
         self._build_with_samples(tmp_path)
         out = tmp_path / "wiki"
         wikilink_re = re.compile(r"\[\[[^\]]+\]\]")
-        for fname in out.iterdir():
+        for fname in self._generated_files(out):
             content = fname.read_text(encoding="utf-8")
             assert wikilink_re.search(content), f"{fname.name}에 [[wikilink]] 없음"
 
@@ -188,7 +277,7 @@ class TestBuild:
     def test_frontmatter_present(self, tmp_path):
         self._build_with_samples(tmp_path)
         out = tmp_path / "wiki"
-        for fname in out.iterdir():
+        for fname in self._generated_files(out):
             content = fname.read_text(encoding="utf-8")
             assert content.startswith("---"), f"{fname.name} frontmatter 없음"
             assert "generated_at:" in content
@@ -218,13 +307,13 @@ class TestBuild:
 
         self._build_with_samples(tmp_path, out_sub="wiki1")
         run1 = {
-            p.name: _body(p.read_text(encoding="utf-8"))
-            for p in (tmp_path / "wiki1").iterdir()
+            p.relative_to(tmp_path / "wiki1").as_posix(): _body(p.read_text(encoding="utf-8"))
+            for p in self._generated_files(tmp_path / "wiki1")
         }
         self._build_with_samples(tmp_path, out_sub="wiki2")
         run2 = {
-            p.name: _body(p.read_text(encoding="utf-8"))
-            for p in (tmp_path / "wiki2").iterdir()
+            p.relative_to(tmp_path / "wiki2").as_posix(): _body(p.read_text(encoding="utf-8"))
+            for p in self._generated_files(tmp_path / "wiki2")
         }
         for fname, body in run1.items():
             assert body == run2[fname], f"{fname} body가 두 실행 간 다름"
@@ -234,6 +323,6 @@ class TestBuild:
         self._build_with_samples(tmp_path)
         iso_re = re.compile(r"generated_at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
         out = tmp_path / "wiki"
-        for fname in out.iterdir():
+        for fname in self._generated_files(out):
             content = fname.read_text(encoding="utf-8")
             assert iso_re.search(content), f"{fname.name}의 generated_at 포맷 이상"

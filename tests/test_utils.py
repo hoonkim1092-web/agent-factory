@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis
 from core.utils import test_file_for as _test_file_for
 from core.utils import get_external_skill_roots, get_codex_skill_roots
 from core.config_paths import SKILLS_DIR
@@ -887,3 +887,37 @@ class TestSpearmanCorrelation:
 
     def test_반환_타입은_float(self):
         assert isinstance(spearman_correlation([1, 2, 3], [4, 5, 6]), float)
+
+
+class TestKurtosis:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            kurtosis([])
+
+    def test_단일_원소는_ValueError(self):
+        with pytest.raises(ValueError):
+            kurtosis([5.0])
+
+    def test_동일값_목록은_ValueError(self):
+        with pytest.raises(ValueError):
+            kurtosis([3.0, 3.0, 3.0])
+
+    def test_두_원소_분포는_마이너스2(self):
+        assert kurtosis([0.0, 1.0]) == pytest.approx(-2.0)
+
+    def test_균등_분포는_음수_첨도(self):
+        assert kurtosis([1.0, 2.0, 3.0, 4.0, 5.0]) == pytest.approx(-1.3)
+
+    def test_대칭_선형_분포(self):
+        assert kurtosis([-2.0, -1.0, 0.0, 1.0, 2.0]) == pytest.approx(-1.3)
+
+    def test_고첨도_분포는_양수(self):
+        values = [0.0] * 9 + [10.0]
+        assert kurtosis(values) > 0.0
+
+    def test_공식_검증(self):
+        # [0,0,0,1]: kurtosis = 7/3 - 3 = -2/3
+        assert kurtosis([0.0, 0.0, 0.0, 1.0]) == pytest.approx(-2.0 / 3.0)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(kurtosis([1, 2, 3, 4, 5]), float)

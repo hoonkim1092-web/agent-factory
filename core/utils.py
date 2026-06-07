@@ -335,6 +335,22 @@ def spearman_correlation(xs: list[int | float], ys: list[int | float]) -> float:
     return pearson_correlation(_rank(xs), _rank(ys))
 
 
+def kurtosis(values: list[int | float]) -> float:
+    """초과 첨도(excess kurtosis)를 float로 반환한다 (Fisher's definition).
+
+    정규분포 = 0.0. 빈 리스트이면 ValueError. 표준편차 0이면 ValueError.
+    공식: (1/n * Σ((x−μ)/σ)^4) − 3
+    """
+    if not values:
+        raise ValueError("빈 리스트에서 첨도를 계산할 수 없습니다.")
+    n = len(values)
+    mean = sum(values) / n
+    sd = std_dev(values)
+    if sd == 0.0:
+        raise ValueError("표준편차가 0인 경우 첨도를 계산할 수 없습니다.")
+    return sum(((x - mean) / sd) ** 4 for x in values) / n - 3.0
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

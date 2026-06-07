@@ -1,0 +1,44 @@
+---
+generated_at: 2026-06-07T21:32:08+09:00
+source_commit: 8552c501
+sources:
+  - "Master_Blueprint.md"
+---
+
+# §5 에이전트 간 통신
+
+> Source: `Master_Blueprint.md:1202`
+> 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
+
+````markdown
+## §5 에이전트 간 통신
+
+### 두 가지 통신 채널
+
+| 채널 | 파일 | 특징 |
+|------|------|------|
+| **TCP MessageBroker** | `core/message_broker.py` | DynamicOrchestrator 내부 pub/sub, 포트 동적 할당 |
+| **파일 기반 Mailbox** | `core/project_mailbox.py` | JSONL 파일, 에이전트 간 비동기 메시지 |
+
+### Mailbox 메시지 타입 (우선순위 순)
+
+| 타입 | 우선순위 | 용도 |
+|------|---------|------|
+| `blocker` | 0 | 차단 이슈, 즉시 해결 필요 |
+| `decision_request` | 1 | 결정 요청 |
+| `review_request` | 2 | 검토 요청 |
+| `handoff` | 3 | 작업 인계 |
+| `result` | 6 | 완료 결과 |
+
+**메시지 파일 위치:** `{workspace}/data/comm/messages.jsonl`
+
+**핵심 함수:**
+```python
+send_agent_message(workspace, from_role, to_role, msg_type, content, task_id)
+read_inbox(workspace, role, task_id, status_filter)
+ack_mailbox_message(workspace, message_id)
+mailbox_prompt_digest(workspace, role)  # LLM 컨텍스트용 포맷
+```
+
+---
+````

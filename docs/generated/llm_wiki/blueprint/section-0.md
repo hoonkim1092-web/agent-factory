@@ -1,0 +1,225 @@
+---
+generated_at: 2026-06-07T21:32:08+09:00
+source_commit: 8552c501
+sources:
+  - "Master_Blueprint.md"
+---
+
+# §0 빠른 참조 테이블
+
+> Source: `Master_Blueprint.md:27`
+> 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
+
+````markdown
+## §0 빠른 참조 테이블
+
+### 루트 파일
+
+| 파일 | 역할 | 주요 클래스/함수 |
+|------|------|----------------|
+| `run_factory_cli.py` | CLI 진입점 (STAGE 1/2/3) | `main()`, `_STAGE1_DISPATCH` (dispatch dict), `_STAGE1_USAGE`, `_is_help_arg()`, `_run_setup_gate()`, `_invoke_nlm_app()`, `__nlm` / `__check-nlm` 숨은 서브커맨드 |
+| `agent_launcher.py` | AgentFactory 부트스트랩. CLI 진입 시 stdin/stdout/stderr 및 child env를 UTF-8 기본값으로 고정해 Windows/macOS 출력 깨짐을 방지. | `AgentFactory`, `_configure_cli_text_streams()`, `_utf8_subprocess_env()` |
+| `model_utils.py:1-845` | 모델 선택·티어 관리 | `_ROLE_ENGINE_MAP`, `_ROLE_CLI_PREFERENCE`, `pick_provider()` |
+| `version.py` | 버전 문자열 | `__version__` |
+| `build_exe.py` | PyInstaller 빌드 | `main()` |
+| `install-af.ps1` | Windows 설치 스크립트 | Chrome 감지(레지스트리), `__check-nlm` 검증 |
+| `install-af.sh` | macOS/Linux 설치 스크립트 (소스모드, venv 기반) | Chrome 감지, `__check-nlm` 검증, curl/wget fallback |
+| `af.spec` | PyInstaller 스펙 | hiddenimports 목록 |
+| `policy.yaml` | 전역 정책 | engines, skills, task_decomposition |
+
+### core/ 파일
+
+| 파일 | 역할 | 주요 클래스/함수 |
+|------|------|----------------|
+| `core/string_utils.py` | 문자열 유틸리티 | `truncate(s, max_len, suffix)` |
+| `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
+| `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
+| `core/agent_worker.py` | PyInstaller worker 진입점. stdout/stderr `errors=replace`로 Windows/macOS 콘솔 인코딩 차이로 인한 worker 조기 종료를 방지. | `main()` |
+| `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` + `_read_block_cause()` (P5), `initialize(status, execution_open)` (v4), DomainVerdict 매트릭스 `_HIGH_BLAST_RADIUS` (P5) |
+| `core/control/verdicts.py` | Stage 0 verdict/route/cause enum 단일 원천 | `QuestionRoute`, `DomainVerdict`, `BlockCause` |
+| `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass | `ContextScanArtifact`, `ProjectGoalArtifact`, `DomainReviewArtifact`, `AssumptionLedgerEntry`, `PausedHitlArtifact`, `PausedHitlQuestion` |
+| `core/control/question_router.py` | Stage 0 순수 분류기 (파일 쓰기 없음) | `QuestionRouter`, `Question`, `QuestionResult`, `QuestionBatchResult`, `load_question_schema()` |
+| `core/control/stage_router.py` | Stage 0 오케스트레이터 | `StageRouter.run()` (work_kind 분기·artifact 렌더링·paused_hitl 방출) |
+| `core/control/context_scanner.py` | LightContextScanner (LLM 0회) | `LightContextScanner.scan()` → `ContextScanArtifact` |
+| `core/escalation_evaluator.py` | P2 에스컬레이션 규칙 평가 | `RunDecision`, `EscalationDecision`, `evaluate()`, `compute_run_decision()`, `load_policy()` |
+| `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | `write_decision_report()`, `write_error_decision()` |
+| `core/warning_overrides.py` | false-positive override 관리 (P2 신규) | `upsert_override()`, `remove_override()`, `overrides_path()` |
+| `core/warning_registry.py` | WARN 기록 SoT + summarize + decision 트리거 | `WarningRecord`, `WarningRegistry`, `_build_summary()`, `_write_minimal_block_decision()` |
+| `core/warning_stats.py` | P3 read-only 분석 도구 — workspace fan-out + 분포 통계. malformed JSONL 경고 경로는 OS와 무관하게 `/` 포맷으로 출력. | `iter_warning_records()`, `collect_workspace_stats()`, `_load_index()`, `_compute_distribution()` |
+| `core/ast_engine.py` | AST 분석 엔진 (ast-grep-py wrapper) | `search()`, `replace()`, `search_file()` |
+| `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
+| `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | `build_full()`, `save_full()`, `build()`, `save()`, `load()` |
+| `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | `run(workspace)` |
+| `scripts/build_llm_wiki.py` | LLM Wiki Phase 0 — 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS → docs/generated/llm_wiki/ 5페이지 | `build(workspace, out_dir)`, `main()` |
+| `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | `select_model()`, `log_routing()`, `store_pending_escalation()`, `get_pending_escalation()`, `clear_pending_escalation()` |
+| `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | `main()` |
+| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | `is_gate_blocked()`, `record_review_done()`, `_required_tiers_for()`, `_deterministic_t3_skip_candidate()`, `_is_always_tier3()`, `_telemetry_skip_enacted()`, `_cli()` |
+| `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | `CLASSIFIER_VERSION`, `classify_t3_requirement()`, `record_skip_telemetry()` |
+| `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | `append_metric()`, `append_skip_audit()`, `compute_report()`, `compute_t3_telemetry_skip()` |
+| `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | `main()` |
+| `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | `DoctorResult`, `run_checks()`, `format_text()`, `format_json()`, `main()` |
+| `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | `inspect_project()`, `format_markdown()`, `_recommend_next_steps()`, `main()` |
+| `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
+| `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
+| `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
+| `core/control_plane_llm.py` | Control-plane CLI-first LLM | `ControlPlaneLLM` |
+| `core/cross_verification.py:1-758` | 멀티 CLI 교차검증 | `CrossVerificationLoop` |
+| `core/dashboard.py` | 실행 이력 모니터링 | `append_dashboard_run()` |
+| `core/destructive_guard.py` | 위험 명령 차단 | `inject_destructive_guard_contract()` |
+| `core/design_review_utils.py` | 설계문서 교차검증 공유 유틸 (watcher 관리, 큐 관리, 패턴 매칭) | `is_design_doc()`, `is_code_file()`, `enqueue()`, `ensure_watcher()`, `_try_acquire_spawn_lock()`, `_release_spawn_lock()`, `_matches_glob()`, `INCLUDE_PATTERNS`, `EXCLUDE_PATTERNS`, `SPAWN_LOCK_FILE`, `SPAWN_LOCK_TTL` |
+| `core/document_chunker.py` | 문서 청킹 (RAG) | `DocumentChunker`, `DocumentChunk` |
+| `core/document_index.py` | Dense+Sparse 하이브리드 검색 | `DocumentIndex` |
+| `core/documentation_policy.py` | 주석/문서화 정책 주입 + `.todo.md` board 동기화 | `inject_documentation_contract()`, `write_project_todo()`, `_instruction_status_map()` |
+| `core/dynamic_orchestrator.py:1-887` | 멀티 에이전트 비동기 오케스트레이터 (sparse governor) | `DynamicOrchestrator`, `restore_from()` (tick 재기동 복원) |
+| `core/nightly_state.py` | 야간 자율 파이프라인 상태 관리 (state_snapshot.json) | `NightlyState`, `load_state()`, `save_state()`, `BudgetState` |
+| `core/watchdog.py` | tick 기반 stall 감지 + lineage 상한 감지 | `WatchdogState`, `tick_progress()`, `tick_no_progress()`, `is_lineage_maxed()`, `degrade_lineage()` |
+| `core/lineage_ledger.py` | lineage 기반 Level 누적 원장 (atomic file write, `_MAX_LEVEL=5`, success 시 level/attempts 리셋) | `LineageEntry`, `LineageLedger`, `get_lineage_ledger()` |
+| `core/memory_system/strategy_ledger.py` | 역할 배정·실패 패턴 영구 원장 (Phase 4) | `StrategyLedger`, `get_strategy_ledger()`, `lookup_best_role()`, `record_role_batch()` |
+| `core/engine_auth.py` | CLI 프로바이더 자동 감지·설정 (API 키 유무 기반 우선순위 정렬) | `auto_configure_cli_provider()`, `_has_required_credentials()` |
+| `core/evaluator.py` | 실패 분석 (retry/pivot/abort) | `StrategyEvaluator` |
+| `core/executor.py` | 태스크 실행 래퍼 | — |
+| `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
+| `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
+| `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | `SkillPackBootstrapper`, `check_installed()`, `missing()`, `installed()` |
+| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리 | `FSALoop`, `run_mission()`, `_run_agent()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
+| `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
+| `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
+| `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | `SkillSelfEvolutionHook` |
+| `core/hooks/code_review_doc.py` | 실행 후 자동 코드 리뷰 + 문서 업데이트 | `CodeReviewDocHook` |
+| `core/hooks/guardrails.py` | 실행 가드레일 | `IntentGateHook` |
+| `core/ingestion_pipeline.py` | 문서 인덱싱 파이프라인 | `IngestionPipeline` |
+| `core/interactive_chat.py` | 대화형 PDCA 모드 (autosave/resume) | `run_interactive()`, `InteractiveChat.load_session()`, `resume_from_session()` |
+| `core/ise_loop.py` | 무한 자가진화 루프 | `ISELoop` |
+| `core/llm_engine.py` | LLM API 호출 엔진 | `LLMEngine` |
+| `core/manager.py` | 에이전트 생성·로드 | `AgentManager`, `RequirementAnalyzer` |
+| `core/memory_system/facade.py` | 메모리 단일 진입점 | `UnifiedMemoryFacade` |
+| `core/message_broker.py` | TCP/인메모리 메시지 브로커 | `MessageBroker` |
+| `core/model_router.py` | CLI 프로바이더 선택 | `ModelRouter` |
+| `core/policy_runtime.py` | 정책 런타임 래퍼 | `PolicyRuntime` |
+| `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | `send_agent_message()`, `read_inbox()` |
+| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **F15**: `runtime_workspace`로 `.checkpoint/`, `runtime/warnings/`, strategy ledger, orchestrator `runs/data/artifacts`를 사용자 workspace와 분리. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | `ProjectPipeline`, `PreparedBrief`, `PreparedProject`, `ResearchGateBlocked` |
+| `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | `SpecGenerator`, `AdrGenerator`, `TraceabilityGenerator`, `_call_llm_raw`, `SPEC_FILENAMES` |
+| `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | `update_project_board_task()`, `sync_todo_from_board()` |
+| `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입 | `execute_cli_chat()`, `_progress_printer()`, `_compose_prompt()`, `_collect_git_context()`, `_detect_repo_root()` |
+| `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize | `prepare_cli_session()`, `handle_hook_event()` |
+| `core/provider_detect.py` | 3-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. ThreadPool race condition 수정: installed_set을 ThreadPool 전 1회 계산 후 각 worker에 frozenset 전달. codex_cli ping: --version (exec stdin hang 수정). CLI ping stdout/stderr는 UTF-8/errors=replace로 디코딩. | `ProviderState`, `ProviderProbeResult`, `detect_provider_states()`, `invalidate_cache()`, `_resolve_ping_cmd()`, `_probe_one(provider_id, installed)` |
+| `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | `get_requested_cli_providers()`, `pick_review_provider()`, `_unix_npm_global_dirs()`, `_installed_cli_cache_lock` |
+| `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | `query_notebooklm()`, `create_notebook()`, `inject_sources()`, `_nlm_cmd_base()`, `_get_archive_notebook_id()` |
+| `core/research_router.py` | Phase 1a: project research mode 분류 + complexity gap 탐지. P0 A5: `ResearchPlan` 3종 필드 + `_detect_domain_hints()` (overlay 선택 보조, gate 아님). **P3 D3c**: substring 매칭 + `"홀덤"` 토큰 추가. **P4**: `_detect_domain()` deprecated → `_detect_domain_hints()` 위임. | `ResearchRouter.plan()`, `ResearchRouter.detect_complexity_gaps()`, `ResearchPlan`, `ResearchGap` (9종 enum), `gap_to_mode()`, `ResearchPlan.for_mode()`, `ResearchRouter._detect_domain_hints()` |
+| `core/researcher.py` | Himari 리서치 에이전트. **P4**: RecoverySearchLoop에 `_build_quality_contract()` 연결. **coverage-gate hoist (2026-05-20)**: `_build_quality_contract`/`_domain_checklist` 계산을 3분기 진입 전으로 hoist — 조건 `requires_web or mode != "fast_synthesis"` (순수 fast_synthesis 제외). `_emit_coverage_report`/`_identify_unmet_gaps`에 `llm_prior_refs` 파라미터 추가(no-Tavily 배포 false BLOCK 방지). escalation 재귀 호출에 `research_plan=` 전달 + `ResearchPlan.for_mode(scores=...)` (관측성). | `HimariResearchAgent`, `collect_project_evidence()`, `_build_quality_contract()`, `_collect_web_references()`, `_collect_local_references()`, `_build_source_pack()`, `_synthesize_structured_evidence()`, `_merge_project_brief_evidence()`, `_is_sufficient()`, `_load_domain_manifest()`, `_identify_unmet_gaps()`, `_emit_evidence_files()`, `_emit_coverage_report()` |
+| `core/research/__init__.py` | P4 QualityContract 서브패키지 진입점 | `WorkSpec`, `WorkSpecExtractor`, `QualityContractItem`, `QualityContract`, `QualityContractBuilder`, `QualityContractBuildError`, `ChecklistMerger` |
+| `core/research/work_spec.py` | P4: 사용자 요청 → WorkSpec 구조화. `WorkSpecExtractor`가 LLM 호출로 `artifact_type/domain/capabilities/risk_areas/constraints` 추출. `domain_hints`는 regex hint만 (advisory). | `WorkSpec`, `WorkSpecExtractor` |
+| `core/research/quality_contract.py` | P4: QualityContract 모델 + Builder. pack 레이어 순서: base → artifact → capability → domain overlay. 빈 체크리스트 → `QualityContractBuildError`. | `QualityContractItem`, `QualityContract`, `QualityContractBuilder`, `QualityContractBuildError` |
+| `core/research/checklist_merger.py` | P4: 동일 id 항목 병합. overlay/llm_addition이 required=True 항목 삭제 불가. | `ChecklistMerger` |
+| `core/security_guard.py` | AST 분석 + 격리 실행 | `quick_guard()`, `run_isolated()` |
+| `core/setup_wizard.py` | 외부 리서치 도구(TAVILY/NotebookLM) 점검·복구 단일 진입점 | `ensure_external_research_capabilities()`, `_find_or_create_archive_notebook()` |
+| `core/skill_cache.py` | 스킬 관련성 LRU 캐시 | `OptimizedSkillRelevance` |
+| `core/skill_creator.py` | 스킬 생성·진화 | `evolve_skill()` |
+| `core/skill_metadata_adapter.py` | YAML/Markdown → SkillMetadata 변환 + SKILL.md fallback | `auto_detect_and_convert()`, `_fill_missing_description()`, `convert_meta_yaml_to_metadata()` |
+| `core/skill_enricher.py` | 스킬 메타데이터 자동 생성 | `enrich_skill_metadata()`, `bulk_enrich_all_skills()` |
+| `core/skill_eval_harness.py` | 계약/숨겨진/섀도우 테스트 | `SkillEvalHarness` |
+| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — knowledge skill early-return + auto_register 지원 | `SkillQualityGate`, `GateResult`, `_register_knowledge_skill()` |
+| `core/evolution_types.py` | Stage-1 공유 타입 (Sprint 1 신규) | `EvolutionDecision`, `EvolutionResult` |
+| `core/skill_evolution_bus.py:1-241` | 7단계 캐시 무효화 체인 | `SkillEvolutionBus.on_skill_evolved()` |
+| `core/skill_evolution_safety.py` | 스킬 진화 안전망 헬퍼 (Stage 0 임시, Stage 1 흡수 예정) | `verify_evolved_skill_sandbox()`, `rollback_evolved_skill()` |
+| `core/skill_forge.py` | 코드 생성→비평→수정 루프 | `SkillForge` |
+| `core/skill_procurer.py` | 스킬 조달·forge·평가·승격 | `procure_skill()`, `forge_new_skill()`, `evaluate_and_promote()`, `SkillOrchestrator` |
+| `core/skill_loader.py` | 런타임 스킬 동적 로딩 | `AdaptiveSkillLoader` |
+| `core/skill_promotion.py` | 스킬 라이프사이클 전환 | `SkillPromotionManager` |
+| `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | `SkillRegistry` (싱글톤) |
+| `core/swarm_council.py` | 다중 역할 계획·승인 | `SwarmCouncil` |
+| `core/document_policy.py` | 금지 토큰 스캔·입력 계약·Jaccard | `scan_forbidden_tokens()`, `jaccard_similarity()` |
+| `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **Phase E (C-3stages 병렬화)**: `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id` doc_type별 격리. `_exec_stage2` (ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED)`). `_extract_section_outline` → tasks prev_spec_outline 전달. 텔레메트리 → `write_initial_record`. **v3.1 (2026-05-11)**: `_GRACE_SEC=5`. `_exec_stage1`(plan+EpisodeHints) / `_exec_stage3`(spec_outline+tasks) 신설. `_generate_and_refine` `deadline` + refine loop deadline guard (F1). `_extract_section_outline` mismatch→`""` (F9). `_exec_stage2` `deadline=` 전달. Stage3 진입 전 `time.sleep(_GRACE_SEC)` (R7). **B-1 (2026-05-21)**: `_inline(value, limit)` sanitizer(`\s+→" "`, `\n##` 분리 방지) + `_skill_gap_bullets(brief, limit)` list[dict] formatter + `_structured_evidence_block(brief)` — structured evidence 3필드(required_capabilities/verification_focus/skill_gap_hypotheses)를 fallback plan/spec/design `## Evidence` 내부 sub-bullet으로 보존. 새 `##` 헤더 신설 없음(`_extract_section_outline` count=12 회귀 방지). **B-1 후행 (2026-05-21)**: `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 명시 — required_capabilities=스킬조달신호, verification_focus=Evidence 하위 검증기준, skill_gap_hypotheses=reuse/enhance/forge계획신호, 새 ## 섹션 금지. | `generate_work_items()`, `_generate_and_refine()`, `_generate_doc_with_llm()`, `_exec_stage1()`, `_exec_stage2()`, `_exec_stage3()`, `_inline()`, `_skill_gap_bullets()`, `_structured_evidence_block()` |
+| `core/cli_session_cleanup.py` | `.af_runtime/cli_sessions/` 하위 30일 초과 CLI 세션 파일 TTL 정리 (Phase A, v2 finding #2). **v3.1 R8**: 디렉토리 cleanup 시 dir mtime 대신 자식 파일 max mtime 사용 (POSIX dir mtime 의미 불일치 수정). | `cleanup_stale_sessions(workspace, days=30)` |
+| `core/work_item_telemetry.py` | work-item 생성 텔레메트리 — T1 retry 횟수 atomic JSON 기록 (Phase A). **simplify**: `write_initial_record(workspace, slug, results)` 신규 (초기 dump, locked_file + atomic write). **v3.1 F7**: 경로 `workspace_runtime_dir(workspace) / "work_item_telemetry"` (컨벤션 통일). | `update_t1_refine_attempts(workspace, slug, doc_name, increment=1)`, `write_initial_record(workspace, slug, results)` |
+| `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성. **Phase C**: `return_usage=False` 옵션, `execute_document_prompt` 응답에 `elapsed_sec`+`usage_tokens` 추가. **simplify**: `_make_usage(prompt_t, completion_t)` 헬퍼 추출 (3× 인라인 중복 제거). **v3.1 F2**: `_call_google/openai/anthropic_api`에 `timeout_sec: int = 120` 추가; google → ThreadPoolExecutor manual + `fut.result(timeout=)`; openai → `client.with_options(timeout=)`; anthropic → `urlopen(timeout=timeout_sec)`. `execute_document_prompt` 3개 API 호출에 `timeout_sec=` 전달. | `execute_requirement_prompt()`, `execute_document_prompt()` |
+| `core/work_item_parser.py` | 편집된 마크다운 재파싱 | `sync_board_from_work_items()` |
+| `core/control/supervisor.py` | 유지보수 감독 루프 | `Supervisor` |
+
+| `core/agent_reservation.py` | agent reservation | `AgentLease`, `AgentReservationManager` |
+| `core/capability_intent.py` | capability intent | — |
+| `core/clarification.py` | clarification | `generate_clarification_questions()`, `should_skip_clarification()`, `merge_clarification()` |
+| `core/interview.py` | user-facing deep interview workflow | `run_interview()`, `collect_answers()`, `cli_main()`, `_ensure_artifact_shape()`, `_build_assumptions()` |
+| `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | `ResearchBrief`, `build_from_interview()`, `tag_evidence()`, `split_evidence()` |
+| `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | `CompiledSpec`, `compile_spec()`, `_detect_gaps()`, `_scope_from_clarification_log()`, `_PATH_RE` |
+| `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | `PremortomResult`, `PremortomRisk`, `VerificationStep`, `run_premortem()`, `_detect_scope_file_risk()`, `_detect_stale_test_risk()`, `_detect_duplicate_function_risk()`, `_detect_conflicting_import_risk()`, `_detect_long_function_risk()`, `_detect_complexity_risk()`, `_detect_nesting_depth_risk()` |
+| `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성. **2026-06-07 fix**: 존재확인 command가 `shlex.quote`(셸 인용)로 `python -c` 내부 Python 리터럴을 만들어 셸-특수문자 없는 경로가 따옴표 없이 들어가 NameError로 실패하던 버그를 `repr()`로 교정(greenfield light run false-negative "pipeline blocked" 해소). 2026-05-31: R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼로 stale 파일→`tests/test_<stem>.py` 경로 변환, "테스트 작성" investigation step 생성. 2026-06-01: R16(complexity) 연동 — `_extract_complexity_pairs()` 헬퍼 + complexity investigation branch. **risk ID 계약 정리**: `_is_assumption_risk()`를 category-only로 축소(brittle `[5,20)` ID-레인지 제거 — 신규 fixed detector 오분류 방지), `pattern_consistency`(R10) 전용 investigation branch 신설(레인지 제거로 인한 R10 step 누락 회귀 차단). 2026-06-01: R17(nesting_depth) 연동 — `_extract_nesting_depth_pairs()` 헬퍼 + nesting_depth investigation branch(R16 패턴 미러, 구현 전 "중첩 깊은 함수 검토" step 생성). last_updated: 2026-06-07 | `ExecutablePlan`, `PlanStep`, `build_plan()`, `implementation_steps()`, `_references_for_scope_item()`, `_extract_scope_file_paths()`, `_extract_stale_test_paths()`, `_extract_complexity_pairs()`, `_extract_nesting_depth_pairs()` |
+| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | `DogfoodPhase`, `DogfoodState`, `MergePolicy`, `GitWorktreeError`, `TriadContractError`, `VerifyResult`, `ReviewDecision`, `create_run()`, `advance_phase()`, `block_run()`, `retry_run()`, `run_phase()`, `run_all()`, `save_state()`, `load_state()`, `prepare_isolated_worktree()`, `finalize_dogfood_result()`, `merge_dogfood_branch()`, `_default_runtime_workspace()`, `_build_interview_fn()`, `_utf8_subprocess_env()`, `_run_research_phase()`, `_research_load_interview()`, `_research_scope_files()`, `_research_collect_refs()` |
+| `core/concurrency.py` | concurrency | `TaskCircuitBreaker`, `BackgroundTask`, `BackgroundTaskManager` |
+| `core/consensus_engine.py` | consensus engine | `ConsensusEngine` |
+| `core/context_window_manager.py` | context window manager | `ContextBudget`, `ToolTracker`, `HistoryEntry` |
+| `core/conversation_manager.py` | conversation manager | `ConversationResult`, `TranscriptStore`, `ConversationManager` |
+| `core/conversation_prompts.py` | conversation prompts | `build_conversation_prompt()`, `build_moderator_decision_prompt()`, `build_consensus_check_prompt()` |
+| `core/conversation_room.py` | conversation room | `ConversationBudget`, `ConversationTurn`, `ConsensusResult` |
+| `core/conversation_task_adapter.py` | conversation task adapter | `ConversationToTaskAdapter` |
+| `core/external_skill_candidate_importer.py` | external skill candidate importer | — |
+| `core/external_skill_source_ids.py` | external skill source ids | `safe_id()`, `normalize_external_source_id()`, `legacy_external_source_ids()` |
+| `core/external_skill_sources.py` | external skill sources | — |
+| `core/file_io.py` | file io | `read_yaml()`, `write_yaml()`, `write_text()` |
+| `core/file_lock.py` | file lock | `locked_file()` |
+| `core/hashline_editor.py` | hashline editor | `HashlineEditor` |
+| `core/implementation_language_policy.py` | implementation language policy | `enforce_os_language_for_human_text()`, `implementation_language_profile()`, `implementation_language_contract_text()` |
+| `core/install_candidate_utils.py` | install candidate utils | `safe_id()`, `infer_source_id_from_candidate_key()`, `canonical_install_candidate_key()` |
+| `core/intent.py` | intent | `IntentGate` |
+| `core/ise_stall_detector.py` | ise stall detector | `StallDetector` |
+| `core/knowledge_skill.py` | knowledge skill | `KnowledgeSkill` |
+| `core/langchain_adapter.py` | langchain adapter | `LangChainToolAdapter`, `LangChainChatModelFactory`, `PydanticOutputAdapter` |
+| `core/lsp_bridge.py` | lsp bridge | `LSPBridge` |
+| `core/mcp_adapter.py` | mcp adapter | `MCPServerConnection`, `MCPAdapter` |
+| `core/memory.py` | memory | `read_core_memory()` |
+| `core/onboarding_wizard.py` | onboarding wizard | `OnboardingWizard` |
+| `core/parallel_critique.py` | parallel critique | `CritiqueResult`, `MergedCritique`, `ParallelCritiqueEngine` |
+| `core/pdca_commands.py` | pdca commands | `PDCACommandRegistry` |
+| `core/pdca_state.py` | pdca state | `PDCAPhase`, `ProjectLevel`, `PDCAState` |
+| `core/pipeline_quality.py` | pipeline quality | `VerdictResult`, `AggregatedVerdict`, `PipelineStageGuard` |
+| `core/plan_verifier.py` | plan verifier | `PlanVerifyResult`, `PlanVerifier` |
+| `core/policy.py` | policy | — |
+| `core/project_init.py` | project init | `ensure_project_files()` |
+| `core/registry.py` | registry | `ToolRegistry` |
+| `core/registry_manager.py` | registry manager | `RegistryManager` |
+| `core/request_router.py` | request router | `RequestRouter` |
+| `core/critic_skill_router.py` | Tier 2 Phase 3 단계 1 — 변경 파일 → 영역 → SKILL ID 매핑 | `map_paths_to_skills()`, `resolve_skill_paths()`, `main()` (CLI) |
+| `core/retrieval_router.py` | retrieval router | `RetrievalStrategy`, `RetrievalPlan`, `RetrievalRouter` |
+| `core/review_report.py` | review report (Tier 2 Phase 2: `ReviewerResult.vendor_mode` 필드 추가) | `ReviewerResult`, `JudgeResult`, `ReviewReport` |
+| `core/review_runner.py` | review runner (WI-4: `_run_provider` → `execute_cli_chat` 위임. Tier 2 Phase 2: `_extract_vendor_label()` + single-vendor notice) | `detect_providers()`, `detect_blocked_providers()`, `select_review_pair()`, `_run_provider()`, `_extract_vendor_label()` |
+| `core/role_decomposer.py` | role decomposer | `log()`, `get_random_signature()`, `load_policy()` |
+| `core/rubric_compiler.py` | rubric compiler | `DimensionScore`, `RubricResult`, `RubricCompiler` |
+| `core/runner.py` | runner | `RunPipeline` |
+| `core/security_scanner.py` | security scanner | `security_scan()` |
+| `core/semantic_embedder.py` | semantic embedder | `SemanticEmbedder` |
+| `core/skill_autodiscover.py` | skill autodiscover | `SkillAutoDiscovery` |
+| `core/skill_context_config.py` | skill context config | `SkillLoaderConfig` |
+| `core/skill_feedback.py` | skill feedback | — |
+| `core/skill_metadata.py` | skill metadata | `SkillCategory`, `SkillType`, `SkillMetadata` |
+| `core/skill_preflight.py` | skill preflight | `PreflightResult`, `PreflightEvaluator` |
+| `core/skill_retrieval_engine.py` | skill retrieval engine | — |
+| `core/skill_spec_synthesizer.py` | skill spec synthesizer | — |
+| `core/synergy_runner.py` | synergy runner | — |
+| `core/template_input.py` | template input | `prompt_mission_template()` |
+| `core/terminal_bridge.py` | terminal bridge | `TerminalBridge` |
+| `core/terminal_visualizer.py` | terminal visualizer | `AgentPhase`, `VisualMode`, `AgentVisualState` |
+| `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | `TextFileFormat`, `TextFileSnapshot`, `find_suspicious_markers()` |
+| `core/tool_runtime.py` | tool runtime | `ToolRuntimeWrapper` |
+| `core/utils.py` | utils. last_updated: 2026-06-07 (kurtosis 추가) | `now_iso()`, `safe_id()`, `safe_optional_id()`, `truncate_text()`, `clamp(value, min_val, max_val)` ([min_val, max_val] 범위 제한; min>max이면 ValueError), `clamp_ratio(value, lo=0.0, hi=1.0)` ([lo, hi] 범위로 클램프한 float 반환; lo>hi이면 ValueError), `median(values)` (정렬 중앙값 float 반환; 빈 리스트이면 ValueError), `mode(values)` (최빈값 float 반환; 동률이면 먼저 등장한 값; 빈 리스트이면 ValueError), `variance(values)` (모집단 분산 float 반환; 빈 리스트이면 ValueError), `std_dev(values)` (모집단 표준편차 float 반환; variance 위에 math.sqrt; 빈 리스트이면 ValueError), `range_span(values)` (최댓값-최솟값 차이를 float로 반환; 빈 리스트이면 ValueError), `chunks(lst, n)` (리스트를 최대 n개 서브리스트로 분할; n<1이면 ValueError), `flatten(lst)` (리스트를 1단계만 shallow flatten; 빈 리스트는 [] 반환), `zscore(values)` (각 원소의 Z-score를 list[float]로 반환; 원소 1개이면 [0.0]; 빈 리스트이면 ValueError), `percentile(values, p)` (p번째 백분위수를 선형 보간으로 float 반환; 빈 리스트이면 ValueError; p가 0~100 범위 밖이면 ValueError), `cumsum(values)` (각 위치까지의 누적 합을 list[float]로 반환; 빈 리스트이면 빈 리스트), `running_max(values)` (각 위치까지의 누적 최댓값을 list[int|float]로 반환; 원소 타입 보존; 빈 리스트이면 빈 리스트), `moving_average(values, window)` (슬라이딩 윈도 이동 평균 list[float] 반환; window<1이면 ValueError; 빈 리스트이면 빈 리스트; 각 위치 i에서 max(window, i+1)개 이전 값의 평균), `geometric_mean(values)` (기하평균 float 반환; 빈 리스트이면 ValueError; 음수 값이면 ValueError; 0 포함이면 0.0; log-sum-exp 계산), `harmonic_mean(values)` (조화평균 float 반환; 빈 리스트이면 ValueError; 0 이하 값이면 ValueError; n/Σ(1/v)), `weighted_mean(values, weights)` (가중 평균 float 반환; 빈 리스트이면 ValueError; values/weights 길이 불일치이면 ValueError; 음수 weight이면 ValueError; weight 합이 0이면 ValueError), `interquartile_range(values)` (IQR = Q3−Q1을 float로 반환; percentile 재사용; 빈 리스트이면 ValueError), `covariance(xs, ys)` (모집단 공분산 float 반환; 빈 리스트이면 ValueError; 길이 불일치이면 ValueError; Σ(x−x̄)(y−ȳ)/n), `pearson_correlation(xs, ys)` (피어슨 상관계수 float 반환; 범위 [-1.0, 1.0]; 빈 리스트이면 ValueError; 길이 불일치이면 ValueError; std_dev 0이면 0.0; cov/(σ_x·σ_y)), `spearman_correlation(xs, ys)` (스피어만 순위 상관계수 float 반환; 범위 [-1.0, 1.0]; 빈 리스트이면 ValueError; 길이 불일치이면 ValueError; 동점은 평균 순위; pearson_correlation(_rank(xs), _rank(ys)) 위임), `kurtosis(values)` (초과 첨도 float 반환; Fisher's definition, 정규분포=0.0; 빈 리스트이면 ValueError; 표준편차 0이면 ValueError; (1/n*Σ((x−μ)/σ)^4)−3), `strip_code_fences()`, `test_file_for()` (core/scripts .py → tests/test_*.py 관례 경로 반환; shell 메타문자 포함 stem은 None), `_SAFE_STEM_RE` (stem 안전성 검증 정규식), `get_external_skill_roots()` (Tier 2에 `PROJECT_ROOT/skills/` 포함; `AF_SELF_RUN=1` 시 `SKILLS_DIR` 제외; personal>project 우선순위; `get_codex_skill_roots` 별칭) |
+| `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | `TriadCriticFinding`, `TriadCriticReport`, `TriadDecision`, `TriadResult`, `TriadBlockedError`, `run_triad()`, `_critic_executor`, `_architect_executor` |
+| `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | `ReviewContext`, `TierSkillProfile`, `ReviewSkillPlan`, `route_review_skills()` |
+| `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | `RouteDecision`, `route_task()`, `_tokens_found()`, `_trivial_found()` |
+| `core/right_sized_router.py` | RSE 슬라이스1 + Phase 1+2 갱신 — LLM 분류 + 결정적 안전 floor 강제. `classify(task, workspace, *, changed_files)→RouteDecision`. Phase 1: scope=[] → `_classify_empty_scope()`(LLM+0.85 임계+`ROUTE_MARKER_SCOPE_UNCERTAIN` marker); 기존 `_fallback_decision` early-exit 교체. Floor 1: self-mod→isolation≥worktree. Floor 2: Tier3→design+review+cross_review 강제(빈-scope는 changed_files=[] 라 생략 — 안전성은 dispatch INV-5에 위임). `is_light()`: marker 유무로 0.85/0.7 threshold SSOT(외부리뷰#5). `RouteDecision.markers` 신규 필드 + `to_dict()` 갱신. last_updated: 2026-06-07 | `RouteDecision`, `classify()`, `_classify_empty_scope()`, `_build_empty_scope_prompt()`, `_apply_safety_floors()`, `_fallback_decision()`, `_validate_raw()`, `_build_prompt()`, `_max_tier()`, `LIGHT_STAGES`, `STAGE_VOCAB`, `ISOLATION_LEVELS`, `ROUTE_MARKER_SCOPE_UNCERTAIN` |
+| `core/architect_agent.py` | §17 Step 19 — Triad 合(Synthesis) Architect executor. TriadCriticReport findings를 Master_Blueprint.md §섹션 + accepted ADR로 검증하여 ACCEPT/REJECT 결정. prefix false match 방지(`(?![\d.])` lookahead), set 기반 중복 키워드 제거, deepcopy 불변성. last_updated: 2026-05-25 | `architect_fn()`, `_resolve_finding()`, `_extract_section()`, `_load_accepted_adrs()`, `_patch_final_plan()` |
+### 서브디렉토리
+
+| 디렉토리 | 역할 |
+|---------|------|
+| `core/continuity/` | 오케스트레이터 체크포인트·재개 |
+| `core/control/` | 유지보수·감독·롤백 파이프라인 |
+| `core/events/` | RunEvent 스키마·FileRunEventStore·SKILL_EVOLVED 등 이벤트 타입 |
+| `core/hooks/` | 실행 라이프사이클 훅 |
+| `core/memory_system/` | 에피소드·그래프·시맨틱 메모리 |
+| `core/providers/` | CLI 프로바이더 (Claude/Gemini/Codex) |
+| `skills/` | 스킬 YAML+Python 구현체 |
+| `agents/` | 역할별 에이전트 YAML |
+| `config/` | Pydantic 설정 스키마 |
+| `syncCompyne/` | 세션 간 공유 메모리 (SQLite) |
+
+---
+````

@@ -1,10 +1,10 @@
 ---
-generated_at: 2026-06-07T19:45:13+09:00
-source_commit: fe08d13b
+generated_at: 2026-06-07T21:32:06+09:00
+source_commit: 8552c501
 sources:
-  - Master_Blueprint.md
-  - docs/code_review/code-review.md
-  - NEXT_STEPS.md
+  - "Master_Blueprint.md"
+  - "docs/code_review/code-review.md"
+  - "NEXT_STEPS.md"
 ---
 
 # Architecture — 모듈 네비게이션

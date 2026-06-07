@@ -1,10 +1,10 @@
 ---
-generated_at: 2026-06-07T19:45:13+09:00
-source_commit: fe08d13b
+generated_at: 2026-06-07T21:32:06+09:00
+source_commit: 8552c501
 sources:
-  - Master_Blueprint.md
-  - docs/code_review/code-review.md
-  - NEXT_STEPS.md
+  - "Master_Blueprint.md"
+  - "docs/code_review/code-review.md"
+  - "NEXT_STEPS.md"
 ---
 
 # LLM Wiki — Index
@@ -18,6 +18,8 @@ sources:
 - [[review_patterns]] — 서브시스템별 코드 리뷰 패턴
 - [[open_items]] — 미완료/보류 항목 (best-effort)
 - [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑
+- [[blueprint/index]] — Master Blueprint 섹션별 전문
+- [[symbols]] — 코드베이스 top-level 심볼 (AST 추출)
 
 ## 사용법
 
