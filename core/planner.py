@@ -294,7 +294,7 @@ def _build_investigation_steps(
                     artifacts=[],
                     depends_on=[],
                     commands=[
-                        f"python -c \"import os; print(os.path.exists({shlex.quote(missing_file)}))\"",
+                        f"python -c \"import os; print(os.path.exists({missing_file!r}))\"",
                     ],
                 ))
                 counter[0] += 1

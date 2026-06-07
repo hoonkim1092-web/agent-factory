@@ -585,6 +585,25 @@ class TestScopeFileRiskInvestigation:
         assert "os.path.exists" in step.commands[0]
         assert "core/missing.py" in step.commands[0]
 
+    def test_scope_file_existence_check_command_is_executable(self):
+        """경로 확인 command는 실제로 실행 가능해야 한다 (path가 Python 리터럴로 인용됨).
+
+        회귀: shlex.quote는 셸-특수문자 없는 경로(예: scripts/foo.py)를 그대로
+        반환해 python -c 안에서 따옴표 없는 식별자가 되어 NameError로 실패했다.
+        문자열 substring 검사만으로는 이 깨진 command를 잡지 못한다 — 실제 실행으로 강제.
+        """
+        import subprocess
+        risks = [_risk(
+            "R11",
+            "Scope file(s) not found on disk: scripts/codebase_symbols.py. Possible typo in path.",
+            "scope_file",
+        )]
+        plan = build_plan(_spec(), _premortem(risks))
+        step = next(s for s in plan.steps if s.action.startswith("경로 확인"))
+        result = subprocess.run(step.commands[0], shell=True, capture_output=True, text=True)
+        assert result.returncode == 0, f"existence-check command failed: {result.stderr}"
+        assert result.stdout.strip() in ("True", "False")
+
     def test_scope_file_risk_multiple_missing_generates_one_step_each(self):
         """scope_file risk 1개에 파일 2개 → 경로 확인 step 2개 생성, 순서 보존."""
         risks = [_risk(
