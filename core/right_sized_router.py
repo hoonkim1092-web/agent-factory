@@ -9,7 +9,7 @@ LLM 분류 → 결정적 안전 floor 강제 → 보수적 fallback.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Final
 
 # ---------------------------------------------------------------------------
 # 어휘 상수 (SSOT — 소비처는 import해서만 쓴다)
@@ -33,6 +33,8 @@ STAGE_VOCAB: tuple[str, ...] = (
 LIGHT_STAGES: frozenset[str] = frozenset({STAGE_PLAN, STAGE_IMPLEMENT, STAGE_TEST})
 
 _LIGHT_CONFIDENCE_THRESHOLD: float = 0.7
+_EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD: float = 0.85
+ROUTE_MARKER_SCOPE_UNCERTAIN: Final[str] = "scope_uncertain"
 
 
 # ---------------------------------------------------------------------------
@@ -47,13 +49,23 @@ class RouteDecision:
     confidence: float
     reason: str
     floors_applied: list[str] = field(default_factory=list)
+    markers: list[str] = field(default_factory=list)
     source: str = "llm"         # "llm" | "fallback"
 
     def is_light(self) -> bool:
-        """floor 적용 후 호출 — 네이티브 light 경로 적격 여부."""
+        """floor 적용 후 호출 — 네이티브 light 경로 적격 여부.
+
+        SCOPE_UNCERTAIN marker가 있으면 0.85 임계 적용(empty-scope 추론은 불확실).
+        marker 없는 결정은 0.7 그대로 → scope 있는 경로 완전 무변(INV-1).
+        """
+        threshold = (
+            _EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD
+            if ROUTE_MARKER_SCOPE_UNCERTAIN in self.markers
+            else _LIGHT_CONFIDENCE_THRESHOLD
+        )
         return (
             self.source == "llm"
-            and self.confidence >= _LIGHT_CONFIDENCE_THRESHOLD
+            and self.confidence >= threshold
             and set(self.required_stages) <= LIGHT_STAGES
         )
 
@@ -65,6 +77,7 @@ class RouteDecision:
             "confidence": self.confidence,
             "reason": self.reason,
             "floors_applied": list(self.floors_applied),
+            "markers": list(self.markers),
             "source": self.source,
         }
 
@@ -218,6 +231,65 @@ def _apply_safety_floors(
 # 프롬프트 빌더
 # ---------------------------------------------------------------------------
 
+def _build_empty_scope_prompt(task: str) -> str:
+    """scope 미확정 task용 분류 프롬프트. 파일 목록 없이 task 의미만으로 추론."""
+    stage_list = ", ".join(STAGE_VOCAB)
+    light_list = ", ".join(sorted(LIGHT_STAGES))
+    return f"""You are a task-complexity classifier for the Agent Factory codebase.
+
+## Task
+{task}
+
+## Intended scope files
+(미확정) — the task did not specify explicit file paths. Infer complexity from the task description alone.
+
+## Output (JSON only, no explanation outside JSON)
+Return a JSON object with exactly these keys:
+  isolation       : one of {list(ISOLATION_LEVELS)}
+  required_stages : subset of [{stage_list}] in execution order
+  review_depth    : one of ["none", "standard", "deep"]
+  confidence      : float 0.0–1.0 (your certainty)
+  reason          : brief explanation (1–2 sentences)
+
+## Rules
+- Pure leaf implementation (add a single function, no API/contract changes):
+    required_stages should be [{light_list}] only.
+- If design, review, or cross-review is genuinely needed, include them.
+- If the scope is unclear or the task involves multiple files/systems, set confidence < 0.5.
+- Tier hint is unavailable — rely on task semantics only.
+"""
+
+
+def _classify_empty_scope(task: str, workspace: str) -> RouteDecision:
+    """scope 미확정 task를 LLM으로 분류. 보수적 — 높은 임계(0.85) + marker.
+
+    Precondition: changed_files is empty — caller (classify()) guarantees this.
+
+    INV-2: LLM 실패/무효 → full fallback.
+    INV-3: 반환 결정에 ROUTE_MARKER_SCOPE_UNCERTAIN 부착.
+
+    [안전성] 빈-scope는 changed_files=[]이므로 _apply_safety_floors의 Floor 1·2가
+    둘 다 자연 생략된다. 이 생략의 안전성은 dispatch의 INV-5(δB)에 의존한다:
+    빈-scope light는 merge∈{never,manual}일 때만 통과(_light_allowed). enforce flip
+    전까지 이 결합이 유일 방어선.
+    """
+    prompt = _build_empty_scope_prompt(task)
+    try:
+        raw = _get_router_llm().generate_json(prompt)
+    except Exception as exc:
+        return _fallback_decision(f"empty-scope LLM error: {exc}")
+
+    decision = _validate_raw(raw)
+    if decision is None:
+        return _fallback_decision(f"empty-scope invalid LLM response: {raw!r}")
+
+    # marker만 부착하고 반환. light 자격(0.85 + light-stages)은 is_light()가 marker를
+    # 보고 단일 판정(외부리뷰 #5). conf 낮은 결정도 marker 단 채 반환 → is_light()=False
+    # → full. _fallback_decision으로 덮지 않아 LLM 실판단이 state.route_decision에 보존.
+    decision.markers = [ROUTE_MARKER_SCOPE_UNCERTAIN]
+    return decision
+
+
 def _build_prompt(task: str, changed_files: list[str], tier_hint: dict[str, int]) -> str:
     files_section = "\n".join(f"  - {f} (Tier {tier_hint.get(f, '?')})" for f in changed_files) or "  (없음)"
     stage_list = ", ".join(STAGE_VOCAB)
@@ -266,7 +338,7 @@ def classify(
     """
     files: list[str] = list(changed_files or [])
     if not files:
-        return _fallback_decision("no changed_files: scope required for routing")
+        return _classify_empty_scope(task, workspace)  # Phase 1: LLM path, 빈-scope early fallback 대체
 
     # Tier hint 계산 (프롬프트용 참고 — floor와 별도)
     tier_hint: dict[str, int] = {}

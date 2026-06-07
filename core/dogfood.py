@@ -296,6 +296,9 @@ class MergePolicy:
     # When True, remove the worktree on BLOCKED (save disk space).
     # Default False — preserve for debugging.  Failed isolations are always cleaned.
     cleanup_worktree_on_block: bool = False
+    # Post-implement Tier3 floor mode (Phase 2). "observe"=캘리브레이션만(BLOCK 없음),
+    # "enforce"=Tier3 산출물 → review 강제(승격 기준 충족 후 flip).
+    tier3_floor_mode: str = "observe"
 
     def __post_init__(self) -> None:
         if self.mode not in VALID_MERGE_MODES:
@@ -307,6 +310,11 @@ class MergePolicy:
             raise ValueError(
                 "allow_partial_impl=True is incompatible with mode='auto_policy'."
                 " Use mode='manual' or 'never' to proceed with partial results."
+            )
+        if self.tier3_floor_mode not in ("observe", "enforce"):
+            raise ValueError(
+                f"invalid tier3_floor_mode: {self.tier3_floor_mode!r}."
+                " Expected 'observe' or 'enforce'."
             )
 
 
@@ -1719,6 +1727,22 @@ def _record_route_decision(state: DogfoodState, route: Any) -> None:
     state.route_decision = route.to_dict()
 
 
+def _light_allowed(route: Any, scope: list[str], state: DogfoodState) -> bool:
+    """scope 있는 light는 무조건 허용(INV-1).
+
+    빈-scope light는 ROUTE_MARKER_SCOPE_UNCERTAIN marker 보유 AND merge_mode∈{never,manual}
+    일 때만 허용(INV-5/δB). auto_policy는 enforce flip 전까지 빈-scope→full 유지
+    (self-run Tier3 self-수정을 무검열 auto-merge하는 통로를 차단).
+    """
+    if scope:
+        return True
+    from core.right_sized_router import ROUTE_MARKER_SCOPE_UNCERTAIN
+    markers = route.markers if hasattr(route, "markers") else []
+    if ROUTE_MARKER_SCOPE_UNCERTAIN not in markers:
+        return False
+    return state.merge_mode in ("never", "manual")
+
+
 def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     """Full DEVELOP path: delegate to ProjectPipeline inside isolation env."""
     worktree = state.worktree_workspace or state.source_workspace
@@ -1736,12 +1760,15 @@ def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     return _normalize_develop_result(result, changed)
 
 
-def _run_develop_light(state: DogfoodState) -> dict[str, Any]:
+def _run_develop_light(state: DogfoodState, policy: "MergePolicy") -> dict[str, Any]:
     """Light DEVELOP path: deterministic builders + AI codegen, no ProjectPipeline.
 
     compile_spec → run_premortem → build_plan → _run_implement_phase.
     Same _develop_isolation_env as full path (registry write blocked, skill lookup
     root = worktree) — cross-review High finding compliance.
+
+    policy.tier3_floor_mode 기반으로 실제 변경 파일의 Tier3 해당 여부를 관측(Phase 2).
+    observe 모드는 block 없음 — 트립률 캘리브레이션 전용.
     """
     from core.spec_compiler import compile_spec
     from core.premortem import run_premortem
@@ -1766,8 +1793,30 @@ def _run_develop_light(state: DogfoodState) -> dict[str, Any]:
         changed = _changed_files_fallback(state, worktree)
     state.develop_changed_paths = changed
 
+    # Phase 2: post-implement Tier3 floor observation (INV-4/δA).
+    from scripts.blast_radius import classify_with_content
+    from core.right_sized_router import ROUTE_MARKER_SCOPE_UNCERTAIN
+    from_uncertain = ROUTE_MARKER_SCOPE_UNCERTAIN in (state.route_decision.get("markers") or [])
+    if not changed:
+        tier3_record: dict[str, Any] = {
+            "mode": policy.tier3_floor_mode,
+            "observability": "no_changes",
+            "from_uncertain_scope": from_uncertain,
+        }
+    else:
+        tier3_changed = [f for f in changed if classify_with_content(f, worktree) >= 3]
+        tier3_record = {
+            "mode": policy.tier3_floor_mode,
+            "observability": "observed",
+            "from_uncertain_scope": from_uncertain,
+        }
+        if tier3_changed:
+            tier3_record["changed_tier3"] = tier3_changed
+        # observe 모드: complete 흐름 무변. enforce 모드는 승격 기준 충족 후 별도 PR.
+
     base: dict[str, Any] = dict(plan_d)
     base["ok"] = bool(impl.get("ok", False))
+    base["tier3_floor"] = tier3_record
     return _normalize_develop_result(base, changed)
 
 
@@ -1785,8 +1834,9 @@ def _run_develop_phase(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     route = classify(state.task, state._cwd(), changed_files=scope)
     _record_route_decision(state, route)
 
-    if route.is_light() and scope:
-        return _run_develop_light(state)
+    policy = build_merge_policy(state, state.merge_mode)
+    if route.is_light() and _light_allowed(route, scope, state):
+        return _run_develop_light(state, policy)
     return _run_develop_full(state, pipeline)
 
 

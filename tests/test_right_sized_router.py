@@ -176,20 +176,23 @@ def test_r_fb_badschema(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# R-FB-NOSCOPE — scope=[] → conservative fallback (LLM not called)
+# R-FB-NOSCOPE → R-EMPTY-SCOPE (Phase 1 계약 변경: LLM IS called for empty scope)
 # ---------------------------------------------------------------------------
 
 def test_r_fb_noscope(monkeypatch, tmp_path):
-    # LLM stub is installed but must NOT be called when scope is empty
+    # Phase 1: scope=[] now calls LLM (high-conf light response → is_light()=True)
     monkeypatch.setattr(rsr, "_router_llm", _stub({
         "isolation": "source",
         "required_stages": ["plan", "implement", "test"],
         "review_depth": "none",
         "confidence": 0.9,
-        "reason": "no scope",
+        "reason": "leaf function, no scope",
     }))
     decision = classify("add geometric_mean", str(tmp_path), changed_files=[])
-    # Empty scope must always fall back conservatively
-    assert decision.source == "fallback"
-    assert decision.is_light() is False
-    assert not any("blast_radius_tier3" in f for f in decision.floors_applied)
+    # source="llm" proves LLM was called (not immediate fallback)
+    assert decision.source == "llm"
+    # high-conf (0.9 ≥ 0.85) + light stages → is_light()=True
+    assert decision.is_light() is True
+    # uncertainty marker attached
+    from core.right_sized_router import ROUTE_MARKER_SCOPE_UNCERTAIN
+    assert ROUTE_MARKER_SCOPE_UNCERTAIN in decision.markers
