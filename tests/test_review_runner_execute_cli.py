@@ -109,6 +109,23 @@ class TestRunProviderExecuteCliChat:
         assert result == "(provider error: unknown_error)"
 
 
+    def test_ok_true_with_rate_limit_text_calls_mark(self, monkeypatch):
+        """ok=True 응답에 rate limit 텍스트가 있어도 mark_rate_limited 호출 (codex ok=True 위장 경로)."""
+        calls: list[tuple] = []
+        monkeypatch.setattr("core.provider_detect.mark_rate_limited", lambda p, u: calls.append((p, u)))
+
+        with patch(
+            "core.providers.cli.execute_cli_chat",
+            return_value={"ok": True, "text": "usage limit exceeded. Please try again later.", "reason": "ok"},
+        ):
+            result = _run_provider("codex", "prompt", ".")
+
+        assert len(calls) == 1
+        pid, _ = calls[0]
+        assert pid == "codex_cli"
+        assert "usage limit" in result  # 텍스트는 그대로 반환
+
+
 class TestProviderIdMap:
     """_PROVIDER_ID_MAP 상수 계약."""
 

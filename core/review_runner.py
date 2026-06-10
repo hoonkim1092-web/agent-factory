@@ -98,6 +98,7 @@ def _load_prompt(workspace: str, name: str) -> str:
 
 def _run_provider(provider: str, prompt: str, workspace: str) -> str:
     """프로바이더 CLI 실행. execute_cli_chat 경유."""
+    from core.provider_detect import detect_rate_limit_signal, mark_rate_limited
     from core.providers.cli import CliChatRequest, execute_cli_chat
 
     provider_id = _PROVIDER_ID_MAP.get(provider, f"{provider}_cli")
@@ -113,8 +114,16 @@ def _run_provider(provider: str, prompt: str, workspace: str) -> str:
     result = execute_cli_chat(request)
     if not result.get("ok"):
         reason = result.get("reason") or "unknown_error"
+        until = detect_rate_limit_signal(f"{reason} {result.get('text', '')}")
+        if until:
+            mark_rate_limited(provider_id, until)
         return f"(provider error: {reason})"
-    return result.get("text") or "(empty response)"
+    # codex가 returncode!=0 + 텍스트를 ok=True로 위장 반환 시에도 limit 감지
+    text_result = result.get("text") or "(empty response)"
+    until = detect_rate_limit_signal(text_result)
+    if until:
+        mark_rate_limited(provider_id, until)
+    return text_result
 
 
 def _build_review_prompt(

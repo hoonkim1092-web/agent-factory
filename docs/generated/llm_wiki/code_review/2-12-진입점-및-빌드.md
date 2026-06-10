@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-07T21:54:33+09:00
-source_commit: 6c728e77
+generated_at: 2026-06-10T15:13:57+09:00
+source_commit: f99f0235
 sources:
   - "docs/code_review/code-review.md"
 ---

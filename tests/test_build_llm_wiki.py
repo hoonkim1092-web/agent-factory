@@ -130,9 +130,9 @@ class TestParsers:
         assert "유지보수 가이드" in headings
         assert "overview" in slugs
         assert "toc" in slugs
-        assert "section-0" in slugs
-        assert "section-1" in slugs
-        assert "section-3" in slugs
+        assert "0-빠른-참조-테이블" in slugs
+        assert "1-아키텍처-개요" in slugs
+        assert "3-핵심-서브시스템" in slugs
         assert "maintenance-guide" in slugs
 
     def test_code_review_extracts_sections(self):
@@ -154,15 +154,15 @@ class TestParsers:
     def test_code_review_sections_split_for_obsidian_pages(self):
         sections = _split_code_review_sections(_SAMPLE_CODE_REVIEW)
         slugs = [s["slug"] for s in sections]
-        assert "section-2-1" in slugs
-        assert "section-2-2" in slugs
+        assert "2-1-실행-엔진-runtime-engine" in slugs
+        assert "2-2-control-plane" in slugs
         assert any("Runtime Engine" in s["content"] for s in sections)
 
     def test_code_review_duplicate_section_ids_get_unique_slugs(self):
         sections = _split_code_review_sections(
             "### 2.1 First\n\nA\n\n### 2.1 Second\n\nB\n"
         )
-        assert [s["slug"] for s in sections] == ["section-2-1", "section-2-1-2"]
+        assert [s["slug"] for s in sections] == ["2-1-first", "2-1-second"]
 
     def test_open_items_extracts_markers(self):
         items = _parse_open_items(_SAMPLE_NEXT_STEPS)
@@ -204,7 +204,13 @@ class TestBuild:
         for name in ("index.md", "architecture.md", "review_patterns.md",
                      "open_items.md", "source_refs.md", "symbols.md"):
             assert (out / name).exists(), f"{name} 미생성"
-        for name in ("index.md", "overview.md", "section-0.md", "section-1.md", "section-3.md"):
+        for name in (
+            "index.md",
+            "overview.md",
+            "0-빠른-참조-테이블.md",
+            "1-아키텍처-개요.md",
+            "3-핵심-서브시스템.md",
+        ):
             assert (out / "blueprint" / name).exists(), f"blueprint/{name} 미생성"
 
     def test_blueprint_overview_contains_preamble(self, tmp_path):
@@ -219,12 +225,12 @@ class TestBuild:
     def test_code_review_expected_files_exist(self, tmp_path):
         self._build_with_samples(tmp_path)
         out = tmp_path / "wiki" / "code_review"
-        for name in ("index.md", "section-2-1.md", "section-2-2.md"):
+        for name in ("index.md", "2-1-실행-엔진-runtime-engine.md", "2-2-control-plane.md"):
             assert (out / name).exists(), f"code_review/{name} missing"
 
     def test_blueprint_section_pages_contain_source_content(self, tmp_path):
         self._build_with_samples(tmp_path)
-        section = (tmp_path / "wiki" / "blueprint" / "section-0.md").read_text(encoding="utf-8")
+        section = (tmp_path / "wiki" / "blueprint" / "0-빠른-참조-테이블.md").read_text(encoding="utf-8")
         index = (tmp_path / "wiki" / "blueprint" / "index.md").read_text(encoding="utf-8")
         source_refs = (tmp_path / "wiki" / "source_refs.md").read_text(encoding="utf-8")
 
@@ -232,8 +238,8 @@ class TestBuild:
         assert "````markdown" in section
         assert "## §0 빠른 참조 테이블" in section
         assert "`agent_launcher.py`" in section
-        assert "[[blueprint/section-0|§0 빠른 참조 테이블]]" in index
-        assert "[[blueprint/section-0]]" in source_refs
+        assert "[[blueprint/0-빠른-참조-테이블|§0 빠른 참조 테이블]]" in index
+        assert "[[blueprint/0-빠른-참조-테이블]]" in source_refs
 
     def test_stale_blueprint_generated_pages_are_removed(self, tmp_path):
         stale_dir = tmp_path / "wiki" / "blueprint"
@@ -247,7 +253,7 @@ class TestBuild:
 
     def test_code_review_section_pages_contain_source_content(self, tmp_path):
         self._build_with_samples(tmp_path)
-        section = (tmp_path / "wiki" / "code_review" / "section-2-1.md").read_text(encoding="utf-8")
+        section = (tmp_path / "wiki" / "code_review" / "2-1-실행-엔진-runtime-engine.md").read_text(encoding="utf-8")
         index = (tmp_path / "wiki" / "code_review" / "index.md").read_text(encoding="utf-8")
         source_refs = (tmp_path / "wiki" / "source_refs.md").read_text(encoding="utf-8")
         root_index = (tmp_path / "wiki" / "index.md").read_text(encoding="utf-8")
@@ -256,8 +262,8 @@ class TestBuild:
         assert "````markdown" in section
         assert "### 2.1" in section
         assert "Runner" in section
-        assert "[[code_review/section-2-1|" in index
-        assert "[[code_review/section-2-1]]" in source_refs
+        assert "[[code_review/2-1-실행-엔진-runtime-engine|" in index
+        assert "[[code_review/2-1-실행-엔진-runtime-engine]]" in source_refs
         assert "[[code_review/index]]" in root_index
 
     def test_stale_code_review_generated_pages_are_removed(self, tmp_path):

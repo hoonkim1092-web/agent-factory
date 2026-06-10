@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-07T21:54:29+09:00
-source_commit: 6c728e77
+generated_at: 2026-06-10T15:13:49+09:00
+source_commit: f99f0235
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -48,13 +48,14 @@ sources:
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | Master_Blueprint.md §0 |
 | `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | Master_Blueprint.md §0 |
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | Master_Blueprint.md §0 |
-| `scripts/build_llm_wiki.py` | LLM Wiki Phase 0 — 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS → docs/generated/llm_wiki/ 5페이지 | Master_Blueprint.md §0 |
+| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. | Master_Blueprint.md §0 |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | Master_Blueprint.md §0 |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | Master_Blueprint.md §0 |
 | `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | Master_Blueprint.md §0 |
 | `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | Master_Blueprint.md §0 |
 | `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | Master_Blueprint.md §0 |
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | Master_Blueprint.md §0 |
+| `scripts/enqueue_staged_review.py` | provider/OS 독립 pre-commit 큐잉 fallback. Claude hook 없이 Codex·IDE·shell에서 staged review 대상 `.py`가 커밋될 때 Git index 기준으로 review queue를 먼저 채움 | Master_Blueprint.md §0 |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | Master_Blueprint.md §0 |
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | Master_Blueprint.md §0 |
@@ -100,7 +101,7 @@ sources:
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | Master_Blueprint.md §0 |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입 | Master_Blueprint.md §0 |
 | `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize | Master_Blueprint.md §0 |
-| `core/provider_detect.py` | 3-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. ThreadPool race condition 수정: installed_set을 ThreadPool 전 1회 계산 후 각 worker에 frozenset 전달. codex_cli ping: --version (exec stdin hang 수정). CLI ping stdout/stderr는 UTF-8/errors=replace로 디코딩. | Master_Blueprint.md §0 |
+| `core/provider_detect.py` | 4-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. **RATE_LIMITED 상태 추가(2026-06-10)**: `mark_rate_limited()` + `detect_rate_limit_signal()` + `_apply_rate_limit_override()`로 usage limit 사후 캐시 학습 → fan_out 자동 제외 + 노티. CLI `--mark-rate-limited --until`. force_refresh 시에도 미래 until이면 RATE_LIMITED 유지. ThreadPool race condition 수정. | Master_Blueprint.md §0 |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | Master_Blueprint.md §0 |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | Master_Blueprint.md §0 |
 | `core/research_router.py` | Phase 1a: project research mode 분류 + complexity gap 탐지. P0 A5: `ResearchPlan` 3종 필드 + `_detect_domain_hints()` (overlay 선택 보조, gate 아님). **P3 D3c**: substring 매칭 + `"홀덤"` 토큰 추가. **P4**: `_detect_domain()` deprecated → `_detect_domain_hints()` 위임. | Master_Blueprint.md §0 |
@@ -197,7 +198,7 @@ sources:
 | `core/terminal_visualizer.py` | terminal visualizer | Master_Blueprint.md §0 |
 | `core/text_integrity.py` | text integrity. Detects UTF-8/BOM/newline drift, mojibake, and literal carriage-return control characters such as repeated `\r` at line ends. | Master_Blueprint.md §0 |
 | `core/tool_runtime.py` | tool runtime | Master_Blueprint.md §0 |
-| `core/utils.py` | utils. last_updated: 2026-06-07 (kurtosis 추가) | Master_Blueprint.md §0 |
+| `core/utils.py` | utils. last_updated: 2026-06-10 (skewness, running_min 추가) | Master_Blueprint.md §0 |
 | `core/triad.py` | §17 Step 15 — 正反合 Triad 오케스트레이션. 反(Critic) injectable executor + evidence contract 강제 + Critical finding 미해소 시 TriadBlockedError. 合(Architect) injectable executor. | Master_Blueprint.md §0 |
 | `core/review_skill_router.py` | §17 Step 17 — Skill-specialized 3-tier review routing. changed-file paths·blast tier·work kind·risk tokens 기반으로 각 review tier의 skill profile을 결정적으로(no LLM) 라우팅. last_updated: 2026-05-25 | Master_Blueprint.md §0 |
 | `core/express_router.py` | §17 Step 18 — Express Router. task description → direct/light/full/dogfood 4-경로 결정적 라우팅(no LLM). self-mod 토큰·risk·research·complexity 기반 분류. Windows 경로 정규화. force_route 오버라이드. last_updated: 2026-05-25 | Master_Blueprint.md §0 |

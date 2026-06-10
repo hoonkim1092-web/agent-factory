@@ -17,6 +17,10 @@ env/
 .DS_Store
 **/.DS_Store
 
+# --- Obsidian local vault settings / accidental nested vault folders ---
+docs/generated/llm_wiki/.obsidian/
+docs/generated/llm_wiki/Agent-factory/
+
 # --- Claude Code machine-local settings (each PC maintains its own) ---
 # Template: .claude/settings.local.template.json
 .claude/settings.local.json
@@ -121,6 +125,7 @@ planning/interview_brief.json
 
 # --- Runtime log output (factory_manager CLI redirect artifact) ---
 run_output.txt
+.af_dogfood_run_*.log
 
 # --- Claude Code runtime artifacts (created by claude_cli AI executor in worktrees) ---
 syncCompyne/

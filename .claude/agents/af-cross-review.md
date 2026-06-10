@@ -73,7 +73,8 @@ fi
 ```bash
 FAN_OUT=$(echo "$PROBE_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(d.get('fan_out',[])))")
 BLOCKED=$(echo "$PROBE_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(d.get('blocked',[])))")
-echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
+RATE_LIMITED=$(echo "$PROBE_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(' '.join(d.get('rate_limited',[])))")
+echo "fan_out: $FAN_OUT   blocked: $BLOCKED   rate_limited: $RATE_LIMITED"
 ```
 
 **케이스 1 — `blocked` 비어있지 않음 (인증 만료)**:
@@ -91,6 +92,23 @@ echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
 <!-- final-verdict-start -->
 ## Tier 3 판정: BLOCK
 사유: 외부 프로바이더 인증 만료
+<!-- final-verdict-end -->
+```
+
+**케이스 1b — `fan_out` 비어있고 `rate_limited` 있음 (usage limit)**:
+
+```
+## 교차 검증 SKIP — 외부 프로바이더 usage limit
+
+다음 프로바이더가 usage limit 상태입니다:
+  - <RATE_LIMITED providers>
+
+재시도 가능 시각은 캐시에 기록됨. 반복 호출을 피하기 위해 cross-review를 건너뜁니다.
+해소 후 `python -m core.provider_detect --invalidate <provider_id>` 로 캐시 갱신 가능.
+
+<!-- final-verdict-start -->
+## Tier 3 판정: PASS [rate-limited]
+사유: 외부 프로바이더 usage limit — SKIP (단, 이번 라운드는 external cross-validation 없음)
 <!-- final-verdict-end -->
 ```
 
@@ -229,6 +247,19 @@ mkdir -p .af_review_queue
   {"threadId": "<extracted_id>", "created_at": "<iso8601>"}
   ```
 - 응답 텍스트를 `/tmp/cr-codex-r1.txt`에 저장한다.
+
+**⚠️ usage limit 감지 시**: 응답 텍스트에 "usage limit" / "rate limit" / "too many requests" 등이 있으면
+rate_limited로 캐시에 기록하고 SKIP 판정을 내린다:
+```bash
+python -m core.provider_detect --mark-rate-limited codex_cli
+# 다음 cross-review의 Step 0이 자동으로 rate_limited로 감지해 SKIP 처리함
+echo "## 교차 검증 SKIP — codex_cli usage limit (캐시 기록 완료)"
+echo "<!-- final-verdict-start -->"
+echo "## Tier 3 판정: PASS [rate-limited]"
+echo "사유: codex_cli usage limit — SKIP (다음 cross-review에서 자동 감지)"
+echo "<!-- final-verdict-end -->"
+exit 0
+```
 
 #### 2c. CLI fallback (codex_cli가 없고 gemini_cli 등 다른 provider만 있을 때)
 

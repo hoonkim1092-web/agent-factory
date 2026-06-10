@@ -57,14 +57,12 @@ def _detect_workspace() -> str:
     return os.getcwd()
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
+def main_for_path(filepath: str, workspace: str | None = None) -> None:
+    if not filepath:
         return
 
-    filepath = sys.argv[1]
-
     # 절대경로 → 상대경로 변환
-    workspace = _detect_workspace()
+    workspace = workspace or _detect_workspace()
     try:
         rel = os.path.relpath(os.path.abspath(filepath), workspace)
     except ValueError:
@@ -250,6 +248,12 @@ def main() -> None:
             )
     except Exception:
         pass
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        return
+    main_for_path(sys.argv[1])
 
 
 if __name__ == "__main__":

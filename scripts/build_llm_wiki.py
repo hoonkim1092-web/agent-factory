@@ -110,6 +110,11 @@ def _parse_blueprint(text: str) -> dict:
     return result
 
 
+def _slug_text(text: str, fallback: str = "section") -> str:
+    normalized = re.sub(r"[^0-9A-Za-z가-힣]+", "-", text).strip("-").lower()
+    return normalized or fallback
+
+
 def _slugify_blueprint_heading(heading: str) -> str:
     if heading == "목차":
         return "toc"
@@ -117,9 +122,11 @@ def _slugify_blueprint_heading(heading: str) -> str:
         return "maintenance-guide"
     if heading.startswith("§"):
         section_id = heading.split(maxsplit=1)[0]
-        return "section-" + section_id.removeprefix("§").replace(".", "-")
-    normalized = re.sub(r"[^0-9A-Za-z가-힣]+", "-", heading).strip("-").lower()
-    return normalized or "section"
+        title = heading.split(maxsplit=1)[1] if len(heading.split(maxsplit=1)) > 1 else ""
+        number = section_id.removeprefix("§").replace(".", "-")
+        title_slug = _slug_text(title, fallback="section")
+        return f"{number}-{title_slug}"
+    return _slug_text(heading)
 
 
 def _split_blueprint_sections(text: str) -> list[dict]:
@@ -185,8 +192,10 @@ def _parse_code_review(text: str) -> list[dict]:
     return sections
 
 
-def _slugify_code_review_section(section_id: str) -> str:
-    return "section-" + section_id.replace(".", "-")
+def _slugify_code_review_section(section_id: str, heading: str = "") -> str:
+    title = heading.split(maxsplit=1)[1] if len(heading.split(maxsplit=1)) > 1 else heading
+    title_slug = _slug_text(title, fallback="section")
+    return f"{section_id.replace('.', '-')}-{title_slug}"
 
 
 def _split_code_review_sections(text: str) -> list[dict]:
@@ -203,7 +212,7 @@ def _split_code_review_sections(text: str) -> list[dict]:
         end = matches[pos + 1][0] if pos + 1 < len(matches) else len(lines)
         heading = heading_line.removeprefix("###").strip()
         section_id = heading.split(maxsplit=1)[0]
-        slug = _slugify_code_review_section(section_id)
+        slug = _slugify_code_review_section(section_id, heading)
         seen[slug] = seen.get(slug, 0) + 1
         if seen[slug] > 1:
             slug = f"{slug}-{seen[slug]}"

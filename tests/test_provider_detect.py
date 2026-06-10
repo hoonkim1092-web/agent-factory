@@ -6,6 +6,7 @@ import os
 import subprocess
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -589,3 +590,206 @@ def test_t14_concurrent_detect_provider_states(monkeypatch):
     for r in results_list:
         assert r["codex_cli"].state == ProviderState.AVAILABLE
         assert r["gemini_cli"].state == ProviderState.AUTH_EXPIRED
+
+
+# ──────────────────────────────────────────
+# Rate-limit: INV-1 ~ INV-9
+# ──────────────────────────────────────────
+
+
+def _future_iso(hours: int = 2) -> str:
+    return (datetime.now(tz=timezone.utc) + timedelta(hours=hours)).isoformat(timespec="seconds")
+
+
+def _past_iso(hours: int = 2) -> str:
+    return (datetime.now(tz=timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds")
+
+
+def test_inv1_mark_rate_limited_detected(monkeypatch):
+    """INV-1: mark_rate_limited(p, 미래) 후 detect → p=RATE_LIMITED, fan_out 제외."""
+    from core.provider_detect import mark_rate_limited
+
+    future = _future_iso()
+    mark_rate_limited("codex_cli", future)
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    results = detect_provider_states(providers=["codex_cli"], use_cache=True)
+
+    assert results["codex_cli"].state == ProviderState.RATE_LIMITED
+    fan_out = [pid for pid, r in results.items() if r.state == ProviderState.AVAILABLE]
+    assert "codex_cli" not in fan_out
+
+
+def test_inv2_expired_rate_limit_recovers(monkeypatch):
+    """INV-2: rate_limited_until 과거 → RATE_LIMITED override 없음, AVAILABLE 복구."""
+    from core.provider_detect import mark_rate_limited
+
+    past = _past_iso()
+    mark_rate_limited("codex_cli", past)
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.stderr = ""
+
+    with patch("subprocess.run", return_value=mock_proc):
+        results = detect_provider_states(providers=["codex_cli"], use_cache=False)
+
+    assert results["codex_cli"].state == ProviderState.AVAILABLE
+
+
+def test_inv3_cli_json_includes_rate_limited(monkeypatch, capsys):
+    """INV-3: CLI --json 출력에 rate_limited 목록 포함."""
+    from core.provider_detect import mark_rate_limited
+
+    future = _future_iso()
+    mark_rate_limited("codex_cli", future)
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli", "gemini_cli"])
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.stderr = ""
+
+    with patch("subprocess.run", return_value=mock_proc):
+        pd._main(["--json", "--exclude-self", "claude_cli"])
+
+    out = capsys.readouterr().out
+    data = json.loads(out)
+    assert "rate_limited" in data
+    assert "codex_cli" in data["rate_limited"]
+    assert "codex_cli" not in data["fan_out"]
+
+
+def test_inv4_detect_rate_limit_signal_with_pattern():
+    """INV-4: detect_rate_limit_signal("...usage limit...") → str 반환."""
+    from core.provider_detect import detect_rate_limit_signal
+
+    result = detect_rate_limit_signal("Error: you have reached your usage limit. Try again later.")
+    assert result is not None
+    assert isinstance(result, str)
+    # Should be parseable as ISO datetime
+    dt = datetime.fromisoformat(result)
+    assert dt > datetime.now(tz=timezone.utc) - timedelta(seconds=5)
+
+
+def test_inv4b_detect_rate_limit_signal_with_iso_reset():
+    """INV-4: reset ISO datetime이 있으면 파싱해서 반환."""
+    from core.provider_detect import detect_rate_limit_signal
+
+    result = detect_rate_limit_signal("usage limit. Reset at 2030-06-11T10:31:00+00:00.")
+    assert result is not None
+    dt = datetime.fromisoformat(result)
+    assert dt.year == 2030
+
+
+def test_inv5_detect_rate_limit_signal_normal_text():
+    """INV-5: 정상 텍스트 → None."""
+    from core.provider_detect import detect_rate_limit_signal
+
+    assert detect_rate_limit_signal("LGTM, no issues found.") is None
+    assert detect_rate_limit_signal("") is None
+    assert detect_rate_limit_signal("Authentication successful") is None
+
+
+def test_inv6_detect_rate_limit_signal_fallback():
+    """INV-6: reset 파싱 실패해도 fallback TTL 반환 (None 아님)."""
+    from core.provider_detect import detect_rate_limit_signal
+
+    result = detect_rate_limit_signal("rate limit hit. Try again eventually.")
+    assert result is not None
+    dt = datetime.fromisoformat(result)
+    assert dt > datetime.now(tz=timezone.utc)
+
+
+def test_inv7_backward_compat_no_rate_limited_until(tmp_path, monkeypatch):
+    """INV-7: 기존 캐시에 rate_limited_until 없어도 AVAILABLE, 예외 없음."""
+    cache_dir = tmp_path / ".af"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / "provider_cache.json"
+    now = datetime.now(tz=timezone.utc).isoformat(timespec="seconds")
+    data = {
+        "version": 1, "ts": now, "ttl_sec": 3600,
+        "states": {
+            "codex_cli": {"state": "available", "checked_at": now, "rtt_ms": 100, "stderr_excerpt": ""},
+        },
+    }
+    cache_file.write_text(json.dumps(data), encoding="utf-8")
+
+    results = detect_provider_states(providers=["codex_cli"], use_cache=True)
+    assert results["codex_cli"].state == ProviderState.AVAILABLE
+
+
+def test_inv8_run_provider_limit_calls_mark(monkeypatch):
+    """INV-8: _run_provider가 limit reason 응답 시 mark_rate_limited 호출."""
+    from core.review_runner import _run_provider
+
+    calls: list[tuple] = []
+
+    def fake_mark(provider_id: str, until: str) -> None:
+        calls.append((provider_id, until))
+
+    monkeypatch.setattr("core.provider_detect.mark_rate_limited", fake_mark)
+
+    with patch(
+        "core.providers.cli.execute_cli_chat",
+        return_value={"ok": False, "reason": "usage limit exceeded", "text": ""},
+    ):
+        result = _run_provider("codex", "prompt", ".")
+
+    assert "(provider error:" in result
+    assert len(calls) == 1
+    pid, until = calls[0]
+    assert pid == "codex_cli"
+    assert until  # not empty
+
+
+def test_inv8_non_limit_error_does_not_mark(monkeypatch):
+    """non-limit 에러는 mark_rate_limited 호출 안 함."""
+    from core.review_runner import _run_provider
+
+    calls: list[tuple] = []
+    monkeypatch.setattr("core.provider_detect.mark_rate_limited", lambda p, u: calls.append((p, u)))
+
+    with patch(
+        "core.providers.cli.execute_cli_chat",
+        return_value={"ok": False, "reason": "connection_timeout", "text": ""},
+    ):
+        _run_provider("codex", "prompt", ".")
+
+    assert len(calls) == 0
+
+
+def test_inv9b_use_cache_false_preserves_rate_limited(monkeypatch):
+    """use_cache=False여도 mark된 rate_limited_until이 결과에 반영된다."""
+    from core.provider_detect import mark_rate_limited
+
+    future = _future_iso(hours=3)
+    mark_rate_limited("codex_cli", future)
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0  # ping says AVAILABLE
+    mock_proc.stderr = ""
+
+    with patch("subprocess.run", return_value=mock_proc):
+        results = detect_provider_states(providers=["codex_cli"], use_cache=False)
+
+    assert results["codex_cli"].state == ProviderState.RATE_LIMITED
+
+
+def test_inv9_force_refresh_preserves_rate_limited(monkeypatch):
+    """INV-9: force_refresh=True여도 until이 미래면 RATE_LIMITED 유지."""
+    from core.provider_detect import mark_rate_limited
+
+    future = _future_iso(hours=3)
+    mark_rate_limited("codex_cli", future)
+
+    monkeypatch.setattr(pd, "detect_installed_cli_providers", lambda: ["codex_cli"])
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0  # ping says AVAILABLE
+    mock_proc.stderr = ""
+
+    with patch("subprocess.run", return_value=mock_proc):
+        results = detect_provider_states(providers=["codex_cli"], force_refresh=True)
+
+    assert results["codex_cli"].state == ProviderState.RATE_LIMITED

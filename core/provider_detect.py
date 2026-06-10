@@ -7,14 +7,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from dataclasses import dataclass, replace
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -22,9 +23,19 @@ from core.providers.registry import CLI_PROVIDER_IDS, detect_installed_cli_provi
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_TTL_SEC = 3600   # 1 hour
-_PING_TIMEOUT_SEC = 30    # codex/gemini는 LLM API 호출이 5~15초 소요
+_DEFAULT_TTL_SEC = 3600         # 1 hour
+_PING_TIMEOUT_SEC = 30          # codex/gemini는 LLM API 호출이 5~15초 소요
 _CACHE_VERSION = 1
+_RATE_LIMIT_FALLBACK_TTL = 3600  # usage limit 리셋 시각 파싱 실패 시 fallback (1h)
+
+_RATE_LIMIT_PATTERNS = (
+    "usage limit",
+    "hit your usage",
+    "rate limit",
+    "too many requests",
+    "429",
+    "resource exhausted",
+)
 
 # Provider alias → canonical ID
 _ALIAS_MAP: dict[str, str] = {
@@ -80,6 +91,7 @@ def _resolve_ping_cmd(provider_id: str) -> list[str] | None:
 class ProviderState(str, Enum):
     AVAILABLE     = "available"
     AUTH_EXPIRED  = "auth_expired"
+    RATE_LIMITED  = "rate_limited"   # usage limit — 시간 경과 시 자동 복구 (SKIP, 노티)
     NOT_INSTALLED = "not_installed"
 
 
@@ -87,9 +99,10 @@ class ProviderState(str, Enum):
 class ProviderProbeResult:
     provider_id: str
     state: ProviderState
-    checked_at: str         # ISO8601 UTC
+    checked_at: str            # ISO8601 UTC
     rtt_ms: int = 0
     stderr_excerpt: str = ""
+    rate_limited_until: str = ""  # ISO8601 UTC; "" = 제한 없음
 
 
 # ──────────────────────────────────────────
@@ -139,6 +152,7 @@ def _write_cache_raw(states: dict[str, ProviderProbeResult]) -> None:
                 "checked_at": r.checked_at,
                 "rtt_ms": r.rtt_ms,
                 "stderr_excerpt": r.stderr_excerpt,
+                "rate_limited_until": r.rate_limited_until,
             }
             for pid, r in states.items()
         },
@@ -169,7 +183,23 @@ def _result_from_dict(pid: str, s: dict) -> ProviderProbeResult:
         checked_at=s.get("checked_at", ""),
         rtt_ms=s.get("rtt_ms", 0),
         stderr_excerpt=s.get("stderr_excerpt", ""),
+        rate_limited_until=s.get("rate_limited_until", ""),
     )
+
+
+def _apply_rate_limit_override(r: ProviderProbeResult) -> ProviderProbeResult:
+    """rate_limited_until이 미래이면 state를 RATE_LIMITED로 override (AVAILABLE이어도)."""
+    if not r.rate_limited_until:
+        return r
+    try:
+        until = datetime.fromisoformat(r.rate_limited_until)
+    except (ValueError, TypeError):
+        return r
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    if until > datetime.now(tz=timezone.utc):
+        return replace(r, state=ProviderState.RATE_LIMITED)
+    return r
 
 
 # ──────────────────────────────────────────
@@ -356,8 +386,23 @@ def detect_provider_states(
                             merged[pid] = _result_from_dict(pid, s)
                         except (KeyError, ValueError):
                             pass
+                # rate_limited_until은 ping으로 복구 불가 — 유효한 값이면 새 probe 결과에도 보존
+                for pid in list(probed_real):
+                    old_r = merged.get(pid)
+                    if old_r and old_r.rate_limited_until:
+                        probed_real[pid] = replace(probed_real[pid], rate_limited_until=old_r.rate_limited_until)
                 merged.update(probed_real)
                 _write_cache_raw(merged)
+        elif probed_real:
+            # use_cache=False여도 rate_limited_until은 캐시에서 복원 (limit은 ping으로 해소 불가)
+            with _cache_lock:
+                existing = _read_cache_raw()
+            if existing:
+                for pid in list(probed_real):
+                    s = existing.get("states", {}).get(pid, {})
+                    old_until = s.get("rate_limited_until", "")
+                    if old_until:
+                        probed_real[pid] = replace(probed_real[pid], rate_limited_until=old_until)
 
         # results 병합: 실제 probe 결과 + skip → NOT_INSTALLED
         results.update(probed_real)
@@ -368,7 +413,70 @@ def detect_provider_states(
                 checked_at=_now_iso(),
             )
 
-    return results
+    return {pid: _apply_rate_limit_override(r) for pid, r in results.items()}
+
+
+def mark_rate_limited(provider_id: str, until_iso: str) -> None:
+    """limit 응답을 만난 호출처가 호출. 캐시에 rate_limited_until을 atomic 기록.
+
+    기존 캐시 항목의 state/rtt_ms 등은 유지하고 rate_limited_until만 갱신.
+    캐시 항목이 없으면 state=rate_limited 미니멀 항목 생성.
+    """
+    with _cache_lock:
+        data = _read_cache_raw()
+        if not data:
+            data = {
+                "version": _CACHE_VERSION,
+                "ts": _now_iso(),
+                "ttl_sec": _ttl_sec(),
+                "states": {},
+            }
+        states: dict[str, dict] = data.get("states", {})
+        entry: dict = dict(states.get(provider_id, {}))
+        entry["rate_limited_until"] = until_iso
+        if "state" not in entry:
+            entry["state"] = ProviderState.RATE_LIMITED.value
+        if "checked_at" not in entry:
+            entry["checked_at"] = _now_iso()
+        states[provider_id] = entry
+        data["states"] = states
+        data["version"] = _CACHE_VERSION
+        path = _cache_path()
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            os.replace(tmp, path)
+        except OSError as exc:
+            log.warning("provider_detect: mark_rate_limited write failed: %s", exc)
+
+
+def detect_rate_limit_signal(text: str) -> str | None:
+    """limit 시그널이 있으면 reset ISO8601 UTC를 반환; 없으면 None.
+
+    리셋 시각 파싱 성공 → 그 값, 실패 → now + _RATE_LIMIT_FALLBACK_TTL fallback.
+    """
+    if not text:
+        return None
+    lower = text.lower()
+    if not any(p in lower for p in _RATE_LIMIT_PATTERNS):
+        return None
+    # Best-effort: ISO8601 datetime (e.g. "2026-06-11T10:31:00+00:00" or with Z)
+    m = re.search(r'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:?\d{2})?', text)
+    if m:
+        try:
+            dt_str = m.group().replace(" ", "T")
+            if dt_str.endswith("Z"):
+                dt_str = dt_str[:-1] + "+00:00"
+            dt = datetime.fromisoformat(dt_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.isoformat(timespec="seconds")
+        except ValueError:
+            pass
+    return (datetime.now(tz=timezone.utc) + timedelta(seconds=_RATE_LIMIT_FALLBACK_TTL)).isoformat(
+        timespec="seconds"
+    )
 
 
 def invalidate_cache(provider_id: str | None = None) -> None:
@@ -416,12 +524,33 @@ def _main(argv: list[str] | None = None) -> None:
         help="캐시 항목 무효화 (all 또는 provider_id)",
     )
     parser.add_argument("--force-refresh", action="store_true", help="캐시 무시하고 새로 ping")
+    parser.add_argument(
+        "--mark-rate-limited",
+        dest="mark_rate_limited",
+        metavar="PROVIDER",
+        help="provider를 rate_limited로 캐시에 기록 (limit 응답 후 호출)",
+    )
+    parser.add_argument(
+        "--until",
+        default="",
+        metavar="ISO8601",
+        help="--mark-rate-limited와 함께 사용; 빈 값이면 now + fallback TTL",
+    )
     args = parser.parse_args(argv)
 
     if args.invalidate:
         target = None if args.invalidate == "all" else args.invalidate
         invalidate_cache(target)
         print(f"cache invalidated: {args.invalidate}", file=sys.stderr)
+        return
+
+    if args.mark_rate_limited:
+        normalized = _ALIAS_MAP.get(args.mark_rate_limited.lower(), args.mark_rate_limited.lower())
+        until = args.until or (
+            datetime.now(tz=timezone.utc) + timedelta(seconds=_RATE_LIMIT_FALLBACK_TTL)
+        ).isoformat(timespec="seconds")
+        mark_rate_limited(normalized, until)
+        print(f"rate_limited marked: {normalized} until {until}", file=sys.stderr)
         return
 
     # exclude_self를 target 목록에서 제거
@@ -439,12 +568,14 @@ def _main(argv: list[str] | None = None) -> None:
 
     fan_out = [pid for pid in target_ids if states[pid].state == ProviderState.AVAILABLE]
     blocked = [pid for pid in target_ids if states[pid].state == ProviderState.AUTH_EXPIRED]
+    rate_limited = [pid for pid in target_ids if states[pid].state == ProviderState.RATE_LIMITED]
 
     if args.json:
         out = {
             "states": {pid: r.state.value for pid, r in states.items()},
             "fan_out": fan_out,
             "blocked": blocked,
+            "rate_limited": rate_limited,
         }
         print(json.dumps(out))
     else:
@@ -452,6 +583,7 @@ def _main(argv: list[str] | None = None) -> None:
             print(f"{pid}: {r.state.value}")
         print(f"fan_out: {fan_out}")
         print(f"blocked: {blocked}")
+        print(f"rate_limited: {rate_limited}")
 
 
 if __name__ == "__main__":
