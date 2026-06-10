@@ -234,12 +234,12 @@ def test_marker_kept_after_fire(tmp_path, monkeypatch, capsys):
 # ── rate_limited skip tests ───────────────────────────────────────────────────
 
 def test_t3_skipped_when_all_external_rate_limited(tmp_path, monkeypatch, capsys):
-    """외부 프로바이더 전부 rate_limited → af-cross-review 없이 af-critic → af-test-runner만 발화."""
+    """외부 프로바이더 전부 미설치/rate_limited → af-cross-review 없이 af-critic → af-test-runner만 발화."""
     import scripts.check_pending_review as m
     importlib.reload(m)
     monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
     monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
-    monkeypatch.setattr(m, "_all_external_providers_rate_limited", lambda: True)
+    monkeypatch.setattr(m, "_all_external_providers_unavailable", lambda: True)
     _write_marker(tmp_path, {
         "files": ["core/x.py"],
         "blast_tier": 2,
@@ -254,7 +254,7 @@ def test_t3_skipped_when_all_external_rate_limited(tmp_path, monkeypatch, capsys
     assert "af-cross-review" not in agent_line
     assert "af-critic" in agent_line
     assert "af-test-runner" in agent_line
-    assert "rate_limited" in out
+    assert "미설치" in out or "rate_limited" in out
 
 
 def test_t3_included_when_no_rate_limit(tmp_path, monkeypatch, capsys):
@@ -263,7 +263,7 @@ def test_t3_included_when_no_rate_limit(tmp_path, monkeypatch, capsys):
     importlib.reload(m)
     monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
     monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
-    monkeypatch.setattr(m, "_all_external_providers_rate_limited", lambda: False)
+    monkeypatch.setattr(m, "_all_external_providers_unavailable", lambda: False)
     _write_marker(tmp_path, {
         "files": ["core/x.py"],
         "blast_tier": 2,

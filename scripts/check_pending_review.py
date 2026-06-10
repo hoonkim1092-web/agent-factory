@@ -85,8 +85,9 @@ def _agents_for_tier(
     )
 
 
-def _all_external_providers_rate_limited() -> bool:
-    """외부(non-claude) 프로바이더 전부 RATE_LIMITED → True. 캐시만 조회, 새 ping 없음."""
+def _all_external_providers_unavailable() -> bool:
+    """외부(non-claude) 프로바이더 전부 사용 불가(NOT_INSTALLED | RATE_LIMITED) → True.
+    캐시만 조회, 새 ping 없음. AUTH_EXPIRED는 포함 안 함 — 재인증 안내가 필요."""
     try:
         from core.provider_detect import (  # type: ignore
             detect_provider_states, ProviderState, CLI_PROVIDER_IDS,
@@ -96,7 +97,8 @@ def _all_external_providers_rate_limited() -> bool:
             return False
         states = detect_provider_states(providers=ext_ids, use_cache=True)
         ext = list(states.values())
-        return bool(ext) and all(r.state == ProviderState.RATE_LIMITED for r in ext)
+        _skip_states = (ProviderState.NOT_INSTALLED, ProviderState.RATE_LIMITED)
+        return bool(ext) and all(r.state in _skip_states for r in ext)
     except Exception:
         return False
 
@@ -221,9 +223,9 @@ def main() -> None:
             from review_gate import _required_tiers_for  # type: ignore
             t3_skip_allowed = blast_tier != 1 and 3 not in _required_tiers_for(data)
             if not t3_skip_allowed and blast_tier != 1:
-                if _all_external_providers_rate_limited():
+                if _all_external_providers_unavailable():
                     t3_skip_allowed = True
-                    _t3_skip_reason = "외부 프로바이더 rate_limited — af-cross-review 스킵"
+                    _t3_skip_reason = "외부 프로바이더 미설치/rate_limited — af-cross-review 스킵"
         except Exception:
             t3_skip_allowed = False
         agent_list, instruction = _agents_for_tier(blast_tier, t3_skip_allowed, _t3_skip_reason)
