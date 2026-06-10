@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T15:13:49+09:00
-source_commit: f99f0235
+generated_at: 2026-06-10T16:07:53+09:00
+source_commit: 29df9555
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,7 +9,7 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `f99f0235`
+> source_commit: `29df9555`
 > 관련: [[index]] | [[architecture]] | [[review_patterns]]
 
 ## Master_Blueprint.md
@@ -34,7 +34,7 @@ sources:
 | §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1596` / [[blueprint/10-의존성-그래프-영향-매트릭스]] |
 | §11 알려진 제약·이슈 | `Master_Blueprint.md:1650` / [[blueprint/11-알려진-제약-이슈]] |
 | §12 변경 이력 | `Master_Blueprint.md:1682` / [[blueprint/12-변경-이력]] |
-| 유지보수 가이드 | `Master_Blueprint.md:2844` / [[blueprint/maintenance-guide]] |
+| 유지보수 가이드 | `Master_Blueprint.md:2846` / [[blueprint/maintenance-guide]] |
 | §3.1 ProjectPipeline | `Master_Blueprint.md:§3.1` |
 | §3.2 DynamicOrchestrator | `Master_Blueprint.md:§3.2` |
 | §3.3 AgentRunner | `Master_Blueprint.md:§3.3` |

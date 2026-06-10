@@ -172,8 +172,8 @@ class SelfEvolutionController:
                     old_version=old_version,
                 )
 
-            # 8. Quality gate
-            gate_result = self._run_quality_gate(candidate_dir, skill_id)
+            # 8. Quality gate (baseline=skill_dir: 진화 전 live 스킬)
+            gate_result = self._run_quality_gate(candidate_dir, skill_id, baseline_dir=skill_dir)
             if gate_result is None:
                 # gate 자체 예외 → DEFERRED (게이트 신뢰 불가, 보수적 폐기)
                 logger.warning("[Controller] quality gate 미완료 (DEFERRED): %s", skill_id)
@@ -293,12 +293,16 @@ class SelfEvolutionController:
             logger.error("[Controller] sandbox 검증 예외 (%s): %s", skill_id, e)
             return False
 
-    def _run_quality_gate(self, candidate_dir: str, skill_id: str):
+    def _run_quality_gate(self, candidate_dir: str, skill_id: str, *, baseline_dir: str | None = None):
         """SkillQualityGate 실행. 예외 시 None 반환 (DEFERRED 트리거)."""
         try:
             from core.skill_quality_gate import SkillQualityGate
             gate = SkillQualityGate()
-            return gate.validate(candidate_dir, auto_register=False)
+            return gate.validate(
+                candidate_dir,
+                baseline_skill_path=baseline_dir,
+                auto_register=False,
+            )
         except Exception as e:
             logger.error("[Controller] quality gate 예외 (%s): %s", skill_id, e)
             return None

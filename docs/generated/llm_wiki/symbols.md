@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T15:13:50+09:00
-source_commit: f99f0235
+generated_at: 2026-06-10T16:07:53+09:00
+source_commit: 29df9555
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9680,6 +9680,23 @@ _(no top-level symbols)_
 - `test_manifest_entry_has_no_reuse_decision_for_exact_match`
 - `test_shadow_reuse_manifest_installed_reflects_is_installable_false`
 - `test_forge_manifest_installed_reflects_is_installable_false`
+
+## `tests/test_skill_quality_gate.py`
+
+**Functions:**
+- `_shadow`
+- `_report`
+- `_make_gate`
+- `_skill_dir`
+- `test_inv1_delta_positive_passes`
+- `test_inv2_delta_negative_rejected`
+- `test_inv2b_delta_zero_rejected`
+- `test_inv3_no_baseline_passes_contract_only`
+- `test_inv4_small_sample_not_blocked`
+- `test_inv5_quality_delta_filled`
+- `test_inv5b_quality_delta_none_when_no_baseline`
+- `test_inv6_baseline_dir_normalized_to_file_path`
+- `test_inv7_knowledge_skill_passes_without_harness`
 
 ## `tests/test_skill_retrieval_engine.py`
 

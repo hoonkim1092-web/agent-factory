@@ -132,7 +132,7 @@
 | `core/skill_metadata_adapter.py` | YAML/Markdown → SkillMetadata 변환 + SKILL.md fallback | `auto_detect_and_convert()`, `_fill_missing_description()`, `convert_meta_yaml_to_metadata()` |
 | `core/skill_enricher.py` | 스킬 메타데이터 자동 생성 | `enrich_skill_metadata()`, `bulk_enrich_all_skills()` |
 | `core/skill_eval_harness.py` | 계약/숨겨진/섀도우 테스트 | `SkillEvalHarness` |
-| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — knowledge skill early-return + auto_register 지원 | `SkillQualityGate`, `GateResult`, `_register_knowledge_skill()` |
+| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — **shadow delta 게이트(2026-06-10)**: baseline 경로 정규화(디렉터리→skill.py 파일) + `_shadow_not_regressed()` + `MIN_SHADOW_CASES=3`. delta>0일 때만 publish(무변화/퇴화 차단). `GateResult.quality_delta` 반환. knowledge skill early-return + auto_register 지원 | `SkillQualityGate`, `GateResult`, `_shadow_not_regressed()`, `_register_knowledge_skill()` |
 | `core/evolution_types.py` | Stage-1 공유 타입 (Sprint 1 신규) | `EvolutionDecision`, `EvolutionResult` |
 | `core/skill_evolution_bus.py:1-241` | 7단계 캐시 무효화 체인 | `SkillEvolutionBus.on_skill_evolved()` |
 | `core/skill_evolution_safety.py` | 스킬 진화 안전망 헬퍼 (Stage 0 임시, Stage 1 흡수 예정) | `verify_evolved_skill_sandbox()`, `rollback_evolved_skill()` |
@@ -1129,12 +1129,12 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-10; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — af-cross-review.md, config.toml, pre-commit, .gitignore, Master_Blueprint.md (+54)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, skill_evolution_controller.py, skill_quality_gate.py, utils.py, test_phase_a_step3_evolution.py (+2)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/provider_detect.py` | Provider 3-state 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. | `ProviderState`, `ProviderProbeResult`, `detect_provider_states()`, `mark_rate_limited()`, `detect_rate_limit_signal()` |
-| `core/review_runner.py` | core/review_runner.py ====================== 교차검증 리뷰 실행 유틸리티 — core/ 레이어에서 안전하게 import 가능. | `detect_providers()`, `detect_blocked_providers()`, `select_review_pair()` |
+| `core/skill_evolution_controller.py` | core/skill_evolution_controller.py ==================================== Stage 1 스킬 진화 단일 진입점. | `SelfEvolutionController` |
+| `core/skill_quality_gate.py` | core/skill_quality_gate.py =========================== 스킬 품질 게이트 — 평가 통과한 스킬만 registry에 등재. | `GateResult`, `SkillQualityGate` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1683,6 +1683,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-10 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, skill_evolution_controller.py, skill_quality_gate.py, utils.py, test_phase_a_step3_evolution.py (+2) |
 | 2026-06-10 | v1.2.34 | chore(.claude): code update — af-cross-review.md, config.toml, pre-commit, .gitignore, Master_Blueprint.md (+54) |
 | 2026-06-10 | v1.2.44 | feat(utils): `running_min(values)` 신설 — 각 위치까지의 누적 최솟값을 list[int\|float]로 반환. 원소 타입 보존(정수 입력→정수 유지). 빈 리스트이면 빈 리스트 반환. `TestRunningMin` 11건 신규(총 248 PASS). §12 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-10 | v1.2.43 | feat(utils): `skewness(values)` 신설 — 왜도(Fisher's definition) float 반환. 오른쪽 꼬리=양수, 완전 대칭=0.0, 왼쪽 꼬리=음수. 빈 리스트이면 ValueError. 표준편차 0이면 0.0. 1/n×Σ((x−μ)/σ)³. `TestSkewness` 8건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
@@ -1722,6 +1723,7 @@ model_utils.py (독립 모듈)
 | 2026-06-04 | v1.2.38 | feat(utils): `harmonic_mean(values)` 신설 — 조화평균 float 반환. 빈 리스트이면 ValueError. 0 이하 값이면 ValueError. `TestHarmonicMean` 11건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-04 | v1.2.37 | feat(utils): `weighted_mean(values, weights)` 신설 — 가중 평균 float 반환. 빈 리스트이면 ValueError. 길이 불일치이면 ValueError. 음수 weight이면 ValueError. weight 합이 0이면 ValueError. `TestWeightedMean` 12건 신규. §0 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |
 | 2026-06-04 | v1.2.34 | chore(af): code update — af.spec |
+| 2026-06-10 | v1.2.34 | fix(skill-quality-gate): (1+1) fitness 게이트 구현 — baseline 경로 정규화(디렉터리→skill.py silent-fail 버그 수정) + shadow delta 게이트(`_shadow_not_regressed`: delta>0만 통과, delta≤0 REJECTED) + `MIN_SHADOW_CASES=3` + `GateResult.quality_delta` 반환. `skill_evolution_controller._run_quality_gate`에 `baseline_dir=skill_dir` 배선. INV-1~7 테스트 9건 신규. 기존 테스트 4건 mock 정합. Blueprint §0/§12 갱신. — core/skill_quality_gate.py, core/skill_evolution_controller.py, tests/test_skill_quality_gate.py, tests/test_phase_a_step3_evolution.py, Master_Blueprint.md |
 | 2026-06-10 | v1.2.34 | feat(provider-detect): RATE_LIMITED 4번째 상태 + usage limit 사후 학습 — `ProviderState.RATE_LIMITED` 추가, `ProviderProbeResult.rate_limited_until` 필드 추가, `mark_rate_limited()` + `detect_rate_limit_signal()` + `_apply_rate_limit_override()` 신규. `review_runner._run_provider`에 limit 감지 배선. `af-cross-review.md` Step 0 rate_limited 케이스 + Step 2b mark 추가. INV-1~9 테스트 11건 신규. 3-Tier 대기. §0/§12 갱신. — core/provider_detect.py, core/review_runner.py, .claude/agents/af-cross-review.md, tests/test_provider_detect.py, tests/test_review_runner_execute_cli.py, Master_Blueprint.md |
 | 2026-06-04 | v1.2.34 | chore(af): code update — af.spec, dogfood.py, right_sized_router.py, 2026-06-04-001515-right_sized_router-code-review.md, test_dogfood.py (+1) |
 | 2026-06-04 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, af.spec, dogfood.py, utils.py, test_dogfood.py (+1) |

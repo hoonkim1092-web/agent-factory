@@ -173,6 +173,7 @@ class TestSkillQualityGate:
         mock_report.contract_eval.total_cases = 5
         mock_report.contract_eval.pass_rate = 0.4  # below 0.8
         mock_report.contract_eval.details = []
+        mock_report.shadow_eval.total_cases = 0  # no baseline → shadow gate 통과
         mock_report.recommended_stage = "draft"
         mock_report.report_path = ""
         gate.harness = MagicMock(evaluate=MagicMock(return_value=mock_report))
@@ -193,6 +194,7 @@ class TestSkillQualityGate:
         mock_report = MagicMock()
         mock_report.contract_eval.total_cases = 3
         mock_report.contract_eval.pass_rate = 0.9
+        mock_report.shadow_eval.total_cases = 0  # no baseline → shadow gate 통과
         mock_report.recommended_stage = "stable"
         mock_report.report_path = ""
         gate.harness = MagicMock(evaluate=MagicMock(return_value=mock_report))
@@ -210,7 +212,7 @@ class TestSkillQualityGate:
         gate.registry = MagicMock()
 
         result = gate.validate(str(tmp_path))
-        assert result.quality_delta is None  # validate()는 quality_delta를 설정하지 않음
+        assert result.quality_delta is None  # eval error 경로 → quality_delta=None
 
 
 # ── SkillSelfEvolutionHook ───────────────────────────────────────────────
@@ -308,6 +310,7 @@ class TestDefectSkillE2E:
             MagicMock(passed=False, name="case2", error="timeout"),
             MagicMock(passed=True, name="case3", error=""),
         ]
+        mock_report.shadow_eval.total_cases = 0  # no baseline → shadow gate 통과
         mock_report.recommended_stage = "draft"
         mock_report.report_path = ""
 
@@ -332,6 +335,7 @@ class TestDefectSkillE2E:
         mock_report = MagicMock()
         mock_report.contract_eval.total_cases = 5
         mock_report.contract_eval.pass_rate = 0.95
+        mock_report.shadow_eval.total_cases = 0  # no baseline → shadow gate 통과
         mock_report.recommended_stage = "stable"
         mock_report.report_path = str(tmp_path / "report.json")
 
@@ -344,7 +348,7 @@ class TestDefectSkillE2E:
 
         assert result.passed is True
         assert result.pass_rate == pytest.approx(0.95)
-        # quality_delta는 외부 caller가 설정 (baseline과 비교)
+        # shadow_eval.total_cases=0(baseline 없음) → quality_delta=None
         assert result.quality_delta is None
 
     def test_quality_delta_set_by_caller(self):

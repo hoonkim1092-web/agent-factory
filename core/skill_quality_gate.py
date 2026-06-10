@@ -30,6 +30,7 @@ class SkillQualityGate:
     """스킬 평가 → 등재 게이트."""
 
     PASS_RATE_THRESHOLD = 0.8
+    MIN_SHADOW_CASES = 3  # delta 게이트 적용 최소 케이스 수 (소표본 노이즈 방지)
 
     def __init__(self, registry=None):
         from core.skill_registry import get_global_registry
@@ -62,10 +63,18 @@ class SkillQualityGate:
                 eval_report_path="",
             )
 
+        # baseline 경로 정규화: 디렉터리 → skill.py 파일 경로
+        # (디렉터리를 그대로 넘기면 importlib.spec_from_file_location이 None 반환
+        #  → baseline_callable=None → shadow 비교 silent-skip)
+        baseline_py = None
+        if baseline_skill_path:
+            _candidate = os.path.join(baseline_skill_path, "skill.py")
+            baseline_py = _candidate if os.path.exists(_candidate) else None
+
         try:
             report = self.harness.evaluate(
                 skill_py,
-                baseline_skill_path=baseline_skill_path,
+                baseline_skill_path=baseline_py,
             )
         except Exception as e:
             return GateResult(
@@ -98,9 +107,16 @@ class SkillQualityGate:
                 if not case.passed:
                     failure_reasons.append(f"  FAIL: {case.name} — {case.error}")
 
+        # shadow delta 게이트 (C2): baseline 있고 케이스 충분하면 delta > 0 강제
+        shadow_ok, shadow_reason = self._shadow_not_regressed(report.shadow_eval)
+        if not shadow_ok:
+            passed = False
+            failure_reasons.append(shadow_reason)
+
         if passed and auto_register:
             self._register_with_eval(skill_path, report)
 
+        shadow_eval = report.shadow_eval
         return GateResult(
             passed=passed,
             skill_path=skill_path,
@@ -108,6 +124,28 @@ class SkillQualityGate:
             pass_rate=pass_rate,
             eval_report_path=getattr(report, "report_path", ""),
             failure_reasons=failure_reasons,
+            quality_delta=shadow_eval.delta if shadow_eval.total_cases > 0 else None,
+        )
+
+    def _shadow_not_regressed(self, shadow_eval) -> tuple[bool, str]:
+        """shadow delta 게이트. (passed, reason) 반환.
+
+        | 조건 | 판정 |
+        |------|------|
+        | total_cases == 0 | 통과 (baseline 없음 — 기존 동작) |
+        | total_cases < MIN | 통과 (소표본 노이즈 무차단) |
+        | delta > 0         | 통과 (개선 확인) |
+        | delta <= 0        | REJECTED (퇴화 또는 무변화) |
+        """
+        if shadow_eval.total_cases == 0:
+            return True, ""
+        if shadow_eval.total_cases < self.MIN_SHADOW_CASES:
+            return True, ""
+        if shadow_eval.delta > 0:
+            return True, ""
+        return (
+            False,
+            f"shadow regression: delta={shadow_eval.delta} over {shadow_eval.total_cases} cases",
         )
 
     def _register_with_eval(self, skill_path: str, report) -> None:

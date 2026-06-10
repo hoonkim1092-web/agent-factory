@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T15:13:49+09:00
-source_commit: f99f0235
+generated_at: 2026-06-10T16:07:52+09:00
+source_commit: 29df9555
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -117,7 +117,7 @@ sources:
 | `core/skill_metadata_adapter.py` | YAML/Markdown → SkillMetadata 변환 + SKILL.md fallback | Master_Blueprint.md §0 |
 | `core/skill_enricher.py` | 스킬 메타데이터 자동 생성 | Master_Blueprint.md §0 |
 | `core/skill_eval_harness.py` | 계약/숨겨진/섀도우 테스트 | Master_Blueprint.md §0 |
-| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — knowledge skill early-return + auto_register 지원 | Master_Blueprint.md §0 |
+| `core/skill_quality_gate.py` | 스킬 품질 게이트 (Quality Plane) — **shadow delta 게이트(2026-06-10)**: baseline 경로 정규화(디렉터리→skill.py 파일) + `_shadow_not_regressed()` + `MIN_SHADOW_CASES=3`. delta>0일 때만 publish(무변화/퇴화 차단). `GateResult.quality_delta` 반환. knowledge skill early-return + auto_register 지원 | Master_Blueprint.md §0 |
 | `core/evolution_types.py` | Stage-1 공유 타입 (Sprint 1 신규) | Master_Blueprint.md §0 |
 | `core/skill_evolution_bus.py:1-241` | 7단계 캐시 무효화 체인 | Master_Blueprint.md §0 |
 | `core/skill_evolution_safety.py` | 스킬 진화 안전망 헬퍼 (Stage 0 임시, Stage 1 흡수 예정) | Master_Blueprint.md §0 |
