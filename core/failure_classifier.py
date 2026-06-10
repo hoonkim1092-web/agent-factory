@@ -35,6 +35,7 @@ _INFRA_PATTERNS: tuple[str, ...] = (
     "503",
     "auth_required",
     "not_logged_in",
+    "auth_expired",
 )
 
 

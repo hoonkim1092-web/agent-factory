@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-10 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-11 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -95,7 +95,7 @@
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | `classify_failure()`, `FailureCategory` |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | `RunBudget`, `set_run_budget()`, `get_run_budget()` |
 | `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | `SkillPackBootstrapper`, `check_installed()`, `missing()`, `installed()` |
-| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리 | `FSALoop`, `run_mission()`, `_run_agent()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
+| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리. B2: INFRA 실패(`classify_failure==INFRA`) 시 rollback 전 즉시 return — AUTH_EXPIRED 등 100+ 재시도 차단. | `FSALoop`, `run_mission()`, `_run_agent()`, `_decide_escalation()`, `_try_evolve_failed_skill()`, `_evolution_failed_skills` (run-scoped set) |
 | `core/git_manager.py` | 워크스페이스 git 연산 | `GitManager` |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | `HookEventBus` |
 | `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | `SkillSelfEvolutionHook` |
@@ -904,10 +904,11 @@ Control-plane(Lilith, Evaluator)용 LLM 인터페이스.
 > - 이 분리는 의도적이며 통합하지 않는다
 
 ### §3.8.2 FailureClassifier (`core/failure_classifier.py`)
+<!-- last_updated: 2026-06-11 -->
 
 reason 문자열 기반 실패 분류. `classify_failure(reason) → FailureCategory.INFRA | IMPLEMENTATION`
 
-INFRA 패턴: `missing_api_key`, `quota`, `429`, `503`, `cli_timeout`, `worker_timeout` 등
+INFRA 패턴: `missing_api_key`, `quota`, `429`, `503`, `cli_timeout`, `worker_timeout`, `auth_required`, `not_logged_in`, `auth_expired` 등 (B2: `auth_expired` 추가 — AUTH_EXPIRED provider 즉시 INFRA 분류)
 
 ### §3.8.3 RunBudget (`core/run_budget.py`)
 <!-- last_updated: 2026-04-27 -->
@@ -1081,7 +1082,7 @@ run_factory_cli.main()
 | `_light_allowed(route, scope, state)` | Phase 1 dispatch guard. scope 있으면 True(INV-1). 빈-scope는 ROUTE_MARKER_SCOPE_UNCERTAIN marker AND state.merge_mode∈{never,manual}일 때만 True(INV-5/δB). auto_policy 빈-scope는 enforce flip 전까지 full 강제. |
 | `_run_develop_full(state, pipeline)` | Full DEVELOP: `_develop_isolation_env(worktree)` CM 안에서 `pipeline.run(route=state.route_decision or None)` 위임(RSE 슬라이스2: required_stages 전달) → `_changed_files_fallback` → `_normalize_develop_result`. |
 | `_run_develop_light(state, policy)` | Light DEVELOP: `compile_spec → run_premortem → build_plan → _run_implement_phase`. `_develop_isolation_env`로 full과 동일 격리. Phase 2(observe): 말미에 `classify_with_content` 기반 Tier3 관측 → result["tier3_floor"] 키 기록(`mode/observability/changed_tier3/from_uncertain_scope`). observe 모드: block 없음, trip-rate 캘리브레이션 전용. |
-| `_develop_isolation_env(worktree)` | Context manager — `_ISO_ENV_KEYS`(AF_DISABLE_REGISTRY_WRITE/AF_SELF_RUN/AGENT_PROJECT_ROOT/AF_SKIP_DOMAIN_REVIEW)를 worktree-confine 값으로 설정, 종료 시 무조건 복원(inv5). full·light 공통 사용. |
+| `_develop_isolation_env(worktree)` | Context manager — `_ISO_ENV_KEYS`(AF_DISABLE_REGISTRY_WRITE/AF_SELF_RUN/AGENT_PROJECT_ROOT/AF_SKIP_DOMAIN_REVIEW/**AF_SKIP_REVIEW_GATE**)를 worktree-confine 값으로 설정, 종료 시 무조건 복원(inv5). full·light 공통 사용. B3: AF_SKIP_REVIEW_GATE=1 추가 — worktree 내부 커밋이 source-repo review-gate hook에 막히는 문제 수정. |
 | `_changed_files_fallback(state, worktree)` | git diff base_ref..HEAD → git status --porcelain 순서로 changed files 파생. full·light 공통 사용. |
 | `_derive_verify_cmds(changed)` | 변경 파일에서 pytest 명령 파생(test_ 포함 파일 → 파일 한정, 없으면 tests/ 전체). |
 | `_intended_scope(task)` | spec_compiler._scope_from_intent(task) 래퍼 — 파일경로 토큰 추출(결정적). scope=[] 시 classify가 low-confidence 처리. |
@@ -1127,13 +1128,16 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-10; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-11; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, dynamic_orchestrator.py, failure_classifier.py, fsa_loop.py (+4)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/dynamic_orchestrator.py` | dynamic orchestrator | `DynamicOrchestrator` |
+| `core/failure_classifier.py` | core/failure_classifier.py ========================== 태스크 실패 reason 문자열을 INFRA / IMPLEMENTATION으로 분류한다. | `FailureCategory`, `classify_failure()` |
+| `core/fsa_loop.py` | core/fsa_loop.py ================ Full Self Automation (FSA) Loop Orchestrator — ISE와 동일한 에스컬레이션 파이프라인. | `FSALoop`, `parse_evaluator_response()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1681,6 +1685,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, dynamic_orchestrator.py, failure_classifier.py, fsa_loop.py (+4) |
+| 2026-06-11 | v1.2.34 | fix(dogfood B3+B2): worktree review-gate 차단 + AUTH_EXPIRED terminal 처리 — B3: `_develop_isolation_env`에 `AF_SKIP_REVIEW_GATE=1` 추가(`_ISO_ENV_KEYS` 포함). B2: `failure_classifier._INFRA_PATTERNS`에 `auth_expired` 추가 + `fsa_loop` INFRA 즉시 중단(rollback 전 조기 return). 테스트 25건 신규. 3-Tier PASS. — core/dogfood.py, core/failure_classifier.py, core/fsa_loop.py, Master_Blueprint.md |
 | 2026-06-10 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py |
 | 2026-06-10 | v1.2.47 | feat(utils): `get_external_skill_roots(extra_roots=None)` 신설 — 외부 스킬 루트 절대경로 list[str] 반환. AF_SELF_RUN=1이면 SKILLS_DIR 제외. AGENT_CODEX_SKILL_DIRS·AGENT_CLAUDE_SKILL_DIRS·CODEX_HOME/skills 환경변수 반영. Unix 전용 /etc/codex/skills. extra_roots 파라미터. normcase 기반 중복 제거. `get_codex_skill_roots` 별칭(is-check). `TestGetExternalSkillRoots` 12건 신규. §0 갱신. — core/utils.py, Master_Blueprint.md |
 | 2026-06-10 | v1.2.46 | feat(utils): `mean_absolute_deviation(values)` 신설 — 평균 절대 편차(MAD) float 반환. 빈 리스트이면 ValueError. 공식: (1/n)×Σ|xᵢ−μ|. `TestMeanAbsoluteDeviation` 8건 신규. §3 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |

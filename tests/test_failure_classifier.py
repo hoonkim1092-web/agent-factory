@@ -17,6 +17,9 @@ from core.failure_classifier import FailureCategory, classify_failure
     "quota_exceeded",
     "rate_limit",
     "auth_required",
+    "auth_expired",
+    "gemini_cli_auth_expired",
+    "provider_auth_expired",
 ])
 def test_infra_patterns_classified_as_infra(reason):
     assert classify_failure(reason) == FailureCategory.INFRA

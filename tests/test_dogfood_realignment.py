@@ -61,7 +61,7 @@ class _FakePipeline:
     the reused F12/self-run guards.
     """
 
-    _ISO_ENV_KEYS = ("AF_DISABLE_REGISTRY_WRITE", "AF_SELF_RUN", "AGENT_PROJECT_ROOT")
+    _ISO_ENV_KEYS = ("AF_DISABLE_REGISTRY_WRITE", "AF_SELF_RUN", "AGENT_PROJECT_ROOT", "AF_SKIP_REVIEW_GATE")
 
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
@@ -248,6 +248,10 @@ def test_inv5_develop_confines_writes_via_reused_guards(tmp_path, monkeypatch):
     assert fake.env_during["AGENT_PROJECT_ROOT"] == worktree, (
         "inv5: file edits must be routed into the worktree (AGENT_PROJECT_ROOT"
         " = worktree) so the merge gate is the only escape path."
+    )
+    assert fake.env_during["AF_SKIP_REVIEW_GATE"] == "1", (
+        "inv5: worktree commits must not trigger the source-repo review-gate "
+        "pre-commit hook (AF_SKIP_REVIEW_GATE=1 during DEVELOP)."
     )
 
     # Guards RESTORED after DEVELOP (no env leak into the rest of the process).

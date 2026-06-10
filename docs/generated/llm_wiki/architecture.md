@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T23:56:31+09:00
-source_commit: 694e8c3f
+generated_at: 2026-06-11T00:34:40+09:00
+source_commit: d442a252
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -80,7 +80,7 @@ sources:
 | `core/failure_classifier.py` | 실패 분류 (infra/impl) | Master_Blueprint.md §0 |
 | `core/run_budget.py` | 글로벌 토큰 예산 추적 | Master_Blueprint.md §0 |
 | `core/skill_pack_bootstrapper.py` | 외부 CLI 플러그인 감지 (claude-code/codex/gemini) | Master_Blueprint.md §0 |
-| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리 | Master_Blueprint.md §0 |
+| `core/fsa_loop.py:1-540` | FSA 에스컬레이션 루프 (ISE 파이프라인, 5사이클 제한). `run_mission(..., runtime_workspace=None)`로 Git/user 작업 범위와 `.af`/runner state 범위를 분리. B2: INFRA 실패(`classify_failure==INFRA`) 시 rollback 전 즉시 return — AUTH_EXPIRED 등 100+ 재시도 차단. | Master_Blueprint.md §0 |
 | `core/git_manager.py` | 워크스페이스 git 연산 | Master_Blueprint.md §0 |
 | `core/hooks/event_bus.py` | 훅 라이프사이클 버스 | Master_Blueprint.md §0 |
 | `core/hooks/skill_self_evolution.py` | 주기적 스킬 품질 감사 | Master_Blueprint.md §0 |

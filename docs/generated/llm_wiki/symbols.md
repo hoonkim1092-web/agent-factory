@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T23:56:31+09:00
-source_commit: 694e8c3f
+generated_at: 2026-06-11T00:34:40+09:00
+source_commit: d442a252
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -6040,6 +6040,8 @@ _(no top-level symbols)_
 - `test_retry_failure_reopens_board_task_for_reschedule`
 - `test_completed_todo_blocks_repeated_llm_reassignment`
 - `test_role_scoped_todo_is_not_cross_assigned`
+- `test_needs_llm_intervention_blocks_stall_when_all_recent_failures_are_infra`
+- `test_needs_llm_intervention_allows_stall_when_impl_failures_mixed`
 
 ## `tests/test_engine_auth_provider_priority.py`
 
@@ -6215,9 +6217,11 @@ _(no top-level symbols)_
 
 **Classes:**
 - `_DummyRunner`
+- `_InfraFailRunner`
 
 **Functions:**
 - `test_fsa_saves_ledger_under_runtime_workspace`
+- `test_fsa_infra_failure_exits_immediately`
 - `test_ise_loop_forwards_runtime_workspace`
 
 ## `tests/test_gemini_smoke.py`

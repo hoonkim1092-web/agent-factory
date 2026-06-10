@@ -244,6 +244,21 @@ class FSALoop:
                         "lineage_id": _lineage_id,
                     }
 
+                # ── INFRA 실패 즉시 중단 — retry 무의미 (AUTH_EXPIRED 포함) ──
+                from core.failure_classifier import classify_failure, FailureCategory
+                if classify_failure(result.get("reason", "")) == FailureCategory.INFRA:
+                    _infra_reason = str(result.get("reason", "infra_failure"))
+                    print_agent_msg("FSA", f"Infra failure — immediate exit: {_infra_reason[:80]}", "🛑")
+                    ledger.save(state_workspace)
+                    return {
+                        "ok": False,
+                        "reason": _infra_reason,
+                        "meta_cycles": cycle,
+                        "max_escalation_level": max_level_reached,
+                        "strategy_ledger": ledger.to_dict(),
+                        "lineage_id": _lineage_id,
+                    }
+
                 # ── Step 3: Rollback (workspace tracked 파일만) ──
                 if self._visualizer:
                     self._visualizer.update_from_fsa_step(agent_name, "eval", cycle, self.max_cycles)
