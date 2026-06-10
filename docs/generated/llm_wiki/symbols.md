@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T02:11:39+09:00
-source_commit: ebef36ee
+generated_at: 2026-06-11T02:40:52+09:00
+source_commit: a731f672
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -6334,6 +6334,16 @@ _(no top-level symbols)_
 - `test_should_decompose_triggers_on_three_logic_failures`
 - `test_should_decompose_rejects_transient_failures`
 - `test_should_decompose_below_retry_threshold`
+
+## `tests/test_ise_provider_awareness.py`
+
+**Functions:**
+- `test_inv1_ise_analyzer_uses_cli_when_available`
+- `test_inv2_infra_failure_triggers_fallback`
+- `test_inv3_graceful_degrade_no_provider`
+- `test_inv4_control_plane_llm_has_required_interface`
+- `test_inv5_no_llmengine_direct_instantiation_in_targets`
+- `test_inv6_strategy_evaluator_llm_is_control_plane`
 
 ## `tests/test_key_combos.py`
 

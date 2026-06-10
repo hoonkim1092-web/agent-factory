@@ -84,9 +84,9 @@ class FSALoop:
         self._evolution_failed_skills: set[str] = set()
 
         # ISE-level 분석/재설계/정체감지 엔진
-        model_name = "gemini-1.5-pro-latest"
+        model_name = None
         if hasattr(runner, "mr") and hasattr(runner.mr, "pick"):
-            model_name = runner.mr.pick("evaluator") or model_name
+            model_name = runner.mr.pick("evaluator") or None
         self.analyzer = ISEAnalyzer(model_name=model_name)
         self.redesigner = ISERedesigner(model_name=model_name)
         self.stall_detector = StallDetector()

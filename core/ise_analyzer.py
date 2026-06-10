@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from core.llm_engine import LLMEngine
+from core.control_plane_llm import ControlPlaneLLM
 from core.utils import safe_json_load, print_agent_msg
 
 
@@ -64,8 +64,8 @@ class ISEAnalyzer:
     - 스킬 결함 식별
     """
 
-    def __init__(self, model_name: str = "gemini-1.5-pro-latest"):
-        self.llm = LLMEngine(model_name=model_name)
+    def __init__(self, model_name: str | None = None):
+        self.llm = ControlPlaneLLM(model_name=model_name)
 
     def analyze_failure(
         self,

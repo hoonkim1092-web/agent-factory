@@ -21,7 +21,7 @@ import json
 import random
 import re
 
-from core.llm_engine import LLMEngine
+from core.control_plane_llm import ControlPlaneLLM
 from core.ise_analyzer import ISEAnalysis
 from core.ise_strategy_ledger import StrategyLedger
 from core.utils import safe_json_load, print_agent_msg
@@ -45,8 +45,8 @@ _CREATIVITY_PERTURBATIONS = [
 class ISERedesigner:
     """LLM 기반 태스크 재설계 + 분해 엔진."""
 
-    def __init__(self, model_name: str = "gemini-1.5-pro-latest"):
-        self.llm = LLMEngine(model_name=model_name)
+    def __init__(self, model_name: str | None = None):
+        self.llm = ControlPlaneLLM(model_name=model_name)
 
     # ── Level 1: 단순 재시도 피드백 ──
 

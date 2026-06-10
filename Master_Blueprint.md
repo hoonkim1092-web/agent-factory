@@ -880,7 +880,7 @@ P4a BLOCK 0건 보장: yaml의 P4 rule(`owner_role_mismatch`, `evidence_quality_
 ---
 
 ### §3.9 Evaluator (`core/evaluator.py`)
-<!-- last_updated: 2026-04-02 (ControlPlaneLLM으로 전환) -->
+<!-- last_updated: 2026-06-11 (ISEAnalyzer/ISERedesigner도 ControlPlaneLLM으로 통일) -->
 
 **클래스:** `StrategyEvaluator`
 
@@ -888,10 +888,15 @@ P4a BLOCK 0건 보장: yaml의 P4 rule(`owner_role_mismatch`, `evidence_quality_
 
 **LLM 엔진:** `ControlPlaneLLM` (CLI-first, API-fallback) — GOOGLE_API_KEY 없이도 동작
 
-### §3.8.1 ControlPlaneLLM (`core/control_plane_llm.py`)
-<!-- last_updated: 2026-06-03 (allow_file_edit=False 격리 차단) -->
+**자가수정 brain 전체 (`ise_analyzer.py`, `ise_redesigner.py`, `evaluator.py`):**
+세 클래스 모두 `LLMEngine`(gemini API 전용) → `ControlPlaneLLM` drop-in 교체 완료 (2026-06-11).
+`engine_api_keys_disabled()` 마스킹에 걸려 full/야간 FSA가 휴리스틱으로 눈감고 작동하던 실재 결함 수정.
+`model_name` default 변경: `"gemini-1.5-pro-latest"` → `None` (provider가 자체 default 선택, 혼란 제거).
 
-Control-plane(Lilith, Evaluator)용 LLM 인터페이스.
+### §3.8.1 ControlPlaneLLM (`core/control_plane_llm.py`)
+<!-- last_updated: 2026-06-11 (ISEAnalyzer/ISERedesigner 소비처 추가) -->
+
+Control-plane(Lilith, Evaluator, ISEAnalyzer, ISERedesigner)용 LLM 인터페이스.
 
 **해결 순서:** CLI providers (claude_cli > gemini_cli > codex_cli) → Gemini API → 빈 결과
 **인터페이스:** `generate(prompt) → str`, `generate_json(prompt) → dict`
@@ -1130,11 +1135,14 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-11; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dynamic_orchestrator.py` | dynamic orchestrator | `DynamicOrchestrator` |
+| `core/evaluator.py` | evaluator | `StrategyEvaluator` |
+| `core/fsa_loop.py` | core/fsa_loop.py ================ Full Self Automation (FSA) Loop Orchestrator — ISE와 동일한 에스컬레이션 파이프라인. | `FSALoop`, `parse_evaluator_response()` |
+| `core/ise_analyzer.py` | core/ise_analyzer.py ==================== ISE 실패 분석 엔진 -- 기존 StrategyEvaluator를 확장하여 에러 분류 + 근본 원인 추론 + 전략 추천을 수행한다. | `ISEAnalysis`, `ISEAnalyzer` |
+| `core/ise_redesigner.py` | core/ise_redesigner.py ====================== ISE 재설계 엔진 -- 실패 이력을 바탕으로 태스크를 재구성한다. | `ISERedesigner` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1682,6 +1690,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1) |
+| 2026-06-11 | v1.2.48 | fix(ise-provider-awareness): 자가수정 brain 3개(ISEAnalyzer/ISERedesigner/StrategyEvaluator) `LLMEngine`(gemini API 전용) → `ControlPlaneLLM` drop-in 교체. CLI-로그인 환경에서 `engine_api_keys_disabled()` 마스킹에 걸려 full/야간 FSA가 휴리스틱 폴백으로만 작동하던 실재 결함 수정. `model_name` default `"gemini-1.5-pro-latest"` → `None`(provider 자체 default). `tests/test_ise_provider_awareness.py` INV-1~6 신규. 3-Tier 예정. §3.8.1·§3.9 갱신. — core/ise_analyzer.py, core/ise_redesigner.py, core/evaluator.py, tests/test_ise_provider_awareness.py, Master_Blueprint.md |
 | 2026-06-11 | v1.2.34 | chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, dynamic_orchestrator.py, failure_classifier.py, fsa_loop.py (+4) |
 | 2026-06-11 | v1.2.34 | fix(dogfood B3+B2): worktree review-gate 차단 + AUTH_EXPIRED terminal 처리 — B3: `_develop_isolation_env`에 `AF_SKIP_REVIEW_GATE=1` 추가(`_ISO_ENV_KEYS` 포함). B2: `failure_classifier._INFRA_PATTERNS`에 `auth_expired` 추가 + `fsa_loop` INFRA 즉시 중단(rollback 전 조기 return). 테스트 25건 신규. 3-Tier PASS. — core/dogfood.py, core/failure_classifier.py, core/fsa_loop.py, Master_Blueprint.md |

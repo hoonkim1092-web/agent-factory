@@ -1,7 +1,7 @@
 import json
 from typing import Dict, Any
 
-from core.llm_engine import LLMEngine
+from core.control_plane_llm import ControlPlaneLLM
 from core.utils import safe_json_load
 
 class StrategyEvaluator:
@@ -12,8 +12,8 @@ class StrategyEvaluator:
     subtask needs a "Retry" (e.g., syntax typo) or a "Strategic Pivot" (e.g., wrong library,
     architectural mismatch).
     """
-    def __init__(self, model_name: str = "gemini-1.5-pro-latest", use_pydantic: bool = False):
-        self.llm = LLMEngine(model_name=model_name)
+    def __init__(self, model_name: str | None = None, use_pydantic: bool = False):
+        self.llm = ControlPlaneLLM(model_name=model_name)
         self._pydantic_adapter = None
         if use_pydantic:
             from core.langchain_adapter import PydanticOutputAdapter
