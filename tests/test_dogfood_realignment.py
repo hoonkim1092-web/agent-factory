@@ -172,7 +172,21 @@ def test_inv3_failed_verify_blocks_without_retry(tmp_path):
 # prepare()/research (project_pipeline.py:725 path).
 # ---------------------------------------------------------------------------
 
-def test_inv4_develop_runs_pipeline_research_in_worktree(tmp_path):
+def test_inv4_develop_runs_pipeline_research_in_worktree(tmp_path, monkeypatch):
+    from core.right_sized_router import RouteDecision, _FULL_STAGES
+
+    monkeypatch.setattr(
+        "core.right_sized_router.classify",
+        lambda *a, **kw: RouteDecision(
+            isolation="worktree",
+            required_stages=list(_FULL_STAGES),
+            review_depth="deep",
+            confidence=0.0,
+            reason="test-stub",
+            source="fallback",
+        ),
+    )
+
     state = _mk(tmp_path, phase=DogfoodPhase.DEVELOP)
     state.worktree_workspace = str(tmp_path / "worktree")
     state.isolation_status = "ready"
@@ -197,7 +211,21 @@ def test_inv4_develop_runs_pipeline_research_in_worktree(tmp_path):
 # var is introduced; reads stay global, writes are confined.
 # ---------------------------------------------------------------------------
 
-def test_inv5_develop_confines_writes_via_reused_guards(tmp_path):
+def test_inv5_develop_confines_writes_via_reused_guards(tmp_path, monkeypatch):
+    from core.right_sized_router import RouteDecision, _FULL_STAGES
+
+    monkeypatch.setattr(
+        "core.right_sized_router.classify",
+        lambda *a, **kw: RouteDecision(
+            isolation="worktree",
+            required_stages=list(_FULL_STAGES),
+            review_depth="deep",
+            confidence=0.0,
+            reason="test-stub",
+            source="fallback",
+        ),
+    )
+
     state = _mk(tmp_path, phase=DogfoodPhase.DEVELOP)
     worktree = str(tmp_path / "worktree")
     state.worktree_workspace = worktree

@@ -30,11 +30,7 @@
    - `Master_Blueprint.md`는 `docs/generated/llm_wiki/blueprint/`에 섹션별 전문 mirror 완료: `overview.md`(preamble), `toc.md`, `0-빠른-참조-테이블.md`처럼 사람이 읽는 파일명, `maintenance-guide.md`, `index.md`. source_refs/index 링크 연결. 4-backtick fence로 원문 코드블록 보호. stale generated blueprint page 자동 삭제.
    - 검증: `python -m pytest tests/test_build_llm_wiki.py tests/test_codebase_symbols.py -q` → **41 PASS** / `python -m py_compile scripts\build_llm_wiki.py scripts\codebase_symbols.py` PASS / `python scripts\test_gap_analyzer.py --workspace .` PASS / `python scripts\build_llm_wiki.py` → **23 pages**.
    - 전체 테스트 참고: `python -m pytest tests/ -q --ignore=tests/test_gemini_smoke.py --ignore=tests/test_web_project_scope.py` → **3039 PASS, 10 FAIL**. 실패는 기존 타 영역(`inject_review_tasks`, `nlm`, `syncCompyne`, `research_system`, `approval_gate` CP949 read, `warning_stats_cli`)로 이번 LLM Wiki 변경과 무관.
- - **🐛 다음 세션 수정 필요 — `test_dogfood_realignment` 2건 FAIL (2026-06-10 발견)**:
-   - `test_inv4_develop_runs_pipeline_research_in_worktree` + `test_inv5_develop_confines_writes_via_reused_guards`
-   - 원인: RSE 슬라이스1/2 이후 `_run_develop_phase` 내부에 라우터가 추가됐는데, 테스트의 `_mk()`가 `route_decision=None`으로 생성 → 라우터가 실제 LLM(claude_cli)을 호출(7분) → FakePipeline 미호출 → assert 실패.
-   - 수정: `_mk()` 또는 테스트 상태에 `route_decision` 사전 설정 (LLM 호출 없이 결정적 경로로 유도).
-   - 파일: `tests/test_dogfood_realignment.py:175`, `:200`
+ - **✅ test_dogfood_realignment 2건 FAIL 수정 (2026-06-10, Sonnet)**: `test_inv4` + `test_inv5`에 `monkeypatch.setattr("core.right_sized_router.classify", ...)` 추가 — fallback RouteDecision(source="fallback", confidence=0.0) 반환으로 LLM 호출 차단 → full path로 FakePipeline 호출. 5/5 PASS.
  - **🎯 다음 세션 진입점 = code-review 문서 전문 mirror**:
    - 현재 `docs/code_review/code-review.md`는 아직 전문 mirror가 아님. `review_patterns.md`는 `### 2.x`/`### 3.x` 섹션 헤더 + 첫 bullet/출처 line 중심 요약 view.
    - **✅ LLM Wiki Code Review mirror 완료 (2026-06-07, Codex, worktree dirty)**: `docs/code_review/code-review.md`의 `### N.N` 섹션을 `docs/generated/llm_wiki/code_review/` 전문 페이지로 분할 생성. `code_review/index.md` 추가, 루트 `index.md`/`source_refs.md` wikilink 연결, stale cleanup 추가, Obsidian 탐색기용 사람이 읽는 파일명(`2-1-실행-엔진-runtime-engine.md` 등) 적용, 테스트 보강. 산출물: 전체 wiki 41 pages. 검증: `py_compile` PASS / `tests/test_build_llm_wiki.py -q` 29 PASS / `scripts/test_gap_analyzer.py --workspace .` PASS. 전체 `python -m pytest tests/ -x -q`는 기존 환경 의존성(`tests/test_gemini_smoke.py`의 `google` 패키지 없음)으로 collect 단계 중단.
