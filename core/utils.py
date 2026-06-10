@@ -209,6 +209,20 @@ def running_max(values: list[int | float]) -> list[int | float]:
     return result
 
 
+def running_min(values: list[int | float]) -> list[int | float]:
+    """각 위치까지의 누적 최솟값 리스트를 반환한다. 빈 리스트이면 빈 리스트 반환.
+
+    원소 타입을 보존한다 — 입력 값을 그대로 비교·반환하므로 정수 입력은 정수로 유지된다.
+    """
+    result: list[int | float] = []
+    current_min: int | float | None = None
+    for x in values:
+        if current_min is None or x < current_min:
+            current_min = x
+        result.append(current_min)
+    return result
+
+
 def moving_average(values: list[int | float], window: int) -> list[float]:
     """슬라이딩 윈도 이동 평균을 float 리스트로 반환한다.
 
@@ -349,6 +363,23 @@ def kurtosis(values: list[int | float]) -> float:
     if sd == 0.0:
         raise ValueError("표준편차가 0인 경우 첨도를 계산할 수 없습니다.")
     return sum(((x - mean) / sd) ** 4 for x in values) / n - 3.0
+
+
+def skewness(values: list[int | float]) -> float:
+    """왜도(skewness)를 float로 반환한다 (Fisher's definition).
+
+    오른쪽 꼬리 분포 = 양수, 완전 대칭 = 0.0, 왼쪽 꼬리 분포 = 음수.
+    빈 리스트이면 ValueError. 표준편차 0이면 0.0 반환.
+    공식: 1/n × Σ((x−μ)/σ)³
+    """
+    if not values:
+        raise ValueError("빈 리스트에서 왜도를 계산할 수 없습니다.")
+    n = len(values)
+    mean = sum(values) / n
+    sd = std_dev(values)
+    if sd == 0.0:
+        return 0.0
+    return sum(((x - mean) / sd) ** 3 for x in values) / n
 
 
 def chunks(lst: list, n: int) -> list[list]:

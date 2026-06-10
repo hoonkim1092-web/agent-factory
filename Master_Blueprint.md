@@ -1129,12 +1129,10 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-10; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, skill_evolution_controller.py, skill_quality_gate.py, utils.py, test_phase_a_step3_evolution.py (+2)
+최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/skill_evolution_controller.py` | core/skill_evolution_controller.py ==================================== Stage 1 스킬 진화 단일 진입점. | `SelfEvolutionController` |
-| `core/skill_quality_gate.py` | core/skill_quality_gate.py =========================== 스킬 품질 게이트 — 평가 통과한 스킬만 registry에 등재. | `GateResult`, `SkillQualityGate` |
 | `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1683,6 +1681,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-10 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-10 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, skill_evolution_controller.py, skill_quality_gate.py, utils.py, test_phase_a_step3_evolution.py (+2) |
 | 2026-06-10 | v1.2.34 | chore(.claude): code update — af-cross-review.md, config.toml, pre-commit, .gitignore, Master_Blueprint.md (+54) |
 | 2026-06-10 | v1.2.44 | feat(utils): `running_min(values)` 신설 — 각 위치까지의 누적 최솟값을 list[int\|float]로 반환. 원소 타입 보존(정수 입력→정수 유지). 빈 리스트이면 빈 리스트 반환. `TestRunningMin` 11건 신규(총 248 PASS). §12 갱신. — core/utils.py, tests/test_utils.py, Master_Blueprint.md |

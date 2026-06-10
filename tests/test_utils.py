@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, running_min, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis, skewness
 from core.utils import test_file_for as _test_file_for
 from core.utils import get_external_skill_roots, get_codex_skill_roots
 from core.config_paths import SKILLS_DIR
@@ -506,6 +506,44 @@ class TestRunningMax:
         assert running_max(values)[-1] == max(values)
 
 
+class TestRunningMin:
+    def test_빈_리스트는_빈_리스트_반환(self):
+        assert running_min([]) == []
+
+    def test_단일_요소(self):
+        assert running_min([5]) == [5]
+
+    def test_감소_수열(self):
+        assert running_min([4, 3, 2, 1]) == [4, 3, 2, 1]
+
+    def test_증가_수열은_첫_값_유지(self):
+        assert running_min([1, 2, 3, 4]) == [1, 1, 1, 1]
+
+    def test_혼합_수열(self):
+        assert running_min([5, 3, 4, 1, 2]) == [5, 3, 3, 1, 1]
+
+    def test_음수_포함(self):
+        assert running_min([-1, -5, -3, -2]) == [-1, -5, -5, -5]
+
+    def test_중복_값(self):
+        assert running_min([2, 2, 2]) == [2, 2, 2]
+
+    def test_부동소수점_리스트(self):
+        assert running_min([3.0, 1.5, 2.0, 0.5]) == [3.0, 1.5, 1.5, 0.5]
+
+    def test_반환_길이_입력과_동일(self):
+        values = [3, 1, 4, 1, 5]
+        assert len(running_min(values)) == len(values)
+
+    def test_정수_타입_보존(self):
+        result = running_min([3, 1, 2])
+        assert all(isinstance(v, int) for v in result)
+
+    def test_마지막_값은_전체_최솟값(self):
+        values = [3, 7, 2, 9, 4]
+        assert running_min(values)[-1] == min(values)
+
+
 class TestMovingAverage:
     def test_빈_리스트는_빈_리스트_반환(self):
         assert moving_average([], 3) == []
@@ -921,3 +959,33 @@ class TestKurtosis:
 
     def test_반환_타입은_float(self):
         assert isinstance(kurtosis([1, 2, 3, 4, 5]), float)
+
+
+class TestSkewness:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            skewness([])
+
+    def test_단일_원소는_0(self):
+        assert skewness([5]) == 0.0
+
+    def test_동일값_목록은_0(self):
+        assert skewness([3, 3, 3]) == 0.0
+
+    def test_대칭_분포는_0(self):
+        assert skewness([1, 2, 3]) == pytest.approx(0.0)
+
+    def test_오른쪽_꼬리는_양수(self):
+        # [0,0,0,0,1]: 큰 양의 이상치 → 양수 왜도 1.5
+        assert skewness([0, 0, 0, 0, 1]) == pytest.approx(1.5)
+
+    def test_왼쪽_꼬리는_음수(self):
+        # [0,1,1,1,1]: 작은 음의 이상치 → 음수 왜도 -1.5
+        assert skewness([0, 1, 1, 1, 1]) == pytest.approx(-1.5)
+
+    def test_부호_반전_대칭(self):
+        vals = [1, 2, 4, 8]
+        assert skewness(vals) == pytest.approx(-skewness([-x for x in vals]))
+
+    def test_반환_타입은_float(self):
+        assert isinstance(skewness([1, 2, 3]), float)
