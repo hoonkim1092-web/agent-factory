@@ -62,7 +62,11 @@ def _inject_model_override(agent_list: str, pending: "dict | None") -> str:
     return agent_list.replace(agent, f"{agent}[model={model_id}]", 1)
 
 
-def _agents_for_tier(tier: int, t3_skip_allowed: bool = False) -> tuple[str, str]:
+def _agents_for_tier(
+    tier: int,
+    t3_skip_allowed: bool = False,
+    t3_skip_reason: str = "",
+) -> tuple[str, str]:
     """(agent_list_str, instruction) 반환."""
     if tier == 1:
         return (
@@ -70,14 +74,31 @@ def _agents_for_tier(tier: int, t3_skip_allowed: bool = False) -> tuple[str, str
             "Tier 1 (저영향) — af-test-runner 1개만 실행하면 충분합니다.",
         )
     if t3_skip_allowed:
+        reason = t3_skip_reason or "deterministic classifier가 Tier 3를 생략했습니다"
         return (
             "af-critic → af-test-runner",
-            "Tier 2 cosmetic-only — deterministic classifier가 Tier 3를 생략했습니다.",
+            f"Tier 2 — {reason}",
         )
     return (
         "af-critic → af-cross-review → af-test-runner",
         "Tier 2~3 — 위 3개 에이전트를 순서대로 실행하세요.",
     )
+
+
+def _all_external_providers_rate_limited() -> bool:
+    """외부(non-claude) 프로바이더 전부 RATE_LIMITED → True. 캐시만 조회, 새 ping 없음."""
+    try:
+        from core.provider_detect import (  # type: ignore
+            detect_provider_states, ProviderState, CLI_PROVIDER_IDS,
+        )
+        ext_ids = [pid for pid in CLI_PROVIDER_IDS if pid != "claude_cli"]
+        if not ext_ids:
+            return False
+        states = detect_provider_states(providers=ext_ids, use_cache=True)
+        ext = list(states.values())
+        return bool(ext) and all(r.state == ProviderState.RATE_LIMITED for r in ext)
+    except Exception:
+        return False
 
 
 def _atomic_write(marker: str, data: dict) -> None:
@@ -195,12 +216,17 @@ def main() -> None:
         if len(files) > 10:
             file_list += f" ... (+{len(files) - 10})"
 
+        _t3_skip_reason = ""
         try:
             from review_gate import _required_tiers_for  # type: ignore
             t3_skip_allowed = blast_tier != 1 and 3 not in _required_tiers_for(data)
+            if not t3_skip_allowed and blast_tier != 1:
+                if _all_external_providers_rate_limited():
+                    t3_skip_allowed = True
+                    _t3_skip_reason = "외부 프로바이더 rate_limited — af-cross-review 스킵"
         except Exception:
             t3_skip_allowed = False
-        agent_list, instruction = _agents_for_tier(blast_tier, t3_skip_allowed)
+        agent_list, instruction = _agents_for_tier(blast_tier, t3_skip_allowed, _t3_skip_reason)
 
         # P4.5b: 이전 라운드 escalation이 저장돼 있으면 해당 에이전트에 model override 주입
         _esc_applied = False

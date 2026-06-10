@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T21:34:48+09:00
-source_commit: 22aa8ee8
+generated_at: 2026-06-10T21:42:54+09:00
+source_commit: bde577d2
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4191,6 +4191,7 @@ _(no top-level symbols)_
 - `_detect_workspace`
 - `_inject_model_override`
 - `_agents_for_tier`
+- `_all_external_providers_rate_limited`
 - `_atomic_write`
 - `main`
 
@@ -6489,6 +6490,8 @@ _(no top-level symbols)_
 - `test_no_refire_when_updated_at_older_than_fired_at`
 - `test_empty_files_list_silent`
 - `test_marker_kept_after_fire`
+- `test_t3_skipped_when_all_external_rate_limited`
+- `test_t3_included_when_no_rate_limit`
 - `test_enqueue_creates_marker_for_core_py`
 - `test_enqueue_skips_non_review_file`
 - `test_enqueue_always_refreshes_updated_at_for_existing_file`

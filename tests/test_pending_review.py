@@ -231,6 +231,50 @@ def test_marker_kept_after_fire(tmp_path, monkeypatch, capsys):
     assert _read_marker(tmp_path) is not None
 
 
+# ── rate_limited skip tests ───────────────────────────────────────────────────
+
+def test_t3_skipped_when_all_external_rate_limited(tmp_path, monkeypatch, capsys):
+    """외부 프로바이더 전부 rate_limited → af-cross-review 없이 af-critic → af-test-runner만 발화."""
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_all_external_providers_rate_limited", lambda: True)
+    _write_marker(tmp_path, {
+        "files": ["core/x.py"],
+        "blast_tier": 2,
+        "created_at": time.time() - 400,
+        "updated_at": time.time() - 400,
+    })
+    m.main()
+    out = capsys.readouterr().out
+    assert "[af-review-pending]" in out
+    # 에이전트 목록 라인에만 af-cross-review가 없어야 한다 (instruction에 "스킵" 언급은 허용)
+    agent_line = next(l for l in out.splitlines() if "실행 에이전트:" in l)
+    assert "af-cross-review" not in agent_line
+    assert "af-critic" in agent_line
+    assert "af-test-runner" in agent_line
+    assert "rate_limited" in out
+
+
+def test_t3_included_when_no_rate_limit(tmp_path, monkeypatch, capsys):
+    """외부 프로바이더 정상이면 af-cross-review 포함 발화."""
+    import scripts.check_pending_review as m
+    importlib.reload(m)
+    monkeypatch.setattr(m, "MIN_BATCH_INTERVAL_SEC", 0)
+    monkeypatch.setattr(m, "_detect_workspace", lambda: str(tmp_path))
+    monkeypatch.setattr(m, "_all_external_providers_rate_limited", lambda: False)
+    _write_marker(tmp_path, {
+        "files": ["core/x.py"],
+        "blast_tier": 2,
+        "created_at": time.time() - 400,
+        "updated_at": time.time() - 400,
+    })
+    m.main()
+    out = capsys.readouterr().out
+    assert "af-cross-review" in out
+
+
 # ── enqueue_agent_review tests ────────────────────────────────────────────────
 
 def test_enqueue_creates_marker_for_core_py(tmp_path, monkeypatch):
