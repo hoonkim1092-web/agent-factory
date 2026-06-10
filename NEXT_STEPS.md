@@ -40,6 +40,7 @@
    - 테스트 25/25 PASS, 전체 3119 PASS. 3-Tier 완주.
    - **B1 (복잡, 보류)**: 단순 patch task에 멀티에이전트 orchestrator 과분해 — RSE 설계 필요, 별도 세션
    - **다음 = product-value work-item 신규 선정**
+ - **✅ fix(dynamic_orchestrator): infra-only stall LLM 개입 차단 완료 (2026-06-11, Sonnet, `77e05ad4`, 브랜치: `2026-06-04-right-sized-execution-slice1`)**: `_needs_llm_intervention` 분기 3에 infra-only 실패 감지 추가 — 최근 실패 전부 `failure_category="infra"`이면 `return False`(LLM 재시도 차단). `0354224c` fsa_loop INFRA 즉시 종료의 orchestrator-레벨 보완층. 테스트 2건 신규(11/11 PASS). 3-Tier 완주. **다음 = product-value work-item 신규 선정**
  - **🎯 다음 세션 진입점 = code-review 문서 전문 mirror**:
    - 현재 `docs/code_review/code-review.md`는 아직 전문 mirror가 아님. `review_patterns.md`는 `### 2.x`/`### 3.x` 섹션 헤더 + 첫 bullet/출처 line 중심 요약 view.
    - **✅ LLM Wiki Code Review mirror 완료 (2026-06-07, Codex, worktree dirty)**: `docs/code_review/code-review.md`의 `### N.N` 섹션을 `docs/generated/llm_wiki/code_review/` 전문 페이지로 분할 생성. `code_review/index.md` 추가, 루트 `index.md`/`source_refs.md` wikilink 연결, stale cleanup 추가, Obsidian 탐색기용 사람이 읽는 파일명(`2-1-실행-엔진-runtime-engine.md` 등) 적용, 테스트 보강. 산출물: 전체 wiki 41 pages. 검증: `py_compile` PASS / `tests/test_build_llm_wiki.py -q` 29 PASS / `scripts/test_gap_analyzer.py --workspace .` PASS. 전체 `python -m pytest tests/ -x -q`는 기존 환경 의존성(`tests/test_gemini_smoke.py`의 `google` 패키지 없음)으로 collect 단계 중단.
