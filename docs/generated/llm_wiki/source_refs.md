@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T00:34:40+09:00
-source_commit: d442a252
+generated_at: 2026-06-11T00:35:13+09:00
+source_commit: 0354224c
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,7 +9,7 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `d442a252`
+> source_commit: `0354224c`
 > 관련: [[index]] | [[architecture]] | [[review_patterns]]
 
 ## Master_Blueprint.md
