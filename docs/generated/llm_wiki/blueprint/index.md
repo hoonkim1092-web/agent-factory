@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-10T21:42:56+09:00
-source_commit: bde577d2
+generated_at: 2026-06-10T23:22:41+09:00
+source_commit: 2fa89587
 sources:
   - "Master_Blueprint.md"
 ---
@@ -27,4 +27,4 @@ sources:
 - [[blueprint/10-의존성-그래프-영향-매트릭스|§10 의존성 그래프 & 영향 매트릭스]] — `Master_Blueprint.md:1594`
 - [[blueprint/11-알려진-제약-이슈|§11 알려진 제약·이슈]] — `Master_Blueprint.md:1648`
 - [[blueprint/12-변경-이력|§12 변경 이력]] — `Master_Blueprint.md:1680`
-- [[blueprint/maintenance-guide|유지보수 가이드]] — `Master_Blueprint.md:2848`
+- [[blueprint/maintenance-guide|유지보수 가이드]] — `Master_Blueprint.md:2849`

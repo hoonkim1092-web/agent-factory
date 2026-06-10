@@ -134,6 +134,17 @@ def std_dev(values: list[int | float]) -> float:
     return math.sqrt(variance(values))
 
 
+def mean_absolute_deviation(values: list[int | float]) -> float:
+    """평균 절대 편차(MAD)를 float로 반환한다. 빈 리스트이면 ValueError.
+
+    공식: (1/n) × Σ|xᵢ − μ|
+    """
+    if not values:
+        raise ValueError("빈 리스트에서 평균 절대 편차를 계산할 수 없습니다.")
+    mean = sum(values) / len(values)
+    return sum(abs(x - mean) for x in values) / len(values)
+
+
 def zscore(values: list[int | float]) -> list[float]:
     """각 원소의 Z-score를 반환한다. 빈 리스트이면 ValueError. 원소 1개 또는 표준편차 0이면 모두 0.0."""
     if not values:
@@ -220,6 +231,23 @@ def running_min(values: list[int | float]) -> list[int | float]:
         if current_min is None or x < current_min:
             current_min = x
         result.append(current_min)
+    return result
+
+
+def exponential_moving_average(values: list[int | float], alpha: float) -> list[float]:
+    """지수 이동 평균(EMA)을 float 리스트로 반환한다.
+
+    각 위치 i: ema[i] = alpha * values[i] + (1 - alpha) * ema[i-1]
+    첫 번째 값은 그대로 사용: ema[0] = float(values[0]).
+    빈 리스트이면 빈 리스트 반환. alpha가 (0, 1] 범위 밖이면 ValueError.
+    """
+    if alpha <= 0.0 or alpha > 1.0:
+        raise ValueError(f"alpha는 (0, 1] 범위여야 합니다: {alpha}")
+    if not values:
+        return []
+    result: list[float] = [float(values[0])]
+    for x in values[1:]:
+        result.append(alpha * x + (1.0 - alpha) * result[-1])
     return result
 
 

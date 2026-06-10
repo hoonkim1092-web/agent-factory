@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, running_min, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis, skewness
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, mean_absolute_deviation, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, running_min, exponential_moving_average, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis, skewness
 from core.utils import test_file_for as _test_file_for
 from core.utils import get_external_skill_roots, get_codex_skill_roots
 from core.config_paths import SKILLS_DIR
@@ -212,6 +212,41 @@ class TestStdDev:
     def test_반환_타입은_float(self):
         result = std_dev([1, 2, 3])
         assert isinstance(result, float)
+
+
+class TestMeanAbsoluteDeviation:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            mean_absolute_deviation([])
+
+    def test_단일_원소는_0(self):
+        assert mean_absolute_deviation([5]) == pytest.approx(0.0)
+
+    def test_동일_값_리스트는_0(self):
+        assert mean_absolute_deviation([7, 7, 7]) == pytest.approx(0.0)
+
+    def test_표준_케이스(self):
+        # values=[1,2,3,4,5], mean=3.0
+        # |1-3|+|2-3|+|3-3|+|4-3|+|5-3| = 2+1+0+1+2=6 → 6/5=1.2
+        assert mean_absolute_deviation([1, 2, 3, 4, 5]) == pytest.approx(1.2)
+
+    def test_음수_포함(self):
+        # values=[-2,-1,0,1,2], mean=0.0
+        # 2+1+0+1+2=6 → 6/5=1.2
+        assert mean_absolute_deviation([-2, -1, 0, 1, 2]) == pytest.approx(1.2)
+
+    def test_두_원소(self):
+        # values=[0.0, 4.0], mean=2.0 → (2+2)/2=2.0
+        assert mean_absolute_deviation([0.0, 4.0]) == pytest.approx(2.0)
+
+    def test_분산보다_작거나_같음_아닌_별개_지표(self):
+        # MAD ≠ std_dev 이지만 같은 데이터에 대해 0이면 둘 다 0
+        values = [3, 3, 3, 3]
+        assert mean_absolute_deviation(values) == pytest.approx(0.0)
+        assert std_dev(values) == pytest.approx(0.0)
+
+    def test_반환_타입은_float(self):
+        assert isinstance(mean_absolute_deviation([1, 2, 3]), float)
 
 
 class TestZscore:
@@ -989,3 +1024,46 @@ class TestSkewness:
 
     def test_반환_타입은_float(self):
         assert isinstance(skewness([1, 2, 3]), float)
+
+
+class TestExponentialMovingAverage:
+    def test_빈_리스트는_빈_리스트(self):
+        assert exponential_moving_average([], 0.5) == []
+
+    def test_alpha_0_이하는_ValueError(self):
+        with pytest.raises(ValueError):
+            exponential_moving_average([1, 2, 3], 0.0)
+
+    def test_alpha_1_초과는_ValueError(self):
+        with pytest.raises(ValueError):
+            exponential_moving_average([1, 2, 3], 1.1)
+
+    def test_alpha_음수는_ValueError(self):
+        with pytest.raises(ValueError):
+            exponential_moving_average([1, 2, 3], -0.5)
+
+    def test_원소_1개는_그대로_반환(self):
+        assert exponential_moving_average([7], 0.3) == [7.0]
+
+    def test_alpha_1이면_원본과_동일(self):
+        vals = [1, 2, 3, 4, 5]
+        result = exponential_moving_average(vals, 1.0)
+        assert result == pytest.approx([float(v) for v in vals])
+
+    def test_alpha_0_5_수동_검증(self):
+        # ema[0]=1.0, ema[1]=0.5*2+0.5*1=1.5, ema[2]=0.5*3+0.5*1.5=2.25
+        result = exponential_moving_average([1, 2, 3], 0.5)
+        assert result == pytest.approx([1.0, 1.5, 2.25])
+
+    def test_결과_길이는_입력_길이와_같음(self):
+        vals = [10, 20, 30, 40, 50]
+        assert len(exponential_moving_average(vals, 0.3)) == len(vals)
+
+    def test_반환_타입은_float_리스트(self):
+        result = exponential_moving_average([1, 2, 3], 0.5)
+        assert all(isinstance(v, float) for v in result)
+
+    def test_정수_입력도_float_반환(self):
+        result = exponential_moving_average([5, 10], 0.4)
+        assert result[0] == pytest.approx(5.0)
+        assert result[1] == pytest.approx(0.4 * 10 + 0.6 * 5.0)
