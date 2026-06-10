@@ -34,6 +34,11 @@
  - **✅ check_pending_review rate_limited skip (2026-06-10, Sonnet, `2fa89587`)**: 외부 프로바이더 전부 RATE_LIMITED 시 `[af-review-pending]` 발화에서 af-cross-review 제거. `_all_external_providers_rate_limited()` 헬퍼 + `_agents_for_tier()` t3_skip_reason 파라미터. 테스트 2건. 25/25 PASS.
  - **✅ feat(utils): mean_absolute_deviation + exponential_moving_average (2026-06-10, Sonnet, `b60bae6a`)**: MAD·EMA 신규 함수. 테스트 18건 신규(266 PASS). LLM Wiki/Blueprint 자동 갱신. 3-Tier PASS.
  - **✅ fix(pending-review): NOT_INSTALLED 프로바이더 af-cross-review 스킵 포함 (2026-06-10, Sonnet, `b6323a1a`)**: `_all_external_providers_rate_limited` → `_all_external_providers_unavailable` 리네임. 스킵 조건: RATE_LIMITED만 → NOT_INSTALLED | RATE_LIMITED. gemini CLI 미설치 환경에서 af-cross-review 불필요 발화 방지. AUTH_EXPIRED는 스킵 제외(재인증 안내 필요). 테스트 25/25 PASS.
+ - **🎯 다음 세션 진입점 = dogfood 버그 B3 → B2 순서 수정**:
+   - **B3 (쉬움)**: `dogfood._develop_isolation_env`에 `AF_SKIP_REVIEW_GATE=1` 추가 — worktree 내부 커밋이 review-gate pre-commit hook에 막히는 문제
+   - **B2 (쉬움)**: cross-validator/FSA 루프가 gemini `AUTH_EXPIRED`를 terminal로 처리하지 않고 100+ 재시도하는 문제 — `AUTH_EXPIRED` 수신 시 즉시 중단
+   - **B1 (복잡, 보류)**: 단순 patch task에 멀티에이전트 orchestrator 과분해 — RSE 설계 필요, B3·B2 이후 별도 세션
+   - B3·B2 완료 후 → product-value work-item 신규 선정
  - **🎯 다음 세션 진입점 = code-review 문서 전문 mirror**:
    - 현재 `docs/code_review/code-review.md`는 아직 전문 mirror가 아님. `review_patterns.md`는 `### 2.x`/`### 3.x` 섹션 헤더 + 첫 bullet/출처 line 중심 요약 view.
    - **✅ LLM Wiki Code Review mirror 완료 (2026-06-07, Codex, worktree dirty)**: `docs/code_review/code-review.md`의 `### N.N` 섹션을 `docs/generated/llm_wiki/code_review/` 전문 페이지로 분할 생성. `code_review/index.md` 추가, 루트 `index.md`/`source_refs.md` wikilink 연결, stale cleanup 추가, Obsidian 탐색기용 사람이 읽는 파일명(`2-1-실행-엔진-runtime-engine.md` 등) 적용, 테스트 보강. 산출물: 전체 wiki 41 pages. 검증: `py_compile` PASS / `tests/test_build_llm_wiki.py -q` 29 PASS / `scripts/test_gap_analyzer.py --workspace .` PASS. 전체 `python -m pytest tests/ -x -q`는 기존 환경 의존성(`tests/test_gemini_smoke.py`의 `google` 패키지 없음)으로 collect 단계 중단.
