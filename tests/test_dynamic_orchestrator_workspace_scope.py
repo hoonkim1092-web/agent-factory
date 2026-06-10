@@ -478,3 +478,46 @@ def test_role_scoped_todo_is_not_cross_assigned(monkeypatch, tmp_path):
     )
 
     assert tasks == []
+
+
+# ----- _needs_llm_intervention: infra-only stall 차단 (B2 버그픽스) -----
+
+def test_needs_llm_intervention_blocks_stall_when_all_recent_failures_are_infra(monkeypatch):
+    """AUTH_EXPIRED 등 infra-only 실패로 stall이 발생했을 때 LLM 개입을 차단한다 — B2 회귀 방지."""
+    monkeypatch.setattr(dyn, "LLMEngine", _DummyLLM)
+    monkeypatch.setattr(dyn, "AgentRunner", _DummyRunner)
+    monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
+    monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
+    monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+
+    orch = dyn.DynamicOrchestrator(_DummyMR())
+    threshold = orch._stall_threshold  # 15
+    orch._last_completion_cycle = 0
+    cycle = threshold + 1
+    # 최근 실패가 전부 infra (AUTH_EXPIRED 패턴)
+    orch.state_board["failed_subtasks"] = [
+        {"role": "cross_validator", "failure_category": "infra", "reason": "cli_auth_required"}
+        for _ in range(threshold)
+    ]
+    assert orch._needs_llm_intervention(cycle, "/fake") is False
+
+
+def test_needs_llm_intervention_allows_stall_when_impl_failures_mixed(monkeypatch):
+    """impl 실패가 섞인 stall은 LLM 개입을 허용한다 — infra-only 차단의 과도한 적용 방지."""
+    monkeypatch.setattr(dyn, "LLMEngine", _DummyLLM)
+    monkeypatch.setattr(dyn, "AgentRunner", _DummyRunner)
+    monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
+    monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
+    monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+
+    orch = dyn.DynamicOrchestrator(_DummyMR())
+    threshold = orch._stall_threshold
+    orch._last_completion_cycle = 0
+    cycle = threshold + 1
+    # infra + impl 혼재
+    orch.state_board["failed_subtasks"] = [
+        {"role": "dev", "failure_category": "infra", "reason": "cli_auth_required"},
+        {"role": "dev", "failure_category": "impl", "reason": "missing import"},
+    ] * (threshold // 2)
+    # impl 실패가 있으므로 LLM 개입 허용
+    assert orch._needs_llm_intervention(cycle, "/fake") is True

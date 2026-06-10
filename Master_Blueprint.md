@@ -1130,14 +1130,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-11; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, dynamic_orchestrator.py, failure_classifier.py, fsa_loop.py (+4)
+최근 자동 갱신 컨텍스트: chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 | `core/dynamic_orchestrator.py` | dynamic orchestrator | `DynamicOrchestrator` |
-| `core/failure_classifier.py` | core/failure_classifier.py ========================== 태스크 실패 reason 문자열을 INFRA / IMPLEMENTATION으로 분류한다. | `FailureCategory`, `classify_failure()` |
-| `core/fsa_loop.py` | core/fsa_loop.py ================ Full Self Automation (FSA) Loop Orchestrator — ISE와 동일한 에스컬레이션 파이프라인. | `FSALoop`, `parse_evaluator_response()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1685,6 +1682,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-11 | v1.2.34 | chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, dogfood.py, dynamic_orchestrator.py, failure_classifier.py, fsa_loop.py (+4) |
 | 2026-06-11 | v1.2.34 | fix(dogfood B3+B2): worktree review-gate 차단 + AUTH_EXPIRED terminal 처리 — B3: `_develop_isolation_env`에 `AF_SKIP_REVIEW_GATE=1` 추가(`_ISO_ENV_KEYS` 포함). B2: `failure_classifier._INFRA_PATTERNS`에 `auth_expired` 추가 + `fsa_loop` INFRA 즉시 중단(rollback 전 조기 return). 테스트 25건 신규. 3-Tier PASS. — core/dogfood.py, core/failure_classifier.py, core/fsa_loop.py, Master_Blueprint.md |
 | 2026-06-10 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, utils.py, test_utils.py |

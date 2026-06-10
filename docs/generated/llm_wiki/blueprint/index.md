@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T00:35:16+09:00
-source_commit: 0354224c
+generated_at: 2026-06-11T00:49:33+09:00
+source_commit: b71c8b6e
 sources:
   - "Master_Blueprint.md"
 ---
@@ -18,13 +18,13 @@ sources:
 - [[blueprint/1-아키텍처-개요|§1 아키텍처 개요]] — `Master_Blueprint.md:240`
 - [[blueprint/2-실행-흐름|§2 실행 흐름]] — `Master_Blueprint.md:276`
 - [[blueprint/3-핵심-서브시스템|§3 핵심 서브시스템]] — `Master_Blueprint.md:431`
-- [[blueprint/4-자가진화-루프|§4 자가진화 루프]] — `Master_Blueprint.md:1145`
-- [[blueprint/5-에이전트-간-통신|§5 에이전트 간 통신]] — `Master_Blueprint.md:1207`
-- [[blueprint/6-모델-라우팅|§6 모델 라우팅]] — `Master_Blueprint.md:1238`
-- [[blueprint/7-안전장치|§7 안전장치]] — `Master_Blueprint.md:1274`
-- [[blueprint/8-빌드-배포|§8 빌드 & 배포]] — `Master_Blueprint.md:1423`
-- [[blueprint/9-설정-레퍼런스|§9 설정 레퍼런스]] — `Master_Blueprint.md:1542`
-- [[blueprint/10-의존성-그래프-영향-매트릭스|§10 의존성 그래프 & 영향 매트릭스]] — `Master_Blueprint.md:1598`
-- [[blueprint/11-알려진-제약-이슈|§11 알려진 제약·이슈]] — `Master_Blueprint.md:1652`
-- [[blueprint/12-변경-이력|§12 변경 이력]] — `Master_Blueprint.md:1684`
-- [[blueprint/maintenance-guide|유지보수 가이드]] — `Master_Blueprint.md:2855`
+- [[blueprint/4-자가진화-루프|§4 자가진화 루프]] — `Master_Blueprint.md:1142`
+- [[blueprint/5-에이전트-간-통신|§5 에이전트 간 통신]] — `Master_Blueprint.md:1204`
+- [[blueprint/6-모델-라우팅|§6 모델 라우팅]] — `Master_Blueprint.md:1235`
+- [[blueprint/7-안전장치|§7 안전장치]] — `Master_Blueprint.md:1271`
+- [[blueprint/8-빌드-배포|§8 빌드 & 배포]] — `Master_Blueprint.md:1420`
+- [[blueprint/9-설정-레퍼런스|§9 설정 레퍼런스]] — `Master_Blueprint.md:1539`
+- [[blueprint/10-의존성-그래프-영향-매트릭스|§10 의존성 그래프 & 영향 매트릭스]] — `Master_Blueprint.md:1595`
+- [[blueprint/11-알려진-제약-이슈|§11 알려진 제약·이슈]] — `Master_Blueprint.md:1649`
+- [[blueprint/12-변경-이력|§12 변경 이력]] — `Master_Blueprint.md:1681`
+- [[blueprint/maintenance-guide|유지보수 가이드]] — `Master_Blueprint.md:2853`

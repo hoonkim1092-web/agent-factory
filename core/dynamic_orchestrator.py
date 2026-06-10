@@ -334,9 +334,12 @@ class DynamicOrchestrator:
                 return True
         except Exception:
             pass
-        # 3. Stall 감지 (N사이클 동안 완료 없음)
+        # 3. Stall 감지 (N사이클 동안 완료 없음) — infra-only 실패는 LLM 개입 불필요
         cycles_since = cycle - self._last_completion_cycle
         if cycles_since >= self._stall_threshold and cycle > self._stall_threshold:
+            _recent = self.state_board.get("failed_subtasks", [])[-self._stall_threshold:]
+            if _recent and all(f.get("failure_category") == "infra" for f in _recent):
+                return False  # AUTH_EXPIRED 등 infra 실패만 있으면 LLM 재시도 무의미
             return True
         # 4. 전략 피벗 필요 (최근 5건 중 impl 실패 3건 이상)
         recent_failures = len([
