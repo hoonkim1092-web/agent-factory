@@ -7,6 +7,11 @@
 > **△ STEP 4 (controlled 측정 강행) 1차 완료, 단 불완전**: `root_mean_square` leaf util(12줄, Tier2, 커밋 `83dd4662`) → af-cross-review 직접 호출(gemini는 `AF_SKIP_PROVIDER=gemini_cli` 우회). **결과: 34분→10.8분(3.2× 빠름), 77k→63k토큰(-18%), 메커니즘 전부 PASS**(청킹 index·번들 임베드·§5 포함·Codex가 §5 근거로 자율탐색 안 함·extension log 0·6파일 read). **그러나 깨끗한 A/B 아님(overclaim 금지)**: ① Tier 불일치(3 vs 2) ② **핵심 benefit 미측정** — RMS는 신규 leaf라 callers 0 + commit-first 탓에 번들 §2 Git Diff 비고 changed_symbols=0 → §5 애초 비어있었음. side-effect 커버리지 가치는 **callers 있는 함수를 pre-commit 게이트(번들 §5 채워진 상태)로** 재측정해야 진짜 입증 ③ 남은 ~11분은 codex 자체 리뷰패스+deliberation. **방향성 확인→STEP2 유지 정당, "분 단위"·side-effect benefit 미입증.** advisory: blueprint_updater 신규 심볼 §3.12 자동반영 못 함(WARN).
 > **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
 > **STEP 3 (정책·선택·안급함)**: `_find_direct_callers` 1-hop/max3/core+scripts 한계 넓힐지 = "안전 vs 빠름" 다이얼. STEP4-rerun 결과 보고 사용자 결정.
+>
+> **▶▶ 다음 세션 미결 3건 (2026-06-12 사용자 지시 "다음 세션에서")**:
+> 1. **(권장·먼저) RMS 정식 3-Tier 완주**: `83dd4662` `root_mean_square`가 측정용으로 `AF_SKIP_REVIEW_GATE=1` 우회 커밋됨 → cross-review WARN(no BLOCK)+테스트 6/6만 받음. **af-critic + af-test-runner 미실행**. 단순 12줄 수학함수라 위험 낮으나 규칙상 미완. 둘 돌려 완주.
+> 2. **(advisory·급하지 않음) blueprint_updater 신규 공개심볼 누락**: `scripts/blueprint_updater.py`가 utils.py docstring 첫 줄 심볼(now_iso/safe_id/safe_optional_id)만 추출 → 신규 공개함수(root_mean_square 등)를 Master_Blueprint §3.12에 자동 반영 못 함. 개선 work-item 후보(top-level 공개함수 전체 반영). cross-review가 WARN으로 지적.
+> 3. **(선택) STEP 4-rerun**: 위 §STEP4 참조 — side-effect benefit 진짜 입증.
 
 ---
 
