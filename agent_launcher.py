@@ -938,6 +938,9 @@ def _build_arg_parser(ad_hoc_mode):
         inspect_parser.add_argument("path", nargs="?", default=".", help="대상 경로 (기본: 현재 디렉터리)")
         inspect_parser.add_argument("--json", dest="json_out", action="store_true", help="JSON 출력")
         inspect_parser.add_argument("--out", metavar="DIR", default=None, help="MD+JSON 파일 저장 디렉터리")
+        symbols_parser = sync_todo_sub.add_parser("symbols", help="Python 프로젝트 AST 심볼 인덱스 생성")
+        symbols_parser.add_argument("path", nargs="?", default=".", help="대상 경로 (기본: 현재 디렉터리)")
+        symbols_parser.add_argument("--out", metavar="DIR", default=None, help="symbols.md 저장 디렉터리 (미지정 시 stdout)")
 
         dogfood_parser = subparsers.add_parser("dogfood", help="Dogfood 파이프라인 실행")
         dogfood_sub = dogfood_parser.add_subparsers(dest="dogfood_cmd", required=True)
@@ -1009,6 +1012,24 @@ if __name__ == "__main__":
                 *(["--json"] if getattr(args, "json_out", False) else []),
                 *(["--out", args.out] if getattr(args, "out", None) else []),
             ]))
+        elif args.subcommand == "project" and getattr(args, "project_cmd", None) == "symbols":
+            from pathlib import Path as _Path
+            from scripts import codebase_symbols as _cs
+            _sym_root = _Path(getattr(args, "path", "."))
+            if not _sym_root.exists() or not _sym_root.is_dir():
+                print(f"[af project symbols] 디렉터리가 아님: {_sym_root}", file=sys.stderr)
+                sys.exit(1)
+            _sym_content = _cs.build(_sym_root)
+            _sym_out = getattr(args, "out", None)
+            if _sym_out:
+                _out_path = _Path(_sym_out)
+                _out_path.mkdir(parents=True, exist_ok=True)
+                _sym_file = _out_path / "symbols.md"
+                _sym_file.write_text(_sym_content, encoding="utf-8")
+                print(f"[af project symbols] 저장됨: {_sym_file}", file=sys.stderr)
+            else:
+                sys.stdout.write(_sym_content)
+            sys.exit(0)
         elif args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
             from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
             from core.documentation_policy import write_project_todo, normalize_project_todo_items, _normalize_instruction, _mark_for_status, _instruction_status_map

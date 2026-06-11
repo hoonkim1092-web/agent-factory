@@ -1690,6 +1690,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-11 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, test_af_project_symbols.py |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1) |
 | 2026-06-11 | v1.2.48 | fix(ise-provider-awareness): 자가수정 brain 3개(ISEAnalyzer/ISERedesigner/StrategyEvaluator) `LLMEngine`(gemini API 전용) → `ControlPlaneLLM` drop-in 교체. CLI-로그인 환경에서 `engine_api_keys_disabled()` 마스킹에 걸려 full/야간 FSA가 휴리스틱 폴백으로만 작동하던 실재 결함 수정. `model_name` default `"gemini-1.5-pro-latest"` → `None`(provider 자체 default). `tests/test_ise_provider_awareness.py` INV-1~6 신규. 3-Tier 예정. §3.8.1·§3.9 갱신. — core/ise_analyzer.py, core/ise_redesigner.py, core/evaluator.py, tests/test_ise_provider_awareness.py, Master_Blueprint.md |
 | 2026-06-11 | v1.2.34 | chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py |
