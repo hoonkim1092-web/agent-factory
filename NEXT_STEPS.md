@@ -9,10 +9,11 @@
 - **✅ 구현 완료 (2026-06-11 Sonnet)**: `INSTRUCTIONS.md` 신규(공통 SSOT) + `scripts/sync_provider_instructions.py` 신규(marker-injection) + `generate_agents_md.py` `render_roster()` 추가·`main()` sync 위임 + `.githooks/pre-commit` sync 트리거 추가(commit 차단 포함). INV-1~8 27 테스트 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(BLOCK 0, Advisory 3건 무해) / af-test-runner PASS(3145 PASS). Codex/Gemini 실무규칙 전달 채널 복원.
 - **다음 = WI-B 또는 다른 product-value work-item.**
 
-### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스
-- **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파. Blueprint/code-review 원본 통째 read 금지 지침 공통 채널 배선 완료.
-- **STEP 2 (별도 기능·설계 필요)**: 외부 프로젝트(AF 부착)용 AST 인덱스. `build_llm_wiki.py`는 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 등 하드코딩 소스, :31-33) → 외부엔 `scripts/codebase_symbols.py`(AST, **범용**)만 작동. `af` 명령으로 임의 프로젝트 symbols 인덱스 생성+AF 분석경로 참조. **ROI 최고**(외부는 기존 정리 0 = 인덱스가 유일 지도).
+### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스 — ✅ 완료 (2026-06-11 Sonnet)
+- **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파.
+- **✅ STEP 2 완료 (2026-06-11 Sonnet, `a6f53fdc`)**: `af project symbols [path] [--out DIR]` 서브커맨드 추가. `codebase_symbols.build()` 재사용. `is_dir()` 체크(Medium advisory 수용). 12 테스트 신규(INV-1~4). 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(117).
 - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
+- **다음 = product-value work-item 신규 선정.**
 
 > ## 🛑 STREAM 상태 (2026-06-02 고정)
 > - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**
