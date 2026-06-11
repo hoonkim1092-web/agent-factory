@@ -221,7 +221,11 @@ def _md_escape(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", "<br>")
 
 
-def render_markdown(records: list[AgentRecord], agents_dir_label: str) -> str:
+def render_roster(records: list[AgentRecord], agents_dir_label: str) -> str:
+    """Return the roster-only markdown body (header + emoji table + agents table).
+
+    Does NOT include AF-COMMON markers — those are added by sync_provider_instructions.
+    """
     lines: list[str] = []
     lines.append("# AGENTS")
     lines.append("")
@@ -263,6 +267,11 @@ def render_markdown(records: list[AgentRecord], agents_dir_label: str) -> str:
     return "\n".join(lines)
 
 
+def render_markdown(records: list[AgentRecord], agents_dir_label: str) -> str:
+    """Backward-compatible alias — returns the same output as render_roster."""
+    return render_roster(records, agents_dir_label=agents_dir_label)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate root AGENTS.md table from YAML files in agents/."
@@ -281,21 +290,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    args = parse_args()
-    agents_dir = _resolve_path(args.agents_dir)
-    output_path = _resolve_path(args.output)
-
-    if not agents_dir.exists() or not agents_dir.is_dir():
-        print(f"[ERROR] agents directory not found: {agents_dir}", file=sys.stderr)
-        return 1
-
-    records = collect_records(REPO_ROOT, agents_dir)
-    agents_dir_label = _relative_posix(agents_dir, REPO_ROOT)
-    markdown = render_markdown(records, agents_dir_label=agents_dir_label)
-
-    output_path.write_text(markdown, encoding="utf-8")
-    print(f"[OK] Generated {output_path} ({len(records)} rows)")
-    return 0
+    # AGENTS.md write responsibility is exclusively sync_provider_instructions.
+    # Delegate to sync so the common block + roster are always composed together.
+    _root = Path(__file__).resolve().parent.parent
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
+    from scripts.sync_provider_instructions import sync  # type: ignore[import]
+    return sync(workspace=str(_root))
 
 
 if __name__ == "__main__":

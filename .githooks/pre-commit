@@ -77,6 +77,27 @@ if [ -n "$WIKI_TRIGGER" ]; then
     fi
 fi
 
+# Provider instructions: regenerate when SSOT or agent YAMLs are staged.
+# Sync failure MUST block commit (drift prevention) — no || true.
+INSTR_TRIGGER=$(echo "$STAGED" | grep -E "^(INSTRUCTIONS\.md|agents/.*\.(yaml|yml))$" | head -1)
+if [ -n "$INSTR_TRIGGER" ]; then
+    "$HOOK_PY" "${REPO_ROOT}/scripts/sync_provider_instructions.py" --workspace "${REPO_ROOT}"
+    SYNC_EXIT=$?
+    if [ $SYNC_EXIT -ne 0 ]; then
+        echo ""
+        echo "⛔ [pre-commit] provider instruction sync failed (exit $SYNC_EXIT)."
+        echo "   Fix INSTRUCTIONS.md markers / agents YAML, then retry."
+        echo "   Note: AF_SKIP_REVIEW_GATE bypass does NOT apply to SSOT sync."
+        echo ""
+        exit 1
+    fi
+    for f in CLAUDE.md AGENTS.md GEMINI.md; do
+        if git diff --name-only 2>/dev/null | grep -q "^${f}$"; then
+            git add "$f" 2>/dev/null || true
+        fi
+    done
+fi
+
 # Code commits must include Blueprint after the post-gate updater step.
 if [ -n "$CODE_CHANGED" ]; then
     BLUEPRINT_STAGED=$(echo "$STAGED" | grep "^$BLUEPRINT$")

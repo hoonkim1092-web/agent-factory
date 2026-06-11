@@ -1,4 +1,3 @@
-<!-- AF-COMMON-START (generated from INSTRUCTIONS.md — DO NOT EDIT between markers) -->
 <!-- 이 파일이 공통 실무 규칙의 SSOT입니다. 편집 후 scripts/sync_provider_instructions.py 또는 pre-commit이 CLAUDE/AGENTS/GEMINI에 전파합니다. -->
 
 <!-- KARPATHY-PRINCIPLES-START (실험 2026-05-04 ~ 2026-05-11, 제거 시 이 마커 사이 전부 삭제) -->
@@ -153,32 +152,3 @@
 - **소스 레포**: `agent-factory` remote = `https://github.com/hoonkim1092-web/agent-factory.git`
 - **현재 브랜치**: `2026-04-01-super-harness`
 - **아키텍처 문서**: `Master_Blueprint.md` (845줄, 12섹션)
-<!-- AF-COMMON-END -->
-
-# AGENTS
-
-This file is auto-generated. Do not edit manually.
-
-## Role Emoji Mapping
-
-| Role | Emoji |
-| --- | --- |
-| Architect | 🐍 |
-| PM | 😈 |
-| Designer | 🎨 |
-| Dev | ☠️ |
-
-## Agents (8)
-
-Source: `agents` (recursive YAML scan)
-
-| Kind | Agent ID | Name | Role | Emoji | YAML |
-| --- | --- | --- | --- | --- | --- |
-| file | iguro_obanai | Iguro Obanai | Backend Architect (CTO Level 5) | 🐍 | `agents/iguro_obanai.yaml` |
-| file | deadbyte | Deadbyte | Frontend Architect | ☠️ | `agents/deadbyte.yaml` |
-| file | himari | Himari | Super Research Architect | 🦽 | `agents/himari.yaml` |
-| file | tanjiro_logimind_planning_director | Kamado Tanjiro | Logi-Mind System Planning Director | 🎴 | `agents/tanjiro_logimind_planning_director.yaml` |
-| file | lilith | Lilith | Senior PM (Level 7) & Agent Factory Orchestrator (HITL enforced) | 😈 | `agents/lilith.yaml` |
-| file | saiba_midori | Saiba Midori | UI/UX Design Director | 🎨 | `agents/saiba_midori.yaml` |
-| file | test_agent | Test | Coder |  | `agents/test_agent.yaml` |
-| file | evaluator | Evaluator | QA/Eval Agent |  | `agents/evaluator.yaml` |

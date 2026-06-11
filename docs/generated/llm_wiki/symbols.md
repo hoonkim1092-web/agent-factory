@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T14:11:23+09:00
-source_commit: 48e10dd2
+generated_at: 2026-06-11T15:49:58+09:00
+source_commit: c37eff2a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -6384,6 +6384,7 @@ _(no top-level symbols)_
 - `_relative_posix`
 - `collect_records`
 - `_md_escape`
+- `render_roster`
 - `render_markdown`
 - `parse_args`
 - `main`
@@ -6633,6 +6634,16 @@ _(no top-level symbols)_
 - `_print_json`
 - `_push`
 - `_pull`
+- `main`
+
+## `scripts/sync_provider_instructions.py`
+
+**Functions:**
+- `_repo_root`
+- `_read_instructions`
+- `_inject_common_block`
+- `_generate_agents_md`
+- `sync`
 - `main`
 
 ## `scripts/sync_skill_registry.py`
@@ -9016,6 +9027,35 @@ _(no top-level symbols)_
 - `test_inv8_non_limit_error_does_not_mark`
 - `test_inv9b_use_cache_false_preserves_rate_limited`
 - `test_inv9_force_refresh_preserves_rate_limited`
+
+## `tests/test_provider_instruction_sync.py`
+
+**Functions:**
+- `_read`
+- `_hook_text`
+- `_markers`
+- `_extract_between_markers`
+- `test_inv1_start_marker_present`
+- `test_inv1_end_marker_present`
+- `test_inv2_no_drift`
+- `test_inv3_idempotent`
+- `test_inv4_agents_md_has_roster_section`
+- `test_inv4_agents_md_has_common_block`
+- `test_inv4_agents_yaml_ids_in_roster`
+- `test_inv5_missing_start_marker_raises`
+- `test_inv5_missing_end_marker_raises`
+- `test_inv5_no_instructions_file_returns_error`
+- `test_inv6_no_redeclare_agent_record`
+- `test_inv6_no_redeclare_collect_records`
+- `test_inv6_sync_imports_from_generate_agents_md`
+- `test_inv7_precommit_calls_sync_script`
+- `test_inv7_precommit_triggers_on_instructions_md`
+- `test_inv7_precommit_triggers_on_agents_yaml`
+- `test_inv7_no_or_true_on_sync_call`
+- `test_inv7_exit_1_path_exists_after_sync_failure`
+- `test_inv8_render_roster_function_exists`
+- `test_inv8_render_roster_no_markers`
+- `test_inv8_main_does_not_write_agents_md_directly`
 
 ## `tests/test_quality_contract.py`
 

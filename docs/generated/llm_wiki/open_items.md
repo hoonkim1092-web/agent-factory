@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T14:11:22+09:00
-source_commit: 48e10dd2
+generated_at: 2026-06-11T15:49:57+09:00
+source_commit: c37eff2a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -14,7 +14,7 @@ sources:
 > Source: NEXT_STEPS.md
 > 관련: [[index]] | [[review_patterns]] | [[source_refs]]
 
-- (L9) - **🎯 다음 = `/model sonnet`으로 설계문서 §7 Step 0~9 test-first 구현(재설계 금지).** 신규 `INSTRUCTIONS.md` + `scripts/sync_provider_instructions.py` + `generate_agents_md.py` roster 라이브러리화 + pre-commit 트리거. test=INV
+- (L10) - **다음 = WI-B 또는 다른 product-value work-item.**
 - (L13) - **STEP 1 (WI-A 공통 SSOT에 흡수)**: 분석 시작 시 `docs/generated/llm_wiki/blueprint/N-*.md` **청킹 섹션만** read(원본 통째 금지) + `symbols.md`는 **grep**(통째 read 금지, 8204줄). 근거: code-review **7302줄→청킹 28줄(260배 절감)**. 청킹
 - (L15) - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
 - (L19) > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.

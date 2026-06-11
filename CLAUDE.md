@@ -1,5 +1,8 @@
 # Agent Factory — Claude Code 지시사항
 
+<!-- AF-COMMON-START (generated from INSTRUCTIONS.md — DO NOT EDIT between markers) -->
+<!-- 이 파일이 공통 실무 규칙의 SSOT입니다. 편집 후 scripts/sync_provider_instructions.py 또는 pre-commit이 CLAUDE/AGENTS/GEMINI에 전파합니다. -->
+
 <!-- KARPATHY-PRINCIPLES-START (실험 2026-05-04 ~ 2026-05-11, 제거 시 이 마커 사이 전부 삭제) -->
 ## LLM 행동 원칙 (Karpathy)
 
@@ -132,6 +135,28 @@
   - MIT 라이선스 기반 흡수 시 본 메타로 attribution 의무 이행
 - **AF 자체 스킬**: `inspired_by:` 필드 없음 (생략)
 
+### Review-Gate 규칙 (Phase 0 갱신 2026-05-13)
+- `.py` 파일 수정 후 `git commit` 전 코드 리뷰 필수. `.githooks/pre-commit`의 review-gate가 이를 강제.
+- **Tier 분류**: Tier 1 파일 (docs/, README, 단순 설정): 경량 review만. Tier 2~3 파일 (core/, scripts/, 일반 코드): review-first 순서.
+  - 분류는 `scripts/blast_radius.py`가 결정 (`subprocess`, `shell=True`, hook launcher 등은 자동 Tier 3)
+- **max_rounds=5 캡** (코드 수정) — 같은 큐는 최대 5라운드까지만 자동 발화. 이후엔 사용자가 수동 결정 (재리뷰 vs 우회)
+- **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
+- `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
+- 진단: `python3 scripts/review_gate.py --debug`
+
+### 커밋 규칙
+- 코드 수정 + Blueprint 업데이트는 같은 커밋
+- 빌드 zip은 **GitHub Release로 배포**: `gh release create af-fsa_v{version} dist/af-{version}.zip --notes ...` (2026-04-14 정책 변경: LFS 미구성 환경에서 ~91MB zip이 GitHub 100MB 한계로 push 실패한 사례 이후. `dist/*.zip`은 `.gitignore` 처리)
+- 태그 형식: `af-fsa_v{version}`
+
+## 프로젝트 개요
+- **위치**: `C:\Project\agent-factory`
+- **퍼블릭 레포**: `origin` = `https://github.com/hoonkim1092-web/af-fsa.git`
+- **소스 레포**: `agent-factory` remote = `https://github.com/hoonkim1092-web/agent-factory.git`
+- **현재 브랜치**: `2026-04-01-super-harness`
+- **아키텍처 문서**: `Master_Blueprint.md` (845줄, 12섹션)
+<!-- AF-COMMON-END -->
+
 ### 교차검증 자동 실행
 - UserPromptSubmit hook이 `[af-review-pending]` 메시지를 출력하면, **메시지의 `실행 에이전트:` 라인에 명시된 에이전트만** 실행한다 (Phase 0 — Tier 1은 af-test-runner 1개, Tier 2~3은 3-tier 순서)
   - 에이전트 이름 뒤에 `[model=X]` 접미사가 있으면 Agent tool의 `model:` 파라미터에 해당 값을 전달한다 (P4.5b 사전강제: 이전 라운드 escalation 적용)
@@ -141,17 +166,10 @@
 - 교차검증 결과에서 **BLOCK 판정 시에만** 발견 사항을 수정한다. **WARN은 advisory** — 자동 수정 의무 없음 (Phase 0 정책, 2026-04-30: 무한루프 방지)
 - **Tier 3(af-cross-review)는 가용 외부 CLI 프로바이더 전부에 병렬 fan-out한다.** 외부 프로바이더 0개면 자동 SKIP(통과 간주), 1개 이상 인증 만료가 있으면 BLOCK + 재인증 안내. (`core/provider_detect.py` Step 0 감지)
 
-### Review-Gate 규칙 (Phase 0 갱신 2026-05-13)
-- `.py` 파일 수정 후 `git commit` 전 필수 tier 완주:
-  - **Tier 1 파일** (docs/, README, 단순 설정): af-test-runner만
-  - **Tier 2~3 파일** (core/, scripts/, 일반 코드): **af-critic → af-cross-review → af-test-runner** 순서 (review-first pattern)
-  - 분류는 `scripts/blast_radius.py`가 결정 (`subprocess`, `shell=True`, hook launcher 등은 자동 Tier 3)
-- **max_rounds=5 캡** (코드 수정) — 같은 큐는 최대 5라운드까지만 자동 발화. 이후엔 사용자가 수동 결정 (재리뷰 vs 우회)
+### Review-Gate 에이전트 순서 (Claude Code 전용)
+- **Tier 2~3 파일**: **af-critic → af-cross-review → af-test-runner** 순서 (review-first pattern)
 - **설계문서는 사용자 안내** — BLOCK 반복 시 무조건 사용자에게 안내 (자동 고정 금지, 의사결정 필요)
 - **WARN-only no-fire** — 직전 라운드가 BLOCK 없이 완료됐다면 (전부 WARN/PASS) 재편집해도 자동 재발화 안 함
-- **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
-- `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
-- 진단: `python3 scripts/review_gate.py --debug`
 
 ### Agent Model Routing — Defaults + Escalation Triggers (P4.5a, 2026-05-15 추가)
 
@@ -177,11 +195,6 @@
 
 **근거 ADR**: `docs/decisions/ADR-20260515-114000-agent-model-routing-defaults-escalation.md`
 
-### 커밋 규칙
-- 코드 수정 + Blueprint 업데이트는 같은 커밋
-- 빌드 zip은 **GitHub Release로 배포**: `gh release create af-fsa_v{version} dist/af-{version}.zip --notes ...` (2026-04-14 정책 변경: LFS 미구성 환경에서 ~91MB zip이 GitHub 100MB 한계로 push 실패한 사례 이후. `dist/*.zip`은 `.gitignore` 처리)
-- 태그 형식: `af-fsa_v{version}`
-
 ## Hook 설치 (레포 클론 후 1회)
 
 ```bash
@@ -189,10 +202,3 @@ git config core.hooksPath .githooks
 ```
 
 이후 `core/*.py` 등 변경 커밋 시 `Master_Blueprint.md` 미스테이지 → 자동 차단.
-
-## 프로젝트 개요
-- **위치**: `C:\Project\agent-factory`
-- **퍼블릭 레포**: `origin` = `https://github.com/hoonkim1092-web/af-fsa.git`
-- **소스 레포**: `agent-factory` remote = `https://github.com/hoonkim1092-web/agent-factory.git`
-- **현재 브랜치**: `2026-04-01-super-harness`
-- **아키텍처 문서**: `Master_Blueprint.md` (845줄, 12섹션)
