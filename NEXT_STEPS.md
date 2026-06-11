@@ -1,5 +1,15 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## 🔥 다음 세션 최우선 = AF 게이트 효율 논의 계속 (2026-06-11 시작)
+
+> 사용자 질문: "AF로 작업하는 게 Opus 직접보다 토큰·시간이 너무 든다는 느낌." **사실 동결: 메모리 `project_af_gate_efficiency_debate`. 재분석 금지 — 실측·진단·잠정결론 확정됨. 다음 세션은 미해결 4항목부터.**
+> - **실측**: `af project symbols` 12줄에 교차검증 136k토큰/37분(cross-review 단독 77k/32분), BLOCK 0 advisory 1. 사용자 느낌 데이터상 정확.
+> - **진단**: 차이=교차검증 오버헤드(코드생성 속도는 Opus 직접과 동일). Tier 분류 과보수(subprocess→자동Tier3). dogfood full 더 심각(trivial 215+사이클 비수렴).
+> - **잠정결론**: 이분법 틀림, 레버=게이트 강도 리스크 비례. 일상 단순=Opus직접+표적검증(생략), core/보안=풀3-Tier. 단일vendor면 cross-review 가치↓.
+> - **미해결(다음 논의)**: ①Tier 분류 과보수 교정 ②cross-review 생략 기준 공식화 ③단일vendor cross-review 정책 ④운영규칙 먼저 손적용→효과확인 후 코드화(메타-재귀 경고).
+
+---
+
 ## 🎯 다음 세션 최우선 진입점 (2026-06-11 준비 — Opus)
 
 > 이번 세션 grep으로 확정한 work-item 2건. **둘 다 메타-재귀 아님** — 멀티 프로바이더 하네스 정합성 + 토큰 절감(실제 product value). 상세 팩트 동결: 메모리 `project_provider_instruction_parity`. **재분석 금지 — 아래 좌표는 grep 확정.**
