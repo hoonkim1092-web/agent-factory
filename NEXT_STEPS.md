@@ -1,6 +1,16 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## 🔥 다음 세션 최우선 = cross-review 입력 배선 STEP 4 (재측정) — STEP 1·2 완료 (2026-06-12)
+## 🔥 다음 세션 = cross-review 입력 배선 STEP 4-rerun(선택) — STEP 1·2·4(1차) 완료 (2026-06-12)
+
+> **STEP 1·2·4(1차) 완료 (2026-06-12, Opus).** 사실·계획·측정결과 동결: 메모리 `project_af_gate_efficiency_debate`. **재분석 금지.**
+>
+> **△ STEP 4 (controlled 측정 강행) 1차 완료, 단 불완전**: `root_mean_square` leaf util(12줄, Tier2, 커밋 `83dd4662`) → af-cross-review 직접 호출(gemini는 `AF_SKIP_PROVIDER=gemini_cli` 우회). **결과: 34분→10.8분(3.2× 빠름), 77k→63k토큰(-18%), 메커니즘 전부 PASS**(청킹 index·번들 임베드·§5 포함·Codex가 §5 근거로 자율탐색 안 함·extension log 0·6파일 read). **그러나 깨끗한 A/B 아님(overclaim 금지)**: ① Tier 불일치(3 vs 2) ② **핵심 benefit 미측정** — RMS는 신규 leaf라 callers 0 + commit-first 탓에 번들 §2 Git Diff 비고 changed_symbols=0 → §5 애초 비어있었음. side-effect 커버리지 가치는 **callers 있는 함수를 pre-commit 게이트(번들 §5 채워진 상태)로** 재측정해야 진짜 입증 ③ 남은 ~11분은 codex 자체 리뷰패스+deliberation. **방향성 확인→STEP2 유지 정당, "분 단위"·side-effect benefit 미입증.** advisory: blueprint_updater 신규 심볼 §3.12 자동반영 못 함(WARN).
+> **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
+> **STEP 3 (정책·선택·안급함)**: `_find_direct_callers` 1-hop/max3/core+scripts 한계 넓힐지 = "안전 vs 빠름" 다이얼. STEP4-rerun 결과 보고 사용자 결정.
+
+---
+
+## (이력) cross-review 입력 배선 STEP 1·2 상세
 
 > **STEP 1·2 완료 (2026-06-12, Opus).** 사실·계획 동결: 메모리 `project_af_gate_efficiency_debate`. **재분석 금지.**
 >
@@ -10,10 +20,7 @@
 > - 편집1 (Step 1): `REVIEW_DOC`을 raw 7302줄 → **청킹 index**(`docs/generated/llm_wiki/code_review/index.md`, 없으면 raw fallback) 재지정 + `review_bundle.md`를 `/tmp/af-review-bundle.txt`에 준비(stale/absent 시 fallback 문구, 입력정책 라인461과 동일한 `-nt` stale 판정).
 > - 편집2 (Step 2a 프롬프트): `[변경 diff]` 뒤 `[Review Bundle — side-effect 표면 이미 수집됨]` 섹션 추가(§5 Direct Callers 임베드). 지시1="청킹 index에서 관련 섹션만", 지시4="호출자는 번들 §5에 이미 있음 → 1차 근거로, 구체적 risk 가설 있을 때만 추가 Read+사유 명시".
 > - 편집3 (python 치환): `BUNDLE_PLACEHOLDER` 치환 1줄 추가.
-> - **검증**: 치환 로직 스모크 PASS — 잔여 PLACEHOLDER 0 / Direct Callers·§5 헤더·청킹 index 임베드 확인. `.md`만이라 review-gate 자동통과(3-Tier 불필요 — 게이트 자체가 STEP4 측정 대상이므로 self-review 모순 회피).
->
-> **▶ STEP 4 (다음 — 메타-재귀 준수)**: **다음 실제 cross-review run**(미래 `.py` work-item이 트리거)에서 토큰/시간 재측정 → STEP2 효과 확인(32분→분 단위 기대 vs 놓친 finding 없는지). 효과 확인 후 고정. *주의: 인위적 run 강제 금지 — 자연 발화 run에서 측정.*
-> **STEP 3 (정책·선택·안급함)**: `_find_direct_callers` 1-hop/max3/core+scripts 한계 넓힐지 = "안전 vs 빠름" 다이얼. STEP4 결과 보고 사용자 결정.
+> - **검증**: 치환 로직 스모크 PASS — 잔여 PLACEHOLDER 0 / Direct Callers·§5 헤더·청킹 index 임베드 확인. `.md`만이라 review-gate 자동통과.
 >
 > **실측 baseline (STEP2 前)**: `af project symbols` 12줄에 교차검증 136k토큰/37분(cross-review 단독 77k/32분), BLOCK 0 advisory 1.
 
