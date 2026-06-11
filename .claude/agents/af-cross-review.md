@@ -157,10 +157,26 @@ if [ $(wc -c < /tmp/af-diff-content.txt) -gt 51200 ]; then
 fi
 ```
 
-최신 코드 리뷰 문서 경로 저장:
+최신 코드 리뷰 문서 경로 저장 (청킹본 우선 — CLAUDE.md: raw code-review.md 통째 read 금지, 7302줄→청킹 28줄 260배 절감):
 ```bash
-REVIEW_DOC=$(ls -t docs/code_review/*.md 2>/dev/null | head -1)
-echo "review doc: $REVIEW_DOC"
+REVIEW_DOC="docs/generated/llm_wiki/code_review/index.md"
+if [ ! -f "$REVIEW_DOC" ]; then
+  REVIEW_DOC=$(ls -t docs/code_review/*.md 2>/dev/null | head -1)
+fi
+echo "review doc (chunked index 우선): $REVIEW_DOC"
+
+# review_bundle.md 준비 — side-effect(직접 호출자) 표면이 §5 Direct Callers에 이미 grep 수집돼 있다.
+# (scripts/hook_runner.py가 .py 편집마다 build_review_bundle.py로 갱신.)
+# 이 번들을 Codex 프롬프트에 임베드하면 외부 리뷰어가 호출자를 자율탐색할 필요가 없다(단선 해소).
+BUNDLE=".af_review_queue/review_bundle.md"
+PENDING=".af_review_queue/pending_agent_review.json"
+if [ -f "$BUNDLE" ] && { [ ! -f "$PENDING" ] || [ ! "$PENDING" -nt "$BUNDLE" ]; }; then
+  cp "$BUNDLE" /tmp/af-review-bundle.txt
+  echo "bundle: embedded ($BUNDLE)"
+else
+  printf '(bundle: absent 또는 stale — 호출자/피호출자를 직접 탐색하는 fallback 모드)\n' > /tmp/af-review-bundle.txt
+  echo "bundle: absent/stale — fallback"
+fi
 ```
 
 ---
@@ -194,8 +210,12 @@ cat > /tmp/af-review-prompt.txt << 'PROMPT_EOF'
 [변경 diff]
 DIFF_CONTENT_PLACEHOLDER
 
+[Review Bundle — side-effect 표면 이미 수집됨]
+아래는 AF가 이번 변경에 대해 미리 grep 수집한 번들이다. 특히 **§5 Direct Callers**가 변경 심볼의 직접 호출자(side-effect 1-hop 표면)이며, §4 Related Tests·§6 Risk Flags·§7 Prior Findings도 포함된다. 호출자를 직접 찾아 헤매지 말고 이 번들을 1차 근거로 삼아라.
+BUNDLE_PLACEHOLDER
+
 [지시사항]
-1. 먼저 REVIEW_DOC_PLACEHOLDER 를 읽어라. 프로젝트 전체 구조, 파일별 역할, 알려진 문제점이 정리되어 있다.
+1. 먼저 REVIEW_DOC_PLACEHOLDER (코드 리뷰 청킹 index)에서 **이번 변경과 관련된 섹션 링크만 골라** 읽어라. 원본 code-review.md 전체 통독은 금지 — 토큰 낭비다.
 2. 검토 대상 카테고리 분리:
    [PRIMARY] (BLOCK/WARN 판정 영향 O)
      (i)  diff에 나타난 변경 심볼 자체의 결함
@@ -203,7 +223,7 @@ DIFF_CONTENT_PLACEHOLDER
    [BONUS] (advisory only, 판정 제외)
      (iii) 변경 무관 결함 — Critical/High만 보고 ("변경 무관" 라벨 필수)
 3. 다음 변경된 파일들을 직접 읽어라: CHANGED_FILES_PLACEHOLDER
-4. 각 파일의 호출자/피호출자도 읽어라.
+4. 호출자/피호출자(side-effect 표면)는 위 [Review Bundle] §5 Direct Callers에 이미 수집돼 있다. **먼저 그것을 근거로 (ii)를 판정하라.** 번들은 1-hop·핵심 심볼만 담으므로, 구체적 risk 가설이 있을 때만 추가 파일을 직접 Read하고 그 사유(검증하려는 risk)를 응답에 명시하라. 근거 없는 광범위 자율탐색은 금지.
 5. 각 항목에 심각도(Critical/High/Medium/Low), 파일명:라인번호, 코드 인용을 포함해라.
 6. [PRIMARY]에 Critical/High 결함이 없으면 "No BLOCK-level findings"를 명시해라.
 7. 출력 직전 자기 검증: 각 file:line 인용의 실제 코드를 다시 읽고, 일치하지 않으면 항목 제거.
@@ -221,6 +241,7 @@ txt = open('/tmp/af-review-prompt.txt').read()
 txt = txt.replace('REVIEW_DOC_PLACEHOLDER', '${REVIEW_DOC}')
 txt = txt.replace('CHANGED_FILES_PLACEHOLDER', '${CHANGED_FILES}')
 txt = txt.replace('DIFF_CONTENT_PLACEHOLDER', open('/tmp/af-diff-content.txt').read())
+txt = txt.replace('BUNDLE_PLACEHOLDER', open('/tmp/af-review-bundle.txt').read())
 open('/tmp/af-review-prompt.txt', 'w').write(txt)
 PYEOF
 
