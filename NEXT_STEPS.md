@@ -8,10 +8,12 @@
 > **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
 > **STEP 3 (정책·선택·안급함)**: `_find_direct_callers` 1-hop/max3/core+scripts 한계 넓힐지 = "안전 vs 빠름" 다이얼. STEP4-rerun 결과 보고 사용자 결정.
 >
-> **▶▶ 다음 세션 미결 2건 (RMS 3-Tier 완주 → 1건 소진, 2026-06-12)**:
-> 1. ~~**(권장·먼저) RMS 정식 3-Tier 완주**~~ ✅ **완료 (2026-06-12 Opus)**: `83dd4662` `root_mean_square` 잔여 2-tier 실행 — **af-critic PASS**(발견 0; 수식 정확·`x*x`로 오버플로우 회피·빈리스트/0/음수 동족 정합) + **af-test-runner PASS**(RMS 6 케이스 + 전체 272 PASS, gap analyzer verdict=PASS). cross-review WARN(BLOCK 0, STEP4 기실행) 포함 3-Tier 완주. 코드 변경 0(전부 PASS).
-> 2. **(advisory·급하지 않음) blueprint_updater 신규 공개심볼 누락**: `scripts/blueprint_updater.py`가 utils.py docstring 첫 줄 심볼(now_iso/safe_id/safe_optional_id)만 추출 → 신규 공개함수(root_mean_square 등)를 Master_Blueprint §3.12에 자동 반영 못 함. 개선 work-item 후보(top-level 공개함수 전체 반영). cross-review가 WARN으로 지적.
-> 3. **(선택) STEP 4-rerun**: 위 §STEP4 참조 — side-effect benefit 진짜 입증.
+> **▶▶ 다음 세션 미결 (3건 전부 소진/측정 — 2026-06-12)**:
+> 1. ~~**(권장·먼저) RMS 정식 3-Tier 완주**~~ ✅ **완료 (2026-06-12 Opus)**: `83dd4662` `root_mean_square` 잔여 2-tier — **af-critic PASS**(발견 0) + **af-test-runner PASS**(RMS 6 + 전체 272, gap PASS). cross-review WARN(BLOCK 0) 포함 완주. 코드 변경 0.
+> 2. ~~**(advisory) blueprint_updater 신규 공개심볼 누락**~~ ✅ **완료 (2026-06-12 Opus, `a32c382d`)**: positional 캡(`funcs[:3]/[:6]`)으로 파일 뒤쪽 공개함수가 §3.12 자동요약에서 누락되던 결함 해소. 신규 `_changed_public_symbols()` — git diff `+def`/`+class` + `@@` 헌크 컨텍스트 enclosing 함수를 **change-relative** 추출(전체 반영 아님 — bloat 회피; utils.py 공개함수 54개라 "전체"는 과설계). `_update_section_3_auto_summary` 배선 교체(+폴백). **부수**: `_git`에 `encoding=utf-8,errors=replace` 추가 — Windows cp949 기본이 diff 비-cp949 문자(em-dash·수식)에서 `stdout=None` 만들던 잠재 결함(전 호출자 공유). 테스트 5건. 3-Tier: af-critic WARN→해소(헌크컨텍스트) / af-cross-review PASS(BLOCK 0, Low 2) / af-test-runner PASS(5+회귀 86). gate state gap stale-BLOCK은 우회(실완주).
+> 3. ~~**(선택) STEP 4-rerun**~~ △ **2차 측정 (위 #2 cross-review가 vehicle 겸용), 단 또 미입증**: blueprint_updater(callers 有: `dogfood.py:972`)를 staged로 af-cross-review — **~15.3분 / 80k토큰 / Codex CLI fallback 단일라운드 / PASS**. 단 **번들이 또 stale** → cross-review가 "bundle stale, git 직접 실험으로 대체" 보고 → **§5 채워진 번들의 side-effect benefit은 여전히 미입증**(staged 직접 호출이라 pre-commit 번들 재생성 안 됨; RMS 1차와 동일 한계). **진짜 입증하려면 자연 pre-commit 발화 run 필요**(staged 우회 측정으론 번들 stale 반복). STEP2 방향성은 유효, 헤드라인 benefit은 2회 연속 미측정.
+>
+> **▶ 다음 = product-value work-item 신규 선정** (미결 3건 소진). STEP4 side-effect benefit은 자연 dogfood/pre-commit run에서 기회 측정.
 
 ---
 
