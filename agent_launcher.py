@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -984,6 +984,9 @@ def _build_arg_parser(ad_hoc_mode):
         df_merge.add_argument("run_id", help="런 ID")
         df_merge.add_argument("--workspace", default=None, help="소스 작업 디렉토리 (기본: CWD)")
 
+        symbols_parser = subparsers.add_parser("symbols", help="외부 Python 프로젝트의 코드 심볼 인덱스 생성")
+        symbols_parser.add_argument("path", help="대상 프로젝트 디렉터리 경로")
+
         doctor_parser = subparsers.add_parser("doctor", help="AF 실행 환경 진단")
         doctor_mode = doctor_parser.add_mutually_exclusive_group()
         doctor_mode.add_argument("--fast", action="store_true", help="provider ping 스킵, 설치 여부만 확인")
@@ -1132,6 +1135,9 @@ if __name__ == "__main__":
                 if state.last_failure:
                     print(f"[dogfood] failure    : {state.last_failure}")
                 sys.exit(0 if state.merge_status == "merged" else 1)
+        elif args.subcommand == "symbols":
+            from scripts.af_symbols import main as symbols_main
+            sys.exit(symbols_main([args.path]))
         elif args.subcommand == "doctor":
             from scripts.af_doctor import main as doctor_main
             sys.exit(doctor_main([

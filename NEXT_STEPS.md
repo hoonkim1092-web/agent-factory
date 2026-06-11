@@ -11,7 +11,8 @@
 
 ### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스
 - **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파. Blueprint/code-review 원본 통째 read 금지 지침 공통 채널 배선 완료.
-- **STEP 2 (별도 기능·설계 필요)**: 외부 프로젝트(AF 부착)용 AST 인덱스. `build_llm_wiki.py`는 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 등 하드코딩 소스, :31-33) → 외부엔 `scripts/codebase_symbols.py`(AST, **범용**)만 작동. `af` 명령으로 임의 프로젝트 symbols 인덱스 생성+AF 분석경로 참조. **ROI 최고**(외부는 기존 정리 0 = 인덱스가 유일 지도).
+- **✅ STEP 2 완료 (2026-06-11, dogfood 산출 → 손 안착)**: `af symbols <경로>` 신규 서브커맨드 — 임의 외부 Python 프로젝트의 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성(범용 `codebase_symbols.build()` 재사용). **dogfood로 구현**(run `1781163237-b04a4d75`, merge=never, RSE route=**light** conf 0.82, 과분해 없이 ~9분 수렴) 후 소스 5파일을 브랜치로 안착 + 3-Tier. `scripts/af_symbols.py`(신규) + `tests/test_af_symbols.py`(18) + `af.py`(`_forward_args` 상대경로 해석) + `af.spec`(af_symbols+codebase_symbols hiddenimports) + `agent_launcher.py`(서브파서+dispatch). **3-Tier**: af-critic PASS / af-cross-review BLOCK→fixed(`af symbols .` 상대경로가 AF_root로 오해석되던 버그 — af.py `_forward_args`가 호출 cwd 기준 해석, 회귀 6) / af-test-runner FAIL→fixed(전이 의존성 `scripts.codebase_symbols` af.spec 누락 + frozen_build_parity 테스트 2, gap analyzer PASS). **RSE 발견**: 멀티파일 인프라 배선도 "가산형·패턴재사용·계약무변"이면 light로 수렴 — "인프라=손구현" 휴리스틱 반증.
+  - **STEP 2-b (잔여)**: `build_llm_wiki.py`는 여전히 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 하드코딩, :31-33). 외부 프로젝트 full-wiki(blueprint/code-review mirror)는 미지원 — symbols 인덱스만 범용. 필요 시 별도 work-item.
 - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
 
 > ## 🛑 STREAM 상태 (2026-06-02 고정)

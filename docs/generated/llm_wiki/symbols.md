@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T15:54:16+09:00
-source_commit: df3cb933
+generated_at: 2026-06-11T17:22:00+09:00
+source_commit: 358f6d77
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -2076,6 +2076,7 @@ _(no top-level symbols)_
 ## `af.py`
 
 **Functions:**
+- `_forward_args`
 - `main`
 
 ## `agent_launcher.py`
@@ -6128,6 +6129,12 @@ _(no top-level symbols)_
 - `format_markdown`
 - `main`
 
+## `scripts/af_symbols.py`
+
+**Functions:**
+- `build_symbols_index`
+- `main`
+
 ## `scripts/agent_model_selector.py`
 
 **Functions:**
@@ -7302,6 +7309,17 @@ _(no top-level symbols)_
 - `_clean_git`
 - `_base_docs`
 - `_ctx_for_steps`
+
+## `tests/test_af_symbols.py`
+
+**Classes:**
+- `TestBuildSymbolsIndex`
+- `TestMain`
+- `TestForwardArgs`
+- `TestFrozenBuildParity`
+
+**Functions:**
+- `_write_sample_module`
 
 ## `tests/test_agent_launcher_cli_dispatch.py`
 

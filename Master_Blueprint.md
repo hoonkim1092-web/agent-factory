@@ -73,6 +73,7 @@
 | `scripts/enqueue_staged_review.py` | provider/OS 독립 pre-commit 큐잉 fallback. Claude hook 없이 Codex·IDE·shell에서 staged review 대상 `.py`가 커밋될 때 Git index 기준으로 review queue를 먼저 채움 | `enqueue_staged()`, `main()` |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | `DoctorResult`, `run_checks()`, `format_text()`, `format_json()`, `main()` |
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | `inspect_project()`, `format_markdown()`, `_recommend_next_steps()`, `main()` |
+| `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | `build_symbols_index()`, `main()` |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
@@ -1690,6 +1691,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, af.spec, agent_launcher.py (+2) |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1) |
 | 2026-06-11 | v1.2.48 | fix(ise-provider-awareness): 자가수정 brain 3개(ISEAnalyzer/ISERedesigner/StrategyEvaluator) `LLMEngine`(gemini API 전용) → `ControlPlaneLLM` drop-in 교체. CLI-로그인 환경에서 `engine_api_keys_disabled()` 마스킹에 걸려 full/야간 FSA가 휴리스틱 폴백으로만 작동하던 실재 결함 수정. `model_name` default `"gemini-1.5-pro-latest"` → `None`(provider 자체 default). `tests/test_ise_provider_awareness.py` INV-1~6 신규. 3-Tier 예정. §3.8.1·§3.9 갱신. — core/ise_analyzer.py, core/ise_redesigner.py, core/evaluator.py, tests/test_ise_provider_awareness.py, Master_Blueprint.md |
 | 2026-06-11 | v1.2.34 | chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py |

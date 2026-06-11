@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T15:54:15+09:00
-source_commit: df3cb933
+generated_at: 2026-06-11T17:22:00+09:00
+source_commit: 358f6d77
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -58,6 +58,7 @@ sources:
 | `scripts/enqueue_staged_review.py` | provider/OS 독립 pre-commit 큐잉 fallback. Claude hook 없이 Codex·IDE·shell에서 staged review 대상 `.py`가 커밋될 때 Git index 기준으로 review queue를 먼저 채움 | Master_Blueprint.md §0 |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | Master_Blueprint.md §0 |
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
+| `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | Master_Blueprint.md §0 |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | Master_Blueprint.md §0 |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | Master_Blueprint.md §0 |
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
