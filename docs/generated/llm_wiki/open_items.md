@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T02:18:22+09:00
-source_commit: 8c4a9e1a
+generated_at: 2026-06-12T02:23:27+09:00
+source_commit: 6e46dac6
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -15,7 +15,7 @@ sources:
 > 관련: [[index]] | [[review_patterns]] | [[source_refs]]
 
 - (L8) > **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
-- (L11) > **▶▶ 다음 세션 미결 3건 (2026-06-12 사용자 지시 "다음 세션에서")**:
+- (L11) > **▶▶ 다음 세션 미결 2건 (RMS 3-Tier 완주 → 1건 소진, 2026-06-12)**:
 - (L41) - **다음 = WI-B 또는 다른 product-value work-item.**
 - (L46) - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
 - (L52) - **다음 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱시간·DB·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 덮어쓰기 위험 → AF 루트 직접 실행 금지.
