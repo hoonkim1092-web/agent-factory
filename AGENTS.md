@@ -108,6 +108,12 @@
 | 배포(버전 bump) | §8 빌드, §12 이력 |
 | 의존성 변경 | §10 Blast Radius 테이블 |
 
+### LLM Wiki 청킹 활용 규칙 (2026-06-11 추가)
+- **Blueprint 탐색 시 `docs/generated/llm_wiki/blueprint/N-*.md` 청킹 섹션만 read** — `Master_Blueprint.md` 원본 통째 read 금지
+- **`symbols.md`는 grep 전용** — 통째 read 금지 (8204줄)
+- **code-review 탐색 시 `docs/generated/llm_wiki/code_review/` 청킹 섹션만 read** — `docs/code_review/code-review.md` 원본 통째 read 금지 (7302줄 → 청킹 28줄, 260배 절감)
+- 재생성: `python scripts/build_llm_wiki.py` — pre-commit에서 소스 파일 변경 시 자동 갱신
+
 ### 버전 및 빌드
 - 버전 파일: `version.py` (`__version__`)
 - 설치 스크립트: `install-af.ps1` (버전 문자열 3곳 동시 수정)
