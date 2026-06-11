@@ -10,7 +10,7 @@
 - **다음 = WI-B 또는 다른 product-value work-item.**
 
 ### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스
-- **STEP 1 (WI-A 공통 SSOT에 흡수)**: 분석 시작 시 `docs/generated/llm_wiki/blueprint/N-*.md` **청킹 섹션만** read(원본 통째 금지) + `symbols.md`는 **grep**(통째 read 금지, 8204줄). 근거: code-review **7302줄→청킹 28줄(260배 절감)**. 청킹 인프라는 이미 완성, **"보라는 지침"만 누락**. ⚠️ Claude 전용 CLAUDE.md에 넣지 말 것 — WI-A 공통 SSOT에 넣어 3 프로바이더 공유.
+- **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파. Blueprint/code-review 원본 통째 read 금지 지침 공통 채널 배선 완료.
 - **STEP 2 (별도 기능·설계 필요)**: 외부 프로젝트(AF 부착)용 AST 인덱스. `build_llm_wiki.py`는 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 등 하드코딩 소스, :31-33) → 외부엔 `scripts/codebase_symbols.py`(AST, **범용**)만 작동. `af` 명령으로 임의 프로젝트 symbols 인덱스 생성+AF 분석경로 참조. **ROI 최고**(외부는 기존 정리 0 = 인덱스가 유일 지도).
 - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
 

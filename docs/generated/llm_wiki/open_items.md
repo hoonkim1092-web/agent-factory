@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-11T15:49:57+09:00
-source_commit: c37eff2a
+generated_at: 2026-06-11T15:54:16+09:00
+source_commit: df3cb933
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -15,7 +15,6 @@ sources:
 > 관련: [[index]] | [[review_patterns]] | [[source_refs]]
 
 - (L10) - **다음 = WI-B 또는 다른 product-value work-item.**
-- (L13) - **STEP 1 (WI-A 공통 SSOT에 흡수)**: 분석 시작 시 `docs/generated/llm_wiki/blueprint/N-*.md` **청킹 섹션만** read(원본 통째 금지) + `symbols.md`는 **grep**(통째 read 금지, 8204줄). 근거: code-review **7302줄→청킹 28줄(260배 절감)**. 청킹
 - (L15) - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
 - (L19) > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
 - (L20) > - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
@@ -55,4 +54,4 @@ sources:
 - (L671) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
 - (L758) 1. 완료 작업 / 다음 진입점 갱신
 
-Source: `NEXT_STEPS.md` (40건 추출)
+Source: `NEXT_STEPS.md` (39건 추출)
