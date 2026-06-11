@@ -1,5 +1,19 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## 🎯 다음 세션 최우선 진입점 (2026-06-11 준비 — Opus)
+
+> 이번 세션 grep으로 확정한 work-item 2건. **둘 다 메타-재귀 아님** — 멀티 프로바이더 하네스 정합성 + 토큰 절감(실제 product value). 상세 팩트 동결: 메모리 `project_provider_instruction_parity`. **재분석 금지 — 아래 좌표는 grep 확정.**
+
+### WI-A: 멀티 프로바이더 지침 SSOT 정합성 — ✅ 설계 완료 (2026-06-11 Opus), 다음=Sonnet 구현
+- **✅ 설계 완료**: `docs/2026-06-11-provider-instruction-ssot-design.md`. 결정 3개 사용자 위임→Opus 확정: ①신규 `INSTRUCTIONS.md`(루트 공통 SSOT) ②AGENTS.md 내 2섹션 ③공통+전용 분리. 합성=marker-injection(`<!-- AF-COMMON-START/END -->` 사이만 SSOT 합성). cross-review WARN 2건 반영(BLOCK 0): pre-commit `|| true` 금지(sync 실패=commit 차단) + INV-8(generate_agents_md 단독 실행 회귀 봉인).
+- **🎯 다음 = `/model sonnet`으로 설계문서 §7 Step 0~9 test-first 구현(재설계 금지).** 신규 `INSTRUCTIONS.md` + `scripts/sync_provider_instructions.py` + `generate_agents_md.py` roster 라이브러리화 + pre-commit 트리거. test=INV-1~8(`tests/test_provider_instruction_sync.py`). 그 뒤 3-Tier(외부 프로바이더 가용 시 cross-review 재검증).
+- **문제 (grep 확정)**: `CLAUDE.md`(198줄=실무규칙) / `GEMINI.md`(149줄=정체성헌법) / `AGENTS.md`(25줄=명단 자동생성) — 셋 다 다름 → Codex/Gemini 실무규칙 0 전달. 모순: `session_bridge.py:13`이 Codex AGENTS.md 지침채널 인식 but `generate_agents_md.py:296`이 명단으로 덮어씀.
+
+### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스
+- **STEP 1 (WI-A 공통 SSOT에 흡수)**: 분석 시작 시 `docs/generated/llm_wiki/blueprint/N-*.md` **청킹 섹션만** read(원본 통째 금지) + `symbols.md`는 **grep**(통째 read 금지, 8204줄). 근거: code-review **7302줄→청킹 28줄(260배 절감)**. 청킹 인프라는 이미 완성, **"보라는 지침"만 누락**. ⚠️ Claude 전용 CLAUDE.md에 넣지 말 것 — WI-A 공통 SSOT에 넣어 3 프로바이더 공유.
+- **STEP 2 (별도 기능·설계 필요)**: 외부 프로젝트(AF 부착)용 AST 인덱스. `build_llm_wiki.py`는 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 등 하드코딩 소스, :31-33) → 외부엔 `scripts/codebase_symbols.py`(AST, **범용**)만 작동. `af` 명령으로 임의 프로젝트 symbols 인덱스 생성+AF 분석경로 참조. **ROI 최고**(외부는 기존 정리 0 = 인덱스가 유일 지도).
+- **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
+
 > ## 🛑 STREAM 상태 (2026-06-02 고정)
 > - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**
 > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
