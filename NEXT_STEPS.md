@@ -13,7 +13,14 @@
 - **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파.
 - **✅ STEP 2 완료 (2026-06-11 Sonnet, `a6f53fdc`)**: `af project symbols [path] [--out DIR]` 서브커맨드 추가. `codebase_symbols.build()` 재사용. `is_dir()` 체크(Medium advisory 수용). 12 테스트 신규(INV-1~4). 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(117).
 - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
-- **다음 = product-value work-item 신규 선정.**
+
+### GitNexus 도입 검토 — ✅ 분석 완료 / 도입 미실행 (2026-06-11)
+- **사실 동결**: 메모리 `project_gitnexus_adoption_review`. 패키지명 `gitnexus`(Node, Python3.14 무관, 즉시 실행 가능). 코드 의존성 그래프(import/호출/상속) + 16 MCP 도구(impact/context/query/detect_changes 등).
+- **중복 결론**: graphify 死상태 직접대체 / blast_radius·symbols 보완(대체 불가) / memory graph·LLM Wiki 무중복(L1만 겹침).
+- **회의용 문서**: `docs/2026-06-11-gitnexus-code-intelligence-도입검토.md`(`1eed96ee`). 사용자가 회사 RAG 논의와 합쳐 사용.
+- **다음 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱시간·DB·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 덮어쓰기 위험 → AF 루트 직접 실행 금지.
+
+- **다음 = product-value work-item 신규 선정 또는 GitNexus Step 0 PoC.**
 
 > ## 🛑 STREAM 상태 (2026-06-02 고정)
 > - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**
