@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T02:23:27+09:00
-source_commit: 6e46dac6
+generated_at: 2026-06-12T03:05:32+09:00
+source_commit: e05b490d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4110,6 +4110,7 @@ _(no top-level symbols)_
 - `_llm_changelog`
 - `_fallback_changelog`
 - `_extract_ast_symbols`
+- `_changed_public_symbols`
 - `_module_doc_summary`
 - `_changed_core_files`
 - `_update_section_3_auto_summary`
@@ -5427,6 +5428,10 @@ _(no top-level symbols)_
 **Functions:**
 - `_minimal_blueprint`
 - `test_update_blueprint_writes_section3_auto_summary`
+- `test_changed_public_symbols_extracts_toplevel_added`
+- `test_changed_public_symbols_attributes_body_only_via_hunk_context`
+- `test_changed_public_symbols_empty_when_no_toplevel`
+- `test_section3_reflects_changed_symbol_regardless_of_position`
 
 ## `tests/test_bootstrap_policy_rules.py`
 
