@@ -410,6 +410,17 @@ def skewness(values: list[int | float]) -> float:
     return sum(((x - mean) / sd) ** 3 for x in values) / n
 
 
+def root_mean_square(values: list[int | float]) -> float:
+    """제곱평균제곱근(RMS = √(Σx²/n))을 float로 반환한다. 빈 리스트이면 ValueError.
+
+    음수 값도 허용한다(제곱하므로 부호 무관). 모든 값이 0이면 0.0.
+    """
+    if not values:
+        raise ValueError("빈 리스트에서 RMS를 계산할 수 없습니다.")
+    n = len(values)
+    return math.sqrt(sum(x * x for x in values) / n)
+
+
 def chunks(lst: list, n: int) -> list[list]:
     """리스트를 최대 n개 크기의 서브리스트로 분할한다. n < 1이면 ValueError."""
     if n < 1:

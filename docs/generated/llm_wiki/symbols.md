@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T01:23:11+09:00
-source_commit: e0d491f0
+generated_at: 2026-06-12T01:48:44+09:00
+source_commit: 5ef256b5
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -2740,6 +2740,7 @@ _(no top-level symbols)_
 - `spearman_correlation`
 - `kurtosis`
 - `skewness`
+- `root_mean_square`
 - `chunks`
 - `flatten`
 - `_split_env_paths`
@@ -7993,6 +7994,7 @@ _(no top-level symbols)_
 - `TestSpearmanCorrelation`
 - `TestKurtosis`
 - `TestSkewness`
+- `TestRootMeanSquare`
 - `TestExponentialMovingAverage`
 
 ## `tests/test_utils_cache.py`
