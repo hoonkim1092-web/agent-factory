@@ -116,6 +116,7 @@ done
 - [ ] 캐시 무한 증가: dict/list에 추가만 하고 제거 로직 없음
 - [ ] 스레드 안전성: 글로벌 dict/list를 멀티스레드에서 접근하는데 Lock 없음
 - [ ] Silent fallback: except 후 아무것도 안 하거나 pass → 무한 retry 가능
+- [ ] 배선 단선 (wiring parity): 신규 함수/새 파라미터가 review_bundle §5 Direct Callers에 실제 production 호출로 나타나는가? 테스트에서만 호출되면 dead code 의심 — `# wiring: deferred` 마커가 없는 한 WARN. (CLAUDE.md 배포 동등성 규칙)
 
 **Medium (유지보수)**
 - [ ] 매직넘버: 하드코딩된 timeout, threshold, retry count

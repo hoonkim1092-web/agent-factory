@@ -57,6 +57,13 @@ _FROZEN_BUILD_TEST_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Wiring parity constants (§3.2 면제 규칙 — 명명 상수 SSOT, 하드코딩 금지)
+_WIRING_EXEMPT_PATHS: frozenset[str] = frozenset({"core/utils.py"})
+_WIRING_DEFERRED_MARKER: str = "# wiring: deferred"
+_DEF_LINE_RE = re.compile(r'^[+-]\s*def\s+(\w+)\s*\((.*)')
+_CLASS_LINE_RE = re.compile(r'^[+-]\s*class\s+(\w+)')
+_PARAM_SPECIAL_RE = re.compile(r'^[\*/]')
+
 
 @dataclass
 class TestGap:
@@ -276,6 +283,152 @@ def _file_diff_excerpt(diff_text: str, changed_file: str) -> str:
     return diff_text
 
 
+def _extract_params(rest: str) -> list[str] | None:
+    """Extract param names from the string after the opening paren of a def."""
+    close = rest.find(")")
+    if close == -1:
+        return None  # multiline → parse failed (INV-4: skip, don't crash)
+    raw = rest[:close]
+    result: list[str] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part or _PARAM_SPECIAL_RE.match(part):
+            continue
+        name = part.split(":")[0].split("=")[0].strip().lstrip("*")
+        if name and name not in {"self", "cls"} and re.match(r'^\w+$', name):
+            result.append(name)
+    return result
+
+
+def _extract_wiring_candidates(
+    diff_excerpt: str,
+) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    """
+    Parse diff_excerpt for newly added functions/classes and parameter additions.
+
+    Returns:
+        added_symbols: names of newly added funcs/classes (no matching -def/-class)
+        param_added: list of (func_name, new_param_names) for param additions
+    """
+    added_defs: dict[str, str] = {}
+    removed_defs: dict[str, str] = {}
+    added_classes: set[str] = set()
+    removed_classes: set[str] = set()
+
+    for line in diff_excerpt.splitlines():
+        if not line or line[0] not in ('+', '-'):
+            continue
+        prefix = line[0]
+        m = _DEF_LINE_RE.match(line)
+        if m:
+            name, rest = m.group(1), m.group(2)
+            (added_defs if prefix == '+' else removed_defs)[name] = rest
+            continue
+        m = _CLASS_LINE_RE.match(line)
+        if m:
+            name = m.group(1)
+            (added_classes if prefix == '+' else removed_classes).add(name)
+
+    added_symbols = [n for n in added_defs if n not in removed_defs]
+    added_symbols += [n for n in added_classes if n not in removed_classes]
+
+    param_added: list[tuple[str, list[str]]] = []
+    for name in added_defs:
+        if name not in removed_defs:
+            continue
+        new_p = _extract_params(added_defs[name])
+        old_p = _extract_params(removed_defs[name])
+        if new_p is None or old_p is None:
+            continue  # INV-4: parse failed → skip
+        genuinely_new = [p for p in new_p if p not in old_p]
+        if genuinely_new:
+            param_added.append((name, genuinely_new))
+
+    return added_symbols, param_added
+
+
+def _find_production_callers(workspace: str, sym: str) -> list[str]:
+    """
+    Find production files that call sym(). Searches core/, scripts/, skills/ only.
+    tests/ is explicitly excluded (INV-3).
+    """
+    pattern = f"{sym}("
+    callers: list[str] = []
+
+    search_dirs = [
+        os.path.join(workspace, d)
+        for d in ("core", "scripts", "skills")
+        if os.path.isdir(os.path.join(workspace, d))
+    ]
+    ws_path = Path(workspace)
+    for d in search_dirs:
+        try:
+            r = subprocess.run(
+                ["grep", "-rl", "--include=*.py", pattern, d],
+                capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=5,
+            )
+            for line in r.stdout.splitlines():
+                f = line.strip()
+                if not f or f in callers:
+                    continue
+                try:
+                    rel = _norm(str(Path(f).relative_to(ws_path)))
+                except ValueError:
+                    rel = _norm(f)
+                if not _is_test_file(rel):
+                    callers.append(f)
+        except Exception:
+            pass
+
+    # Root-level *.py (non-test), not inside any subdirectory
+    try:
+        for p in ws_path.glob("*.py"):
+            rel = _norm(str(p.relative_to(ws_path)))
+            if _is_test_file(rel):
+                continue
+            try:
+                if pattern in p.read_text(encoding="utf-8", errors="replace"):
+                    fp = str(p)
+                    if fp not in callers:
+                        callers.append(fp)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return callers
+
+
+def _any_caller_passes_param(caller_files: list[str], param_names: list[str]) -> bool:
+    """Check if any caller passes param_names as keyword args (non-def lines only)."""
+    for path in caller_files:
+        try:
+            lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception:
+            continue
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("def "):
+                continue  # skip definition lines — default values look like keyword args
+            for param in param_names:
+                if f"{param}=" in stripped:
+                    return True
+    return False
+
+
+def _has_deferred_marker(file_text: str, sym: str) -> bool:
+    """Return True if sym's definition has _WIRING_DEFERRED_MARKER within ±1 line."""
+    sym_re = re.compile(rf'\s*(def|class)\s+{re.escape(sym)}\b')
+    lines = file_text.splitlines()
+    for i, line in enumerate(lines):
+        if sym_re.search(line):
+            context = lines[max(0, i - 1) : min(len(lines), i + 2)]
+            if any(_WIRING_DEFERRED_MARKER in cl for cl in context):
+                return True
+    return False
+
+
 def _is_subprocess_quoting_risk(diff_excerpt: str, file_text: str) -> bool:
     del file_text
     return bool(
@@ -355,6 +508,40 @@ def analyze_diff(
             warnings.append(
                 f"{changed_file}: platform 분기 변경이 있지만 관련 테스트에서 Windows/POSIX 분기 입력이 보이지 않습니다."
             )
+
+        # Wiring parity check (§3 — WARN only, verdict 유지, INV-1)
+        if changed_file not in _WIRING_EXEMPT_PATHS:
+            added_syms, param_added = _extract_wiring_candidates(diff_excerpt)
+            abs_changed = str((Path(workspace) / changed_file).resolve())
+
+            for sym in added_syms:
+                if _has_deferred_marker(file_text, sym):
+                    continue
+                callers = [
+                    c for c in _find_production_callers(workspace, sym)
+                    if str(Path(c).resolve()) != abs_changed
+                ]
+                if not callers:
+                    warnings.append(
+                        f"[wiring] {changed_file}: 신규 함수/클래스 '{sym}'의 production caller가 없습니다"
+                        f" - 배선 누락이면 다음 커밋에서 배선하거나 '# wiring: deferred' 마커를 달아주세요."
+                    )
+
+            for sym, new_params in param_added:
+                if sym == "__init__":  # INV: __init__ callers use ClassName(), not __init__()
+                    continue
+                if _has_deferred_marker(file_text, sym):
+                    continue
+                callers = [
+                    c for c in _find_production_callers(workspace, sym)
+                    if str(Path(c).resolve()) != abs_changed
+                ]
+                if callers and not _any_caller_passes_param(callers, new_params):
+                    warnings.append(
+                        f"[wiring] {changed_file}: '{sym}'에 추가된 파라미터 {new_params}를 "
+                        f"production caller ({[os.path.basename(c) for c in callers[:3]]})가 "
+                        f"넘기지 않습니다 - 배선 누락 또는 '# wiring: deferred' 마커 필요."
+                    )
 
     return TestGapReport(verdict="FAIL" if gaps else "PASS", gaps=gaps, warnings=warnings)
 
