@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T03:06:55+09:00
-source_commit: a32c382d
+generated_at: 2026-06-12T16:32:06+09:00
+source_commit: fc07b0cf
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,8 +9,7 @@ sources:
 
 # LLM Wiki — Index
 
-> AF 프로젝트 지식 뷰 (generated view — 원본 수정 금지).
-> 원본: Master_Blueprint.md / docs/code_review/code-review.md / NEXT_STEPS.md
+> 프로젝트 지식 뷰 (generated view — 원본 수정 금지).
 
 ## 페이지 목록
 
@@ -25,6 +24,6 @@ sources:
 ## 사용법
 
 Obsidian에서 이 디렉터리를 vault로 열면 `[[...]]` 링크로 탐색 가능.
-재생성: `python scripts/build_llm_wiki.py`
+재생성: `python scripts/build_llm_wiki.py` 또는 `af project wiki <path>`
 
 Source: scripts/build_llm_wiki.py

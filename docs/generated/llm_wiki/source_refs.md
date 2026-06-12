@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T03:06:55+09:00
-source_commit: a32c382d
+generated_at: 2026-06-12T16:32:03+09:00
+source_commit: fc07b0cf
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,8 +9,8 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `a32c382d`
-> 관련: [[index]] | [[architecture]] | [[review_patterns]]
+> source_commit: `fc07b0cf`
+> 관련: [[index]] | [[architecture]] | [[symbols]]
 
 ## Master_Blueprint.md
 
@@ -22,19 +22,19 @@ sources:
 | 개요 | `Master_Blueprint.md:1` / [[blueprint/overview]] |
 | 목차 | `Master_Blueprint.md:9` / [[blueprint/toc]] |
 | §0 빠른 참조 테이블 | `Master_Blueprint.md:27` / [[blueprint/0-빠른-참조-테이블]] |
-| §1 아키텍처 개요 | `Master_Blueprint.md:240` / [[blueprint/1-아키텍처-개요]] |
-| §2 실행 흐름 | `Master_Blueprint.md:276` / [[blueprint/2-실행-흐름]] |
-| §3 핵심 서브시스템 | `Master_Blueprint.md:431` / [[blueprint/3-핵심-서브시스템]] |
-| §4 자가진화 루프 | `Master_Blueprint.md:1147` / [[blueprint/4-자가진화-루프]] |
-| §5 에이전트 간 통신 | `Master_Blueprint.md:1209` / [[blueprint/5-에이전트-간-통신]] |
-| §6 모델 라우팅 | `Master_Blueprint.md:1240` / [[blueprint/6-모델-라우팅]] |
-| §7 안전장치 | `Master_Blueprint.md:1276` / [[blueprint/7-안전장치]] |
-| §8 빌드 & 배포 | `Master_Blueprint.md:1425` / [[blueprint/8-빌드-배포]] |
-| §9 설정 레퍼런스 | `Master_Blueprint.md:1544` / [[blueprint/9-설정-레퍼런스]] |
-| §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1600` / [[blueprint/10-의존성-그래프-영향-매트릭스]] |
-| §11 알려진 제약·이슈 | `Master_Blueprint.md:1654` / [[blueprint/11-알려진-제약-이슈]] |
-| §12 변경 이력 | `Master_Blueprint.md:1686` / [[blueprint/12-변경-이력]] |
-| 유지보수 가이드 | `Master_Blueprint.md:2862` / [[blueprint/maintenance-guide]] |
+| §1 아키텍처 개요 | `Master_Blueprint.md:241` / [[blueprint/1-아키텍처-개요]] |
+| §2 실행 흐름 | `Master_Blueprint.md:277` / [[blueprint/2-실행-흐름]] |
+| §3 핵심 서브시스템 | `Master_Blueprint.md:432` / [[blueprint/3-핵심-서브시스템]] |
+| §4 자가진화 루프 | `Master_Blueprint.md:1148` / [[blueprint/4-자가진화-루프]] |
+| §5 에이전트 간 통신 | `Master_Blueprint.md:1210` / [[blueprint/5-에이전트-간-통신]] |
+| §6 모델 라우팅 | `Master_Blueprint.md:1241` / [[blueprint/6-모델-라우팅]] |
+| §7 안전장치 | `Master_Blueprint.md:1277` / [[blueprint/7-안전장치]] |
+| §8 빌드 & 배포 | `Master_Blueprint.md:1426` / [[blueprint/8-빌드-배포]] |
+| §9 설정 레퍼런스 | `Master_Blueprint.md:1545` / [[blueprint/9-설정-레퍼런스]] |
+| §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1601` / [[blueprint/10-의존성-그래프-영향-매트릭스]] |
+| §11 알려진 제약·이슈 | `Master_Blueprint.md:1655` / [[blueprint/11-알려진-제약-이슈]] |
+| §12 변경 이력 | `Master_Blueprint.md:1687` / [[blueprint/12-변경-이력]] |
+| 유지보수 가이드 | `Master_Blueprint.md:2865` / [[blueprint/maintenance-guide]] |
 | §3.1 ProjectPipeline | `Master_Blueprint.md:§3.1` |
 | §3.2 DynamicOrchestrator | `Master_Blueprint.md:§3.2` |
 | §3.3 AgentRunner | `Master_Blueprint.md:§3.3` |

@@ -20,9 +20,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 try:
-    from scripts.codebase_symbols import build as _cs_build
+    from scripts.codebase_symbols import collect_symbols as _cs_collect, render as _cs_render
 except ModuleNotFoundError:
-    from codebase_symbols import build as _cs_build
+    from codebase_symbols import collect_symbols as _cs_collect, render as _cs_render
 
 # ---------------------------------------------------------------------------
 # 경로 상수 (POSIX 슬래시 리터럴 — OS 무관 frontmatter 안정성)
@@ -248,55 +248,107 @@ def _parse_open_items(text: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 # 생성기 — 5개 페이지
 # ---------------------------------------------------------------------------
-def _build_index(workspace: str, sources: list[str]) -> str:
+# index 페이지 링크 정의 — (생성 파일 키, 표시 문구). 실제 생성된 페이지만 링크된다.
+_INDEX_LINKS: list[tuple[str, str]] = [
+    ("architecture.md", "[[architecture]] — 모듈 구조 + 서브시스템 네비게이션"),
+    ("review_patterns.md", "[[review_patterns]] — 서브시스템별 코드 리뷰 패턴"),
+    ("open_items.md", "[[open_items]] — 미완료/보류 항목 (best-effort)"),
+    ("source_refs.md", "[[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑"),
+    ("blueprint/index.md", "[[blueprint/index]] — Master Blueprint 섹션별 전문"),
+    ("code_review/index.md", "[[code_review/index]] — Code Review 섹션별 전문"),
+    ("symbols.md", "[[symbols]] — 코드베이스 top-level 심볼 (AST 추출)"),
+]
+
+
+def _build_index(workspace: str, sources: list[str], generated: set[str]) -> str:
     fm = _make_frontmatter(workspace, sources)
+    link_lines = "".join(
+        f"- {desc}\n" for rel, desc in _INDEX_LINKS if rel in generated
+    )
     return (
         fm
         + "# LLM Wiki — Index\n\n"
-        + "> AF 프로젝트 지식 뷰 (generated view — 원본 수정 금지).\n"
-        + "> 원본: Master_Blueprint.md / docs/code_review/code-review.md / NEXT_STEPS.md\n\n"
+        + "> 프로젝트 지식 뷰 (generated view — 원본 수정 금지).\n\n"
         + "## 페이지 목록\n\n"
-        + "- [[architecture]] — 모듈 구조 + 서브시스템 네비게이션\n"
-        + "- [[review_patterns]] — 서브시스템별 코드 리뷰 패턴\n"
-        + "- [[open_items]] — 미완료/보류 항목 (best-effort)\n"
-        + "- [[source_refs]] — 섹션 ↔ 원본 파일 경로 매핑\n"
-        + "- [[blueprint/index]] — Master Blueprint 섹션별 전문\n"
-        + "- [[code_review/index]] — Code Review 섹션별 전문\n"
-        + "- [[symbols]] — 코드베이스 top-level 심볼 (AST 추출)\n\n"
-        + "## 사용법\n\n"
+        + link_lines
+        + "\n## 사용법\n\n"
         + "Obsidian에서 이 디렉터리를 vault로 열면 `[[...]]` 링크로 탐색 가능.\n"
-        + "재생성: `python scripts/build_llm_wiki.py`\n\n"
+        + "재생성: `python scripts/build_llm_wiki.py` 또는 `af project wiki <path>`\n\n"
         + "Source: scripts/build_llm_wiki.py\n"
     )
 
 
-def _build_architecture(workspace: str, sources: list[str], bp: dict) -> str:
+def _build_codebase_tree(symbols: dict) -> str:
+    """AST 심볼 맵을 디렉터리별 모듈 navigation 섹션으로 렌더링한다 (결정적).
+
+    외부 프로젝트(Blueprint 부재)에서도 코드 구조 navigation을 제공하는
+    범용 view. ``codebase_symbols.collect_symbols`` 결과를 입력으로 받는다.
+    """
+    by_dir: dict[str, list[str]] = {}
+    for rel in sorted(symbols):
+        parent = Path(rel).parent.as_posix()
+        directory = "(root)" if parent == "." else parent
+        by_dir.setdefault(directory, []).append(rel)
+
+    if not by_dir:
+        return "_(Python 모듈을 찾지 못했습니다)_\n"
+
+    lines: list[str] = []
+    for directory in sorted(by_dir):
+        mods = by_dir[directory]
+        n_class = sum(len(symbols[m].get("classes", [])) for m in mods)
+        n_func = sum(len(symbols[m].get("functions", [])) for m in mods)
+        lines.append(f"### `{directory}`\n\n")
+        lines.append(f"{len(mods)} modules · {n_class} classes · {n_func} functions\n\n")
+        for m in mods:
+            c = len(symbols[m].get("classes", []))
+            f = len(symbols[m].get("functions", []))
+            lines.append(f"- `{m}` — {c} class / {f} func\n")
+        lines.append("\n")
+    return "".join(lines)
+
+
+def _build_architecture(workspace: str, sources: list[str], bp: dict | None, symbols: dict) -> str:
     fm = _make_frontmatter(workspace, sources)
-    lines = [
-        "# Architecture — 모듈 네비게이션\n",
-        "> Source: Master_Blueprint.md §0 + §3\n",
-        "> 관련: [[index]] | [[source_refs]]\n\n",
-        "## 루트 파일\n\n",
-        "| 파일 | 역할 | Source |\n",
-        "|------|------|--------|\n",
-    ]
-    for r in bp["root_rows"]:
-        lines.append(f"| `{r['path']}` | {r['role']} | Master_Blueprint.md §0 |\n")
+    has_bp = bool(bp and (bp["root_rows"] or bp["core_rows"] or bp["subsystems"]))
+
+    lines = ["# Architecture — 모듈 네비게이션\n"]
+    if has_bp:
+        lines += [
+            "> Source: Master_Blueprint.md §0 + §3\n",
+            "> 관련: [[index]] | [[symbols]] | [[source_refs]]\n\n",
+            "## 루트 파일\n\n",
+            "| 파일 | 역할 | Source |\n",
+            "|------|------|--------|\n",
+        ]
+        for r in bp["root_rows"]:
+            lines.append(f"| `{r['path']}` | {r['role']} | Master_Blueprint.md §0 |\n")
+
+        lines += [
+            "\n## core/ 주요 모듈\n\n",
+            "| 파일 | 역할 | Source |\n",
+            "|------|------|--------|\n",
+        ]
+        for r in bp["core_rows"]:
+            lines.append(f"| `{r['path']}` | {r['role']} | Master_Blueprint.md §0 |\n")
+
+        if bp["subsystems"]:
+            lines += ["\n## §3 서브시스템\n\n",
+                      "| ID | 이름 | 파일 | Source |\n",
+                      "|----|------|------|--------|\n"]
+            for s in bp["subsystems"]:
+                lines.append(f"| {s['id']} | {s['name']} | `{s['file']}` | Master_Blueprint.md {s['id']} |\n")
+    else:
+        lines += [
+            "> Source: scripts/codebase_symbols.py (AST 추출, read-only)\n",
+            "> 관련: [[index]] | [[symbols]] | [[source_refs]]\n\n",
+        ]
 
     lines += [
-        "\n## core/ 주요 모듈\n\n",
-        "| 파일 | 역할 | Source |\n",
-        "|------|------|--------|\n",
+        "\n## 코드베이스 구조 (AST)\n\n",
+        "> Source: scripts/codebase_symbols.py (read-only AST) — 디렉터리별 모듈/심볼\n\n",
     ]
-    for r in bp["core_rows"]:
-        lines.append(f"| `{r['path']}` | {r['role']} | Master_Blueprint.md §0 |\n")
-
-    if bp["subsystems"]:
-        lines += ["\n## §3 서브시스템\n\n",
-                  "| ID | 이름 | 파일 | Source |\n",
-                  "|----|------|------|--------|\n"]
-        for s in bp["subsystems"]:
-            lines.append(f"| {s['id']} | {s['name']} | `{s['file']}` | Master_Blueprint.md {s['id']} |\n")
+    lines.append(_build_codebase_tree(symbols))
 
     return fm + "".join(lines)
 
@@ -335,13 +387,13 @@ def _build_open_items(workspace: str, sources: list[str], items: list[dict]) -> 
     return fm + "".join(lines)
 
 
-def _build_symbols(workspace: str, sources: list[str]) -> str:
+def _build_symbols(workspace: str, sources: list[str], symbols: dict) -> str:
     fm = _make_frontmatter(workspace, sources + ["scripts/codebase_symbols.py", "**/*.py"])
     header = (
         "> Source: scripts/codebase_symbols.py (AST 추출, read-only)\n"
         "> 관련: [[index]] | [[architecture]] | [[source_refs]]\n\n"
     )
-    body = _cs_build(workspace)
+    body = _cs_render(symbols)
     return fm + header + body
 
 
@@ -404,7 +456,7 @@ def _build_code_review_section(workspace: str, section: dict) -> str:
 
 
 def _build_source_refs(workspace: str, sources: list[str],
-                       bp: dict, cr_sections: list[dict],
+                       bp: dict | None, cr_sections: list[dict],
                        blueprint_sections: list[dict] | None = None,
                        code_review_sections: list[dict] | None = None) -> str:
     fm = _make_frontmatter(workspace, sources)
@@ -412,43 +464,52 @@ def _build_source_refs(workspace: str, sources: list[str],
     lines = [
         "# Source References — 섹션 ↔ 원본 경로 매핑\n\n",
         f"> source_commit: `{commit}`\n",
-        "> 관련: [[index]] | [[architecture]] | [[review_patterns]]\n\n",
-        "## Master_Blueprint.md\n\n",
-        "| 항목 | 원본 경로 |\n",
-        "|------|----------|\n",
-        "| §0 루트 파일 테이블 | `Master_Blueprint.md:§0 루트 파일` |\n",
-        "| §0 core/ 파일 테이블 | `Master_Blueprint.md:§0 core/ 파일` |\n",
-        "| 섹션별 전문 mirror | `blueprint/*.md` |\n",
+        "> 관련: [[index]] | [[architecture]] | [[symbols]]\n\n",
     ]
-    if blueprint_sections:
-        for section in blueprint_sections:
-            lines.append(
-                f"| {section['heading']} | `Master_Blueprint.md:{section['line']}`"
-                f" / [[blueprint/{section['slug']}]] |\n"
-            )
-    for s in bp["subsystems"]:
-        lines.append(f"| {s['id']} {s['name']} | `Master_Blueprint.md:{s['id']}` |\n")
+
+    if bp:
+        lines += [
+            "## Master_Blueprint.md\n\n",
+            "| 항목 | 원본 경로 |\n",
+            "|------|----------|\n",
+            "| §0 루트 파일 테이블 | `Master_Blueprint.md:§0 루트 파일` |\n",
+            "| §0 core/ 파일 테이블 | `Master_Blueprint.md:§0 core/ 파일` |\n",
+            "| 섹션별 전문 mirror | `blueprint/*.md` |\n",
+        ]
+        if blueprint_sections:
+            for section in blueprint_sections:
+                lines.append(
+                    f"| {section['heading']} | `Master_Blueprint.md:{section['line']}`"
+                    f" / [[blueprint/{section['slug']}]] |\n"
+                )
+        for s in bp["subsystems"]:
+            lines.append(f"| {s['id']} {s['name']} | `Master_Blueprint.md:{s['id']}` |\n")
+
+    if cr_sections:
+        lines += [
+            "\n## docs/code_review/code-review.md\n\n",
+            "| 섹션 | 원본 경로 |\n",
+            "|------|----------|\n",
+            "| 섹션 mirror | `code_review/*.md` |\n",
+        ]
+        for s in cr_sections:
+            mirror = ""
+            if code_review_sections:
+                match = next((section for section in code_review_sections if section["id"] == s["id"]), None)
+                if match:
+                    mirror = f" / [[code_review/{match['slug']}]]"
+            lines.append(f"| §{s['id']} {s['name']} | `docs/code_review/code-review.md:{s['line']}`{mirror} |\n")
+
+    if _NEXT_STEPS in sources:
+        lines += [
+            "\n## NEXT_STEPS.md\n\n",
+            "| 항목 | 원본 경로 |\n",
+            "|------|----------|\n",
+            "| 미완료/보류 항목 | `NEXT_STEPS.md` (마커 기반 추출) |\n",
+            "| 세션 재개 가이드 | `NEXT_STEPS.md:1` |\n",
+        ]
 
     lines += [
-        "\n## docs/code_review/code-review.md\n\n",
-        "| 섹션 | 원본 경로 |\n",
-        "|------|----------|\n",
-        "| 섹션 mirror | `code_review/*.md` |\n",
-    ]
-    for s in cr_sections:
-        mirror = ""
-        if code_review_sections:
-            match = next((section for section in code_review_sections if section["id"] == s["id"]), None)
-            if match:
-                mirror = f" / [[code_review/{match['slug']}]]"
-        lines.append(f"| §{s['id']} {s['name']} | `docs/code_review/code-review.md:{s['line']}`{mirror} |\n")
-
-    lines += [
-        "\n## NEXT_STEPS.md\n\n",
-        "| 항목 | 원본 경로 |\n",
-        "|------|----------|\n",
-        "| 미완료/보류 항목 | `NEXT_STEPS.md` (마커 기반 추출) |\n",
-        "| 세션 재개 가이드 | `NEXT_STEPS.md:1` |\n",
         "\n## Codebase Symbols\n\n",
         "| 항목 | 원본 경로 |\n",
         "|------|----------|\n",
@@ -467,35 +528,55 @@ def build(workspace: str = ".", out_dir: str = _DEFAULT_OUT) -> dict[str, str]:
     out_path = Path(workspace) / out_dir
     out_path.mkdir(parents=True, exist_ok=True)
 
-    def _read(rel: str) -> str:
-        return (Path(workspace) / rel).read_text(encoding="utf-8")
+    def _read_optional(rel: str) -> str | None:
+        p = Path(workspace) / rel
+        if not p.is_file():
+            return None
+        return p.read_text(encoding="utf-8")
 
-    bp_text = _read(_BLUEPRINT)
-    cr_text = _read(_CODE_REVIEW)
-    ns_text = _read(_NEXT_STEPS)
+    # AF 전용 문서는 존재할 때만 처리한다 (외부 프로젝트는 부재 — skip).
+    bp_text = _read_optional(_BLUEPRINT)
+    cr_text = _read_optional(_CODE_REVIEW)
+    ns_text = _read_optional(_NEXT_STEPS)
 
-    bp = _parse_blueprint(bp_text)
-    blueprint_sections = _split_blueprint_sections(bp_text)
-    cr_sections = _parse_code_review(cr_text)
-    code_review_sections = _split_code_review_sections(cr_text)
-    open_items = _parse_open_items(ns_text)
+    bp = _parse_blueprint(bp_text) if bp_text is not None else None
+    blueprint_sections = _split_blueprint_sections(bp_text) if bp_text is not None else []
+    cr_sections = _parse_code_review(cr_text) if cr_text is not None else []
+    code_review_sections = _split_code_review_sections(cr_text) if cr_text is not None else []
+    open_items = _parse_open_items(ns_text) if ns_text is not None else []
 
-    sources = [_BLUEPRINT, _CODE_REVIEW, _NEXT_STEPS]
+    # AST 심볼은 한 번만 수집해 symbols/architecture 페이지가 공유한다.
+    symbols = _cs_collect(workspace)
 
+    sources = [
+        rel for rel, text in (
+            (_BLUEPRINT, bp_text), (_CODE_REVIEW, cr_text), (_NEXT_STEPS, ns_text)
+        ) if text is not None
+    ]
+
+    # 범용 페이지 (모든 프로젝트에서 생성) — index는 생성 확정 후 마지막에 추가.
     pages = {
-        "index.md": _build_index(workspace, sources),
-        "architecture.md": _build_architecture(workspace, sources, bp),
-        "review_patterns.md": _build_review_patterns(workspace, sources, cr_sections),
-        "open_items.md": _build_open_items(workspace, sources, open_items),
+        "architecture.md": _build_architecture(workspace, sources, bp, symbols),
         "source_refs.md": _build_source_refs(workspace, sources, bp, cr_sections, blueprint_sections, code_review_sections),
-        "symbols.md": _build_symbols(workspace, sources),
-        "blueprint/index.md": _build_blueprint_index(workspace, blueprint_sections),
-        "code_review/index.md": _build_code_review_index(workspace, code_review_sections),
+        "symbols.md": _build_symbols(workspace, sources, symbols),
     }
-    for section in blueprint_sections:
-        pages[f"blueprint/{section['slug']}.md"] = _build_blueprint_section(workspace, section)
-    for section in code_review_sections:
-        pages[f"code_review/{section['slug']}.md"] = _build_code_review_section(workspace, section)
+    # Blueprint 의존 페이지
+    if bp is not None:
+        pages["blueprint/index.md"] = _build_blueprint_index(workspace, blueprint_sections)
+        for section in blueprint_sections:
+            pages[f"blueprint/{section['slug']}.md"] = _build_blueprint_section(workspace, section)
+    # code-review 의존 페이지
+    if cr_text is not None:
+        pages["review_patterns.md"] = _build_review_patterns(workspace, sources, cr_sections)
+        pages["code_review/index.md"] = _build_code_review_index(workspace, code_review_sections)
+        for section in code_review_sections:
+            pages[f"code_review/{section['slug']}.md"] = _build_code_review_section(workspace, section)
+    # NEXT_STEPS 의존 페이지
+    if ns_text is not None:
+        pages["open_items.md"] = _build_open_items(workspace, sources, open_items)
+
+    # index는 실제 생성된 페이지만 적응적으로 링크한다.
+    pages["index.md"] = _build_index(workspace, sources, set(pages.keys()))
 
     blueprint_out = out_path / "blueprint"
     if blueprint_out.exists():

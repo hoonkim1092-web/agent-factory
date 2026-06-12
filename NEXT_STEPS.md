@@ -1,6 +1,20 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## 🔥 다음 세션 = cross-review 입력 배선 STEP 4-rerun(선택) — STEP 1·2·4(1차) 완료 (2026-06-12)
+## 🔥 다음 세션 = product-value work-item 신규 선정 — WI-B STEP 2-b 완료 (2026-06-12, Opus)
+
+> **✅ WI-B STEP 2-b 완료 (2026-06-12, Opus)**: `build_llm_wiki`를 AF 전용 → **외부 프로젝트 full-wiki(AST architecture)**로 확장.
+> - **구현**: ① AF 문서 3종(Blueprint/code-review/NEXT_STEPS) `_read_optional`로 전환 — 부재 시 의존 페이지(blueprint/*, code_review/*, review_patterns, open_items) skip ② `_build_codebase_tree(symbols)` 신규 — AST 심볼 맵을 디렉터리별 모듈 navigation 섹션으로 렌더(외부 프로젝트도 navigation 제공) ③ `_build_architecture`에 AST 섹션 항상 추가(AF=Blueprint 테이블+AST, 외부=AST만) — 페이지 수 14 불변(회귀 0) ④ `_build_index` 적응형(`_INDEX_LINKS` 상수, 생성된 페이지만 링크) ⑤ `_build_source_refs` 적응형 ⑥ 심볼 `collect_symbols` 1회 수집 공유.
+> - **CLI 신규**: `af project wiki <path> [--out DIR]` (`agent_launcher.py` dispatch + `af.spec` hiddenimports).
+> - **테스트**: TestExternalProject 8 + AF AST 1 = 9 신규, `test_build_llm_wiki` 37 PASS (전체 56 PASS).
+> - **3-Tier 완주**: af-critic PASS(발견 0) / af-cross-review WARN[single-vendor](BLOCK 0, Advisory Medium 1 — `--out` 기본값 외부 docs/ 오염, 자동수정 의무 없음) / af-test-runner PASS(56 + 배포 동등성).
+> - **🔬 STEP4 부수 측정 (자연 pre-commit 조건 첫 성립)**: review_bundle §5 Direct Callers = **callers=7/7 채워짐**(RMS 1차·blueprint 2차에서 둘 다 비어있던 그 섹션). cross-review **6.8분 / 78.2k** = 32분 baseline 대비 4.7× 빠름, extension log 0(번들 §5 1차 근거 사용). **단 codex MCP가 또 비활성 → Claude 단독(single-vendor)** → 시간 단축에 외부 deliberation 부재 혼입. 헤드라인 benefit은 codex 활성+§5 채워짐 동시 조건 필요(여전히 미충족). 사실 동결: 메모리 `project_af_gate_efficiency_debate`.
+> - **잔여 advisory(선택)**: `af project wiki` `--out` 기본값을 외부 프로젝트엔 덜 침습적인 경로로 바꿀지(WARN, 의무 아님). **STEP 3(보류)**: dogfood ContextPack 주입은 기각 이력(메타-재귀).
+>
+> **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
+
+---
+
+## (이력) cross-review 입력 배선 STEP 4-rerun(선택) — STEP 1·2·4(1차) 완료 (2026-06-12)
 
 > **STEP 1·2·4(1차) 완료 (2026-06-12, Opus).** 사실·계획·측정결과 동결: 메모리 `project_af_gate_efficiency_debate`. **재분석 금지.**
 >

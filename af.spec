@@ -110,6 +110,7 @@ a = Analysis(
         'scripts.af_doctor',
         'scripts.af_project_inspect',
         'scripts.codebase_symbols',
+        'scripts.build_llm_wiki',
         'core.interactive_chat',
         # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
         'core.ise_analyzer',

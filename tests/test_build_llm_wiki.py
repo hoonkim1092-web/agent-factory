@@ -377,3 +377,91 @@ class TestBuild:
         for fname in self._generated_files(out):
             content = fname.read_text(encoding="utf-8")
             assert iso_re.search(content), f"{fname.name}의 generated_at 포맷 이상"
+
+    # --- AF architecture.md는 Blueprint 테이블 + AST 섹션 둘 다 포함 ---
+    def test_af_architecture_includes_ast_section(self, tmp_path):
+        (tmp_path / "sample_mod.py").write_text(
+            "class WikiEngine:\n    pass\n\ndef wiki_run():\n    return 1\n",
+            encoding="utf-8",
+        )
+        self._build_with_samples(tmp_path)
+        arch = (tmp_path / "wiki" / "architecture.md").read_text(encoding="utf-8")
+        # 기존 Blueprint §0 테이블 유지
+        assert "agent_launcher.py" in arch
+        # AST 도출 섹션 추가
+        assert "AST" in arch
+        assert "sample_mod.py" in arch
+
+
+# ---------------------------------------------------------------------------
+# 외부 프로젝트 — AF 문서가 없는 코드베이스의 full-wiki (AST architecture)
+# ---------------------------------------------------------------------------
+class TestExternalProject:
+    """AF 전용 문서(Blueprint/code-review/NEXT_STEPS)가 없는 외부 프로젝트에서도
+    build()가 죽지 않고 symbols + AST architecture wiki를 생성한다."""
+
+    def _ext_workspace(self, tmp_path: Path) -> dict:
+        (tmp_path / "pkg").mkdir()
+        (tmp_path / "pkg" / "engine.py").write_text(
+            "class Engine:\n    pass\n\ndef run():\n    return 1\n", encoding="utf-8"
+        )
+        (tmp_path / "main.py").write_text("def main():\n    pass\n", encoding="utf-8")
+        return build(workspace=str(tmp_path), out_dir="wiki")
+
+    def test_builds_without_af_docs(self, tmp_path):
+        # AF 문서가 하나도 없어도 FileNotFoundError 없이 생성되어야 한다
+        pages = self._ext_workspace(tmp_path)
+        assert pages
+
+    def test_generates_universal_pages(self, tmp_path):
+        self._ext_workspace(tmp_path)
+        out = tmp_path / "wiki"
+        for name in ("index.md", "architecture.md", "symbols.md", "source_refs.md"):
+            assert (out / name).exists(), f"{name} 미생성"
+
+    def test_skips_af_only_pages(self, tmp_path):
+        self._ext_workspace(tmp_path)
+        out = tmp_path / "wiki"
+        assert not (out / "review_patterns.md").exists()
+        assert not (out / "open_items.md").exists()
+        assert not (out / "blueprint").exists()
+        assert not (out / "code_review").exists()
+
+    def test_architecture_has_ast_tree(self, tmp_path):
+        self._ext_workspace(tmp_path)
+        arch = (tmp_path / "wiki" / "architecture.md").read_text(encoding="utf-8")
+        assert "AST" in arch
+        assert "pkg" in arch
+        assert "engine.py" in arch
+        assert "main.py" in arch
+
+    def test_index_only_links_generated_pages(self, tmp_path):
+        self._ext_workspace(tmp_path)
+        index = (tmp_path / "wiki" / "index.md").read_text(encoding="utf-8")
+        assert "[[symbols]]" in index
+        assert "[[architecture]]" in index
+        # AF 전용 페이지 링크는 없어야 한다
+        assert "[[review_patterns]]" not in index
+        assert "[[open_items]]" not in index
+        assert "[[blueprint/index]]" not in index
+        assert "[[code_review/index]]" not in index
+
+    def test_each_external_page_has_frontmatter_and_wikilink(self, tmp_path):
+        self._ext_workspace(tmp_path)
+        out = tmp_path / "wiki"
+        wikilink_re = re.compile(r"\[\[[^\]]+\]\]")
+        for fname in sorted(p for p in out.rglob("*.md") if p.is_file()):
+            content = fname.read_text(encoding="utf-8")
+            assert content.startswith("---"), f"{fname.name} frontmatter 없음"
+            assert wikilink_re.search(content), f"{fname.name}에 wikilink 없음"
+
+    def test_partial_sources_blueprint_only(self, tmp_path):
+        # Blueprint만 있고 code-review/NEXT_STEPS 없음 — blueprint 페이지만 추가 생성
+        (tmp_path / "Master_Blueprint.md").write_text(_SAMPLE_BLUEPRINT, encoding="utf-8")
+        (tmp_path / "m.py").write_text("def f():\n    pass\n", encoding="utf-8")
+        build(workspace=str(tmp_path), out_dir="wiki")
+        out = tmp_path / "wiki"
+        assert (out / "blueprint" / "index.md").exists()
+        assert not (out / "review_patterns.md").exists()
+        assert not (out / "open_items.md").exists()
+        assert not (out / "code_review").exists()

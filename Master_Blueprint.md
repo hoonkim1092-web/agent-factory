@@ -63,7 +63,7 @@
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | `AstMemoryHub` |
 | `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | `build_full()`, `save_full()`, `build()`, `save()`, `load()` |
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | `run(workspace)` |
-| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. | `build(workspace, out_dir)`, `main()` |
+| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. **외부 프로젝트 지원**: AF 문서 3종 부재 시 해당 페이지 skip + AST 디렉터리/모듈 navigation(`_build_codebase_tree`)만으로 full-wiki 생성(`af project wiki <path>`). | `build(workspace, out_dir)`, `_build_codebase_tree(symbols)`, `main()` |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | `select_model()`, `log_routing()`, `store_pending_escalation()`, `get_pending_escalation()`, `clear_pending_escalation()` |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | `main()` |
 | `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | `is_gate_blocked()`, `record_review_done()`, `_required_tiers_for()`, `_deterministic_t3_skip_candidate()`, `_is_always_tier3()`, `_telemetry_skip_enacted()`, `_cli()` |
@@ -1688,6 +1688,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-12 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, architecture.md (+42) |
+| 2026-06-12 | v1.2.34 | feat(llm-wiki): `build_llm_wiki`를 AF 전용 → 외부 프로젝트 full-wiki로 확장. AF 문서 3종(Blueprint/code-review/NEXT_STEPS)을 optional read로 전환(부재 시 해당 페이지 skip), `architecture.md`에 `_build_codebase_tree()` AST 디렉터리/모듈 navigation 섹션 항상 추가(외부 프로젝트도 navigation 제공), `_build_index` 적응형 링크(생성된 페이지만), `_build_source_refs` 적응형 섹션. 신규 CLI `af project wiki <path> [--out DIR]`. AST 심볼은 `collect_symbols` 한 번 수집해 symbols/architecture 공유. 테스트 9건 신규(TestExternalProject 8 + AF AST 섹션 1, 총 37 PASS). §0 갱신. — scripts/build_llm_wiki.py, agent_launcher.py, af.spec, tests/test_build_llm_wiki.py, Master_Blueprint.md |
 | 2026-06-12 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
 | 2026-06-11 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, test_af_project_symbols.py |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1) |

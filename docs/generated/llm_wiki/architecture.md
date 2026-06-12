@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T03:06:55+09:00
-source_commit: a32c382d
+generated_at: 2026-06-12T16:32:03+09:00
+source_commit: fc07b0cf
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,7 +9,7 @@ sources:
 
 # Architecture — 모듈 네비게이션
 > Source: Master_Blueprint.md §0 + §3
-> 관련: [[index]] | [[source_refs]]
+> 관련: [[index]] | [[symbols]] | [[source_refs]]
 
 ## 루트 파일
 
@@ -48,7 +48,7 @@ sources:
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | Master_Blueprint.md §0 |
 | `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | Master_Blueprint.md §0 |
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | Master_Blueprint.md §0 |
-| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. | Master_Blueprint.md §0 |
+| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. **외부 프로젝트 지원**: AF 문서 3종 부재 시 해당 페이지 skip + AST 디렉터리/모듈 navigation(`_build_codebase_tree`)만으로 full-wiki 생성(`af project wiki <path>`). | Master_Blueprint.md §0 |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | Master_Blueprint.md §0 |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | Master_Blueprint.md §0 |
 | `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | Master_Blueprint.md §0 |
@@ -228,3 +228,1783 @@ sources:
 | §3.11 | Setup Wizard + External Research (`core/setup_wizard.py`, `core/research_engine.py`) | `` | Master_Blueprint.md §3.11 |
 | §3.13 | Dogfood Pipeline | `core/dogfood.py` | Master_Blueprint.md §3.13 |
 | §3.12 | 자동 Core 변경 요약 | `` | Master_Blueprint.md §3.12 |
+
+## 코드베이스 구조 (AST)
+
+> Source: scripts/codebase_symbols.py (read-only AST) — 디렉터리별 모듈/심볼
+
+### `(root)`
+
+30 modules · 3 classes · 119 functions
+
+- `af.py` — 0 class / 2 func
+- `agent_launcher.py` — 1 class / 8 func
+- `agt.py` — 0 class / 1 func
+- `antigravity_link.py` — 1 class / 8 func
+- `build_exe.py` — 0 class / 2 func
+- `cdx.py` — 0 class / 2 func
+- `check_rel.py` — 0 class / 1 func
+- `demo_runner.py` — 0 class / 1 func
+- `end_db.py` — 0 class / 4 func
+- `end_git.py` — 0 class / 2 func
+- `end_sync.py` — 0 class / 2 func
+- `extract_phase3.py` — 0 class / 1 func
+- `factory_manager.py` — 0 class / 3 func
+- `lm.py` — 0 class / 1 func
+- `model_utils.py` — 1 class / 27 func
+- `probe_openai.py` — 0 class / 0 func
+- `project_orchestrator.py` — 0 class / 6 func
+- `repo_shortcuts.py` — 0 class / 3 func
+- `run_eval_loop.py` — 0 class / 2 func
+- `run_factory_cli.py` — 0 class / 29 func
+- `set_utf8.py` — 0 class / 1 func
+- `setup-dev.py` — 0 class / 0 func
+- `setup_dev.py` — 0 class / 2 func
+- `start_db.py` — 0 class / 4 func
+- `start_git.py` — 0 class / 2 func
+- `start_sync.py` — 0 class / 2 func
+- `test_fallback.py` — 0 class / 1 func
+- `verify_project_memory.py` — 0 class / 1 func
+- `verify_project_memory_quick.py` — 0 class / 1 func
+- `version.py` — 0 class / 0 func
+
+### `.a`
+
+24 modules · 5 classes · 77 functions
+
+- `.a/agent_launcher.py` — 1 class / 1 func
+- `.a/antigravity_link.py` — 1 class / 8 func
+- `.a/build_exe.py` — 0 class / 2 func
+- `.a/check_rel.py` — 0 class / 1 func
+- `.a/demo_runner.py` — 0 class / 1 func
+- `.a/extract_phase3.py` — 0 class / 1 func
+- `.a/factory_manager.py` — 0 class / 3 func
+- `.a/model_utils.py` — 1 class / 26 func
+- `.a/probe_openai.py` — 0 class / 0 func
+- `.a/project_orchestrator.py` — 0 class / 6 func
+- `.a/repo_shortcuts.py` — 0 class / 3 func
+- `.a/run_eval_loop.py` — 0 class / 2 func
+- `.a/run_factory_cli.py` — 0 class / 9 func
+- `.a/test_complex_skill_build.py` — 0 class / 1 func
+- `.a/test_fallback.py` — 0 class / 1 func
+- `.a/test_hashline.py` — 0 class / 1 func
+- `.a/test_hashline_v2.py` — 0 class / 2 func
+- `.a/test_hound_librarian.py` — 0 class / 0 func
+- `.a/test_llm.py` — 0 class / 0 func
+- `.a/test_model_routing_v3.py` — 2 class / 5 func
+- `.a/test_terminal.py` — 0 class / 2 func
+- `.a/verify_project_memory.py` — 0 class / 1 func
+- `.a/verify_project_memory_quick.py` — 0 class / 1 func
+- `.a/version.py` — 0 class / 0 func
+
+### `.a/projects/agent_factory/artifacts`
+
+1 modules · 0 classes · 10 functions
+
+- `.a/projects/agent_factory/artifacts/db_customization_loader.py` — 0 class / 10 func
+
+### `.a/projects/agent_factory/runs/r2`
+
+1 modules · 0 classes · 5 functions
+
+- `.a/projects/agent_factory/runs/r2/dp_skill.py` — 0 class / 5 func
+
+### `.a/projects/agent_factory/runs/r3`
+
+1 modules · 0 classes · 5 functions
+
+- `.a/projects/agent_factory/runs/r3/dp_skill.py` — 0 class / 5 func
+
+### `.a/projects/agent_factory/syncCompyne`
+
+3 modules · 3 classes · 42 functions
+
+- `.a/projects/agent_factory/syncCompyne/memory_store.py` — 1 class / 6 func
+- `.a/projects/agent_factory/syncCompyne/project_log_cli.py` — 0 class / 11 func
+- `.a/projects/agent_factory/syncCompyne/workspace_context_cli.py` — 2 class / 25 func
+
+### `.a/projects/gemini_live_edit/artifacts`
+
+1 modules · 0 classes · 1 functions
+
+- `.a/projects/gemini_live_edit/artifacts/live_edit_check.py` — 0 class / 1 func
+
+### `.a/projects/minesweeper/agents/architect-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `.a/projects/minesweeper/agents/architect-agent/tools/ast_grep.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/core_module.py` — 0 class / 5 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/cortex.py` — 1 class / 3 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/file_handler.py` — 0 class / 3 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/mcp_client.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/architect-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/projects/minesweeper/agents/logicdeveloper-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/ast_grep.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/core_module.py` — 0 class / 5 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/cortex.py` — 1 class / 3 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/file_handler.py` — 0 class / 3 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_client.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/projects/minesweeper/agents/uideveloper-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/ast_grep.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/core_module.py` — 0 class / 5 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/cortex.py` — 1 class / 3 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/file_handler.py` — 0 class / 3 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/mcp_client.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `.a/projects/minesweeper/agents/uideveloper-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/scripts`
+
+16 modules · 3 classes · 95 functions
+
+- `.a/scripts/check_changed_text_integrity.py` — 1 class / 6 func
+- `.a/scripts/claude_session_bridge.py` — 0 class / 0 func
+- `.a/scripts/clean_agents_yaml.py` — 0 class / 1 func
+- `.a/scripts/cli_hook_bridge.py` — 0 class / 1 func
+- `.a/scripts/codex_session_bridge.py` — 0 class / 0 func
+- `.a/scripts/destructive_guard_proxy.py` — 0 class / 2 func
+- `.a/scripts/fix_runner_cwm.py` — 0 class / 0 func
+- `.a/scripts/gemini_session_bridge.py` — 0 class / 0 func
+- `.a/scripts/generate_agents_md.py` — 1 class / 17 func
+- `.a/scripts/import_external_skill_candidates.py` — 0 class / 0 func
+- `.a/scripts/migrate_registry.py` — 0 class / 2 func
+- `.a/scripts/project_context_sync.py` — 0 class / 30 func
+- `.a/scripts/replace_react_loop.py` — 0 class / 0 func
+- `.a/scripts/session_bridge.py` — 1 class / 23 func
+- `.a/scripts/sync_skill_registry.py` — 0 class / 11 func
+- `.a/scripts/write_resume_brief.py` — 0 class / 2 func
+
+### `.a/skills/ai_funnel_routing`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/ai_funnel_routing/skill.py` — 0 class / 3 func
+
+### `.a/skills/core`
+
+8 modules · 1 classes · 12 functions
+
+- `.a/skills/core/ast_grep.py` — 0 class / 1 func
+- `.a/skills/core/cortex.py` — 1 class / 3 func
+- `.a/skills/core/file_handler.py` — 0 class / 3 func
+- `.a/skills/core/lsp_hover.py` — 0 class / 1 func
+- `.a/skills/core/mcp_client.py` — 0 class / 1 func
+- `.a/skills/core/mcp_exa_search.py` — 0 class / 1 func
+- `.a/skills/core/memory_pruner.py` — 0 class / 1 func
+- `.a/skills/core/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/skills/core_memory`
+
+1 modules · 0 classes · 16 functions
+
+- `.a/skills/core_memory/skill.py` — 0 class / 16 func
+
+### `.a/skills/create_design_system`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/create_design_system/skill.py` — 0 class / 3 func
+
+### `.a/skills/css_styling`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/css_styling/skill.py` — 0 class / 3 func
+
+### `.a/skills/data_visualize`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/data_visualize/skill.py` — 0 class / 3 func
+
+### `.a/skills/domain/langchain`
+
+1 modules · 0 classes · 12 functions
+
+- `.a/skills/domain/langchain/langchain_guidelines.py` — 0 class / 12 func
+
+### `.a/skills/dp`
+
+1 modules · 0 classes · 5 functions
+
+- `.a/skills/dp/skill.py` — 0 class / 5 func
+
+### `.a/skills/eval`
+
+1 modules · 0 classes · 4 functions
+
+- `.a/skills/eval/langsmith_eval.py` — 0 class / 4 func
+
+### `.a/skills/evaluator`
+
+1 modules · 0 classes · 0 functions
+
+- `.a/skills/evaluator/__init__.py` — 0 class / 0 func
+
+### `.a/skills/evaluator/generate_eval_dataset`
+
+1 modules · 0 classes · 12 functions
+
+- `.a/skills/evaluator/generate_eval_dataset/skill.py` — 0 class / 12 func
+
+### `.a/skills/evaluator/summarize_failure`
+
+1 modules · 0 classes · 13 functions
+
+- `.a/skills/evaluator/summarize_failure/skill.py` — 0 class / 13 func
+
+### `.a/skills/evaluator/trace_execution`
+
+1 modules · 0 classes · 10 functions
+
+- `.a/skills/evaluator/trace_execution/skill.py` — 0 class / 10 func
+
+### `.a/skills/forge`
+
+16 modules · 1 classes · 48 functions
+
+- `.a/skills/forge/api_security_vetting.py` — 0 class / 6 func
+- `.a/skills/forge/core_module.py` — 0 class / 5 func
+- `.a/skills/forge/database_performance_tuning.py` — 0 class / 0 func
+- `.a/skills/forge/db_optimizer.py` — 0 class / 6 func
+- `.a/skills/forge/edomae_sushi_shikomi_playbook.py` — 0 class / 7 func
+- `.a/skills/forge/file_handler.py` — 0 class / 3 func
+- `.a/skills/forge/infrastructure_scaler.py` — 0 class / 6 func
+- `.a/skills/forge/needs_issue.py` — 0 class / 0 func
+- `.a/skills/forge/new_skill.py` — 0 class / 0 func
+- `.a/skills/forge/omakase_service_pacing_control.py` — 0 class / 0 func
+- `.a/skills/forge/perishable_inventory_control.py` — 0 class / 8 func
+- `.a/skills/forge/precision_knife_techniques.py` — 1 class / 1 func
+- `.a/skills/forge/scalable_api_architecture.py` — 0 class / 0 func
+- `.a/skills/forge/seasonal_ingredient_procurement.py` — 0 class / 6 func
+- `.a/skills/forge/seasonal_omakase_inventory_optimization.py` — 0 class / 0 func
+- `.a/skills/forge/zero_downtime_deployment_playbook.py` — 0 class / 0 func
+
+### `.a/skills/frontend_ui_ux`
+
+1 modules · 1 classes · 0 functions
+
+- `.a/skills/frontend_ui_ux/skill.py` — 1 class / 0 func
+
+### `.a/skills/generate_image`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/generate_image/skill.py` — 0 class / 3 func
+
+### `.a/skills/gherkin_sdd_authoring`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/gherkin_sdd_authoring/skill.py` — 0 class / 3 func
+
+### `.a/skills/git_master`
+
+1 modules · 1 classes · 0 functions
+
+- `.a/skills/git_master/skill.py` — 1 class / 0 func
+
+### `.a/skills/hash_edit`
+
+1 modules · 0 classes · 5 functions
+
+- `.a/skills/hash_edit/skill.py` — 0 class / 5 func
+
+### `.a/skills/hashline_edit`
+
+1 modules · 1 classes · 0 functions
+
+- `.a/skills/hashline_edit/skill.py` — 1 class / 0 func
+
+### `.a/skills/hound_librarian`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/hound_librarian/skill.py` — 0 class / 3 func
+
+### `.a/skills/issue_tracker`
+
+1 modules · 0 classes · 5 functions
+
+- `.a/skills/issue_tracker/skill.py` — 0 class / 5 func
+
+### `.a/skills/liability_traceability_design`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/liability_traceability_design/skill.py` — 0 class / 3 func
+
+### `.a/skills/new_skill`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/new_skill/skill.py` — 0 class / 3 func
+
+### `.a/skills/perform_web_design_review`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/perform_web_design_review/skill.py` — 0 class / 3 func
+
+### `.a/skills/react_coding`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/react_coding/skill.py` — 0 class / 3 func
+
+### `.a/skills/research_assistant`
+
+1 modules · 0 classes · 7 functions
+
+- `.a/skills/research_assistant/skill.py` — 0 class / 7 func
+
+### `.a/skills/roi_defense_modeling`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/roi_defense_modeling/skill.py` — 0 class / 3 func
+
+### `.a/skills/state_machine_exception_planning`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/state_machine_exception_planning/skill.py` — 0 class / 3 func
+
+### `.a/skills/stitch_design`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/stitch_design/skill.py` — 0 class / 3 func
+
+### `.a/skills/trigger_rule_design`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/trigger_rule_design/skill.py` — 0 class / 3 func
+
+### `.a/skills/user_flow_optimization`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/user_flow_optimization/skill.py` — 0 class / 3 func
+
+### `.a/skills/zero_integration_parsing_spec`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/skills/zero_integration_parsing_spec/skill.py` — 0 class / 3 func
+
+### `.a/syncCompyne`
+
+3 modules · 3 classes · 42 functions
+
+- `.a/syncCompyne/memory_store.py` — 1 class / 6 func
+- `.a/syncCompyne/project_log_cli.py` — 0 class / 11 func
+- `.a/syncCompyne/workspace_context_cli.py` — 2 class / 25 func
+
+### `.a/test_output/agents/architect-agent/tools`
+
+8 modules · 1 classes · 14 functions
+
+- `.a/test_output/agents/architect-agent/tools/ast_grep.py` — 0 class / 1 func
+- `.a/test_output/agents/architect-agent/tools/core_module.py` — 0 class / 5 func
+- `.a/test_output/agents/architect-agent/tools/cortex.py` — 1 class / 3 func
+- `.a/test_output/agents/architect-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `.a/test_output/agents/architect-agent/tools/mcp_client.py` — 0 class / 1 func
+- `.a/test_output/agents/architect-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `.a/test_output/agents/architect-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `.a/test_output/agents/architect-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/test_output/agents/logicdev-agent/tools`
+
+8 modules · 1 classes · 14 functions
+
+- `.a/test_output/agents/logicdev-agent/tools/ast_grep.py` — 0 class / 1 func
+- `.a/test_output/agents/logicdev-agent/tools/core_module.py` — 0 class / 5 func
+- `.a/test_output/agents/logicdev-agent/tools/cortex.py` — 1 class / 3 func
+- `.a/test_output/agents/logicdev-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `.a/test_output/agents/logicdev-agent/tools/mcp_client.py` — 0 class / 1 func
+- `.a/test_output/agents/logicdev-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `.a/test_output/agents/logicdev-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `.a/test_output/agents/logicdev-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `.a/tests`
+
+88 modules · 115 classes · 280 functions
+
+- `.a/tests/check_models.py` — 0 class / 0 func
+- `.a/tests/conftest.py` — 0 class / 2 func
+- `.a/tests/run_verify_agent.py` — 0 class / 1 func
+- `.a/tests/test_builder_cli_fallback.py` — 0 class / 3 func
+- `.a/tests/test_builder_multi_pass.py` — 0 class / 2 func
+- `.a/tests/test_capability_intent.py` — 0 class / 1 func
+- `.a/tests/test_cli_providers.py` — 0 class / 25 func
+- `.a/tests/test_cli_session_adapter.py` — 0 class / 9 func
+- `.a/tests/test_context_window_manager.py` — 6 class / 0 func
+- `.a/tests/test_conversation_collaboration.py` — 10 class / 0 func
+- `.a/tests/test_cross_schema.py` — 0 class / 1 func
+- `.a/tests/test_destructive_guard.py` — 0 class / 4 func
+- `.a/tests/test_documentation_policy.py` — 0 class / 4 func
+- `.a/tests/test_dynamic_orchestrator_workspace_scope.py` — 8 class / 7 func
+- `.a/tests/test_executor.py` — 0 class / 3 func
+- `.a/tests/test_external_skill_candidate_importer.py` — 0 class / 10 func
+- `.a/tests/test_external_skill_sources.py` — 0 class / 9 func
+- `.a/tests/test_factory_evolution.py` — 0 class / 4 func
+- `.a/tests/test_fallback_auto_gen.py` — 0 class / 1 func
+- `.a/tests/test_hook_event_bus.py` — 3 class / 2 func
+- `.a/tests/test_implementation_language_policy.py` — 0 class / 4 func
+- `.a/tests/test_key_combos.py` — 0 class / 1 func
+- `.a/tests/test_knowledge_skill.py` — 5 class / 3 func
+- `.a/tests/test_korean_encoding.py` — 0 class / 1 func
+- `.a/tests/test_llm_engine_auto_upgrade_scope.py` — 0 class / 2 func
+- `.a/tests/test_manager.py` — 0 class / 1 func
+- `.a/tests/test_midori_skills.py` — 0 class / 2 func
+- `.a/tests/test_model_name_normalization.py` — 2 class / 6 func
+- `.a/tests/test_omo_env_parse.py` — 0 class / 2 func
+- `.a/tests/test_orchestrator_manifest.py` — 6 class / 2 func
+- `.a/tests/test_phase10_memory_foundation.py` — 7 class / 1 func
+- `.a/tests/test_phase11_adapters.py` — 6 class / 1 func
+- `.a/tests/test_phase12_episodic_memory.py` — 2 class / 1 func
+- `.a/tests/test_phase13_knowledge_graph.py` — 3 class / 1 func
+- `.a/tests/test_phase14_decay_cross_project.py` — 2 class / 1 func
+- `.a/tests/test_phase15_lifecycle_issues.py` — 3 class / 1 func
+- `.a/tests/test_phase16_integration.py` — 3 class / 1 func
+- `.a/tests/test_phase1_2_integration.py` — 1 class / 1 func
+- `.a/tests/test_phase3_langsmith_tracing.py` — 3 class / 0 func
+- `.a/tests/test_phase4_evaluator_skills.py` — 3 class / 4 func
+- `.a/tests/test_phase5_context_fork_preflight.py` — 2 class / 0 func
+- `.a/tests/test_phase6_semantic_matching.py` — 7 class / 1 func
+- `.a/tests/test_phase7_dep_graph_evolve.py` — 3 class / 0 func
+- `.a/tests/test_phase8_retrieval_router.py` — 2 class / 0 func
+- `.a/tests/test_phase9_hybrid_retrieval.py` — 6 class / 0 func
+- `.a/tests/test_policy_runtime.py` — 1 class / 2 func
+- `.a/tests/test_project_context_sync.py` — 0 class / 8 func
+- `.a/tests/test_project_overrides.py` — 0 class / 6 func
+- `.a/tests/test_project_pipeline.py` — 0 class / 5 func
+- `.a/tests/test_project_policy_defaults.py` — 0 class / 2 func
+- `.a/tests/test_project_scope.py` — 0 class / 4 func
+- `.a/tests/test_registry.py` — 0 class / 3 func
+- `.a/tests/test_registry_manager_codex_skills.py` — 0 class / 4 func
+- `.a/tests/test_repo_shortcuts.py` — 0 class / 2 func
+- `.a/tests/test_request_router.py` — 1 class / 2 func
+- `.a/tests/test_requirement_llm.py` — 0 class / 2 func
+- `.a/tests/test_research_depth.py` — 1 class / 0 func
+- `.a/tests/test_researcher_feedback_ranking.py` — 0 class / 1 func
+- `.a/tests/test_resume_brief.py` — 0 class / 2 func
+- `.a/tests/test_resume_brief_session_adapter.py` — 0 class / 1 func
+- `.a/tests/test_run_build_separation.py` — 0 class / 3 func
+- `.a/tests/test_run_factory_cli.py` — 0 class / 3 func
+- `.a/tests/test_runner_contracts.py` — 0 class / 10 func
+- `.a/tests/test_session_bridge.py` — 0 class / 7 func
+- `.a/tests/test_signatures.py` — 0 class / 1 func
+- `.a/tests/test_skill_eval_harness.py` — 0 class / 12 func
+- `.a/tests/test_skill_feedback.py` — 0 class / 11 func
+- `.a/tests/test_skill_forge.py` — 0 class / 2 func
+- `.a/tests/test_skill_loader_phase2.py` — 0 class / 5 func
+- `.a/tests/test_skill_loader_phase4.py` — 2 class / 0 func
+- `.a/tests/test_skill_lock_utils.py` — 0 class / 4 func
+- `.a/tests/test_skill_metadata_phase1.py` — 3 class / 0 func
+- `.a/tests/test_skill_metadata_v2_compat.py` — 0 class / 3 func
+- `.a/tests/test_skill_procurer_exact_reuse.py` — 0 class / 2 func
+- `.a/tests/test_skill_procurer_external_fallback.py` — 3 class / 4 func
+- `.a/tests/test_skill_procurer_logging.py` — 3 class / 3 func
+- `.a/tests/test_skill_procurer_reuse_gate.py` — 1 class / 5 func
+- `.a/tests/test_skill_retrieval_engine.py` — 0 class / 5 func
+- `.a/tests/test_skill_spec_synthesizer.py` — 0 class / 1 func
+- `.a/tests/test_stage4_7_knowledge_pipeline.py` — 7 class / 2 func
+- `.a/tests/test_sync_skill_registry.py` — 0 class / 3 func
+- `.a/tests/test_sync_wrappers.py` — 0 class / 3 func
+- `.a/tests/test_text_integrity.py` — 0 class / 6 func
+- `.a/tests/test_utils_cache.py` — 0 class / 7 func
+- `.a/tests/test_web_project_scope.py` — 0 class / 3 func
+- `.a/tests/test_workflow_autonomy.py` — 0 class / 3 func
+- `.a/tests/verify_aee_cli.py` — 0 class / 2 func
+- `.a/tests/verify_audit_hash.py` — 0 class / 1 func
+
+### `.a/utils`
+
+1 modules · 0 classes · 1 functions
+
+- `.a/utils/audit_logger.py` — 0 class / 1 func
+
+### `.a/web`
+
+1 modules · 0 classes · 3 functions
+
+- `.a/web/app.py` — 0 class / 3 func
+
+### `.a/web/api`
+
+4 modules · 4 classes · 24 functions
+
+- `.a/web/api/__init__.py` — 0 class / 0 func
+- `.a/web/api/agents.py` — 2 class / 20 func
+- `.a/web/api/run.py` — 1 class / 2 func
+- `.a/web/api/settings.py` — 1 class / 2 func
+
+### `agents/backend-architect-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/backend-architect-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/backend-dev-agent/tools`
+
+5 modules · 1 classes · 5 functions
+
+- `agents/backend-dev-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/backend-dev-agent/tools/database_performance_tuning.py` — 0 class / 0 func
+- `agents/backend-dev-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+- `agents/backend-dev-agent/tools/scalable_api_architecture.py` — 0 class / 0 func
+- `agents/backend-dev-agent/tools/zero_downtime_deployment_playbook.py` — 0 class / 0 func
+
+### `agents/calculus-tutor-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/calculus-tutor-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/chef-agent/tools`
+
+3 modules · 1 classes · 10 functions
+
+- `agents/chef-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/chef-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/chef-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/general-assistant-agent/tools`
+
+2 modules · 1 classes · 5 functions
+
+- `agents/general-assistant-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/general-assistant-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/himari-test-agent-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/himari-test-agent-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/iguro_obanai/tools`
+
+4 modules · 1 classes · 10 functions
+
+- `agents/iguro_obanai/tools/api_security_vetting.py` — 0 class / 2 func
+- `agents/iguro_obanai/tools/cortex.py` — 1 class / 4 func
+- `agents/iguro_obanai/tools/db_optimizer.py` — 0 class / 2 func
+- `agents/iguro_obanai/tools/infrastructure_scaler.py` — 0 class / 2 func
+
+### `agents/japanese-restaurant-master-chef-agent/tools`
+
+9 modules · 2 classes · 32 functions
+
+- `agents/japanese-restaurant-master-chef-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/japanese-restaurant-master-chef-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/japanese-restaurant-master-chef-agent/tools/edomae_sushi_shikomi_playbook.py` — 0 class / 7 func
+- `agents/japanese-restaurant-master-chef-agent/tools/omakase_service_pacing_control.py` — 0 class / 0 func
+- `agents/japanese-restaurant-master-chef-agent/tools/perishable_inventory_control.py` — 0 class / 8 func
+- `agents/japanese-restaurant-master-chef-agent/tools/precision_knife_techniques.py` — 1 class / 1 func
+- `agents/japanese-restaurant-master-chef-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+- `agents/japanese-restaurant-master-chef-agent/tools/seasonal_ingredient_procurement.py` — 0 class / 6 func
+- `agents/japanese-restaurant-master-chef-agent/tools/seasonal_omakase_inventory_optimization.py` — 0 class / 0 func
+
+### `agents/lilith-agent/tools`
+
+3 modules · 1 classes · 10 functions
+
+- `agents/lilith-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/lilith-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/lilith-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/marketer-agent/tools`
+
+3 modules · 1 classes · 10 functions
+
+- `agents/marketer-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/marketer-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/marketer-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/stock-analyst-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/stock-analyst-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/system-admin-(uses-run_command-tool)-agent/tools`
+
+3 modules · 1 classes · 10 functions
+
+- `agents/system-admin-(uses-run_command-tool)-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/system-admin-(uses-run_command-tool)-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/system-admin-(uses-run_command-tool)-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/system-admin-agent/tools`
+
+3 modules · 1 classes · 10 functions
+
+- `agents/system-admin-agent/tools/core_module.py` — 0 class / 5 func
+- `agents/system-admin-agent/tools/cortex.py` — 1 class / 4 func
+- `agents/system-admin-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `agents/test-agent-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/test-agent-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/test-assistant-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/test-assistant-agent/tools/cortex.py` — 1 class / 4 func
+
+### `agents/web-app-specialist-agent/tools`
+
+1 modules · 1 classes · 4 functions
+
+- `agents/web-app-specialist-agent/tools/cortex.py` — 1 class / 4 func
+
+### `artifacts`
+
+1 modules · 0 classes · 10 functions
+
+- `artifacts/db_customization_loader.py` — 0 class / 10 func
+
+### `config`
+
+1 modules · 8 classes · 1 functions
+
+- `config/schema.py` — 8 class / 1 func
+
+### `core`
+
+151 modules · 213 classes · 842 functions
+
+- `core/agent_reservation.py` — 2 class / 0 func
+- `core/agent_runner.py` — 2 class / 2 func
+- `core/agent_specializer.py` — 1 class / 0 func
+- `core/agent_worker.py` — 0 class / 2 func
+- `core/approval_gate.py` — 1 class / 7 func
+- `core/architect_agent.py` — 0 class / 8 func
+- `core/ast_engine.py` — 0 class / 8 func
+- `core/ast_memory_hub.py` — 1 class / 0 func
+- `core/bootstrap_roles.py` — 1 class / 3 func
+- `core/builder.py` — 1 class / 0 func
+- `core/capability_intent.py` — 2 class / 5 func
+- `core/clarification.py` — 0 class / 5 func
+- `core/cli_session_cleanup.py` — 0 class / 1 func
+- `core/concurrency.py` — 3 class / 0 func
+- `core/config_paths.py` — 0 class / 2 func
+- `core/consensus_engine.py` — 1 class / 0 func
+- `core/context_window_manager.py` — 6 class / 1 func
+- `core/control_plane_llm.py` — 1 class / 1 func
+- `core/conversation_manager.py` — 3 class / 1 func
+- `core/conversation_prompts.py` — 0 class / 4 func
+- `core/conversation_room.py` — 4 class / 0 func
+- `core/conversation_task_adapter.py` — 1 class / 2 func
+- `core/critic_skill_router.py` — 0 class / 3 func
+- `core/cross_verification.py` — 3 class / 1 func
+- `core/dashboard.py` — 0 class / 7 func
+- `core/design_review_utils.py` — 0 class / 18 func
+- `core/destructive_guard.py` — 0 class / 7 func
+- `core/document_chunker.py` — 2 class / 1 func
+- `core/document_index.py` — 4 class / 2 func
+- `core/document_policy.py` — 0 class / 3 func
+- `core/documentation_policy.py` — 0 class / 20 func
+- `core/dogfood.py` — 7 class / 76 func
+- `core/dynamic_orchestrator.py` — 1 class / 0 func
+- `core/engine_auth.py` — 0 class / 9 func
+- `core/escalation_decision_report.py` — 0 class / 7 func
+- `core/escalation_evaluator.py` — 3 class / 6 func
+- `core/evaluator.py` — 1 class / 0 func
+- `core/evolution_ledger.py` — 2 class / 0 func
+- `core/evolution_types.py` — 2 class / 0 func
+- `core/executor.py` — 0 class / 1 func
+- `core/express_router.py` — 1 class / 4 func
+- `core/external_skill_candidate_importer.py` — 0 class / 19 func
+- `core/external_skill_source_ids.py` — 0 class / 4 func
+- `core/external_skill_sources.py` — 8 class / 10 func
+- `core/failure_classifier.py` — 1 class / 1 func
+- `core/file_io.py` — 0 class / 8 func
+- `core/file_lock.py` — 0 class / 2 func
+- `core/fsa_loop.py` — 1 class / 1 func
+- `core/git_manager.py` — 1 class / 1 func
+- `core/hashline_editor.py` — 1 class / 0 func
+- `core/implementation_language_policy.py` — 0 class / 5 func
+- `core/ingestion_pipeline.py` — 1 class / 0 func
+- `core/install_candidate_utils.py` — 0 class / 6 func
+- `core/intent.py` — 1 class / 0 func
+- `core/interactive_chat.py` — 2 class / 8 func
+- `core/interview.py` — 0 class / 7 func
+- `core/ise_analyzer.py` — 2 class / 0 func
+- `core/ise_loop.py` — 1 class / 0 func
+- `core/ise_redesigner.py` — 1 class / 0 func
+- `core/ise_stall_detector.py` — 1 class / 0 func
+- `core/ise_strategy_ledger.py` — 2 class / 0 func
+- `core/knowledge_skill.py` — 1 class / 4 func
+- `core/langchain_adapter.py` — 3 class / 0 func
+- `core/lineage_ledger.py` — 2 class / 2 func
+- `core/llm_engine.py` — 1 class / 6 func
+- `core/lsp_bridge.py` — 1 class / 0 func
+- `core/manager.py` — 2 class / 0 func
+- `core/mcp_adapter.py` — 2 class / 4 func
+- `core/memory.py` — 0 class / 6 func
+- `core/message_broker.py` — 1 class / 2 func
+- `core/model_router.py` — 1 class / 4 func
+- `core/nightly_state.py` — 2 class / 12 func
+- `core/onboarding_wizard.py` — 1 class / 5 func
+- `core/parallel_critique.py` — 3 class / 0 func
+- `core/pdca_commands.py` — 1 class / 4 func
+- `core/pdca_state.py` — 4 class / 0 func
+- `core/pipeline_quality.py` — 3 class / 0 func
+- `core/plan_verifier.py` — 2 class / 0 func
+- `core/planner.py` — 2 class / 18 func
+- `core/policy.py` — 0 class / 4 func
+- `core/policy_runtime.py` — 1 class / 2 func
+- `core/premortem.py` — 3 class / 17 func
+- `core/project_init.py` — 0 class / 2 func
+- `core/project_mailbox.py` — 0 class / 11 func
+- `core/project_pipeline.py` — 4 class / 1 func
+- `core/project_task_board.py` — 0 class / 35 func
+- `core/provider_detect.py` — 2 class / 17 func
+- `core/registry.py` — 1 class / 0 func
+- `core/registry_manager.py` — 1 class / 2 func
+- `core/request_router.py` — 1 class / 0 func
+- `core/requirement_llm.py` — 1 class / 12 func
+- `core/research_brief.py` — 1 class / 6 func
+- `core/research_engine.py` — 1 class / 13 func
+- `core/research_router.py` — 3 class / 2 func
+- `core/research_verifier.py` — 2 class / 0 func
+- `core/researcher.py` — 1 class / 0 func
+- `core/retrieval_router.py` — 3 class / 0 func
+- `core/review_bundle.py` — 0 class / 17 func
+- `core/review_report.py` — 4 class / 0 func
+- `core/review_runner.py` — 0 class / 14 func
+- `core/review_skill_router.py` — 3 class / 4 func
+- `core/right_sized_router.py` — 1 class / 12 func
+- `core/role_decomposer.py` — 0 class / 6 func
+- `core/rubric_compiler.py` — 3 class / 0 func
+- `core/run_budget.py` — 1 class / 2 func
+- `core/runner.py` — 1 class / 0 func
+- `core/security_guard.py` — 0 class / 4 func
+- `core/security_scanner.py` — 0 class / 1 func
+- `core/semantic_embedder.py` — 1 class / 0 func
+- `core/setup_wizard.py` — 0 class / 31 func
+- `core/skill_autodiscover.py` — 1 class / 2 func
+- `core/skill_cache.py` — 2 class / 0 func
+- `core/skill_context_config.py` — 1 class / 2 func
+- `core/skill_creator.py` — 0 class / 22 func
+- `core/skill_enricher.py` — 0 class / 7 func
+- `core/skill_eval_harness.py` — 5 class / 20 func
+- `core/skill_evolution_bus.py` — 1 class / 0 func
+- `core/skill_evolution_controller.py` — 1 class / 0 func
+- `core/skill_evolution_safety.py` — 0 class / 2 func
+- `core/skill_feedback.py` — 3 class / 0 func
+- `core/skill_forge.py` — 3 class / 0 func
+- `core/skill_loader.py` — 4 class / 0 func
+- `core/skill_metadata.py` — 3 class / 4 func
+- `core/skill_metadata_adapter.py` — 0 class / 26 func
+- `core/skill_pack_bootstrapper.py` — 1 class / 0 func
+- `core/skill_preflight.py` — 2 class / 6 func
+- `core/skill_procurer.py` — 1 class / 14 func
+- `core/skill_promotion.py` — 2 class / 4 func
+- `core/skill_quality_gate.py` — 2 class / 0 func
+- `core/skill_registry.py` — 1 class / 12 func
+- `core/skill_retrieval_engine.py` — 3 class / 0 func
+- `core/skill_spec_synthesizer.py` — 2 class / 4 func
+- `core/spec_compiler.py` — 1 class / 6 func
+- `core/spec_generator.py` — 3 class / 1 func
+- `core/swarm_council.py` — 1 class / 1 func
+- `core/synergy_runner.py` — 0 class / 0 func
+- `core/template_input.py` — 0 class / 1 func
+- `core/terminal_bridge.py` — 1 class / 2 func
+- `core/terminal_visualizer.py` — 4 class / 3 func
+- `core/text_integrity.py` — 2 class / 9 func
+- `core/tool_runtime.py` — 1 class / 0 func
+- `core/triad.py` — 5 class / 5 func
+- `core/utils.py` — 0 class / 56 func
+- `core/warning_overrides.py` — 0 class / 6 func
+- `core/warning_registry.py` — 2 class / 5 func
+- `core/warning_stats.py` — 2 class / 5 func
+- `core/watchdog.py` — 2 class / 0 func
+- `core/web_search.py` — 0 class / 4 func
+- `core/work_item_generator.py` — 1 class / 33 func
+- `core/work_item_parser.py` — 0 class / 7 func
+- `core/work_item_telemetry.py` — 0 class / 2 func
+
+### `core/checkpoint`
+
+3 modules · 3 classes · 3 functions
+
+- `core/checkpoint/__init__.py` — 0 class / 0 func
+- `core/checkpoint/canonical.py` — 1 class / 1 func
+- `core/checkpoint/storage.py` — 2 class / 2 func
+
+### `core/continuity`
+
+4 modules · 1 classes · 13 functions
+
+- `core/continuity/__init__.py` — 0 class / 0 func
+- `core/continuity/manifest_store.py` — 1 class / 1 func
+- `core/continuity/resume_brief.py` — 0 class / 10 func
+- `core/continuity/runtime_paths.py` — 0 class / 2 func
+
+### `core/control`
+
+19 modules · 38 classes · 10 functions
+
+- `core/control/__init__.py` — 0 class / 0 func
+- `core/control/change_impact.py` — 2 class / 0 func
+- `core/control/context_scanner.py` — 1 class / 1 func
+- `core/control/continuity_snapshot.py` — 2 class / 0 func
+- `core/control/execution_policy.py` — 2 class / 0 func
+- `core/control/intake.py` — 2 class / 0 func
+- `core/control/issue_context.py` — 2 class / 0 func
+- `core/control/lifecycle_bridge.py` — 2 class / 0 func
+- `core/control/maintenance_pipeline.py` — 1 class / 0 func
+- `core/control/maintenance_state.py` — 2 class / 0 func
+- `core/control/question_router.py` — 5 class / 3 func
+- `core/control/regression_gate.py` — 1 class / 0 func
+- `core/control/rollback.py` — 2 class / 0 func
+- `core/control/run_ledger.py` — 2 class / 0 func
+- `core/control/stage_artifacts.py` — 6 class / 0 func
+- `core/control/stage_router.py` — 1 class / 6 func
+- `core/control/supervisor.py` — 1 class / 0 func
+- `core/control/verdicts.py` — 3 class / 0 func
+- `core/control/work_kind.py` — 1 class / 0 func
+
+### `core/events`
+
+2 modules · 4 classes · 3 functions
+
+- `core/events/__init__.py` — 0 class / 0 func
+- `core/events/run_event.py` — 4 class / 3 func
+
+### `core/hooks`
+
+12 modules · 16 classes · 15 functions
+
+- `core/hooks/base.py` — 2 class / 0 func
+- `core/hooks/checkpoint.py` — 1 class / 0 func
+- `core/hooks/code_review_doc.py` — 1 class / 0 func
+- `core/hooks/context_fork.py` — 1 class / 4 func
+- `core/hooks/design_review_hook.py` — 1 class / 2 func
+- `core/hooks/event_bus.py` — 1 class / 0 func
+- `core/hooks/guardrails.py` — 3 class / 0 func
+- `core/hooks/human_interrupt.py` — 1 class / 0 func
+- `core/hooks/langsmith_tracing.py` — 2 class / 1 func
+- `core/hooks/lsp_check.py` — 1 class / 6 func
+- `core/hooks/memory_consolidation.py` — 1 class / 2 func
+- `core/hooks/skill_self_evolution.py` — 1 class / 0 func
+
+### `core/memory_system`
+
+16 modules · 32 classes · 26 functions
+
+- `core/memory_system/__init__.py` — 0 class / 0 func
+- `core/memory_system/config.py` — 5 class / 4 func
+- `core/memory_system/cross_project.py` — 1 class / 0 func
+- `core/memory_system/decay.py` — 1 class / 1 func
+- `core/memory_system/episode_extractor.py` — 0 class / 4 func
+- `core/memory_system/episode_matcher.py` — 1 class / 4 func
+- `core/memory_system/facade.py` — 1 class / 2 func
+- `core/memory_system/graph_builder.py` — 0 class / 4 func
+- `core/memory_system/graph_query.py` — 1 class / 0 func
+- `core/memory_system/issue_tracker.py` — 4 class / 0 func
+- `core/memory_system/knowledge_forger.py` — 1 class / 1 func
+- `core/memory_system/knowledge_injection.py` — 1 class / 0 func
+- `core/memory_system/models.py` — 8 class / 3 func
+- `core/memory_system/project_lifecycle.py` — 2 class / 0 func
+- `core/memory_system/router.py` — 3 class / 1 func
+- `core/memory_system/strategy_ledger.py` — 3 class / 2 func
+
+### `core/memory_system/adapters`
+
+9 modules · 8 classes · 2 functions
+
+- `core/memory_system/adapters/__init__.py` — 0 class / 0 func
+- `core/memory_system/adapters/ast_hub.py` — 1 class / 0 func
+- `core/memory_system/adapters/base.py` — 1 class / 0 func
+- `core/memory_system/adapters/continuity.py` — 1 class / 0 func
+- `core/memory_system/adapters/core_memory.py` — 1 class / 1 func
+- `core/memory_system/adapters/cortex_vector.py` — 1 class / 1 func
+- `core/memory_system/adapters/knowledge_graph.py` — 1 class / 0 func
+- `core/memory_system/adapters/sync_compyne.py` — 1 class / 0 func
+- `core/memory_system/adapters/trace_log.py` — 1 class / 0 func
+
+### `core/providers`
+
+4 modules · 3 classes · 89 functions
+
+- `core/providers/__init__.py` — 0 class / 0 func
+- `core/providers/cli.py` — 2 class / 33 func
+- `core/providers/registry.py` — 0 class / 21 func
+- `core/providers/session_adapter.py` — 1 class / 35 func
+
+### `core/research`
+
+4 modules · 7 classes · 1 functions
+
+- `core/research/__init__.py` — 0 class / 0 func
+- `core/research/checklist_merger.py` — 1 class / 0 func
+- `core/research/quality_contract.py` — 4 class / 0 func
+- `core/research/work_spec.py` — 2 class / 1 func
+
+### `core/synergy`
+
+5 modules · 5 classes · 4 functions
+
+- `core/synergy/__init__.py` — 0 class / 0 func
+- `core/synergy/bridge.py` — 2 class / 0 func
+- `core/synergy/job.py` — 2 class / 0 func
+- `core/synergy/process.py` — 1 class / 2 func
+- `core/synergy/tools.py` — 0 class / 2 func
+
+### `projects/agent_factory/runs/r2`
+
+1 modules · 0 classes · 5 functions
+
+- `projects/agent_factory/runs/r2/dp_skill.py` — 0 class / 5 func
+
+### `projects/agent_factory/runs/r3`
+
+1 modules · 0 classes · 5 functions
+
+- `projects/agent_factory/runs/r3/dp_skill.py` — 0 class / 5 func
+
+### `projects/gemini_live_edit/artifacts`
+
+1 modules · 0 classes · 1 functions
+
+- `projects/gemini_live_edit/artifacts/live_edit_check.py` — 0 class / 1 func
+
+### `projects/lotto_mobile_web`
+
+1 modules · 0 classes · 0 functions
+
+- `projects/lotto_mobile_web/conftest.py` — 0 class / 0 func
+
+### `projects/lotto_mobile_web/server`
+
+6 modules · 10 classes · 15 functions
+
+- `projects/lotto_mobile_web/server/__init__.py` — 0 class / 0 func
+- `projects/lotto_mobile_web/server/app.py` — 1 class / 4 func
+- `projects/lotto_mobile_web/server/bootstrap.py` — 0 class / 3 func
+- `projects/lotto_mobile_web/server/dependencies.py` — 0 class / 2 func
+- `projects/lotto_mobile_web/server/errors.py` — 2 class / 6 func
+- `projects/lotto_mobile_web/server/schemas.py` — 7 class / 0 func
+
+### `projects/lotto_mobile_web/server/services`
+
+3 modules · 3 classes · 1 functions
+
+- `projects/lotto_mobile_web/server/services/__init__.py` — 0 class / 0 func
+- `projects/lotto_mobile_web/server/services/draw_cache.py` — 2 class / 0 func
+- `projects/lotto_mobile_web/server/services/recommendation.py` — 1 class / 1 func
+
+### `projects/lotto_mobile_web/tests/api`
+
+2 modules · 2 classes · 11 functions
+
+- `projects/lotto_mobile_web/tests/api/conftest.py` — 2 class / 6 func
+- `projects/lotto_mobile_web/tests/api/test_recommend_endpoint.py` — 0 class / 5 func
+
+### `projects/lotto_mobile_web/tests/frontend`
+
+4 modules · 1 classes · 14 functions
+
+- `projects/lotto_mobile_web/tests/frontend/conftest.py` — 1 class / 6 func
+- `projects/lotto_mobile_web/tests/frontend/test_offline_cache_contract.py` — 0 class / 3 func
+- `projects/lotto_mobile_web/tests/frontend/test_param_panel_contract.py` — 0 class / 1 func
+- `projects/lotto_mobile_web/tests/frontend/test_smoke_render.py` — 0 class / 4 func
+
+### `projects/lotto_pattern_predictor/scripts`
+
+1 modules · 1 classes · 14 functions
+
+- `projects/lotto_pattern_predictor/scripts/run_qa_checks.py` — 1 class / 14 func
+
+### `projects/lotto_pattern_predictor/src`
+
+1 modules · 0 classes · 0 functions
+
+- `projects/lotto_pattern_predictor/src/__init__.py` — 0 class / 0 func
+
+### `projects/lotto_pattern_predictor/src/lotto`
+
+6 modules · 12 classes · 3 functions
+
+- `projects/lotto_pattern_predictor/src/lotto/__init__.py` — 0 class / 0 func
+- `projects/lotto_pattern_predictor/src/lotto/analysis.py` — 4 class / 0 func
+- `projects/lotto_pattern_predictor/src/lotto/cache_store.py` — 1 class / 2 func
+- `projects/lotto_pattern_predictor/src/lotto/exceptions.py` — 5 class / 0 func
+- `projects/lotto_pattern_predictor/src/lotto/fetcher.py` — 1 class / 1 func
+- `projects/lotto_pattern_predictor/src/lotto/models.py` — 1 class / 0 func
+
+### `projects/lotto_pattern_predictor/tests`
+
+8 modules · 28 classes · 25 functions
+
+- `projects/lotto_pattern_predictor/tests/__init__.py` — 0 class / 0 func
+- `projects/lotto_pattern_predictor/tests/test_analysis.py` — 8 class / 3 func
+- `projects/lotto_pattern_predictor/tests/test_analyzer.py` — 5 class / 7 func
+- `projects/lotto_pattern_predictor/tests/test_cache_store.py` — 8 class / 1 func
+- `projects/lotto_pattern_predictor/tests/test_fetcher.py` — 2 class / 6 func
+- `projects/lotto_pattern_predictor/tests/test_fetcher_integration.py` — 1 class / 1 func
+- `projects/lotto_pattern_predictor/tests/test_models.py` — 1 class / 0 func
+- `projects/lotto_pattern_predictor/tests/test_recommender.py` — 3 class / 7 func
+
+### `projects/lotto_predictor_v2/src/lotto`
+
+6 modules · 4 classes · 28 functions
+
+- `projects/lotto_predictor_v2/src/lotto/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto/__main__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto/cli.py` — 0 class / 8 func
+- `projects/lotto_predictor_v2/src/lotto/collector.py` — 3 class / 1 func
+- `projects/lotto_predictor_v2/src/lotto/recommender.py` — 1 class / 10 func
+- `projects/lotto_predictor_v2/src/lotto/report.py` — 0 class / 9 func
+
+### `projects/lotto_predictor_v2/src/lotto/analytics`
+
+2 modules · 1 classes · 9 functions
+
+- `projects/lotto_predictor_v2/src/lotto/analytics/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto/analytics/patterns.py` — 1 class / 9 func
+
+### `projects/lotto_predictor_v2/src/lotto/cache`
+
+2 modules · 2 classes · 0 functions
+
+- `projects/lotto_predictor_v2/src/lotto/cache/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto/cache/store.py` — 2 class / 0 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor`
+
+2 modules · 0 classes · 1 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/__main__.py` — 0 class / 1 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor/analytics`
+
+2 modules · 2 classes · 7 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/analytics/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/analytics/patterns.py` — 2 class / 7 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor/backend`
+
+5 modules · 11 classes · 6 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/backend/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/backend/http_client.py` — 2 class / 1 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/backend/models.py` — 7 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/backend/serialization.py` — 0 class / 2 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/backend/storage.py` — 2 class / 3 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor/cache`
+
+4 modules · 10 classes · 4 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/cache/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/cache/core.py` — 2 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/cache/json_store.py` — 4 class / 4 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/cache/models.py` — 4 class / 0 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor/collector`
+
+3 modules · 6 classes · 0 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/collector/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/collector/core.py` — 3 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/collector/models.py` — 3 class / 0 func
+
+### `projects/lotto_predictor_v2/src/lotto_predictor/game_logic`
+
+4 modules · 15 classes · 0 functions
+
+- `projects/lotto_predictor_v2/src/lotto_predictor/game_logic/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/game_logic/engine.py` — 2 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/game_logic/errors.py` — 3 class / 0 func
+- `projects/lotto_predictor_v2/src/lotto_predictor/game_logic/models.py` — 10 class / 0 func
+
+### `projects/lotto_predictor_v2/tests`
+
+9 modules · 4 classes · 38 functions
+
+- `projects/lotto_predictor_v2/tests/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/conftest.py` — 0 class / 1 func
+- `projects/lotto_predictor_v2/tests/test_analytics_integration.py` — 0 class / 5 func
+- `projects/lotto_predictor_v2/tests/test_cache_store.py` — 0 class / 7 func
+- `projects/lotto_predictor_v2/tests/test_lotto_collector.py` — 3 class / 5 func
+- `projects/lotto_predictor_v2/tests/test_patterns.py` — 1 class / 0 func
+- `projects/lotto_predictor_v2/tests/test_pyinstaller_e2e.py` — 0 class / 7 func
+- `projects/lotto_predictor_v2/tests/test_recommender.py` — 0 class / 5 func
+- `projects/lotto_predictor_v2/tests/test_report.py` — 0 class / 8 func
+
+### `projects/lotto_predictor_v2/tests/cache`
+
+6 modules · 2 classes · 29 functions
+
+- `projects/lotto_predictor_v2/tests/cache/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/cache/_fakes.py` — 2 class / 2 func
+- `projects/lotto_predictor_v2/tests/cache/test_cache_continuity.py` — 0 class / 6 func
+- `projects/lotto_predictor_v2/tests/cache/test_cache_ensure_ready.py` — 0 class / 7 func
+- `projects/lotto_predictor_v2/tests/cache/test_cache_reads.py` — 0 class / 8 func
+- `projects/lotto_predictor_v2/tests/cache/test_cache_status.py` — 0 class / 6 func
+
+### `projects/lotto_predictor_v2/tests/collector`
+
+5 modules · 7 classes · 2 functions
+
+- `projects/lotto_predictor_v2/tests/collector/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/collector/_fakes.py` — 2 class / 2 func
+- `projects/lotto_predictor_v2/tests/collector/test_collector_detect.py` — 1 class / 0 func
+- `projects/lotto_predictor_v2/tests/collector/test_collector_failures.py` — 2 class / 0 func
+- `projects/lotto_predictor_v2/tests/collector/test_collector_sync.py` — 2 class / 0 func
+
+### `projects/lotto_predictor_v2/tests/fixtures`
+
+2 modules · 0 classes · 1 functions
+
+- `projects/lotto_predictor_v2/tests/fixtures/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/fixtures/mock_responses.py` — 0 class / 1 func
+
+### `projects/lotto_predictor_v2/tests/fixtures/e2e`
+
+2 modules · 0 classes · 0 functions
+
+- `projects/lotto_predictor_v2/tests/fixtures/e2e/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/fixtures/e2e/pyinstaller_samples.py` — 0 class / 0 func
+
+### `projects/lotto_predictor_v2/tests/fixtures/recommender`
+
+2 modules · 0 classes · 8 functions
+
+- `projects/lotto_predictor_v2/tests/fixtures/recommender/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/fixtures/recommender/mock_stats.py` — 0 class / 8 func
+
+### `projects/lotto_predictor_v2/tests/game_logic`
+
+2 modules · 1 classes · 0 functions
+
+- `projects/lotto_predictor_v2/tests/game_logic/__init__.py` — 0 class / 0 func
+- `projects/lotto_predictor_v2/tests/game_logic/test_engine.py` — 1 class / 0 func
+
+### `projects/minesweeper-baseline`
+
+1 modules · 3 classes · 14 functions
+
+- `projects/minesweeper-baseline/minesweeper.py` — 3 class / 14 func
+
+### `projects/minesweeper-baseline/src`
+
+2 modules · 3 classes · 9 functions
+
+- `projects/minesweeper-baseline/src/__init__.py` — 0 class / 0 func
+- `projects/minesweeper-baseline/src/game_logic.py` — 3 class / 9 func
+
+### `projects/minesweeper-baseline/tests`
+
+3 modules · 0 classes · 25 functions
+
+- `projects/minesweeper-baseline/tests/conftest.py` — 0 class / 0 func
+- `projects/minesweeper-baseline/tests/test_game_logic.py` — 0 class / 5 func
+- `projects/minesweeper-baseline/tests/test_minesweeper_unit.py` — 0 class / 20 func
+
+### `projects/minesweeper/agents/architect-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `projects/minesweeper/agents/architect-agent/tools/ast_grep.py` — 0 class / 1 func
+- `projects/minesweeper/agents/architect-agent/tools/core_module.py` — 0 class / 5 func
+- `projects/minesweeper/agents/architect-agent/tools/cortex.py` — 1 class / 3 func
+- `projects/minesweeper/agents/architect-agent/tools/file_handler.py` — 0 class / 3 func
+- `projects/minesweeper/agents/architect-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `projects/minesweeper/agents/architect-agent/tools/mcp_client.py` — 0 class / 1 func
+- `projects/minesweeper/agents/architect-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `projects/minesweeper/agents/architect-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `projects/minesweeper/agents/architect-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `projects/minesweeper/agents/logicdeveloper-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/ast_grep.py` — 0 class / 1 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/core_module.py` — 0 class / 5 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/cortex.py` — 1 class / 3 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/file_handler.py` — 0 class / 3 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_client.py` — 0 class / 1 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `projects/minesweeper/agents/logicdeveloper-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `projects/minesweeper/agents/uideveloper-agent/tools`
+
+9 modules · 1 classes · 17 functions
+
+- `projects/minesweeper/agents/uideveloper-agent/tools/ast_grep.py` — 0 class / 1 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/core_module.py` — 0 class / 5 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/cortex.py` — 1 class / 3 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/file_handler.py` — 0 class / 3 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/lsp_hover.py` — 0 class / 1 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/mcp_client.py` — 0 class / 1 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/mcp_exa_search.py` — 0 class / 1 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/memory_pruner.py` — 0 class / 1 func
+- `projects/minesweeper/agents/uideveloper-agent/tools/retrofit_cortex.py` — 0 class / 1 func
+
+### `pyinstaller_hooks`
+
+1 modules · 0 classes · 0 functions
+
+- `pyinstaller_hooks/hook-ast_grep_py.py` — 0 class / 0 func
+
+### `scripts`
+
+51 modules · 8 classes · 427 functions
+
+- `scripts/af_doctor.py` — 1 class / 12 func
+- `scripts/af_project_inspect.py` — 0 class / 13 func
+- `scripts/af_symbols.py` — 0 class / 2 func
+- `scripts/agent_model_selector.py` — 0 class / 6 func
+- `scripts/blast_radius.py` — 0 class / 7 func
+- `scripts/blueprint_updater.py` — 0 class / 28 func
+- `scripts/build_llm_wiki.py` — 0 class / 24 func
+- `scripts/build_review_bundle.py` — 0 class / 5 func
+- `scripts/check_changed_text_integrity.py` — 1 class / 6 func
+- `scripts/check_design_pending.py` — 0 class / 5 func
+- `scripts/check_model_escalation.py` — 0 class / 2 func
+- `scripts/check_pending_review.py` — 0 class / 6 func
+- `scripts/claude_session_bridge.py` — 0 class / 0 func
+- `scripts/clean_agents_yaml.py` — 0 class / 1 func
+- `scripts/cli_hook_bridge.py` — 0 class / 2 func
+- `scripts/code_review_updater.py` — 0 class / 14 func
+- `scripts/codebase_symbols.py` — 0 class / 6 func
+- `scripts/codex_session_bridge.py` — 0 class / 0 func
+- `scripts/design_review_trigger.py` — 0 class / 2 func
+- `scripts/design_review_watcher.py` — 0 class / 16 func
+- `scripts/destructive_guard_proxy.py` — 0 class / 2 func
+- `scripts/enqueue_agent_review.py` — 0 class / 4 func
+- `scripts/enqueue_staged_review.py` — 0 class / 11 func
+- `scripts/fix_runner_cwm.py` — 0 class / 0 func
+- `scripts/gemini_session_bridge.py` — 0 class / 0 func
+- `scripts/generate_agents_md.py` — 1 class / 18 func
+- `scripts/hook_runner.py` — 0 class / 23 func
+- `scripts/import_external_skill_candidates.py` — 0 class / 0 func
+- `scripts/install_scheduler.py` — 0 class / 11 func
+- `scripts/measure_goal_overlap.py` — 0 class / 4 func
+- `scripts/migrate_registry.py` — 0 class / 2 func
+- `scripts/migrate_workitem_e2e.py` — 0 class / 3 func
+- `scripts/nightly_summary.py` — 0 class / 3 func
+- `scripts/nightly_tick.py` — 0 class / 9 func
+- `scripts/project_context_git_sync.py` — 0 class / 5 func
+- `scripts/project_context_sync.py` — 0 class / 31 func
+- `scripts/refresh_lotto_seed.py` — 0 class / 3 func
+- `scripts/replace_react_loop.py` — 0 class / 0 func
+- `scripts/review_gate.py` — 0 class / 24 func
+- `scripts/review_metrics_logger.py` — 0 class / 13 func
+- `scripts/review_metrics_report.py` — 0 class / 2 func
+- `scripts/run.py` — 0 class / 2 func
+- `scripts/session_bridge.py` — 1 class / 23 func
+- `scripts/sync_claude_memory.py` — 0 class / 14 func
+- `scripts/sync_provider_instructions.py` — 0 class / 6 func
+- `scripts/sync_skill_registry.py` — 0 class / 11 func
+- `scripts/t3_classifier.py` — 2 class / 13 func
+- `scripts/t3_skip_report.py` — 0 class / 5 func
+- `scripts/test_gap_analyzer.py` — 2 class / 22 func
+- `scripts/verify_handoff_checker.py` — 0 class / 4 func
+- `scripts/write_resume_brief.py` — 0 class / 2 func
+
+### `skills/ai_funnel_routing`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/ai_funnel_routing/skill.py` — 0 class / 3 func
+
+### `skills/core`
+
+8 modules · 1 classes · 13 functions
+
+- `skills/core/ast_grep.py` — 0 class / 1 func
+- `skills/core/cortex.py` — 1 class / 4 func
+- `skills/core/file_handler.py` — 0 class / 3 func
+- `skills/core/lsp_hover.py` — 0 class / 1 func
+- `skills/core/mcp_client.py` — 0 class / 1 func
+- `skills/core/mcp_exa_search.py` — 0 class / 1 func
+- `skills/core/memory_pruner.py` — 0 class / 1 func
+- `skills/core/retrofit_cortex.py` — 0 class / 1 func
+
+### `skills/core_memory`
+
+1 modules · 0 classes · 16 functions
+
+- `skills/core_memory/skill.py` — 0 class / 16 func
+
+### `skills/create_design_system`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/create_design_system/skill.py` — 0 class / 3 func
+
+### `skills/css_styling`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/css_styling/skill.py` — 0 class / 3 func
+
+### `skills/data_visualize`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/data_visualize/skill.py` — 0 class / 3 func
+
+### `skills/domain/langchain`
+
+1 modules · 0 classes · 12 functions
+
+- `skills/domain/langchain/langchain_guidelines.py` — 0 class / 12 func
+
+### `skills/dp`
+
+1 modules · 0 classes · 5 functions
+
+- `skills/dp/skill.py` — 0 class / 5 func
+
+### `skills/eval`
+
+1 modules · 0 classes · 4 functions
+
+- `skills/eval/langsmith_eval.py` — 0 class / 4 func
+
+### `skills/evaluator`
+
+1 modules · 0 classes · 0 functions
+
+- `skills/evaluator/__init__.py` — 0 class / 0 func
+
+### `skills/evaluator/doc_qa`
+
+1 modules · 1 classes · 0 functions
+
+- `skills/evaluator/doc_qa/skill.py` — 1 class / 0 func
+
+### `skills/evaluator/generate_eval_dataset`
+
+1 modules · 0 classes · 12 functions
+
+- `skills/evaluator/generate_eval_dataset/skill.py` — 0 class / 12 func
+
+### `skills/evaluator/summarize_failure`
+
+1 modules · 0 classes · 13 functions
+
+- `skills/evaluator/summarize_failure/skill.py` — 0 class / 13 func
+
+### `skills/evaluator/trace_execution`
+
+1 modules · 0 classes · 10 functions
+
+- `skills/evaluator/trace_execution/skill.py` — 0 class / 10 func
+
+### `skills/forge`
+
+16 modules · 1 classes · 48 functions
+
+- `skills/forge/api_security_vetting.py` — 0 class / 6 func
+- `skills/forge/core_module.py` — 0 class / 5 func
+- `skills/forge/database_performance_tuning.py` — 0 class / 0 func
+- `skills/forge/db_optimizer.py` — 0 class / 6 func
+- `skills/forge/edomae_sushi_shikomi_playbook.py` — 0 class / 7 func
+- `skills/forge/file_handler.py` — 0 class / 3 func
+- `skills/forge/infrastructure_scaler.py` — 0 class / 6 func
+- `skills/forge/needs_issue.py` — 0 class / 0 func
+- `skills/forge/new_skill.py` — 0 class / 0 func
+- `skills/forge/omakase_service_pacing_control.py` — 0 class / 0 func
+- `skills/forge/perishable_inventory_control.py` — 0 class / 8 func
+- `skills/forge/precision_knife_techniques.py` — 1 class / 1 func
+- `skills/forge/scalable_api_architecture.py` — 0 class / 0 func
+- `skills/forge/seasonal_ingredient_procurement.py` — 0 class / 6 func
+- `skills/forge/seasonal_omakase_inventory_optimization.py` — 0 class / 0 func
+- `skills/forge/zero_downtime_deployment_playbook.py` — 0 class / 0 func
+
+### `skills/frontend_ui_ux`
+
+1 modules · 1 classes · 0 functions
+
+- `skills/frontend_ui_ux/skill.py` — 1 class / 0 func
+
+### `skills/generate_image`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/generate_image/skill.py` — 0 class / 3 func
+
+### `skills/gherkin_sdd_authoring`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/gherkin_sdd_authoring/skill.py` — 0 class / 3 func
+
+### `skills/git_master`
+
+1 modules · 1 classes · 0 functions
+
+- `skills/git_master/skill.py` — 1 class / 0 func
+
+### `skills/graphify`
+
+1 modules · 1 classes · 1 functions
+
+- `skills/graphify/skill.py` — 1 class / 1 func
+
+### `skills/hash_edit`
+
+1 modules · 0 classes · 5 functions
+
+- `skills/hash_edit/skill.py` — 0 class / 5 func
+
+### `skills/hashline_edit`
+
+1 modules · 1 classes · 0 functions
+
+- `skills/hashline_edit/skill.py` — 1 class / 0 func
+
+### `skills/hound_librarian`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/hound_librarian/skill.py` — 0 class / 3 func
+
+### `skills/issue_tracker`
+
+1 modules · 0 classes · 5 functions
+
+- `skills/issue_tracker/skill.py` — 0 class / 5 func
+
+### `skills/liability_traceability_design`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/liability_traceability_design/skill.py` — 0 class / 3 func
+
+### `skills/new_skill`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/new_skill/skill.py` — 0 class / 3 func
+
+### `skills/perform_web_design_review`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/perform_web_design_review/skill.py` — 0 class / 3 func
+
+### `skills/react_coding`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/react_coding/skill.py` — 0 class / 3 func
+
+### `skills/research_assistant`
+
+1 modules · 0 classes · 5 functions
+
+- `skills/research_assistant/skill.py` — 0 class / 5 func
+
+### `skills/roi_defense_modeling`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/roi_defense_modeling/skill.py` — 0 class / 3 func
+
+### `skills/state_machine_exception_planning`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/state_machine_exception_planning/skill.py` — 0 class / 3 func
+
+### `skills/stitch_design`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/stitch_design/skill.py` — 0 class / 3 func
+
+### `skills/trigger_rule_design`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/trigger_rule_design/skill.py` — 0 class / 3 func
+
+### `skills/user_flow_optimization`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/user_flow_optimization/skill.py` — 0 class / 3 func
+
+### `skills/zero_integration_parsing_spec`
+
+1 modules · 0 classes · 3 functions
+
+- `skills/zero_integration_parsing_spec/skill.py` — 0 class / 3 func
+
+### `tests`
+
+206 modules · 332 classes · 1764 functions
+
+- `tests/check_models.py` — 0 class / 0 func
+- `tests/conftest.py` — 0 class / 4 func
+- `tests/run_verify_agent.py` — 0 class / 1 func
+- `tests/test_af_doctor.py` — 0 class / 27 func
+- `tests/test_af_project_inspect.py` — 11 class / 4 func
+- `tests/test_af_project_symbols.py` — 4 class / 1 func
+- `tests/test_af_symbols.py` — 4 class / 1 func
+- `tests/test_agent_launcher_cli_dispatch.py` — 7 class / 0 func
+- `tests/test_agent_model_selector.py` — 4 class / 0 func
+- `tests/test_agent_runner_force_provider.py` — 1 class / 1 func
+- `tests/test_agent_specializer.py` — 1 class / 2 func
+- `tests/test_agent_worker.py` — 0 class / 5 func
+- `tests/test_approval_gate_auto_approve.py` — 0 class / 26 func
+- `tests/test_approval_gate_block_decision.py` — 0 class / 8 func
+- `tests/test_approval_gate_domain_gate.py` — 6 class / 14 func
+- `tests/test_approval_gate_domain_review.py` — 0 class / 3 func
+- `tests/test_approval_gate_metadata_persistence.py` — 0 class / 6 func
+- `tests/test_approval_gate_runtime_workspace.py` — 0 class / 4 func
+- `tests/test_architect_agent.py` — 8 class / 2 func
+- `tests/test_ast_engine_smoke.py` — 0 class / 8 func
+- `tests/test_blueprint_updater.py` — 0 class / 6 func
+- `tests/test_bootstrap_policy_rules.py` — 0 class / 8 func
+- `tests/test_build_llm_wiki.py` — 3 class / 0 func
+- `tests/test_build_review_bundle.py` — 0 class / 15 func
+- `tests/test_builder_cli_fallback.py` — 0 class / 3 func
+- `tests/test_builder_multi_pass.py` — 0 class / 2 func
+- `tests/test_bulk_enrich_trigger_routing.py` — 1 class / 0 func
+- `tests/test_capability_intent.py` — 0 class / 1 func
+- `tests/test_check_model_escalation.py` — 0 class / 5 func
+- `tests/test_check_pending_review.py` — 1 class / 0 func
+- `tests/test_cli_providers.py` — 1 class / 31 func
+- `tests/test_cli_session_adapter.py` — 0 class / 10 func
+- `tests/test_codebase_symbols.py` — 0 class / 17 func
+- `tests/test_coding_conventions.py` — 0 class / 7 func
+- `tests/test_compact_step2.py` — 4 class / 1 func
+- `tests/test_context_window_manager.py` — 6 class / 0 func
+- `tests/test_conversation_collaboration.py` — 10 class / 0 func
+- `tests/test_coverage_gate_hoist.py` — 8 class / 2 func
+- `tests/test_critic_skill_router.py` — 0 class / 17 func
+- `tests/test_cross_cli_skill_discovery.py` — 0 class / 23 func
+- `tests/test_cross_schema.py` — 0 class / 1 func
+- `tests/test_decision_report.py` — 0 class / 4 func
+- `tests/test_default_context_schema.py` — 2 class / 1 func
+- `tests/test_destructive_guard.py` — 0 class / 4 func
+- `tests/test_documentation_policy.py` — 0 class / 15 func
+- `tests/test_dogfood.py` — 9 class / 142 func
+- `tests/test_dogfood_cli.py` — 0 class / 37 func
+- `tests/test_dogfood_integration.py` — 0 class / 16 func
+- `tests/test_dogfood_isolation.py` — 0 class / 72 func
+- `tests/test_dogfood_realignment.py` — 1 class / 6 func
+- `tests/test_dynamic_orchestrator_workspace_scope.py` — 8 class / 11 func
+- `tests/test_engine_auth_provider_priority.py` — 0 class / 11 func
+- `tests/test_enqueue_staged_review.py` — 0 class / 5 func
+- `tests/test_escalation_evaluator.py` — 0 class / 11 func
+- `tests/test_escalation_evaluator_p4a.py` — 0 class / 8 func
+- `tests/test_escalation_policy_yaml_p4a.py` — 0 class / 2 func
+- `tests/test_evolution_ledger.py` — 3 class / 1 func
+- `tests/test_executor.py` — 0 class / 3 func
+- `tests/test_express_router.py` — 0 class / 46 func
+- `tests/test_external_skill_candidate_importer.py` — 0 class / 10 func
+- `tests/test_external_skill_sources.py` — 0 class / 9 func
+- `tests/test_factory_evolution.py` — 0 class / 4 func
+- `tests/test_failure_classifier.py` — 0 class / 2 func
+- `tests/test_fallback_auto_gen.py` — 0 class / 1 func
+- `tests/test_fsa_runtime_workspace.py` — 2 class / 3 func
+- `tests/test_gemini_smoke.py` — 0 class / 3 func
+- `tests/test_hook_event_bus.py` — 3 class / 2 func
+- `tests/test_hook_runner.py` — 0 class / 4 func
+- `tests/test_hook_runner_builtins.py` — 0 class / 40 func
+- `tests/test_implementation_language_policy.py` — 0 class / 4 func
+- `tests/test_inject_review_tasks_e2e_command.py` — 0 class / 4 func
+- `tests/test_interview.py` — 0 class / 10 func
+- `tests/test_ise_integration.py` — 0 class / 7 func
+- `tests/test_ise_provider_awareness.py` — 0 class / 6 func
+- `tests/test_key_combos.py` — 0 class / 1 func
+- `tests/test_knowledge_skill.py` — 5 class / 3 func
+- `tests/test_korean_encoding.py` — 0 class / 1 func
+- `tests/test_lineage_ledger.py` — 0 class / 11 func
+- `tests/test_llm_doc_gen_p3_p6.py` — 7 class / 0 func
+- `tests/test_llm_engine_auto_upgrade_scope.py` — 0 class / 2 func
+- `tests/test_llm_wiki_precommit.py` — 0 class / 3 func
+- `tests/test_manager.py` — 0 class / 1 func
+- `tests/test_midori_skills.py` — 0 class / 2 func
+- `tests/test_model_name_normalization.py` — 2 class / 6 func
+- `tests/test_nightly_summary.py` — 0 class / 5 func
+- `tests/test_nlm_regression.py` — 0 class / 2 func
+- `tests/test_omo_env_parse.py` — 0 class / 2 func
+- `tests/test_optional_id_calib.py` — 0 class / 13 func
+- `tests/test_orchestrator_manifest.py` — 6 class / 2 func
+- `tests/test_pending_review.py` — 0 class / 30 func
+- `tests/test_phase10_memory_foundation.py` — 7 class / 1 func
+- `tests/test_phase11_adapters.py` — 6 class / 1 func
+- `tests/test_phase12_episodic_memory.py` — 2 class / 1 func
+- `tests/test_phase13_knowledge_graph.py` — 3 class / 1 func
+- `tests/test_phase14_decay_cross_project.py` — 2 class / 1 func
+- `tests/test_phase15_lifecycle_issues.py` — 3 class / 1 func
+- `tests/test_phase16_integration.py` — 3 class / 1 func
+- `tests/test_phase1_2_integration.py` — 1 class / 1 func
+- `tests/test_phase1_blast_tier_invariant.py` — 0 class / 9 func
+- `tests/test_phase3_langsmith_tracing.py` — 3 class / 0 func
+- `tests/test_phase4_evaluator_skills.py` — 3 class / 4 func
+- `tests/test_phase5_context_fork_preflight.py` — 2 class / 0 func
+- `tests/test_phase6_semantic_matching.py` — 7 class / 1 func
+- `tests/test_phase7_dep_graph_evolve.py` — 3 class / 0 func
+- `tests/test_phase8_retrieval_router.py` — 2 class / 0 func
+- `tests/test_phase9_hybrid_retrieval.py` — 6 class / 0 func
+- `tests/test_phase_a_step3_evolution.py` — 6 class / 0 func
+- `tests/test_pipeline_block_enforcement.py` — 0 class / 3 func
+- `tests/test_planner.py` — 9 class / 51 func
+- `tests/test_policy_runtime.py` — 1 class / 2 func
+- `tests/test_premortem.py` — 7 class / 49 func
+- `tests/test_project_context_sync.py` — 0 class / 14 func
+- `tests/test_project_overrides.py` — 0 class / 6 func
+- `tests/test_project_pipeline.py` — 0 class / 7 func
+- `tests/test_project_policy_defaults.py` — 0 class / 2 func
+- `tests/test_project_scope.py` — 0 class / 4 func
+- `tests/test_project_task_board_dispatch.py` — 0 class / 30 func
+- `tests/test_provider_detect.py` — 0 class / 35 func
+- `tests/test_provider_instruction_sync.py` — 0 class / 25 func
+- `tests/test_quality_contract.py` — 2 class / 2 func
+- `tests/test_registry.py` — 0 class / 3 func
+- `tests/test_registry_manager_codex_skills.py` — 0 class / 8 func
+- `tests/test_repo_shortcuts.py` — 0 class / 2 func
+- `tests/test_request_router.py` — 1 class / 2 func
+- `tests/test_requirement_llm.py` — 0 class / 2 func
+- `tests/test_research_brief.py` — 0 class / 12 func
+- `tests/test_research_depth.py` — 1 class / 0 func
+- `tests/test_research_p1_quality_gate.py` — 7 class / 0 func
+- `tests/test_research_router_modes.py` — 8 class / 1 func
+- `tests/test_research_router_phase1b.py` — 5 class / 0 func
+- `tests/test_research_system_regression.py` — 11 class / 0 func
+- `tests/test_researcher_feedback_ranking.py` — 0 class / 1 func
+- `tests/test_resume_brief.py` — 0 class / 2 func
+- `tests/test_resume_brief_session_adapter.py` — 0 class / 1 func
+- `tests/test_review_bundle.py` — 0 class / 16 func
+- `tests/test_review_gate.py` — 0 class / 65 func
+- `tests/test_review_gate_phase0.py` — 0 class / 22 func
+- `tests/test_review_metrics_logger.py` — 0 class / 54 func
+- `tests/test_review_runner_execute_cli.py` — 2 class / 2 func
+- `tests/test_review_runner_vendor_label.py` — 0 class / 9 func
+- `tests/test_review_skill_router.py` — 0 class / 36 func
+- `tests/test_right_sized_router.py` — 1 class / 10 func
+- `tests/test_rse_router_decoupling.py` — 5 class / 1 func
+- `tests/test_rse_slice2.py` — 0 class / 24 func
+- `tests/test_run_build_separation.py` — 0 class / 3 func
+- `tests/test_run_event_evolution_split.py` — 2 class / 0 func
+- `tests/test_run_factory_cli.py` — 0 class / 4 func
+- `tests/test_runner_contracts.py` — 0 class / 10 func
+- `tests/test_safe_optional_id.py` — 0 class / 6 func
+- `tests/test_session_bridge.py` — 0 class / 7 func
+- `tests/test_setup_wizard_gate.py` — 0 class / 27 func
+- `tests/test_signatures.py` — 0 class / 1 func
+- `tests/test_skill_eval_harness.py` — 0 class / 12 func
+- `tests/test_skill_evolution_controller.py` — 9 class / 3 func
+- `tests/test_skill_evolution_safety.py` — 2 class / 0 func
+- `tests/test_skill_evolution_trigger_routing.py` — 2 class / 0 func
+- `tests/test_skill_feedback.py` — 0 class / 11 func
+- `tests/test_skill_forge.py` — 0 class / 2 func
+- `tests/test_skill_loader_phase2.py` — 0 class / 5 func
+- `tests/test_skill_loader_phase4.py` — 2 class / 0 func
+- `tests/test_skill_lock_utils.py` — 0 class / 4 func
+- `tests/test_skill_metadata_adapter.py` — 1 class / 1 func
+- `tests/test_skill_metadata_phase1.py` — 3 class / 0 func
+- `tests/test_skill_metadata_v2_compat.py` — 0 class / 3 func
+- `tests/test_skill_procurer_exact_reuse.py` — 0 class / 2 func
+- `tests/test_skill_procurer_external_fallback.py` — 3 class / 4 func
+- `tests/test_skill_procurer_logging.py` — 3 class / 3 func
+- `tests/test_skill_procurer_reuse_gate.py` — 1 class / 11 func
+- `tests/test_skill_quality_gate.py` — 0 class / 13 func
+- `tests/test_skill_retrieval_engine.py` — 0 class / 16 func
+- `tests/test_skill_self_evolution_hook_runid.py` — 1 class / 0 func
+- `tests/test_skill_spec_synthesizer.py` — 0 class / 1 func
+- `tests/test_spec_compiler.py` — 0 class / 28 func
+- `tests/test_stage0_question_router.py` — 11 class / 1 func
+- `tests/test_stage4_7_knowledge_pipeline.py` — 7 class / 2 func
+- `tests/test_strategy_ledger.py` — 0 class / 28 func
+- `tests/test_summary_schema_repeat_count.py` — 0 class / 1 func
+- `tests/test_sync_claude_memory.py` — 0 class / 3 func
+- `tests/test_sync_skill_registry.py` — 0 class / 3 func
+- `tests/test_sync_wrappers.py` — 3 class / 0 func
+- `tests/test_t3_7_run_event_integration.py` — 4 class / 2 func
+- `tests/test_t3_classifier.py` — 0 class / 9 func
+- `tests/test_t3_skip_report.py` — 0 class / 2 func
+- `tests/test_task_template_e2e_command.py` — 0 class / 3 func
+- `tests/test_test_gap_analyzer.py` — 0 class / 11 func
+- `tests/test_text_integrity.py` — 0 class / 9 func
+- `tests/test_triad.py` — 0 class / 29 func
+- `tests/test_utils.py` — 31 class / 0 func
+- `tests/test_utils_cache.py` — 0 class / 7 func
+- `tests/test_warning_override_cli.py` — 0 class / 4 func
+- `tests/test_warning_registry.py` — 0 class / 11 func
+- `tests/test_warning_registry_cli.py` — 0 class / 4 func
+- `tests/test_warning_registry_migration_callsites.py` — 0 class / 5 func
+- `tests/test_warning_registry_p4a.py` — 0 class / 3 func
+- `tests/test_warning_registry_schema_evolution.py` — 0 class / 1 func
+- `tests/test_warning_stats.py` — 0 class / 10 func
+- `tests/test_warning_stats_cli.py` — 0 class / 13 func
+- `tests/test_web_project_scope.py` — 0 class / 3 func
+- `tests/test_wig_summarize_wiring.py` — 0 class / 1 func
+- `tests/test_work_item_generator_backfill.py` — 0 class / 10 func
+- `tests/test_work_item_generator_references.py` — 0 class / 5 func
+- `tests/test_work_item_generator_structured_evidence.py` — 0 class / 16 func
+- `tests/test_workflow_autonomy.py` — 0 class / 3 func
+- `tests/test_workspace_scoped_storage.py` — 0 class / 6 func
+- `tests/verify_aee_cli.py` — 0 class / 2 func
+- `tests/verify_audit_hash.py` — 0 class / 1 func
+
+### `tests/e2e`
+
+3 modules · 0 classes · 6 functions
+
+- `tests/e2e/__init__.py` — 0 class / 0 func
+- `tests/e2e/conftest.py` — 0 class / 3 func
+- `tests/e2e/tick_simulator.py` — 0 class / 3 func
+
+### `utils`
+
+1 modules · 0 classes · 1 functions
+
+- `utils/audit_logger.py` — 0 class / 1 func
+
+### `web`
+
+1 modules · 0 classes · 3 functions
+
+- `web/app.py` — 0 class / 3 func
+
+### `web/api`
+
+4 modules · 4 classes · 24 functions
+
+- `web/api/__init__.py` — 0 class / 0 func
+- `web/api/agents.py` — 2 class / 20 func
+- `web/api/run.py` — 1 class / 2 func
+- `web/api/settings.py` — 1 class / 2 func
+
