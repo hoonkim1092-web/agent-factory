@@ -183,8 +183,10 @@ fi
 
 ### Step 2: Round 1 — Discovery (Codex 첫 리뷰)
 
-**`codex_cli`가 `fan_out`에 있을 때** MCP 도구로 호출한다.
+**`codex_cli`가 `fan_out`에 있을 때** MCP 도구(`mcp__codex__codex`)로 호출한다.
 **다른 provider만 있을 때** Step 2-alt(CLI fallback)를 사용한다.
+
+> **⚠️ 중요 — provider_detect available ≠ MCP 도구 연결**: `provider_detect`의 `fan_out`은 **CLI 인증 레벨**(`codex login status`)만 검증한다 (`core/provider_detect.py:65`). `codex_cli`가 `fan_out`에 있어도 이 세션에 `mcp__codex__codex` MCP 도구가 **연결돼 있지 않을 수 있다**. 이때 **Claude 단독(single-vendor)으로 폴백하지 말 것** — codex CLI 자체는 살아있으므로 **2b-fallback(`codex exec`)으로 실제 외부 검증을 유지한다**. single-vendor 폴백은 codex CLI마저 실패한 최후에만 허용된다.
 
 #### 2a. 리뷰 프롬프트 구성
 
@@ -281,6 +283,19 @@ echo "사유: codex_cli usage limit — SKIP (다음 cross-review에서 자동 �
 echo "<!-- final-verdict-end -->"
 exit 0
 ```
+
+#### 2b-fallback. codex CLI 직접 호출 (codex_cli는 fan_out에 있으나 MCP 도구 미연결)
+
+`mcp__codex__codex` 도구가 이 세션에 등록돼 있지 않거나 호출이 실패하면(MCP 서버 미연결 — `fan_out`엔 codex_cli가 있는데 도구는 없는 상태), **Claude 단독으로 떨어지지 말고** codex CLI로 직접 Round 1을 수행한다. codex는 `exec` non-interactive 모드를 지원한다.
+
+```bash
+timeout 300 codex exec "$REVIEW_PROMPT" > /tmp/cr-codex-cli.txt 2>/tmp/cr-codex-cli-err.txt
+```
+
+- CLI fallback이므로 **단일 라운드** — Step 3/4 deliberation을 건너뛰고 Step 5로 직행.
+- **usage limit 감지**: `/tmp/cr-codex-cli.txt`에 "usage limit"/"rate limit"/"too many requests"가 있으면 2b의 rate-limited 처리(`provider_detect --mark-rate-limited codex_cli` + SKIP)를 동일하게 적용한다.
+- **verdict 라벨**: `[codex-cli, no-mcp]` — 외부 검증 O, MCP deliberation X. **`[single-vendor]` 아님** (codex 외부 검증을 실제로 받았으므로 신뢰도가 단독 검증보다 높다).
+- codex CLI마저 실패(미설치/timeout/비정상 종료)하면 그때 Claude 단독(`[single-vendor]`) 또는 SKIP으로 처리하고 그 사유를 verdict에 명시한다.
 
 #### 2c. CLI fallback (codex_cli가 없고 gemini_cli 등 다른 provider만 있을 때)
 
