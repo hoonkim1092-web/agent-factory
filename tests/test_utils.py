@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("AF_DISABLE_REGISTRY_WRITE", "1")
 
 import pytest
-from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, mean_absolute_deviation, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, running_min, exponential_moving_average, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis, skewness
+from core.utils import truncate_text, clamp, clamp_ratio, median, mode, variance, std_dev, mean_absolute_deviation, zscore, range_span, chunks, flatten, percentile, normalize, cumsum, running_max, running_min, exponential_moving_average, moving_average, geometric_mean, harmonic_mean, weighted_mean, interquartile_range, covariance, pearson_correlation, spearman_correlation, kurtosis, skewness, root_mean_square
 from core.utils import test_file_for as _test_file_for
 from core.utils import get_external_skill_roots, get_codex_skill_roots
 from core.config_paths import SKILLS_DIR
@@ -1024,6 +1024,29 @@ class TestSkewness:
 
     def test_반환_타입은_float(self):
         assert isinstance(skewness([1, 2, 3]), float)
+
+
+class TestRootMeanSquare:
+    def test_빈_리스트는_ValueError(self):
+        with pytest.raises(ValueError):
+            root_mean_square([])
+
+    def test_모두_0이면_0(self):
+        assert root_mean_square([0, 0, 0]) == 0.0
+
+    def test_단일_값은_절댓값(self):
+        assert root_mean_square([5]) == pytest.approx(5.0)
+        assert root_mean_square([-5]) == pytest.approx(5.0)
+
+    def test_수동_검증(self):
+        # √((3²+4²)/2) = √(25/2) = √12.5
+        assert root_mean_square([3, 4]) == pytest.approx(12.5 ** 0.5)
+
+    def test_부호_무관(self):
+        assert root_mean_square([1, -2, 3]) == pytest.approx(root_mean_square([-1, 2, -3]))
+
+    def test_반환_타입은_float(self):
+        assert isinstance(root_mean_square([1, 2, 3]), float)
 
 
 class TestExponentialMovingAverage:

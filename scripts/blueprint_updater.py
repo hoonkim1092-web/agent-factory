@@ -36,9 +36,12 @@ TRIGGER_FILES = ("af.spec", "version.py", "run_factory_cli.py", "model_utils.py"
 # ── git helpers ──────────────────────────────────────────────────────────────
 
 def _git(args: list[str], cwd: str, timeout: int = 10) -> str:
+    # encoding 고정 — Windows 기본 cp949로는 git diff의 비-cp949 문자(em-dash·수식
+    # 기호 등)에서 디코드가 깨져 stdout이 None이 되는 잠재 결함 방지. git은 utf-8 출력.
     try:
         r = subprocess.run(
             ["git"] + args, capture_output=True, text=True, cwd=cwd, timeout=timeout,
+            encoding="utf-8", errors="replace",
         )
         return r.stdout if r.returncode == 0 else ""
     except Exception:
@@ -253,6 +256,51 @@ def _extract_ast_symbols(filepath: str) -> tuple[list[str], list[str]]:
         return [], []
 
 
+def _changed_public_symbols(workspace: str, rel_path: str) -> tuple[list[str], list[str]]:
+    """이번 변경(diff)에서 추가·수정된 top-level public 클래스·함수 추출.
+
+    두 신호를 합친다:
+      1. '+' 라인의 **들여쓰기 없는** ``def``/``class`` — 새로 추가되거나 시그니처가
+         바뀐 top-level 심볼.
+      2. ``@@ ... @@ <enclosing>`` 헌크 헤더의 둘러싼 함수 — 본문만 수정된 경우에도
+         git이 헌크마다 표기하는 enclosing top-level 함수를 귀속한다.
+    들여쓰기된 메서드·중첩 정의, 언더스코어로 시작하는 private 심볼은 제외한다.
+    변경된 top-level 심볼이 없으면 빈 리스트 — 호출부가 파일 preview로 폴백한다.
+
+    §3.12는 '변경 요약'이므로 파일의 모든 공개심볼이 아니라 이번에 바뀐 것만
+    반영한다. (과거 positional 캡(funcs[:3]/[:6])이 파일 뒤쪽에 추가·수정된
+    함수를 누락하던 문제를 해소.)
+    """
+    classes: list[str] = []
+    funcs: list[str] = []
+
+    def _record(body: str) -> None:
+        m_cls = re.match(r"class (\w+)", body)
+        if m_cls:
+            name = m_cls.group(1)
+            if not name.startswith("_") and name not in classes:
+                classes.append(name)
+            return
+        m_fn = re.match(r"(?:async )?def (\w+)", body)
+        if m_fn:
+            name = m_fn.group(1)
+            if not name.startswith("_") and name not in funcs:
+                funcs.append(name)
+
+    head_diff = _git(["diff", "HEAD", "--", rel_path], workspace, timeout=15)
+    staged_diff = _git(["diff", "--staged", "--", rel_path], workspace, timeout=15)
+    for line in (head_diff + "\n" + staged_diff).splitlines():
+        if line.startswith("@@"):
+            # 헌크 헤더 '@@ -a,b +c,d @@ <enclosing>' — enclosing 함수 시그니처
+            ctx = line.split("@@", 2)[-1]
+            _record(ctx[1:] if ctx.startswith(" ") else ctx)
+            continue
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        _record(line[1:])
+    return classes, funcs
+
+
 def _module_doc_summary(filepath: str) -> str:
     """Return a compact module docstring summary for generated Blueprint notes."""
     try:
@@ -306,9 +354,13 @@ def _update_section_3_auto_summary(
         full_path = os.path.join(workspace, rel_path)
         if not os.path.exists(full_path):
             continue
-        classes, funcs = _extract_ast_symbols(full_path)
-        symbols = [f"`{c}`" for c in classes[:4]]
-        symbols.extend(f"`{f}()`" for f in funcs[:6])
+        # 변경 요약 — 이번 diff에서 추가/변경된 top-level 공개심볼만 반영.
+        # 본문만 수정 등 변경 심볼이 없으면 파일 preview(앞 N개)로 폴백.
+        classes, funcs = _changed_public_symbols(workspace, rel_path)
+        if not classes and not funcs:
+            classes, funcs = _extract_ast_symbols(full_path)
+        symbols = [f"`{c}`" for c in classes]
+        symbols.extend(f"`{f}()`" for f in funcs)
         symbol_text = ", ".join(symbols) if symbols else "—"
         summary = _module_doc_summary(full_path).replace("|", "\\|")
         rows.append(f"| `{rel_path}` | {summary} | {symbol_text} |")

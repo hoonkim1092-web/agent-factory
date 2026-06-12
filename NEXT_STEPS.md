@@ -1,5 +1,38 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## 🔥 다음 세션 = cross-review 입력 배선 STEP 4-rerun(선택) — STEP 1·2·4(1차) 완료 (2026-06-12)
+
+> **STEP 1·2·4(1차) 완료 (2026-06-12, Opus).** 사실·계획·측정결과 동결: 메모리 `project_af_gate_efficiency_debate`. **재분석 금지.**
+>
+> **△ STEP 4 (controlled 측정 강행) 1차 완료, 단 불완전**: `root_mean_square` leaf util(12줄, Tier2, 커밋 `83dd4662`) → af-cross-review 직접 호출(gemini는 `AF_SKIP_PROVIDER=gemini_cli` 우회). **결과: 34분→10.8분(3.2× 빠름), 77k→63k토큰(-18%), 메커니즘 전부 PASS**(청킹 index·번들 임베드·§5 포함·Codex가 §5 근거로 자율탐색 안 함·extension log 0·6파일 read). **그러나 깨끗한 A/B 아님(overclaim 금지)**: ① Tier 불일치(3 vs 2) ② **핵심 benefit 미측정** — RMS는 신규 leaf라 callers 0 + commit-first 탓에 번들 §2 Git Diff 비고 changed_symbols=0 → §5 애초 비어있었음. side-effect 커버리지 가치는 **callers 있는 함수를 pre-commit 게이트(번들 §5 채워진 상태)로** 재측정해야 진짜 입증 ③ 남은 ~11분은 codex 자체 리뷰패스+deliberation. **방향성 확인→STEP2 유지 정당, "분 단위"·side-effect benefit 미입증.** advisory: blueprint_updater 신규 심볼 §3.12 자동반영 못 함(WARN).
+> **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
+> **STEP 3 (정책·선택·안급함)**: `_find_direct_callers` 1-hop/max3/core+scripts 한계 넓힐지 = "안전 vs 빠름" 다이얼. STEP4-rerun 결과 보고 사용자 결정.
+>
+> **▶▶ 다음 세션 미결 (3건 전부 소진/측정 — 2026-06-12)**:
+> 1. ~~**(권장·먼저) RMS 정식 3-Tier 완주**~~ ✅ **완료 (2026-06-12 Opus)**: `83dd4662` `root_mean_square` 잔여 2-tier — **af-critic PASS**(발견 0) + **af-test-runner PASS**(RMS 6 + 전체 272, gap PASS). cross-review WARN(BLOCK 0) 포함 완주. 코드 변경 0.
+> 2. ~~**(advisory) blueprint_updater 신규 공개심볼 누락**~~ ✅ **완료 (2026-06-12 Opus, `a32c382d`)**: positional 캡(`funcs[:3]/[:6]`)으로 파일 뒤쪽 공개함수가 §3.12 자동요약에서 누락되던 결함 해소. 신규 `_changed_public_symbols()` — git diff `+def`/`+class` + `@@` 헌크 컨텍스트 enclosing 함수를 **change-relative** 추출(전체 반영 아님 — bloat 회피; utils.py 공개함수 54개라 "전체"는 과설계). `_update_section_3_auto_summary` 배선 교체(+폴백). **부수**: `_git`에 `encoding=utf-8,errors=replace` 추가 — Windows cp949 기본이 diff 비-cp949 문자(em-dash·수식)에서 `stdout=None` 만들던 잠재 결함(전 호출자 공유). 테스트 5건. 3-Tier: af-critic WARN→해소(헌크컨텍스트) / af-cross-review PASS(BLOCK 0, Low 2) / af-test-runner PASS(5+회귀 86). gate state gap stale-BLOCK은 우회(실완주).
+> 3. ~~**(선택) STEP 4-rerun**~~ △ **2차 측정 (위 #2 cross-review가 vehicle 겸용), 단 또 미입증**: blueprint_updater(callers 有: `dogfood.py:972`)를 staged로 af-cross-review — **~15.3분 / 80k토큰 / Codex CLI fallback 단일라운드 / PASS**. 단 **번들이 또 stale** → cross-review가 "bundle stale, git 직접 실험으로 대체" 보고 → **§5 채워진 번들의 side-effect benefit은 여전히 미입증**(staged 직접 호출이라 pre-commit 번들 재생성 안 됨; RMS 1차와 동일 한계). **진짜 입증하려면 자연 pre-commit 발화 run 필요**(staged 우회 측정으론 번들 stale 반복). STEP2 방향성은 유효, 헤드라인 benefit은 2회 연속 미측정.
+>
+> **▶ 다음 = product-value work-item 신규 선정** (미결 3건 소진). STEP4 side-effect benefit은 자연 dogfood/pre-commit run에서 기회 측정.
+
+---
+
+## (이력) cross-review 입력 배선 STEP 1·2 상세
+
+> **STEP 1·2 완료 (2026-06-12, Opus).** 사실·계획 동결: 메모리 `project_af_gate_efficiency_debate`. **재분석 금지.**
+>
+> **✅ STEP 1 (진단·코드0) 완료**: `scripts/hook_runner.py:165`가 모든 `.py` 편집 시 `build_review_bundle.py`를 호출 → `review_bundle.md`는 **항상 생성됨**(현재도 존재, §5 Direct Callers 포함). 32분 정체는 번들 *미생성*이 아니라 Step 2a 프롬프트가 그 번들을 *안 써서*(단선) — 팩트 4 확정(무시, not missing).
+>
+> **✅ STEP 2 (본체) 완료**: `.claude/agents/af-cross-review.md` 3개 편집(에이전트 지시문 텍스트만, core 코드 로직 0, 되돌리기 쉬움):
+> - 편집1 (Step 1): `REVIEW_DOC`을 raw 7302줄 → **청킹 index**(`docs/generated/llm_wiki/code_review/index.md`, 없으면 raw fallback) 재지정 + `review_bundle.md`를 `/tmp/af-review-bundle.txt`에 준비(stale/absent 시 fallback 문구, 입력정책 라인461과 동일한 `-nt` stale 판정).
+> - 편집2 (Step 2a 프롬프트): `[변경 diff]` 뒤 `[Review Bundle — side-effect 표면 이미 수집됨]` 섹션 추가(§5 Direct Callers 임베드). 지시1="청킹 index에서 관련 섹션만", 지시4="호출자는 번들 §5에 이미 있음 → 1차 근거로, 구체적 risk 가설 있을 때만 추가 Read+사유 명시".
+> - 편집3 (python 치환): `BUNDLE_PLACEHOLDER` 치환 1줄 추가.
+> - **검증**: 치환 로직 스모크 PASS — 잔여 PLACEHOLDER 0 / Direct Callers·§5 헤더·청킹 index 임베드 확인. `.md`만이라 review-gate 자동통과.
+>
+> **실측 baseline (STEP2 前)**: `af project symbols` 12줄에 교차검증 136k토큰/37분(cross-review 단독 77k/32분), BLOCK 0 advisory 1.
+
+---
+
 ## 🎯 다음 세션 최우선 진입점 (2026-06-11 준비 — Opus)
 
 > 이번 세션 grep으로 확정한 work-item 2건. **둘 다 메타-재귀 아님** — 멀티 프로바이더 하네스 정합성 + 토큰 절감(실제 product value). 상세 팩트 동결: 메모리 `project_provider_instruction_parity`. **재분석 금지 — 아래 좌표는 grep 확정.**
@@ -9,11 +42,18 @@
 - **✅ 구현 완료 (2026-06-11 Sonnet)**: `INSTRUCTIONS.md` 신규(공통 SSOT) + `scripts/sync_provider_instructions.py` 신규(marker-injection) + `generate_agents_md.py` `render_roster()` 추가·`main()` sync 위임 + `.githooks/pre-commit` sync 트리거 추가(commit 차단 포함). INV-1~8 27 테스트 PASS. 3-Tier: af-critic PASS / af-cross-review PASS(BLOCK 0, Advisory 3건 무해) / af-test-runner PASS(3145 PASS). Codex/Gemini 실무규칙 전달 채널 복원.
 - **다음 = WI-B 또는 다른 product-value work-item.**
 
-### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스
-- **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파. Blueprint/code-review 원본 통째 read 금지 지침 공통 채널 배선 완료.
-- **✅ STEP 2 완료 (2026-06-11, dogfood 산출 → 손 안착)**: `af symbols <경로>` 신규 서브커맨드 — 임의 외부 Python 프로젝트의 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성(범용 `codebase_symbols.build()` 재사용). **dogfood로 구현**(run `1781163237-b04a4d75`, merge=never, RSE route=**light** conf 0.82, 과분해 없이 ~9분 수렴) 후 소스 5파일을 브랜치로 안착 + 3-Tier. `scripts/af_symbols.py`(신규) + `tests/test_af_symbols.py`(18) + `af.py`(`_forward_args` 상대경로 해석) + `af.spec`(af_symbols+codebase_symbols hiddenimports) + `agent_launcher.py`(서브파서+dispatch). **3-Tier**: af-critic PASS / af-cross-review BLOCK→fixed(`af symbols .` 상대경로가 AF_root로 오해석되던 버그 — af.py `_forward_args`가 호출 cwd 기준 해석, 회귀 6) / af-test-runner FAIL→fixed(전이 의존성 `scripts.codebase_symbols` af.spec 누락 + frozen_build_parity 테스트 2, gap analyzer PASS). **RSE 발견**: 멀티파일 인프라 배선도 "가산형·패턴재사용·계약무변"이면 light로 수렴 — "인프라=손구현" 휴리스틱 반증.
-  - **STEP 2-b (잔여)**: `build_llm_wiki.py`는 여전히 **AF 전용**(`_BLUEPRINT="Master_Blueprint.md"` 하드코딩, :31-33). 외부 프로젝트 full-wiki(blueprint/code-review mirror)는 미지원 — symbols 인덱스만 범용. 필요 시 별도 work-item.
+### WI-B: LLM Wiki 청킹본 우선 활용 + 외부 프로젝트 AST 인덱스 — ✅ 완료 (2026-06-11 Sonnet)
+- **✅ STEP 1 완료 (2026-06-11 Sonnet, `df3cb933`)**: LLM Wiki 청킹 활용 규칙을 INSTRUCTIONS.md SSOT에 추가 → CLAUDE/AGENTS/GEMINI 3 파일 자동 전파.
+- **✅ STEP 2 완료 (2026-06-11 Sonnet, `a6f53fdc`)**: `af project symbols [path] [--out DIR]` 서브커맨드 추가. `codebase_symbols.build()` 재사용. `is_dir()` 체크(Medium advisory 수용). 12 테스트 신규(INV-1~4). 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(117).
 - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
+
+### GitNexus 도입 검토 — ✅ 분석 완료 / 도입 미실행 (2026-06-11)
+- **사실 동결**: 메모리 `project_gitnexus_adoption_review`. 패키지명 `gitnexus`(Node, Python3.14 무관, 즉시 실행 가능). 코드 의존성 그래프(import/호출/상속) + 16 MCP 도구(impact/context/query/detect_changes 등).
+- **중복 결론**: graphify 死상태 직접대체 / blast_radius·symbols 보완(대체 불가) / memory graph·LLM Wiki 무중복(L1만 겹침).
+- **회의용 문서**: `docs/2026-06-11-gitnexus-code-intelligence-도입검토.md`(`1eed96ee`). 사용자가 회사 RAG 논의와 합쳐 사용.
+- **다음 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱시간·DB·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 덮어쓰기 위험 → AF 루트 직접 실행 금지.
+
+- **다음 = product-value work-item 신규 선정 또는 GitNexus Step 0 PoC.**
 
 > ## 🛑 STREAM 상태 (2026-06-02 고정)
 > - **dogfood detector/infra stream COMPLETE** — R10~R17 detector + 고리③ 배선 + 실효성 측정까지 종료. detector 풀 소진, R18 후보 부적합. **"동일 발화 N차 반복 검증" 프레임 종료.**

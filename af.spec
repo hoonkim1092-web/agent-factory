@@ -109,8 +109,7 @@ a = Analysis(
         'scripts.blast_radius',
         'scripts.af_doctor',
         'scripts.af_project_inspect',
-        'scripts.af_symbols',
-        'scripts.codebase_symbols',  # af_symbols가 직접 import하는 전이 의존성
+        'scripts.codebase_symbols',
         'core.interactive_chat',
         # ── ISE (Phase A Step 1b: --mode ise 배선을 위해 PyInstaller hidden import 명시) ──
         'core.ise_analyzer',

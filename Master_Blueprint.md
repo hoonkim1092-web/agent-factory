@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-11 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-12 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1134,16 +1134,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-11; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-12; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1)
+최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/evaluator.py` | evaluator | `StrategyEvaluator` |
-| `core/fsa_loop.py` | core/fsa_loop.py ================ Full Self Automation (FSA) Loop Orchestrator — ISE와 동일한 에스컬레이션 파이프라인. | `FSALoop`, `parse_evaluator_response()` |
-| `core/ise_analyzer.py` | core/ise_analyzer.py ==================== ISE 실패 분석 엔진 -- 기존 StrategyEvaluator를 확장하여 에러 분류 + 근본 원인 추론 + 전략 추천을 수행한다. | `ISEAnalysis`, `ISEAnalyzer` |
-| `core/ise_redesigner.py` | core/ise_redesigner.py ====================== ISE 재설계 엔진 -- 실패 이력을 바탕으로 태스크를 재구성한다. | `ISERedesigner` |
+| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1691,7 +1688,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
-| 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, af.spec, agent_launcher.py (+2) |
+| 2026-06-12 | v1.2.34 | chore(core): code update — utils.py, test_utils.py |
+| 2026-06-11 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, test_af_project_symbols.py |
 | 2026-06-11 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, evaluator.py, fsa_loop.py, ise_analyzer.py, ise_redesigner.py (+1) |
 | 2026-06-11 | v1.2.48 | fix(ise-provider-awareness): 자가수정 brain 3개(ISEAnalyzer/ISERedesigner/StrategyEvaluator) `LLMEngine`(gemini API 전용) → `ControlPlaneLLM` drop-in 교체. CLI-로그인 환경에서 `engine_api_keys_disabled()` 마스킹에 걸려 full/야간 FSA가 휴리스틱 폴백으로만 작동하던 실재 결함 수정. `model_name` default `"gemini-1.5-pro-latest"` → `None`(provider 자체 default). `tests/test_ise_provider_awareness.py` INV-1~6 신규. 3-Tier 예정. §3.8.1·§3.9 갱신. — core/ise_analyzer.py, core/ise_redesigner.py, core/evaluator.py, tests/test_ise_provider_awareness.py, Master_Blueprint.md |
 | 2026-06-11 | v1.2.34 | chore(core): code update — dynamic_orchestrator.py, test_dynamic_orchestrator_workspace_scope.py |
