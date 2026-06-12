@@ -1,6 +1,19 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## 🔥 다음 세션 = product-value work-item 신규 선정 — WI-B STEP 2-b 완료 (2026-06-12, Opus)
+## 🔥 다음 세션 = product-value work-item 신규 선정 — wiring-parity-gate 완료 (2026-06-12, Sonnet)
+
+> **✅ wiring-parity-gate 완료 (2026-06-12, Sonnet, `5a16df39`)**: `test_gap_analyzer.py`에 배선 단선 검증 룰 추가.
+> - **설계 문서**: `docs/2026-06-12-wiring-parity-gate-design.md` (af-cross-review PASS, 2026-06-12 Opus).
+> - **구현**: `_WIRING_EXEMPT_PATHS`/`_WIRING_DEFERRED_MARKER` 명명 상수 + `_extract_wiring_candidates`(diff→신규def/파라미터추출) + `_find_production_callers`(core/scripts/skills grep, tests/제외, 정의파일 self 제외) + `_any_caller_passes_param`(def 행 제외 keyword 검색) + `_has_deferred_marker`(±1줄). `__init__` 파라미터 skip(INV). `core/utils.py` 면제. `analyze_diff` warnings 채널 배선(verdict=PASS 유지, WARN-only).
+> - **테스트**: `tests/test_wiring_parity.py` 11케이스 신규. `af-critic.md` Step3 High 체크리스트 1줄.
+> - **3-Tier**: af-critic PASS / af-cross-review WARN(BLOCK 0, Advisory Medium: file-level false negative — 동일 파일 내 무관 `param=` 오탐 가능, WARN-only로 완화됨) / af-test-runner PASS(22). Windows CP949 em-dash 버그 수정 포함.
+> - **Advisory 잔여(선택)**: file-level `param=` false negative → `sym(` 포함 라인만 스캔으로 개선 가능. false-positive 실측 N≥10 run 후 dead-parameter BLOCK 승격 여부 결정.
+>
+> **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
+
+---
+
+## (이력) 다음 세션 = product-value work-item 신규 선정 — WI-B STEP 2-b 완료 (2026-06-12, Opus)
 
 > **✅ WI-B STEP 2-b 완료 (2026-06-12, Opus)**: `build_llm_wiki`를 AF 전용 → **외부 프로젝트 full-wiki(AST architecture)**로 확장.
 > - **구현**: ① AF 문서 3종(Blueprint/code-review/NEXT_STEPS) `_read_optional`로 전환 — 부재 시 의존 페이지(blueprint/*, code_review/*, review_patterns, open_items) skip ② `_build_codebase_tree(symbols)` 신규 — AST 심볼 맵을 디렉터리별 모듈 navigation 섹션으로 렌더(외부 프로젝트도 navigation 제공) ③ `_build_architecture`에 AST 섹션 항상 추가(AF=Blueprint 테이블+AST, 외부=AST만) — 페이지 수 14 불변(회귀 0) ④ `_build_index` 적응형(`_INDEX_LINKS` 상수, 생성된 페이지만 링크) ⑤ `_build_source_refs` 적응형 ⑥ 심볼 `collect_symbols` 1회 수집 공유.
