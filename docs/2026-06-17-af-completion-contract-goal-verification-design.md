@@ -292,9 +292,37 @@ project_pipeline.execute():1421
 GoalContract를 `execute()`에서 접근하려면 **run 컨텍스트에 실어야 한다** — `DogfoodState.goal_contract`(dogfood 경로) 외에, 직접 `execute()` 호출 경로는 `prepared`/run-board를 통해 contract를 전달하는 배선을 §8 S3에서 명시한다(신규 파라미터 최소화: 기존 run 컨텍스트 dict 채널 우선).
 
 **2차 배선 (보강, dogfood 경로 한정) — `dogfood._run_verify_phase()`**:
-pytest 실행 → `VerifyResult.passed` + `AcceptanceGate.run(state.goal_contract, workspace)`. `contract.has_failures()` 시 REVIEW phase는 `decision="block"` 반환 → `block_run()` 호출 → `DogfoodPhase.BLOCKED`(terminal) 종료. Option 2 아키텍처에서 REVIEW block은 FSA 재시도가 아니라 **run 종료**다 (`core/dogfood.py` — `block_run()`: `state.phase = BLOCKED`, `while not state.is_terminal():` 즉시 탈출). 골 실패 후 재시도가 필요하다면 BLOCKED 원인을 "goal_failed"로 분류해 상위 FSA 또는 사용자 개입으로 새 run을 시작하는 경로를 **별도로 설계**해야 한다.
+pytest 실행 → `VerifyResult.passed` + `AcceptanceGate.run(state.goal_contract, workspace)`. `contract.has_failures()` 시의 처리는 §6.4(골 실패 → 수정 루프)로 닫는다 — 현재 코드의 BLOCKED-terminal은 **사실**이고, end-to-end 목표는 그 terminal을 IMPLEMENT 피드백 루프로 바꾸는 것이다.
 
 > **이중 배선 주의**: 1차(execute)와 2차(verify_phase)가 같은 contract에 대해 AcceptanceGate를 두 번 실행하지 않도록, dogfood 경로는 `_run_verify_phase`에서 실행하고 `execute()`는 이미 채워진 verdict를 **재실행 없이 집계만** 한다(idempotent: 이미 VERIFIED/FAILED인 골은 재실행 skip). §8 S3에서 idempotent 가드 명시.
+
+### §6.4 골 실패 → 수정 루프 (end-to-end 닫기) — Phase 3 본체로 승격
+
+> **2026-06-18 승격**: 초안은 골 FAILED → BLOCKED terminal로 멈추고, "goal_failed → IMPLEMENT 재시도"를 §11로 보류했다. 그러나 골 테스트의 핵심 가치는 **버그를 찾는 것이 아니라 찾아서 고치는 것**이다. 멈추기만 하면 detector이지 end-to-end가 아니다. 따라서 이 루프를 본체로 승격한다.
+
+**현재 상태 (사실)**: `AcceptanceGate`가 골 FAILED를 내면 REVIEW phase `decision="block"` → `block_run()` → `DogfoodPhase.BLOCKED`(terminal). `while not state.is_terminal():`가 즉시 탈출하므로 **수정 없이 run이 끝난다**. 버그는 검출되지만 닫히지 않는다.
+
+**목표 모델 — 닫힌 루프**:
+```
+AcceptanceGate → goal FAILED
+   │
+   ├─ failure_classifier: "goal_failed" → IMPLEMENTATION 클래스 (infra 아님)
+   │     (CANNOT_VERIFY는 분류 제외 — 환경 한계는 고칠 수 없음, 루프 진입 금지)
+   │
+   ├─ FSA → IMPLEMENT 단계 복귀 → 수정 → AcceptanceGate 재실행
+   │     (코드리뷰 BLOCK→수정→재리뷰와 동일한 피드백 구조)
+   │
+   └─ 경계(무한루프 차단): goal_failed 재시도는 FSA의 기존 max-retry bound 재사용.
+         N회 후에도 FAILED면 BLOCKED(reason="goal_failed_exhausted")로 종료 +
+         evidence_ledger에 [FAILED] 섹션 + 시도 횟수 기록 → 사용자 개입.
+```
+
+**구현 3요소 (S3에서 함께)**:
+1. **`failure_classifier`**: `goal_failed` 패턴을 `IMPLEMENTATION` 클래스로 등록(`_INFRA_PATTERNS`에 **넣지 않음** — 고칠 수 있는 결함). `CANNOT_VERIFY`로 끝난 골은 분류 대상 아님.
+2. **dogfood 피드백 경로**: 현재 VERIFY/REVIEW → BLOCKED(terminal)을, `goal_failed`일 때만 IMPLEMENT로 되돌리는 분기 추가. **`block_run()`은 `goal_failed_exhausted`·`CANNOT_VERIFY`가 아닌 진짜 종료에만 유지** (Option 2 FSA-소유 원칙과 충돌하지 않게: 루프 소유권은 FSA, dogfood는 분류·라우팅만).
+3. **bound**: FSA `max-retry`(기존 상수 재사용) + `CANNOT_VERIFY` 루프 제외 + exhausted 시 evidence 보존. 무한루프(안 고쳐지는 골)와 환경불가 골의 헛도는 재시도를 둘 다 차단.
+
+**불변식 추가 (§9 INV-G)**: `verdict="CANNOT_VERIFY"`는 절대 IMPLEMENT 루프를 유발하지 않는다(환경 한계는 수정 불가). `verdict="FAILED"`만 bound 내에서 루프한다.
 
 ---
 
@@ -382,8 +410,12 @@ pipeline 최종 출력(`project_pipeline.execute()` 반환값)에 `evidence_ledg
 - **하위 호환 폴백 경계 (Low 방어보강 — production 미도달, 전환기 한정)**: `goal_contract=None`이면 기존 `verify.passed` 폴백. 이론상 `verify_result.get("passed", True)`의 기본값 `True`(`core/dogfood.py:1899`)와 결합하면 "contract 없음 + verify 빈 dict → 무음 pass"가 INV-B를 위반할 수 있다. **단 production 도달 경로는 아니다**: `_run_review_phase`는 항상 `context={"verify_result": ...}`로 호출되고(`core/dogfood.py:2038`) `_run_verify_phase`가 `passed`를 항상 채운다 — 빈 `context={}`는 단위 테스트 전용. 그럼에도 전환기 방어로 폴백 진입을 다음으로 **제한**한다(cheap):
   - `goal_contract=None`은 **점진 도입 전환기에만** 허용되는 상태로 정의. S3 배선 완료 후에는 planner가 criteria를 못 뽑아도 **전부 `UNVERIFIED`인 비어있지 않은 contract**를 만든다(§4.2 파서 폴백) → `goal_contract`는 사실상 None이 되지 않는다.
   - 전환기 폴백 시에도 `verify_result`가 **빈 dict이면 pass 금지** — 폴백 경로는 `passed = verify_result.get("passed", True)`가 아니라 `verify_result`에 `passed` 키가 **실제로 존재**할 때만 그 값을 쓰고, 부재 시 `ok=False, reason="goal_unverified"`로 떨어뜨린다(INV-B). 기존 테스트 `test_run_review_missing_verify_result_assumes_passed`는 이 정책 변경에 맞춰 갱신 필요(고정된 pass 가정 해제).
-- 테스트: `tests/test_acceptance_gate_integration.py` — ① VERIFIED 골 → ok=True ② FAILED 골 → ok=False ③ **`execute()` 직접 호출 경로(dogfood 미경유)에서도 contract 차단 적용** ④ contract=None + verify 빈 dict → ok=False(무음 pass 금지, INV-B)
-- **3-Tier 필수**: `dogfood.py`/`project_pipeline.py` = Tier 3 → 풀 3-Tier
+- **골 실패 → 수정 루프 (§6.4, end-to-end 닫기)**:
+  - `core/failure_classifier.py`: `goal_failed` → IMPLEMENTATION 클래스 추가(`_INFRA_PATTERNS` 아님). `CANNOT_VERIFY`는 분류 제외(INV-G).
+  - `core/dogfood.py`: `goal_failed`(exhausted 아님)일 때 VERIFY/REVIEW → IMPLEMENT 되돌림 분기. `block_run()`은 `goal_failed_exhausted`·`CANNOT_VERIFY`가 아닌 종료에만. 루프 소유권은 FSA(`fsa_loop.py`), dogfood는 분류·라우팅만.
+  - bound: FSA 기존 max-retry 상수 재사용. exhausted 시 BLOCKED(reason="goal_failed_exhausted") + evidence_ledger [FAILED] 섹션 보존.
+- 테스트: `tests/test_acceptance_gate_integration.py` — ① VERIFIED 골 → ok=True ② FAILED 골 → ok=False ③ **`execute()` 직접 호출 경로(dogfood 미경유)에서도 contract 차단 적용** ④ contract=None + verify 빈 dict → ok=False(무음 pass 금지, INV-B) ⑤ **FAILED → IMPLEMENT 루프 (bound 내) / CANNOT_VERIFY → 루프 없음 (INV-G) / exhausted → BLOCKED+evidence**
+- **3-Tier 필수**: `dogfood.py`/`project_pipeline.py`/`failure_classifier.py`/`fsa_loop.py` = Tier 3 → 풀 3-Tier
 
 ---
 
@@ -397,6 +429,7 @@ pipeline 최종 출력(`project_pipeline.execute()` 반환값)에 `evidence_ledg
 | INV-D | `goal_contract=None` 폴백은 전환기 한정 + **`verify_result`에 `passed` 키가 실제 존재할 때만** 그 값 사용. 빈 dict → `ok=False`(무음 pass 금지, INV-B와 정합) | `test_null_contract_empty_verify_blocks` |
 | INV-E | evidence_ledger는 항상 `goals/cannot_verify/unverified` 3-section 포함 | `test_ledger_three_sections_always_present` |
 | INV-F | `harness_type="none"`(미해결) 골 → verdict=`UNVERIFIED` (file-exists 자동 통과 금지, §5.1 정정) → `is_done()==False` | `test_none_harness_stays_unverified` |
+| INV-G | `verdict="CANNOT_VERIFY"`는 IMPLEMENT 수정 루프를 유발하지 않는다(환경 한계=수정 불가). `verdict="FAILED"`만 FSA max-retry bound 내에서 루프. exhausted 시 BLOCKED(reason="goal_failed_exhausted") (§6.4) | `test_cannot_verify_no_retry`, `test_failed_loops_within_bound`, `test_exhausted_blocks_with_evidence` |
 
 ---
 
@@ -409,20 +442,37 @@ pipeline 최종 출력(`project_pipeline.execute()` 반환값)에 `evidence_ledg
 | GoalContract LLM 추출 정확도 | 별도 조율 필요 | planner criteria 품질은 이 설계 범위 밖 |
 | CI 장치 프로비저닝 | 별도 인프라 작업 | 환경 구멍은 `CANNOT_VERIFY` 명시로 대응, CI 셋업은 별도 |
 | `completion_criteria` 파싱 로직 | S1 구현 시 결정 | LLM criteria 포맷이 확정되면 파서 설계 |
+| ~~goal_failed → IMPLEMENT 재시도 루프~~ | **§6.4로 승격(2026-06-18)** — 더 이상 보류 아님 | 골 테스트의 핵심 가치는 "찾아 고치기". detector에 그치면 end-to-end 아님 |
 
 ---
 
 ## §11 연결 지점
 
-**`docs/2026-06-07-router-scope-research-decoupling-design.md` §1.3 "출구 단절 4곳"**:
+### §11.0 하나의 축 — "검증은 완료 이벤트에 매달린 스테이지, 결함은 IMPLEMENT로 되먹임" (2026-06-18)
+
+이 설계는 독립 기능이 아니라 **세 설계가 공유하는 한 원칙**의 출구 절반이다:
+
+| 설계 | 역할 | 같은 원칙의 어느 면 |
+|------|------|-------------------|
+| router decoupling (2026-06-07) **Phase 2** | post-implement **Tier3 코드리뷰 floor** (observe-first) | 리뷰 = implement 완료 시 도는 **스테이지** (자율 경로 `_inject_review_tasks`) |
+| **이 문서 Phase 3** | AcceptanceGate **골 증거 검증** | 골테스트 = implement 완료 시 도는 **스테이지** |
+| §6.4 (이번 승격) | 골/리뷰 결함 → IMPLEMENT **수정 루프** | 결함 되먹임 (코드리뷰 BLOCK·골 FAILED 공통 구조) |
+
+**핵심 함의 — UserPromptSubmit 자동발화는 이 모델과 충돌**:
+- 3-Tier 리뷰 자동발화를 `UserPromptSubmit`(사람 키 입력 = 폴링)에 매달면, "implement 완료" 이벤트와 디커플됨. 올바른 트리거는 **완료 이벤트**(자율=파이프라인 스테이지, 인터랙티브=커밋/어시스턴트 완료 판단)다.
+- 실제로 `UserPromptSubmit` 훅 제거 시 **단절④의 `AF_SKIP_REVIEW_GATE=1` 우회가 상시 강제**된다 — 즉 자동발화 폴링을 떼면 이 설계가 닫으려는 바로 그 구멍이 더 벌어진다. **결론**: 넛지 복원이 아니라 검증을 완료-이벤트 스테이지로 모델링(§6.4 루프 포함)하는 것이 정답.
+
+### §11.1 `docs/2026-06-07-router-scope-research-decoupling-design.md` §1.3 "출구 단절 4곳"
 - 단절 ①②③④ 모두 이 설계의 GoalContract + AcceptanceGate가 해소 대상
+- **단절④ = `_run_review_phase`(`:1845`) + finalize `AF_SKIP_REVIEW_GATE=1`(`:1052`) 우회** = §11.0의 UserPromptSubmit 제거가 벌린 그 구멍. §6.4 수정 루프 + ok=True SSOT 배선(§6.3)이 정공법 해소.
 - Phase 3 (Completion Contract) = 이 문서가 그 설계
 
-**`core/fsa_loop.py`**:
-- FSA 재시도 루프는 `ok=False, reason="goal_failed"`를 수신하면 IMPLEMENT 단계로 되돌아가야 함
-- `failure_classifier`에 `"goal_failed"` 패턴 추가 필요 (S3 구현 시)
+### §11.2 `core/fsa_loop.py` + `core/failure_classifier.py` (§6.4 본체)
+- FSA 재시도 루프는 `ok=False, reason="goal_failed"`를 수신하면 IMPLEMENT 단계로 되돌아간다 (§6.4 — **보류 아님, Phase 3 본체**)
+- `failure_classifier`에 `"goal_failed"`를 **IMPLEMENTATION 클래스**로 추가(`_INFRA_PATTERNS` 아님). `CANNOT_VERIFY`는 분류 제외(INV-G)
+- max-retry bound는 FSA 기존 상수 재사용 — exhausted 시 `goal_failed_exhausted` BLOCKED
 
-**`core/premortem.py`**:
+### §11.3 `core/premortem.py`
 - premortem이 "실행 하니스 없음" 위험을 R-series 패턴으로 탐지하면 AcceptanceGate 강제 발화 연동 가능
 - 별도 detector 추가 여부는 S3 완료 후 평가
 
@@ -435,4 +485,5 @@ pipeline 최종 출력(`project_pipeline.execute()` 반환값)에 `evidence_ledg
 | 2026-06-17 | Draft 작성 (Sonnet 4.6) — meeting_stt_app dogfood 3가지 실패 패턴 기반 |
 | 2026-06-17 | §6.3 High 수정 — FSA 재시도 → BLOCKED terminal 아키텍처 사실 반영 (af-cross-review WARN) |
 | 2026-06-18 | 코드 대조 리뷰 3건 반영 (Opus): ① §2.4 사실 정정 — `e2e_command_missing` 게이트는 실재(work_item_generator:1312·escalation_evaluator·drive_meeting_stt.py 동기 dogfood가 실제로 막힘). presence-check vs evidence-check 구분 + 공존 관계 명시 ② §4.2/§5.1/§5.2/§6.2 — `harness_type="none"` 기본값을 file-exists 자동통과 → `UNVERIFIED`로 정정(패턴 A 재도입 차단). `UNVERIFIED`/`FAILED` verdict 분기 추가 ③ §9 INV-F 신규 |
+| 2026-06-18 | 세 설계 연결 + 골 실패 수정루프 승격 (Opus): ① §11.0 신규 — router decoupling Phase 2(post-implement Tier3 floor) + 이 문서 Phase 3(골 검증) + §6.4(수정 루프)가 "검증=완료-이벤트 스테이지, 결함=IMPLEMENT 되먹임" 한 축. **UserPromptSubmit 자동발화(폴링)는 이 모델과 충돌** — 제거 시 단절④ `AF_SKIP_REVIEW_GATE` 우회 상시 강제(구멍 확대), 정답은 완료-이벤트 스테이지화 ② §6.4 신규 — `goal_failed → IMPLEMENT 수정 루프`를 §11 보류 → Phase 3 본체로 **승격**. failure_classifier(IMPLEMENTATION 클래스)+dogfood 피드백 경로+FSA max-retry bound 3요소. detector→end-to-end ③ §9 INV-G(CANNOT_VERIFY는 루프 금지, FAILED만 bound 내 루프) + §8 S3 루프 구현·테스트 ⑤ §10 goal_failed 루프 항목 "승격"으로 이동 |
 | 2026-06-18 | af-cross-review 발견 검증 후 4건 수용·1건 severity 하향 (Opus). **전건 동조 아님 — 각 건 grep 직접 반증 후 판정**: ① **High (수용)** §6.3/§8 S3 — AcceptanceGate를 ok=True SSOT(`project_pipeline.execute:1421`)에 1차 배선(동기 dogfood `drive_meeting_stt.py:68`이 execute 직접 호출 → dogfood verify 미경유 갭 해소). idempotent 이중배선 가드. (1차 코드대조 리뷰가 놓친 진짜 아키텍처 갭) ② **Low로 하향 (cross-review는 High로 보고)** §8 S3/INV-D — `goal_contract=None`+`verify` 빈 dict → 무음 pass 시나리오는 **production 미도달**: `_run_review_phase`는 항상 `context={"verify_result": ...}`로 호출되고(`core/dogfood.py:2038`) `_run_verify_phase`가 `passed`를 항상 채운다. 빈 `context={}` 호출자는 `tests/test_dogfood.py`뿐(production caller 0). cross-review가 테스트 픽스처(`test_..._assumes_passed`)를 결함 실체로 격상한 케이스(메모리 `feedback_test_mock_vs_defect`). **수정은 유지**(폴백을 `passed` 키 실존 시로 제한 = cheap 전환기 방어)하되 severity는 Low 방어보강. ③ **Adv 수용** §8 S2 `_run_file_exists` 잔존 제거(자체 편집 미완성) ④ **Adv 수용** §8 S1 직렬화 명세 추가 ⑤ **Adv 수용** §3 INV-A `GoalContract.verdict`→`is_done()` 오표기 정정. **수용 거부 1건** (BONUS: `work_item_generator.py:1318` source_path stale = 기존 코드 annotation 오류, 본 설계 무관 — 미수정). 따라서 실제 BLOCK 기여는 High#1 1건. |
