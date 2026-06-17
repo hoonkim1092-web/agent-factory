@@ -31,6 +31,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Final, Literal, Tuple
 
+from core.completion_contract import GoalContract
+
 # ---------------------------------------------------------------------------
 # Artifact filename constants (SSOT — never use raw strings for these paths)
 # ---------------------------------------------------------------------------
@@ -173,6 +175,9 @@ class DogfoodState:
     next_action: str = ""
     approval_policy: str = ""
     completion_criteria: list[str] = field(default_factory=list)
+    # goal-reached verification contract (persist channel; generation SSOT is
+    # project_pipeline.prepare() — see completion-contract design §4.2/§8 S1)
+    goal_contract: GoalContract | None = None
 
     # F-RUN-BUDGET-STATE: snapshot of core.run_budget singleton for restart survival
     budget_consumed: int = 0
@@ -224,6 +229,7 @@ class DogfoodState:
             "next_action": self.next_action,
             "approval_policy": self.approval_policy,
             "completion_criteria": self.completion_criteria,
+            "goal_contract": self.goal_contract.to_dict() if self.goal_contract else None,
             "budget_consumed": self.budget_consumed,
             "budget_max_tokens": self.budget_max_tokens,
             "budget_stopped": self.budget_stopped,
@@ -262,6 +268,11 @@ class DogfoodState:
             next_action=data.get("next_action", ""),
             approval_policy=data.get("approval_policy", ""),
             completion_criteria=data.get("completion_criteria", []),
+            goal_contract=(
+                GoalContract.from_dict(gc)
+                if (gc := data.get("goal_contract"))
+                else None
+            ),
             budget_consumed=int(data.get("budget_consumed", 0) or 0),
             budget_max_tokens=int(data.get("budget_max_tokens", 0) or 0),
             budget_stopped=bool(data.get("budget_stopped", False)),

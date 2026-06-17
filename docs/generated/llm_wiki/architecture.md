@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T03:31:19+09:00
-source_commit: 32a438c2
+generated_at: 2026-06-18T08:02:29+09:00
+source_commit: f4fa5fb8
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -143,7 +143,8 @@ sources:
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | Master_Blueprint.md §0 |
 | `core/premortem.py` | §17 Step 5 — CompiledSpec → repo-aware risks + verification steps | Master_Blueprint.md §0 |
 | `core/planner.py` | §17 Step 6 — CompiledSpec + PremortomResult → ExecutablePlan. P2(2026-05-25): `_build_implementation_steps`가 core/*.py scope item에 `Master_Blueprint.md`를 artifacts에 자동 추가 — Blueprint 동기화 allowlist 연동. 2026-05-27: `implementation_steps(plan)` 헬퍼 신설 — `id`에 'IMPLEMENT' 포함 step만 필터. 2026-05-27 (advisory): `PlanStep.reference_artifacts` 필드 추가 — research_findings 의 companion test/sibling pattern 경로를 read-only context로 노출(`_references_for_scope_item()` 헬퍼). dogfood `_build_ai_task` 가 "Reference files (read-only ...)" 섹션으로 surface. 2026-05-31: `_build_investigation_steps()`에 R11(scope_file) 연동 — `_extract_scope_file_paths()` 헬퍼로 missing 경로 파싱 후 경로별 "경로 확인" step 생성. **2026-06-07 fix**: 존재확인 command가 `shlex.quote`(셸 인용)로 `python -c` 내부 Python 리터럴을 만들어 셸-특수문자 없는 경로가 따옴표 없이 들어가 NameError로 실패하던 버그를 `repr()`로 교정(greenfield light run false-negative "pipeline blocked" 해소). 2026-05-31: R12(stale_test) 연동 — `_extract_stale_test_paths()` 헬퍼로 stale 파일→`tests/test_<stem>.py` 경로 변환, "테스트 작성" investigation step 생성. 2026-06-01: R16(complexity) 연동 — `_extract_complexity_pairs()` 헬퍼 + complexity investigation branch. **risk ID 계약 정리**: `_is_assumption_risk()`를 category-only로 축소(brittle `[5,20)` ID-레인지 제거 — 신규 fixed detector 오분류 방지), `pattern_consistency`(R10) 전용 investigation branch 신설(레인지 제거로 인한 R10 step 누락 회귀 차단). 2026-06-01: R17(nesting_depth) 연동 — `_extract_nesting_depth_pairs()` 헬퍼 + nesting_depth investigation branch(R16 패턴 미러, 구현 전 "중첩 깊은 함수 검토" step 생성). last_updated: 2026-06-07 | Master_Blueprint.md §0 |
-| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. last_updated: 2026-05-26 | Master_Blueprint.md §0 |
+| `core/dogfood.py` | §17 Step 7~16 — Dogfood state machine + worktree isolation + auto-merge lifecycle. 14-phase pipeline (ISOLATE/FINALIZE/MERGE 추가). DogfoodState 3-path 분리(source/worktree/runtime), MergePolicy 정책 게이트, prepare_isolated_worktree() 1-retry, finalize_dogfood_result(), merge_dogfood_branch() crash recovery+reset--merge. P1(2026-05-25): IMPLEMENT no-op guard — 모든 steps가 commands=[] (AI executor 미연결)이면 BLOCKED. P3(2026-05-25): finalize_dogfood_result() selective staging — plan allowlist(artifacts+tests_required) 교집합만 stage; 나머지는 scope_violations로 기록. P4(2026-05-26): dogfood shell/git subprocess env + decoding을 UTF-8로 고정. P0(2026-05-26): run_all strict_contract, phase_trace.jsonl, RunBudget accounting, pre-IMPLEMENT static smoke 추가. R-PHASE(2026-05-26): _run_research_phase stub→실 구현 — scope .py 파일 + companion test 파일 읽기 → evidence bundle {local_refs:[...]}. DogfoodState.research_path 신규. S1-완료계약(2026-06-18): `DogfoodState.goal_contract: GoalContract | Master_Blueprint.md §0 |
+| `core/completion_contract.py` | 완료 계약 데이터 계층 — "생성=완료" 패턴 A 차단. acceptance criteria를 검증 가능한 골로 모델링하고 실행 증거로 판정. **S1(2026-06-18)**: 구조체 + 직렬화만(하니스 실행은 S2 예정). `GoalContract.is_done()`=모든 골 VERIFIED/CANNOT_VERIFY여야 done(빈 계약 불가, INV-A). `from_dict(to_dict(x))==x` round-trip. 생성 SSOT는 `project_pipeline.prepare()`(S3), `DogfoodState.goal_contract`는 persist 채널. last_updated: 2026-06-18 | Master_Blueprint.md §0 |
 | `core/concurrency.py` | concurrency | Master_Blueprint.md §0 |
 | `core/consensus_engine.py` | consensus engine | Master_Blueprint.md §0 |
 | `core/context_window_manager.py` | context window manager | Master_Blueprint.md §0 |
@@ -406,7 +407,7 @@ sources:
 
 ### `core`
 
-151 modules · 213 classes · 842 functions
+152 modules · 217 classes · 842 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
 - `core/agent_runner.py` — 2 class / 2 func
@@ -421,6 +422,7 @@ sources:
 - `core/capability_intent.py` — 2 class / 5 func
 - `core/clarification.py` — 0 class / 5 func
 - `core/cli_session_cleanup.py` — 0 class / 1 func
+- `core/completion_contract.py` — 4 class / 0 func
 - `core/concurrency.py` — 3 class / 0 func
 - `core/config_paths.py` — 0 class / 2 func
 - `core/consensus_engine.py` — 1 class / 0 func
@@ -1348,7 +1350,7 @@ sources:
 
 ### `tests`
 
-208 modules · 335 classes · 1778 functions
+209 modules · 335 classes · 1797 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1386,6 +1388,7 @@ sources:
 - `tests/test_codebase_symbols.py` — 0 class / 17 func
 - `tests/test_coding_conventions.py` — 0 class / 7 func
 - `tests/test_compact_step2.py` — 4 class / 1 func
+- `tests/test_completion_contract.py` — 0 class / 19 func
 - `tests/test_context_window_manager.py` — 6 class / 0 func
 - `tests/test_conversation_collaboration.py` — 10 class / 0 func
 - `tests/test_coverage_gate_hoist.py` — 8 class / 2 func

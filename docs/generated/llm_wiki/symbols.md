@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T03:31:19+09:00
-source_commit: 32a438c2
+generated_at: 2026-06-18T08:02:29+09:00
+source_commit: f4fa5fb8
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -583,6 +583,14 @@ _(no top-level symbols)_
 
 **Functions:**
 - `cleanup_stale_sessions`
+
+## `core/completion_contract.py`
+
+**Classes:**
+- `GoalEvidence`
+- `GoalEntry`
+- `GoalContract`
+- `HarnessResult`
 
 ## `core/concurrency.py`
 
@@ -5858,6 +5866,29 @@ _(no top-level symbols)_
 
 **Functions:**
 - `reset_run_budget`
+
+## `tests/test_completion_contract.py`
+
+**Functions:**
+- `_entry`
+- `test_empty_contract_is_not_done`
+- `test_all_verified_is_done`
+- `test_verified_plus_cannot_verify_is_done`
+- `test_unverified_blocks_done`
+- `test_failed_blocks_done`
+- `test_has_failures_true_only_for_failed`
+- `test_has_failures_empty_contract`
+- `test_goal_entry_defaults`
+- `test_harness_result_is_plain_struct`
+- `test_evidence_round_trip`
+- `test_entry_round_trip_with_evidence`
+- `test_entry_round_trip_without_evidence`
+- `test_contract_round_trip_nested`
+- `test_empty_contract_round_trip`
+- `_mk_state`
+- `test_dogfood_state_round_trip_with_contract`
+- `test_dogfood_state_round_trip_none_contract`
+- `test_dogfood_state_legacy_dict_without_contract_key`
 
 ## `tests/test_context_window_manager.py`
 

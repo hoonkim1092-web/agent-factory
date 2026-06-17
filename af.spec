@@ -102,6 +102,7 @@ a = Analysis(
         'core.triad',
         'core.architect_agent',
         'core.dogfood',
+        'core.completion_contract',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

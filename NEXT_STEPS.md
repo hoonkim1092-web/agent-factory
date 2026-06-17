@@ -24,8 +24,13 @@
 - **테스트** `tests/test_check_staged_design_review.py` 17케이스. 3-Tier: af-critic WARN(2 advisory 반영) / af-cross-review BLOCK→fixed(볼드체 regex) / af-test-runner PASS(17+회귀11).
 - **미채택(설계 결정)**: Stop hook 드레인 보류(pre-commit이 실패 케이스 `d1022ecd`를 정확히 차단하는 최소·자족 경로). 부수버그 `_is_watcher_alive` os.kill Windows WinError 87 / watcher codex CreateProcessWithLogonW:1909 단일vendor는 **미수정**(surface와 독립, 별도 추적).
 
-### ▶ (C) 다음 = S1 구현 (core/completion_contract.py)
-> `core/completion_contract.py` 신규 + `GoalContract.to_dict/from_dict`(중첩) + `DogfoodState.goal_contract` 필드 + `tests/test_completion_contract.py`. **선행조건**: 실제 LLM criteria(task_board `acceptance_criteria`) 출력 샘플 캡처(파서 baseline, 메모리 `analysis_doc_baseline_must_be_real_code`) 후 착수.
+### ✅ (C) S1 완료 (2026-06-18, Opus) — 다음 = S2 (ExecutionHarness + AcceptanceGate)
+> **S1 완료**: `core/completion_contract.py` 신규(`GoalVerdict`/`GoalEvidence`/`GoalEntry`/`GoalContract`/`HarnessResult`) — 순수 데이터 구조 + 직렬화만. `GoalContract.is_done()`(INV-A: 빈 계약 불가, UNVERIFIED/FAILED 차단, CANNOT_VERIFY done 허용) + `has_failures()` + 중첩 `to_dict/from_dict` round-trip. `DogfoodState.goal_contract: GoalContract|None` persist 채널 배선(import + 직렬화). `af.spec` hiddenimports. `tests/test_completion_contract.py` 17케이스 + `test_dogfood.py` key-set 갱신. 3-Tier(§8 S1=Tier 2, subprocess 미도입): af-critic PASS(발견 0) / af-test-runner PASS(290 = 17 신규 + 273 회귀). Blueprint §0·§12 갱신.
+>
+> **선행조건 메모(S1엔 불필요, S3 파서용)**: 실제 LLM criteria(task_board `acceptance_criteria`) 출력 샘플 캡처는 §10에서 "파싱 로직은 S3에서 결정"으로 분리 — S1 산출물(구조체+직렬화)엔 파서 없음. S3 진입 전 baseline 캡처(메모리 `analysis_doc_baseline_must_be_real_code`).
+
+### ▶ (C-S2) 다음 = ExecutionHarness + AcceptanceGate (§8 S2)
+> `core/completion_contract.py`에 `ExecutionHarness.run()` + `_run_cli`/`_run_server`/`_run_library`(§5.2, `_run_file_exists`는 §5.1 정정으로 제거) + `AcceptanceGate.run(contract, workspace)`. **subprocess.run 도입 → blast_radius Tier 3 가능 → af-critic + af-cross-review 필요**. verdict 매핑: `evidence_type=="unverified"`→`UNVERIFIED`, gui→`CANNOT_VERIFY`(§6.2/§5.2). 테스트 `tests/test_acceptance_gate*`.
 
 > **부트스트랩 주의**: §6.4 수정본 커밋 시 (B) 게이트가 stale BLOCK(`2026-06-18-015950`)을 잡는다 — af-cross-review가 inv3 해소를 독립 확증했으므로 `AF_SKIP_REVIEW_GATE=1`로 커밋(또는 watcher 재리뷰로 PASS 산출).
 
