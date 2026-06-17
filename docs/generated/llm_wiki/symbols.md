@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T02:42:00+09:00
-source_commit: d1022ecd
+generated_at: 2026-06-18T03:30:11+09:00
+source_commit: ced3b021
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4409,6 +4409,15 @@ _(no top-level symbols)_
 - `_atomic_write`
 - `main`
 
+## `scripts/check_staged_design_review.py`
+
+**Functions:**
+- `_repo_root`
+- `_staged_files`
+- `load_latest_design_verdicts`
+- `find_blocked`
+- `main`
+
 ## `scripts/claude_session_bridge.py`
 
 _(no top-level symbols)_
@@ -5744,6 +5753,16 @@ _(no top-level symbols)_
 
 **Classes:**
 - `TestInjectModelOverride`
+
+## `tests/test_check_staged_design_review.py`
+
+**Classes:**
+- `TestLoadLatestVerdicts`
+- `TestFindBlocked`
+- `TestMain`
+
+**Functions:**
+- `_write_review`
 
 ## `tests/test_cli_providers.py`
 

@@ -50,6 +50,18 @@ if [ "${AF_SKIP_REVIEW_GATE:-0}" != "1" ]; then
         echo ""
         exit 1
     fi
+
+    # Design-review surface: block commits of staged design docs whose latest
+    # automated review verdict is BLOCK. The watcher writes verdicts to
+    # docs/reviews/ but nothing reads them — this git-native, provider-neutral
+    # check restores that surface (see d1022ecd: a BLOCK was committed unseen).
+    # Reached on doc-only commits too: review_gate.py --check exits 0 when no
+    # .py files are staged, so flow falls through to here.
+    "$HOOK_PY" "${REPO_ROOT}/scripts/check_staged_design_review.py" --workspace "${REPO_ROOT}"
+    DESIGN_EXIT=$?
+    if [ $DESIGN_EXIT -ne 0 ]; then
+        exit 1
+    fi
 fi
 
 # Generated docs belong after review-gate PASS, as final commit preparation.

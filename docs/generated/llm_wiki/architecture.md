@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T02:42:00+09:00
-source_commit: d1022ecd
+generated_at: 2026-06-18T03:30:11+09:00
+source_commit: ced3b021
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1057,7 +1057,7 @@ sources:
 
 ### `scripts`
 
-53 modules · 8 classes · 448 functions
+54 modules · 8 classes · 453 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
@@ -1072,6 +1072,7 @@ sources:
 - `scripts/check_design_pending.py` — 0 class / 5 func
 - `scripts/check_model_escalation.py` — 0 class / 2 func
 - `scripts/check_pending_review.py` — 0 class / 6 func
+- `scripts/check_staged_design_review.py` — 0 class / 5 func
 - `scripts/claude_session_bridge.py` — 0 class / 0 func
 - `scripts/clean_agents_yaml.py` — 0 class / 1 func
 - `scripts/cli_hook_bridge.py` — 0 class / 2 func
@@ -1347,7 +1348,7 @@ sources:
 
 ### `tests`
 
-207 modules · 332 classes · 1777 functions
+208 modules · 335 classes · 1778 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1379,6 +1380,7 @@ sources:
 - `tests/test_capability_intent.py` — 0 class / 1 func
 - `tests/test_check_model_escalation.py` — 0 class / 5 func
 - `tests/test_check_pending_review.py` — 1 class / 0 func
+- `tests/test_check_staged_design_review.py` — 3 class / 1 func
 - `tests/test_cli_providers.py` — 1 class / 31 func
 - `tests/test_cli_session_adapter.py` — 0 class / 10 func
 - `tests/test_codebase_symbols.py` — 0 class / 17 func

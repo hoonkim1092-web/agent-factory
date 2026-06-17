@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T02:42:00+09:00
-source_commit: d1022ecd
+generated_at: 2026-06-18T03:30:11+09:00
+source_commit: ced3b021
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,7 +9,7 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `d1022ecd`
+> source_commit: `ced3b021`
 > 관련: [[index]] | [[architecture]] | [[symbols]]
 
 ## Master_Blueprint.md
