@@ -1315,7 +1315,7 @@ def generate_work_items(
                     severity="warn",
                     rationale="work_item_generator: tasks without e2e_command",
                     affected_ids=_tids,
-                    source_path="core/work_item_generator.py:1056",
+                    source_path="core/work_item_generator.py",
                 )
         except Exception as _e2e_exc:
             _LOGGER.debug("warning_registry record skip (e2e_command_missing): %s", _e2e_exc)

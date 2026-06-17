@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-12 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-18 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1134,13 +1134,14 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-12; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-18; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — utils.py, test_utils.py
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, project_pipeline.py, work_item_generator.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/utils.py` | core/utils.py ============= 범용 유틸리티 + 하위 호환 재수출 허브. | `now_iso()`, `safe_id()`, `safe_optional_id()` |
+| `core/project_pipeline.py` | project pipeline | `ProjectPipeline` |
+| `core/work_item_generator.py` | Generate work-item markdown documents from planning artifacts. | `generate_work_items()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1688,6 +1689,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-18 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, project_pipeline.py, work_item_generator.py |
 | 2026-06-12 | v1.2.34 | feat(wiring-parity-gate): `test_gap_analyzer.py`에 wiring_parity 룰 추가. 신규 함수/파라미터가 production caller 없으면 warnings 채널 WARN(verdict=PASS 유지). `_WIRING_EXEMPT_PATHS`/`_WIRING_DEFERRED_MARKER` 명명 상수, `_extract_wiring_candidates`/`_find_production_callers`/`_any_caller_passes_param`/`_has_deferred_marker` 헬퍼. `__init__` 파라미터 skip(INV: caller는 ClassName()). `core/utils.py` 면제. `tests/test_wiring_parity.py` 11케이스 신규. af-critic.md Step3 High 1줄 추가. 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(22). §3 갱신. |
 | 2026-06-12 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, architecture.md (+42) |
 | 2026-06-12 | v1.2.34 | feat(llm-wiki): `build_llm_wiki`를 AF 전용 → 외부 프로젝트 full-wiki로 확장. AF 문서 3종(Blueprint/code-review/NEXT_STEPS)을 optional read로 전환(부재 시 해당 페이지 skip), `architecture.md`에 `_build_codebase_tree()` AST 디렉터리/모듈 navigation 섹션 항상 추가(외부 프로젝트도 navigation 제공), `_build_index` 적응형 링크(생성된 페이지만), `_build_source_refs` 적응형 섹션. 신규 CLI `af project wiki <path> [--out DIR]`. AST 심볼은 `collect_symbols` 한 번 수집해 symbols/architecture 공유. 테스트 9건 신규(TestExternalProject 8 + AF AST 섹션 1, 총 37 PASS). §0 갱신. — scripts/build_llm_wiki.py, agent_launcher.py, af.spec, tests/test_build_llm_wiki.py, Master_Blueprint.md |

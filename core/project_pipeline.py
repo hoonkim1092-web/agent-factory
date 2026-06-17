@@ -793,7 +793,7 @@ class ProjectPipeline:
                                 count=len(_vr.gaps),
                                 severity="warn",
                                 extra={"score": _vr.score, "gaps": _vr.gaps},
-                                source_path="core/project_pipeline.py:757",
+                                source_path="core/project_pipeline.py",
                             )
                         except Exception as _eqw_exc:
                             print(f"[ProjectPipeline] warning_registry record skip (evidence_quality_warn): {_eqw_exc}")
@@ -1042,7 +1042,7 @@ class ProjectPipeline:
                         count=len(_plan_result.issues),
                         severity="warn",
                         extra={"score": _plan_result.score},
-                        source_path="core/project_pipeline.py:983",
+                        source_path="core/project_pipeline.py",
                     )
                 except Exception as _pvw_exc:
                     print(f"[Pipeline] warning_registry record skip (plan_verifier_warn): {_pvw_exc}")
@@ -1517,7 +1517,7 @@ class ProjectPipeline:
                             {"task_id": tid, "expected": exp, "actual": act}
                             for tid, exp, act in mismatches
                         ]},
-                        source_path="core/project_pipeline.py:1455",
+                        source_path="core/project_pipeline.py",
                     )
                 except Exception as _owr_exc:
                     logger.debug("warning_registry record skip (owner_role_mismatch): %s", _owr_exc)
