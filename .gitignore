@@ -71,6 +71,12 @@ build/
 # --- Session resume brief (auto-regenerated every turn, volatile) ---
 /resume_brief.md
 
+# --- 외부 product 프로젝트 (AF를 플랫폼으로 사용해 생성된 독립 산출물) ---
+# 정책 (2026-06-17): AF 레포는 AF 자체(core/scripts/tests) 전용.
+# AF 파이프라인으로 만든 외부 앱·서비스는 별도 레포로 분리한다.
+# projects/ 는 dogfood 런타임 임시 작업공간 용도로만 허용.
+projects/meeting_stt_app/
+
 # --- Project memory data (synced via Supabase start_db/end_db, not git) ---
 # All files under data/memory/ are auto-generated runtime data.
 # Cross-PC sync is handled by project_context_sync.py → Supabase.
