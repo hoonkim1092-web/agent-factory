@@ -1,24 +1,25 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## 🔥 다음 세션 = **"AF 완료 계약 — 증거원장 기반 goal-reached 검증" 설계문서 작성** (2026-06-17, Opus)
+## ✅ "AF 완료 계약 — 증거원장 기반 goal-reached 검증" 설계문서 완료 (2026-06-17, Sonnet)
 
-> **배경 (2026-06-17 회의록 STT 앱 dogfood 세션)**: AF 파이프라인으로 `projects/meeting_stt_app` (PySide6 + faster-whisper + WASAPI loopback) 개발 시 3가지 구조적 실패 패턴 확인:
-> 1. **생성≠완료**: `e2e_command_missing` 게이트가 override 가능 + 실행결과 검증 없음
-> 2. **실행 안 된 테스트 = 없는 테스트보다 나쁨**: 믹서 정렬 회귀 테스트 생성됐으나 아무도 돌리지 않아 거짓 확신 제공
-> 3. **골 검증 3구멍**: 실행 구멍(산출물 유형별 하니스 없음) + 정답 구멍(oracle 없음) + 환경 구멍(CI에 장치 없음)
+> **설계 파일**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
+> **교차검증**: af-cross-review WARN (BLOCK 0) — §6.3 High 1건 수정(FSA 재시도 → BLOCKED terminal 아키텍처). Advisory Medium 4건 미적용(의무 아님):
+>   - §5.1 `test` harness 유형 누락 (기존 `_run_verify_phase`와 이중 실행 위험)
+>   - §8 S3에 `contract_status` 구분 부재 (파싱 실패 vs old-state None 혼동)
+>   - §2.3 단절④에 `verify_result` 기본값 `True` 취약점 추가 권장
+>   - §2.2 라인 번호 정확도 개선 권장
+
+## 🔥 다음 세션 진입점 — AF 완료 계약 S1 구현 (Sonnet)
+
+> **설계 완료 (2026-06-17)**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
 >
-> **사용자 핵심 통찰**: "결국 골에 도달했는지를 검증하는 부분이 부족한게 문제다"
+> **S1 구현 내용** (`§8 S1 — GoalContract 구조체 + EvidenceLedger`):
+> - `core/completion_contract.py` 신규: `GoalVerdict`, `GoalEvidence`, `GoalEntry`, `GoalContract`, `HarnessResult`
+> - `core/dogfood.py`: `DogfoodState.goal_contract: GoalContract | None = None` 필드 + 직렬화
+> - 테스트: `tests/test_completion_contract.py` — INV-A~E 불변식
+> - 3-Tier: af-critic + af-test-runner (Tier 2)
 >
-> **설계 범위 (다음 세션 시작 시 문서 작성)**:
-> - **완료 계약 재정의**: `ok:True`를 "산출물 생성됨"이 아니라 "골이 시연됨(증거 첨부)"로
-> - **실행 하니스 추상화**: 유형별 소수 하니스 (GUI→offscreen+probe / CLI→인자+exit code / server→포트+요청)
-> - **인수검사 실행 게이트**: 생성만 DONE 처리 금지 — 실행+green이 DONE 전제
-> - **기계적 vs 의미적 골 분리**: 전자=자동 검증, 후자="미검증" 명시 보고
-> - **증거 원장 출력**: `골 / 증거 / 미검증` 3-section을 1차 출력으로
-> - `project_router_research_decoupling` 메모리 *completion contract* 항목과 연결
->
-> **파일명**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
-> **작성 모델**: Opus → 다음 세션 Sonnet 구현
+> **Advisory 미적용 4건** — S1 구현 중 `test` harness / `contract_status` 구분 필요 여부 결정
 
 ---
 
