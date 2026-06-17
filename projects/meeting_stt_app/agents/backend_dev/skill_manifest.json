@@ -1,0 +1,23 @@
+{
+  "role_id": "backend_dev",
+  "run_id": "project_run_1781301417_backend_dev",
+  "skills": [
+    {
+      "skill_id": "wasapi_loopback_audio_capture",
+      "requested": true,
+      "installed": true,
+      "decision_mode": "direct_install",
+      "reused_from": null,
+      "forge_run_id": null,
+      "fallback_chain": []
+    }
+  ],
+  "summary": {
+    "requested": 1,
+    "installed": 1,
+    "by_mode": {
+      "direct_install": 1
+    }
+  },
+  "generated_at": "2026-06-13T07:06:53"
+}

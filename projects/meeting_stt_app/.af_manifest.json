@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-12T22:34:26.654281+00:00",
+  "workspace": "D:\\warkSpaces\\agent-factory\\projects\\meeting_stt_app",
+  "project_desc": "마이크와 시스템오디오(WASAPI loopback)를 동시에 녹음하면서 로컬 faster-whisper로 실시간 한국어 자막을 출력하고 종료 시 WAV와 전사 텍스트를 자동 저장하는 PySide6 Windows 데스크톱 앱을 만든다.",
+  "roles": [
+    "frontend_dev",
+    "backend_dev",
+    "qa_engineer",
+    "qa_engineer_code_reviewer",
+    "qa_engineer_cross_validator",
+    "backend_dev_code_reviewer",
+    "backend_dev_cross_validator"
+  ],
+  "state_board": {
+    "completed_subtasks": [
+      {
+        "role": "frontend_dev",
+        "subtask": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "frontend_dev_module_1_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_scope_1"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_10_scope_1"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_build_2"
+      },
+      {
+        "role": "qa_engineer_code_reviewer",
+        "subtask": "[Code Review] qa_engineer_module_6 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_code_review"
+      },
+      {
+        "role": "backend_dev",
+        "subtask": "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_10_build_2"
+      },
+      {
+        "role": "qa_engineer_cross_validator",
+        "subtask": "[Cross Validate] qa_engineer_module_6 전체 정합성을 교차검증한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_cross_validate"
+      },
+      {
+        "role": "qa_engineer",
+        "subtask": "합성 오디오 헤드리스 셀프테스트 스크립트의 구현 결과를 검증하고 handoff 메모를 남긴다. 검증 초점: (1) 모듈 import가 헤드리스에서 오류 없이 성공, (2) 오디오 장치 enumerate가 예외 없이 동작, (3) 합성 사인파/샘플 WAV가 STT 파이프라인을 1회 통과해 전사 텍스트 반환, (4) 녹음 시작→청크 전사→정지→WAV+전사 파일 저장 흐름이 코드상 end-to-end 연결. 잔여 리스크와 후속 작업을 기록한다.",
+        "result": "Success",
+        "task_id": "qa_engineer_module_6_verify_3"
+      },
+      {
+        "role": "backend_dev_code_reviewer",
+        "subtask": "[Code Review] backend_dev_module_10 build 산출물의 코드 품질/보안/설계를 리뷰한다.",
+        "result": "Success",
+        "task_id": "backend_dev_module_10_code_review"
+      }
+    ],
+    "failed_subtasks": [],
+    "interrupted_subtasks": [],
+    "agents_status": {
+      "frontend_dev": "working",
+      "backend_dev": "working",
+      "qa_engineer": "idle",
+      "qa_engineer_code_reviewer": "idle",
+      "qa_engineer_cross_validator": "idle",
+      "backend_dev_code_reviewer": "idle",
+      "backend_dev_cross_validator": "working"
+    },
+    "current_status": "running"
+  },
+  "active_assignments": {
+    "run_1781302246_frontend_dev_17a2c1": {
+      "role": "frontend_dev",
+      "subtask": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+      "workspace": "D:\\warkSpaces\\agent-factory\\projects\\meeting_stt_app"
+    },
+    "run_1781303504_backend_dev_cross_validator_6bd134": {
+      "role": "backend_dev_cross_validator",
+      "subtask": "[Cross Validate] backend_dev_module_10 전체 정합성을 교차검증한다.",
+      "workspace": "D:\\warkSpaces\\agent-factory\\projects\\meeting_stt_app"
+    },
+    "run_1781303666_backend_dev_c2aa31": {
+      "role": "backend_dev",
+      "subtask": "Backend Dev 구현(backend_dev_module_10) 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다. 검증 초점: (1) module_10 산출물(role_spec.json·skill_manifest.json·app/ 소스)이 헤드리스에서 import 오류 없이 로드되는지, (2) 오디오 장치 enumerate가 예외 없이 동작하는지, (3) module_10이 추가한 함수/심볼이 production 호출 경로에 실제로 연결됐는지(dead symbol이면 BLOCK), (4) 녹음 시작→청크 전사→정지→WAV+전사 파일 저장 흐름이 코드상 end-to-end 연결되어 있는지. 잔여 리스크와 후속 작업을 docs handoff 메모로 기록한다.",
+      "workspace": "D:\\warkSpaces\\agent-factory\\projects\\meeting_stt_app"
+    }
+  }
+}

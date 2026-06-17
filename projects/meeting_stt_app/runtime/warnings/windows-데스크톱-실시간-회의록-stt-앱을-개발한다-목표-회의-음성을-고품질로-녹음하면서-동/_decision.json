@@ -1,0 +1,61 @@
+{
+  "decision_schema_version": 1,
+  "project_slug": "windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동",
+  "last_updated": "2026-06-13T06:21:55",
+  "generated_from_summary_last_updated": "2026-06-13T06:21:55",
+  "escalation_phase": "P4",
+  "block": true,
+  "activate_phase": "P4",
+  "blocking_rules": [
+    "e2e_command_missing"
+  ],
+  "reason": "blocked_by:e2e_command_missing",
+  "rule_decisions": [
+    {
+      "rule_id": "e2e_command_missing",
+      "block": false,
+      "severity": "warn",
+      "reason": "exempt_phase:scope",
+      "activate_at": "P2"
+    },
+    {
+      "rule_id": "e2e_command_missing",
+      "block": true,
+      "severity": "block",
+      "reason": "threshold_met",
+      "activate_at": "P2"
+    },
+    {
+      "rule_id": "e2e_command_missing",
+      "block": true,
+      "severity": "block",
+      "reason": "threshold_met",
+      "activate_at": "P2"
+    }
+  ],
+  "summary_snapshot": {
+    "project_slug": "windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동",
+    "last_updated": "2026-06-13T06:21:55",
+    "by_rule": {
+      "e2e_command_missing": {
+        "count": 9,
+        "first_ts": "2026-06-13T06:21:55",
+        "last_ts": "2026-06-13T06:21:55",
+        "severity": "warn",
+        "by_phase": {
+          "scope": 3,
+          "build": 3,
+          "verify": 3
+        },
+        "repeat_count_max": 3,
+        "any_override": false
+      }
+    },
+    "by_severity": {
+      "warn": 9,
+      "block_candidate": 0,
+      "block": 0
+    },
+    "escalation_phase": "P4"
+  }
+}

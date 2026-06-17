@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T22:50:51+09:00
-source_commit: 5a16df39
+generated_at: 2026-06-17T22:07:55+09:00
+source_commit: 5de1ae43
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -235,7 +235,7 @@ sources:
 
 ### `(root)`
 
-31 modules · 3 classes · 120 functions
+32 modules · 3 classes · 120 functions
 
 - `af.py` — 0 class / 2 func
 - `agent_launcher.py` — 1 class / 8 func
@@ -245,6 +245,7 @@ sources:
 - `cdx.py` — 0 class / 2 func
 - `check_rel.py` — 0 class / 1 func
 - `demo_runner.py` — 0 class / 1 func
+- `drive_meeting_stt.py` — 0 class / 0 func
 - `end_db.py` — 0 class / 4 func
 - `end_git.py` — 0 class / 2 func
 - `end_sync.py` — 0 class / 2 func
@@ -920,6 +921,71 @@ sources:
 - `projects/lotto_predictor_v2/tests/game_logic/__init__.py` — 0 class / 0 func
 - `projects/lotto_predictor_v2/tests/game_logic/test_engine.py` — 1 class / 0 func
 
+### `projects/meeting_stt_app`
+
+3 modules · 0 classes · 9 functions
+
+- `projects/meeting_stt_app/build.py` — 0 class / 3 func
+- `projects/meeting_stt_app/build_onedir.py` — 0 class / 4 func
+- `projects/meeting_stt_app/meeting_stt.py` — 0 class / 2 func
+
+### `projects/meeting_stt_app/app`
+
+4 modules · 2 classes · 5 functions
+
+- `projects/meeting_stt_app/app/__init__.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/config.py` — 1 class / 2 func
+- `projects/meeting_stt_app/app/main.py` — 1 class / 3 func
+- `projects/meeting_stt_app/app/qt_compat.py` — 0 class / 0 func
+
+### `projects/meeting_stt_app/app/audio`
+
+4 modules · 3 classes · 5 functions
+
+- `projects/meeting_stt_app/app/audio/__init__.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/audio/capture.py` — 1 class / 0 func
+- `projects/meeting_stt_app/app/audio/devices.py` — 1 class / 2 func
+- `projects/meeting_stt_app/app/audio/mixer.py` — 1 class / 3 func
+
+### `projects/meeting_stt_app/app/io`
+
+4 modules · 3 classes · 1 functions
+
+- `projects/meeting_stt_app/app/io/__init__.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/io/recorder.py` — 1 class / 0 func
+- `projects/meeting_stt_app/app/io/session.py` — 1 class / 0 func
+- `projects/meeting_stt_app/app/io/transcript_writer.py` — 1 class / 1 func
+
+### `projects/meeting_stt_app/app/stt`
+
+4 modules · 3 classes · 0 functions
+
+- `projects/meeting_stt_app/app/stt/__init__.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/stt/transcriber.py` — 1 class / 0 func
+- `projects/meeting_stt_app/app/stt/types.py` — 1 class / 0 func
+- `projects/meeting_stt_app/app/stt/worker.py` — 1 class / 0 func
+
+### `projects/meeting_stt_app/app/ui`
+
+3 modules · 0 classes · 0 functions
+
+- `projects/meeting_stt_app/app/ui/__init__.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/ui/main_window.py` — 0 class / 0 func
+- `projects/meeting_stt_app/app/ui/widgets.py` — 0 class / 0 func
+
+### `projects/meeting_stt_app/scripts`
+
+1 modules · 2 classes · 10 functions
+
+- `projects/meeting_stt_app/scripts/synthetic_audio_headless_selftest.py` — 2 class / 10 func
+
+### `projects/meeting_stt_app/tests`
+
+2 modules · 1 classes · 27 functions
+
+- `projects/meeting_stt_app/tests/selftest_pipeline.py` — 1 class / 8 func
+- `projects/meeting_stt_app/tests/test_audio_mixer.py` — 0 class / 19 func
+
 ### `projects/minesweeper-baseline`
 
 1 modules · 3 classes · 14 functions
@@ -991,7 +1057,7 @@ sources:
 
 ### `scripts`
 
-51 modules · 8 classes · 432 functions
+53 modules · 8 classes · 448 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
@@ -1000,6 +1066,7 @@ sources:
 - `scripts/blast_radius.py` — 0 class / 7 func
 - `scripts/blueprint_updater.py` — 0 class / 28 func
 - `scripts/build_llm_wiki.py` — 0 class / 24 func
+- `scripts/build_resume_docx.py` — 0 class / 11 func
 - `scripts/build_review_bundle.py` — 0 class / 5 func
 - `scripts/check_changed_text_integrity.py` — 1 class / 6 func
 - `scripts/check_design_pending.py` — 0 class / 5 func
@@ -1018,6 +1085,7 @@ sources:
 - `scripts/enqueue_staged_review.py` — 0 class / 11 func
 - `scripts/fix_runner_cwm.py` — 0 class / 0 func
 - `scripts/gemini_session_bridge.py` — 0 class / 0 func
+- `scripts/gen_resume_diagrams.py` — 0 class / 5 func
 - `scripts/generate_agents_md.py` — 1 class / 18 func
 - `scripts/hook_runner.py` — 0 class / 23 func
 - `scripts/import_external_skill_candidates.py` — 0 class / 0 func

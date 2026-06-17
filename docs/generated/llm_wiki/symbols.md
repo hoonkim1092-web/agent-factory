@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-12T22:50:51+09:00
-source_commit: 5a16df39
+generated_at: 2026-06-17T22:07:55+09:00
+source_commit: 5de1ae43
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -2881,6 +2881,10 @@ _(no top-level symbols)_
 **Functions:**
 - `run_demo`
 
+## `drive_meeting_stt.py`
+
+_(no top-level symbols)_
+
 ## `end_db.py`
 
 **Functions:**
@@ -3735,6 +3739,191 @@ _(no top-level symbols)_
 - `test_report_validates_inputs`
 - `test_write_report_appends_newline_if_missing`
 
+## `projects/meeting_stt_app/app/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/audio/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/audio/capture.py`
+
+**Classes:**
+- `CaptureThread`
+
+## `projects/meeting_stt_app/app/audio/devices.py`
+
+**Classes:**
+- `Device`
+
+**Functions:**
+- `detect_compute_device`
+- `enumerate_devices`
+
+## `projects/meeting_stt_app/app/audio/mixer.py`
+
+**Classes:**
+- `AudioMixer`
+
+**Functions:**
+- `to_mono_float32`
+- `resample_to_16k`
+- `rms`
+
+## `projects/meeting_stt_app/app/config.py`
+
+**Classes:**
+- `AppSettings`
+
+**Functions:**
+- `_config_path`
+- `resolve_save_root`
+
+## `projects/meeting_stt_app/app/io/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/io/recorder.py`
+
+**Classes:**
+- `WavRecorder`
+
+## `projects/meeting_stt_app/app/io/session.py`
+
+**Classes:**
+- `RecordingSession`
+
+## `projects/meeting_stt_app/app/io/transcript_writer.py`
+
+**Classes:**
+- `TranscriptWriter`
+
+**Functions:**
+- `_fmt_ts`
+
+## `projects/meeting_stt_app/app/main.py`
+
+**Classes:**
+- `PipelineController`
+
+**Functions:**
+- `_now_iso`
+- `_new_session_id`
+- `main`
+
+## `projects/meeting_stt_app/app/qt_compat.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/stt/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/stt/transcriber.py`
+
+**Classes:**
+- `Transcriber`
+
+## `projects/meeting_stt_app/app/stt/types.py`
+
+**Classes:**
+- `TranscriptChunk`
+
+## `projects/meeting_stt_app/app/stt/worker.py`
+
+**Classes:**
+- `TranscribeWorker`
+
+## `projects/meeting_stt_app/app/ui/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/ui/main_window.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/ui/widgets.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/build.py`
+
+**Functions:**
+- `run_selftest`
+- `run_pyinstaller`
+- `main`
+
+## `projects/meeting_stt_app/build_onedir.py`
+
+**Functions:**
+- `_parse_args`
+- `_ensure_pyinstaller_available`
+- `_build_command`
+- `main`
+
+## `projects/meeting_stt_app/meeting_stt.py`
+
+**Functions:**
+- `_check_devices`
+- `main`
+
+## `projects/meeting_stt_app/scripts/synthetic_audio_headless_selftest.py`
+
+**Classes:**
+- `AudioSpec`
+- `ValidationResult`
+
+**Functions:**
+- `parse_args`
+- `validate_spec`
+- `synthesize_samples`
+- `write_wav`
+- `read_wav_samples`
+- `rms`
+- `estimate_frequency`
+- `validate_wav`
+- `write_report`
+- `main`
+
+## `projects/meeting_stt_app/tests/selftest_pipeline.py`
+
+**Classes:**
+- `FakeTranscriber`
+
+**Functions:**
+- `_sine`
+- `_check`
+- `test_imports`
+- `test_resolve_save_root`
+- `test_mixer_chunk`
+- `test_pipeline_e2e`
+- `test_real_whisper_optional`
+- `main`
+
+## `projects/meeting_stt_app/tests/test_audio_mixer.py`
+
+**Functions:**
+- `_block`
+- `_sine`
+- `test_to_mono_float32_int16_정규화`
+- `test_to_mono_float32_다채널_평균`
+- `test_resample_to_16k_shape_rate`
+- `test_rms_값`
+- `test_믹싱_번갈아_push_정렬`
+- `test_믹싱_bulk_push_정렬`
+- `test_믹싱_부분_겹침`
+- `test_합성_사인파_이중스트림_헤드리스`
+- `test_max_chunk_sec_컷`
+- `test_vad_무음_tail_컷`
+- `test_flush_잔여_반환`
+- `test_단일_소스_마이크_단독`
+- `test_단일_소스_loopback_단독`
+- `test_2소스_파트너_영구부재_holdoff_통과`
+- `test_capture_device_none_무동작`
+- `test_level_changed_시그널`
+- `_run_all`
+
 ## `projects/minesweeper-baseline/minesweeper.py`
 
 **Classes:**
@@ -4158,6 +4347,21 @@ _(no top-level symbols)_
 - `build`
 - `main`
 
+## `scripts/build_resume_docx.py`
+
+**Functions:**
+- `_make_rpr`
+- `_make_run`
+- `make_p`
+- `make_empty_p`
+- `insert_after`
+- `insert_sequence`
+- `make_image_p`
+- `build_stock_analyzer_content`
+- `replace_stock_analyzer`
+- `build_af_content`
+- `main`
+
 ## `scripts/build_review_bundle.py`
 
 **Functions:**
@@ -4314,6 +4518,15 @@ _(no top-level symbols)_
 ## `scripts/gemini_session_bridge.py`
 
 _(no top-level symbols)_
+
+## `scripts/gen_resume_diagrams.py`
+
+**Functions:**
+- `rbox`
+- `arrow`
+- `make_architecture`
+- `make_workflow`
+- `make_pipeline`
 
 ## `scripts/generate_agents_md.py`
 

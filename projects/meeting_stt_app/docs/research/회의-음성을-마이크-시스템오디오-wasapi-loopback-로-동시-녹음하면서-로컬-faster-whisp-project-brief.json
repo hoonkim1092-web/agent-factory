@@ -1,0 +1,230 @@
+{
+  "original_request": "Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.\n\n## 목표\n회의 음성을 고품질로 녹음하면서 동시에 실시간으로 한국어 자막(전사)을 화면에 출력하고, 종료 시 음성(WAV)과 전사 텍스트(.txt/.md)를 자동 저장하는 Windows 데스크톱 애플리케이션.\n\n## 확정된 아키텍처 결정 (변경 금지)\n1. STT 엔진: 로컬 faster-whisper (오프라인, 무료, 프라이버시). CUDA 감지 시 device=cuda/compute_type=float16, 없으면 CPU int8. 모델 크기 선택 가능(tiny/base/small/medium), 기본 small.\n2. 오디오 캡처: 마이크 + 시스템오디오(WASAPI loopback)를 동시에 캡처한다. pyaudiowpatch 라이브러리로 마이크 입력과 기본 스피커의 loopback을 각각 스레드로 받아 16kHz mono로 리샘플 후 믹싱한다. 고품질 원본 WAV도 저장한다.\n3. 전사 언어: 한국어 우선 + 자동감지(language=\"ko\" 기본, auto 옵션 제공).\n4. UI: PySide6 데스크톱 GUI. 녹음 시작/정지 버튼, 마이크/시스템출력 장치 선택 드롭다운, 모델 크기 선택, 실시간 자막 패널(청크 단위 append), 녹음 타이머, 오디오 레벨 미터, 저장 경로 표시.\n\n## 실시간 전사 방식\n오디오를 롤링 버퍼에 누적하고, VAD(무음 감지) 또는 최대 길이(예: 10~15초)에 도달하면 청크를 워커 스레드에서 faster-whisper로 전사하여 자막 패널에 append한다. faster-whisper 내장 VAD 필터 사용. UI는 절대 블로킹하지 않는다(전사는 별도 스레드/큐).\n\n## 산출물\n- 실행 가능한 PySide6 앱 (예: app/main.py 또는 패키지 구조)\n- requirements.txt (faster-whisper, pyaudiowpatch, PySide6, numpy, soundfile/scipy 등)\n- README.md (설치/실행/사용법, 시스템오디오 캡처 주의사항)\n- PyInstaller 패키징 스펙/스크립트 (단일 폴더 onedir 배포 — ctranslate2 DLL/모델 포함). 빌드로 dist/ 에 실행 파일 생성.\n\n## 완료 기준\n- 앱이 import 오류 없이 기동된다 (헤드리스 검증: 모듈 import + 오디오 장치 enumerate + 합성 오디오로 STT 파이프라인 1회 전사 성공).\n- 녹음 시작 → 실시간 자막 출력 → 정지 → WAV + 전사 파일 저장의 전체 흐름이 코드상 연결되어 있다.\n- PyInstaller 빌드 스크립트가 존재하고 패키징 절차가 문서화되어 있다.\n\n## 비고\n- 마이크가 없는 CI/헤드리스 환경에서도 검증 가능하도록, 합성 사인파/샘플 WAV를 STT에 통과시키는 셀프테스트 스크립트를 포함한다.\n- 절대경로 하드코딩 금지. 저장 경로는 사용자 홈/문서 폴더 또는 앱 실행 폴더 하위 meetings/ 로 한다.",
+  "goal": "회의 음성을 마이크+시스템오디오(WASAPI loopback)로 동시 녹음하면서 로컬 faster-whisper로 실시간 한국어 자막을 출력하고 종료 시 WAV와 전사 텍스트를 자동 저장하는 PySide6 Windows 데스크톱 앱을 만든다.",
+  "background_context": "원격·대면 회의가 일상화되면서 음성을 텍스트로 남기는 수요는 크지만, 클라우드 STT는 프라이버시·비용·인터넷 의존성 문제가 있다. 워크스페이스에는 이미 feature-spec/implementation-design/task_execution_plan 등 work-item 문서 세트가 준비되어 있어 아키텍처 결정(로컬 faster-whisper, pyaudiowpatch loopback, PySide6)이 확정된 상태에서 구현 단계로 진입한다.",
+  "problem_statement": "기존 STT 도구는 마이크 단일 채널만 받아 상대방(시스템 출력) 음성을 놓치거나, 클라우드 전송으로 민감한 회의 내용이 외부로 나가며, 실시간 자막과 고품질 원본 녹음을 동시에 제공하지 못한다. 마이크와 시스템 스피커 loopback을 동시에 캡처해 오프라인으로 실시간 전사하면서 UI를 블로킹하지 않는 구현이 핵심 난제다.",
+  "target_path": "D:\\warkSpaces\\agent-factory\\projects\\meeting_stt_app",
+  "constraints": [
+    "STT 엔진은 로컬 faster-whisper 고정 — 클라우드 STT 금지 (오프라인/무료/프라이버시)",
+    "CUDA 감지 시 device=cuda/compute_type=float16, 미감지 시 CPU int8 자동 폴백",
+    "모델 크기 선택 가능(tiny/base/small/medium), 기본값 small",
+    "마이크 + 시스템오디오(WASAPI loopback)를 각각 별도 스레드로 동시 캡처, 16kHz mono 리샘플 후 믹싱",
+    "전사 언어 한국어 우선(language=ko 기본), auto 자동감지 옵션 제공",
+    "UI는 절대 블로킹 금지 — 전사는 워커 스레드/큐로 분리",
+    "롤링 버퍼 + faster-whisper 내장 VAD 필터 또는 최대 길이(10~15초) 도달 시 청크 전사",
+    "절대경로 하드코딩 금지 — 저장 경로는 사용자 홈/문서 폴더 또는 앱 폴더 하위 meetings/",
+    "마이크 없는 CI/헤드리스 환경에서 합성 사인파/샘플 WAV로 STT 파이프라인 검증 가능해야 함",
+    "PyInstaller onedir 패키징 — ctranslate2 DLL 및 모델 포함"
+  ],
+  "required_skills": [
+    "realtime_audio_capture",
+    "wasapi_loopback_recording",
+    "faster_whisper_inference",
+    "pyside6_gui_development",
+    "multithreading_queue_design",
+    "audio_resampling_mixing",
+    "pyinstaller_packaging",
+    "headless_self_test_scripting"
+  ],
+  "role_hints": [
+    "audio_engineer",
+    "desktop_gui_developer",
+    "ml_inference_integrator",
+    "packaging_release_engineer",
+    "qa_automation_engineer"
+  ],
+  "deliverables": [
+    "실행 가능한 PySide6 회의록 STT 데스크톱 앱",
+    "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진",
+    "faster-whisper 실시간 청크 전사 워커",
+    "실시간 자막 패널·장치 선택·레벨 미터 UI",
+    "WAV + 전사(.txt/.md) 자동 저장 모듈",
+    "requirements.txt 의존성 명세",
+    "설치/실행/시스템오디오 주의사항 README",
+    "PyInstaller onedir 빌드 스크립트/스펙",
+    "합성 오디오 헤드리스 셀프테스트 스크립트"
+  ],
+  "risks": [
+    "pyaudiowpatch WASAPI loopback이 기본 스피커 변경·장치 미존재 시 실패할 수 있음",
+    "faster-whisper 모델 다운로드(small ~500MB) 첫 실행 지연 및 오프라인 환경 캐시 부재",
+    "마이크/시스템 두 스트림의 샘플레이트·버퍼 드리프트로 믹싱 동기 어긋남",
+    "CUDA/cuDNN 버전 불일치로 GPU 경로 로드 실패 → CPU 폴백 검증 필요",
+    "PyInstaller가 ctranslate2/onnxruntime 네이티브 DLL과 모델을 누락하면 빌드 실행 실패",
+    "실시간 청크 경계에서 단어가 잘려 전사 정확도 저하",
+    "CI/헤드리스 환경에 오디오 장치가 없어 enumerate가 빈 목록 반환"
+  ],
+  "research_notes": [
+    "pyaudiowpatch는 PyAudio 포크로 WASAPI loopback을 공식 지원 — get_default_wasapi_loopback() 패턴 사용",
+    "faster-whisper transcribe(vad_filter=True, language='ko')로 내장 Silero VAD 활용 가능",
+    "헤드리스 검증은 numpy 사인파 → 16kHz mono WAV → model.transcribe로 1회 통과시키는 방식이 표준",
+    "워크스페이스에 feature-spec/implementation-design/feature-plan/task_execution_plan 문서가 이미 존재 — 인터페이스 정의의 baseline으로 사용",
+    "장치 enumerate는 PyAudio host API 순회로 마이크/loopback 후보를 드롭다운에 채움",
+    "오디오 I/O와 STT 추론을 queue.Queue로 분리해 GUI 스레드 블로킹을 구조적으로 차단",
+    "local_references=6",
+    "Workspace note: existing_todo=.todo.md",
+    "Workspace note: existing_project_board=project_board_state.json",
+    "Workspace note: existing_work_items=1",
+    "Local reference: docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/feature-spec.md -> ## Feature Overview Windows 데스크톱 실시간 회의록 STT 앱을 개발한다."
+  ],
+  "tech_stack": [
+    "Python 3.11",
+    "faster-whisper (ctranslate2 백엔드)",
+    "pyaudiowpatch (WASAPI loopback)",
+    "PySide6 (Qt6 GUI)",
+    "numpy",
+    "soundfile 또는 scipy (WAV I/O)",
+    "PyInstaller (onedir 패키징)"
+  ],
+  "data_model": [
+    {
+      "entity": "RecordingSession",
+      "fields": [
+        "session_id",
+        "start_time",
+        "end_time",
+        "wav_path",
+        "transcript_path",
+        "model_size",
+        "language",
+        "device"
+      ],
+      "storage": "json"
+    },
+    {
+      "entity": "TranscriptChunk",
+      "fields": [
+        "chunk_index",
+        "start_ts",
+        "end_ts",
+        "text",
+        "language",
+        "avg_logprob"
+      ],
+      "storage": "memory"
+    },
+    {
+      "entity": "AudioConfig",
+      "fields": [
+        "mic_device_index",
+        "loopback_device_index",
+        "sample_rate",
+        "channels",
+        "model_size",
+        "language",
+        "save_dir"
+      ],
+      "storage": "json"
+    }
+  ],
+  "user_flows": [
+    "사용자: 앱 실행 -> 시스템: 마이크/시스템출력 장치 목록 enumerate 후 드롭다운 채움",
+    "사용자: 모델 크기·언어 선택 후 녹음 시작 클릭 -> 시스템: 캡처 스레드 2개 기동, 타이머·레벨미터 시작",
+    "시스템: 롤링 버퍼가 VAD 무음 또는 최대 길이 도달 -> 워커 스레드가 청크 전사 후 자막 패널에 append",
+    "사용자: 정지 클릭 -> 시스템: 스레드 종료, meetings/ 하위에 WAV + 전사(.txt/.md) 자동 저장 후 경로 표시",
+    "개발자: 셀프테스트 스크립트 실행 -> 시스템: 합성 사인파 WAV를 STT에 통과시켜 전사 성공 여부 검증"
+  ],
+  "non_goals": [
+    "클라우드 STT API 연동(OpenAI Whisper API 등) 미지원",
+    "화자 분리(diarization) 미구현",
+    "macOS/Linux 크로스플랫폼 시스템오디오 캡처 미지원 (Windows WASAPI 전용)",
+    "실시간 번역·요약·회의록 자동 정리 미포함",
+    "클라우드 동기화·계정·다중 사용자 협업 미포함"
+  ],
+  "architecture_style": "desktop_gui",
+  "research_mode": "fast_synthesis",
+  "recommended_architecture": "desktop_gui",
+  "recommended_tech_stack": [
+    "Python 3.11",
+    "faster-whisper",
+    "pyaudiowpatch",
+    "PySide6",
+    "numpy",
+    "soundfile",
+    "PyInstaller"
+  ],
+  "required_capabilities": [
+    "concurrent_dual_stream_audio_capture",
+    "wasapi_loopback_access",
+    "local_offline_stt_inference",
+    "non_blocking_gui_threading",
+    "audio_buffer_vad_chunking",
+    "wav_and_transcript_persistence",
+    "onedir_native_dll_packaging",
+    "headless_synthetic_audio_verification"
+  ],
+  "skill_gap_hypotheses": [],
+  "verification_focus": [
+    "모듈 import가 오류 없이 성공하는지(헤드리스)",
+    "오디오 장치 enumerate가 예외 없이 동작하고 빈 목록도 안전 처리하는지",
+    "합성 사인파 WAV가 faster-whisper STT 파이프라인을 1회 통과해 전사 결과를 반환하는지",
+    "녹음 시작→청크 전사→정지→WAV+전사 저장의 호출 경로가 코드상 end-to-end 연결되는지",
+    "CUDA 미감지 시 CPU int8 경로로 폴백되는지",
+    "저장 경로에 절대경로 하드코딩이 없고 meetings/ 하위로 해석되는지",
+    "PyInstaller 빌드 스크립트가 존재하고 패키징 절차가 문서화되어 있는지"
+  ],
+  "maintenance_strategy": [],
+  "source_backed_claims": [],
+  "workspace_notes": [
+    "existing_todo=.todo.md",
+    "existing_project_board=project_board_state.json",
+    "existing_work_items=1"
+  ],
+  "evidence_summary": [
+    "Workspace note: existing_todo=.todo.md",
+    "Workspace note: existing_project_board=project_board_state.json",
+    "Workspace note: existing_work_items=1",
+    "Local reference: docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/feature-spec.md -> ## Feature Overview Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.",
+    "Local reference: docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/implementation-design.md -> ## Design Summary Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.",
+    "Local reference: docs/task_execution_plan.md -> ## Overview - project_goal: Windows 데스크톱 실시간 회의록 STT 앱을 개발한다."
+  ],
+  "local_references": [
+    {
+      "path": "docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/feature-spec.md",
+      "heading": "## Feature Overview",
+      "excerpt": "## Feature Overview Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.",
+      "score": 1.0
+    },
+    {
+      "path": "docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/implementation-design.md",
+      "heading": "## Design Summary",
+      "excerpt": "## Design Summary Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.",
+      "score": 1.0
+    },
+    {
+      "path": "docs/task_execution_plan.md",
+      "heading": "## Overview",
+      "excerpt": "## Overview - project_goal: Windows 데스크톱 실시간 회의록 STT 앱을 개발한다.",
+      "score": 1.0
+    },
+    {
+      "path": "docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/feature-plan.md",
+      "heading": "## 목표",
+      "excerpt": "## 목표 회의 음성을 고품질로 녹음하면서 동시에 실시간으로 한국어 자막(전사)을 화면에 출력하고, 종료 시 음성(WAV)과 전사 텍스트(.txt/.md)를 자동 저장하는 Windows 데스크톱 애플리케이션.",
+      "score": 0.9704
+    },
+    {
+      "path": "docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/feature-spec.md",
+      "heading": "## 목표",
+      "excerpt": "## 목표 회의 음성을 고품질로 녹음하면서 동시에 실시간으로 한국어 자막(전사)을 화면에 출력하고, 종료 시 음성(WAV)과 전사 텍스트(.txt/.md)를 자동 저장하는 Windows 데스크톱 애플리케이션.",
+      "score": 0.9704
+    },
+    {
+      "path": "docs/work-items/windows-데스크톱-실시간-회의록-stt-앱을-개발한다-목표-회의-음성을-고품질로-녹음하면서-동/implementation-design.md",
+      "heading": "## 목표",
+      "excerpt": "## 목표 회의 음성을 고품질로 녹음하면서 동시에 실시간으로 한국어 자막(전사)을 화면에 출력하고, 종료 시 음성(WAV)과 전사 텍스트(.txt/.md)를 자동 저장하는 Windows 데스크톱 애플리케이션.",
+      "score": 0.9704
+    }
+  ],
+  "web_references": [],
+  "llm_prior_references": [],
+  "notebook_summary": "",
+  "requested_role": "General Assistant",
+  "route": {
+    "pipeline": "project",
+    "intent": "forced",
+    "confidence": 100,
+    "reasoning": "pipeline_mode=project",
+    "risk_level": "strict"
+  },
+  "generated_at": "2026-06-13T06:23:11"
+}

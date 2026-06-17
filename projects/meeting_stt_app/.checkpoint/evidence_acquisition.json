@@ -1,0 +1,172 @@
+{
+  "stage": "evidence_acquisition",
+  "saved_at": "2026-06-13T06:56:57",
+  "data_hash": "cad8d1cf5cce41afef12cd32aedeb1a4",
+  "data": {
+    "workspace_notes": [
+      "existing_todo=.todo.md",
+      "existing_project_board=project_board_state.json",
+      "existing_work_items=3"
+    ],
+    "local_references": [
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "### FR-5. STT 엔진 구성",
+        "excerpt": "### FR-5. STT 엔진 구성 - CUDA 감지 시 `device=cuda`/`compute_type=float16`, 없으면 CPU `int8`로 모델을 로드한다. - 모델 크기는 tiny/base/small/medium 중 선택 가능하며 기본값은 `small`이다.",
+        "score": 1.0
+      },
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "### FR-7. WAV + 전사 영속화 (`wav_and_transcript_persistence`)",
+        "excerpt": "### FR-7. WAV + 전사 영속화 (`wav_and_transcript_persistence`) - 정지 시 원본 녹음 WAV(`meetings/<session>/...wav`)와 전사 텍스트(`.txt` 및/또는 `.md`)를 자동 저장한다.",
+        "score": 0.996
+      },
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "### FR-6. UI 레이어 (`pyside6_gui_development`)",
+        "excerpt": "### FR-6. UI 레이어 (`pyside6_gui_development`) - 녹음 시작/정지 버튼, 마이크·시스템출력 장치 선택 드롭다운, 모델 크기 선택, 언어 선택, 실시간 자막 패널(청크 단위 append), 녹음 타이머, 오디오 레벨 미터, 저장 경로 표시를 제공한다.",
+        "score": 0.9872
+      },
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "## Feature Overview",
+        "excerpt": "de6 GUI. 전사는 워커 스레드/큐로 분리해 UI를 절대 블로킹하지 않는다. - **실시간 청크화**: 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 VAD(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 워커 스레드에서 전사하여 자막 패널에 append. - **저장 경로**: 절대경로 하드코딩 금지 — 사용자 홈/문서 폴더 또는 앱 실행 폴더 하위 `meetings/`.",
+        "score": 0.8215
+      },
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "### Outputs",
+        "excerpt": "### Outputs - 실시간 자막 패널의 청크 단위 전사 텍스트 - 원본 녹음 WAV 파일(`meetings/<session>/...wav`) - 전사 텍스트 파일(`.txt` 및/또는 `.md`) - 세션 메타데이터 JSON(RecordingSession) - 오디오 레벨 미터·타이머·저장 경로 등 UI 상태 표시",
+        "score": 0.7805
+      },
+      {
+        "path": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+        "heading": "### FR-4. VAD 기반 청크 스트리밍 STT (`vad_chunked_streaming_stt`)",
+        "excerpt": "### FR-4. VAD 기반 청크 스트리밍 STT (`vad_chunked_streaming_stt`) - 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 `vad_filter`(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 전사한다. - 전사 결과를 TranscriptChunk 단위로 자막 패널에 append한다. - 전사 언어는 기본 `ko`, `auto` 옵션을 제공한다.",
+        "score": 0.7156
+      }
+    ],
+    "web_references": [],
+    "llm_prior_references": [],
+    "notebook_summary": "",
+    "evidence_summary": [
+      "Workspace note: existing_todo=.todo.md",
+      "Workspace note: existing_project_board=project_board_state.json",
+      "Workspace note: existing_work_items=3",
+      "Local reference: docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md -> ### FR-5. STT 엔진 구성 - CUDA 감지 시 `device=cuda`/`compute_type=float16`, 없으면 CPU `int8`로 모델을 로드한다. - 모델 크기는 tiny/base/small/medium 중 선택 가능하며 기본값은 `small`이다.",
+      "Local reference: docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md -> ### FR-7. WAV + 전사 영속화 (`wav_and_transcript_persistence`) - 정지 시 원본 녹음 WAV(`meetings/<session>/...wav`)와 전사 텍스트(`.txt` 및/또는 `.md`)를 자동 저장한다.",
+      "Local reference: docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md -> ### FR-6. UI 레이어 (`pyside6_gui_development`) - 녹음 시작/정지 버튼, 마이크·시스템출력 장치 선택 드롭다운, 모델 크기 선택, 언어 선택, 실시간 자막 패널(청크 단위 append), 녹음 타이머, 오디오 레벨 미터, 저장 경로 표시를 제공한다."
+    ],
+    "sufficiency_gate_passed": true,
+    "research_plan": {
+      "mode": "fast_synthesis",
+      "secondary_modes": [
+        "data_pipeline"
+      ],
+      "scores": {
+        "freshness_score": 0,
+        "external_stack_score": 1,
+        "operational_risk_score": 1,
+        "data_pipeline_score": 1,
+        "live_project_score": 0,
+        "deep_decision_score": 1,
+        "archive_score": 0
+      },
+      "reason": "",
+      "requires_web": false,
+      "requires_tavily_extract": false,
+      "requires_notebooklm": false,
+      "requires_deep_source_pack": false,
+      "risk_level": "normal",
+      "requires_research": false,
+      "domain": "",
+      "research_depth": "shallow"
+    },
+    "source_pack": {
+      "sources": [
+        {
+          "source_id": "local_001",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "### FR-5. STT 엔진 구성 - CUDA 감지 시 `device=cuda`/`compute_type=float16`, 없으면 CPU `int8`로 모델을 로드한다. - 모델 크기는 tiny/base/small/medium 중 선택 가능하며 기본값은 `small`이다.",
+          "content_full": "### FR-5. STT 엔진 구성 - CUDA 감지 시 `device=cuda`/`compute_type=float16`, 없으면 CPU `int8`로 모델을 로드한다. - 모델 크기는 tiny/base/small/medium 중 선택 가능하며 기본값은 `small`이다.",
+          "authority_level": "primary",
+          "relevance_score": 1.0,
+          "selected_reason": "local_rag_result"
+        },
+        {
+          "source_id": "local_002",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "### FR-7. WAV + 전사 영속화 (`wav_and_transcript_persistence`) - 정지 시 원본 녹음 WAV(`meetings/<session>/...wav`)와 전사 텍스트(`.txt` 및/또는 `.md`)를 자동 저장한다.",
+          "content_full": "### FR-7. WAV + 전사 영속화 (`wav_and_transcript_persistence`) - 정지 시 원본 녹음 WAV(`meetings/<session>/...wav`)와 전사 텍스트(`.txt` 및/또는 `.md`)를 자동 저장한다.",
+          "authority_level": "primary",
+          "relevance_score": 0.996,
+          "selected_reason": "local_rag_result"
+        },
+        {
+          "source_id": "local_003",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "### FR-6. UI 레이어 (`pyside6_gui_development`) - 녹음 시작/정지 버튼, 마이크·시스템출력 장치 선택 드롭다운, 모델 크기 선택, 언어 선택, 실시간 자막 패널(청크 단위 append), 녹음 타이머, 오디오 레벨 미터, 저장 경로 표시를 제공한다.",
+          "content_full": "### FR-6. UI 레이어 (`pyside6_gui_development`) - 녹음 시작/정지 버튼, 마이크·시스템출력 장치 선택 드롭다운, 모델 크기 선택, 언어 선택, 실시간 자막 패널(청크 단위 append), 녹음 타이머, 오디오 레벨 미터, 저장 경로 표시를 제공한다.",
+          "authority_level": "primary",
+          "relevance_score": 0.9872,
+          "selected_reason": "local_rag_result"
+        },
+        {
+          "source_id": "local_004",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "de6 GUI. 전사는 워커 스레드/큐로 분리해 UI를 절대 블로킹하지 않는다. - **실시간 청크화**: 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 VAD(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 워커 스레드에서 전사하여 자막 패널에 append. - **저장 경로**: 절대경로 하드코딩 금지 — 사용자 홈/문서 폴더 또는 앱 실행 폴더 하위 `meetings/`.",
+          "content_full": "de6 GUI. 전사는 워커 스레드/큐로 분리해 UI를 절대 블로킹하지 않는다. - **실시간 청크화**: 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 VAD(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 워커 스레드에서 전사하여 자막 패널에 append. - **저장 경로**: 절대경로 하드코딩 금지 — 사용자 홈/문서 폴더 또는 앱 실행 폴더 하위 `meetings/`.",
+          "authority_level": "primary",
+          "relevance_score": 0.8215,
+          "selected_reason": "local_rag_result"
+        },
+        {
+          "source_id": "local_005",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "### Outputs - 실시간 자막 패널의 청크 단위 전사 텍스트 - 원본 녹음 WAV 파일(`meetings/<session>/...wav`) - 전사 텍스트 파일(`.txt` 및/또는 `.md`) - 세션 메타데이터 JSON(RecordingSession) - 오디오 레벨 미터·타이머·저장 경로 등 UI 상태 표시",
+          "content_full": "### Outputs - 실시간 자막 패널의 청크 단위 전사 텍스트 - 원본 녹음 WAV 파일(`meetings/<session>/...wav`) - 전사 텍스트 파일(`.txt` 및/또는 `.md`) - 세션 메타데이터 JSON(RecordingSession) - 오디오 레벨 미터·타이머·저장 경로 등 UI 상태 표시",
+          "authority_level": "primary",
+          "relevance_score": 0.7805,
+          "selected_reason": "local_rag_result"
+        },
+        {
+          "source_id": "local_006",
+          "source_type": "local",
+          "retrieval_method": "local_rag",
+          "url": "",
+          "title": "docs/work-items/마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시/feature-spec.md",
+          "excerpt": "### FR-4. VAD 기반 청크 스트리밍 STT (`vad_chunked_streaming_stt`) - 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 `vad_filter`(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 전사한다. - 전사 결과를 TranscriptChunk 단위로 자막 패널에 append한다. - 전사 언어는 기본 `ko`, `auto` 옵션을 제공한다.",
+          "content_full": "### FR-4. VAD 기반 청크 스트리밍 STT (`vad_chunked_streaming_stt`) - 롤링 버퍼에 오디오를 누적하고, faster-whisper 내장 `vad_filter`(무음 감지) 또는 최대 길이(10~15초) 도달 시 청크를 전사한다. - 전사 결과를 TranscriptChunk 단위로 자막 패널에 append한다. - 전사 언어는 기본 `ko`, `auto` 옵션을 제공한다.",
+          "authority_level": "primary",
+          "relevance_score": 0.7156,
+          "selected_reason": "local_rag_result"
+        }
+      ]
+    },
+    "structured_evidence": {},
+    "unmet_gaps": [],
+    "_verification": {
+      "score": 0.824,
+      "status": "pass",
+      "gaps": [
+        "no_external_evidence"
+      ],
+      "attempt": 0
+    }
+  }
+}

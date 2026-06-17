@@ -1,0 +1,61 @@
+{
+  "decision_schema_version": 1,
+  "project_slug": "마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시",
+  "last_updated": "2026-06-13T06:47:01",
+  "generated_from_summary_last_updated": "2026-06-13T06:47:01",
+  "escalation_phase": "P4",
+  "block": true,
+  "activate_phase": "P4",
+  "blocking_rules": [
+    "e2e_command_missing"
+  ],
+  "reason": "blocked_by:e2e_command_missing",
+  "rule_decisions": [
+    {
+      "rule_id": "e2e_command_missing",
+      "block": false,
+      "severity": "warn",
+      "reason": "exempt_phase:scope",
+      "activate_at": "P2"
+    },
+    {
+      "rule_id": "e2e_command_missing",
+      "block": true,
+      "severity": "block",
+      "reason": "threshold_met",
+      "activate_at": "P2"
+    },
+    {
+      "rule_id": "e2e_command_missing",
+      "block": true,
+      "severity": "block",
+      "reason": "threshold_met",
+      "activate_at": "P2"
+    }
+  ],
+  "summary_snapshot": {
+    "project_slug": "마이크와-시스템오디오-wasapi-loopback-를-동시-녹음하면서-로컬-faster-whisper로-실시",
+    "last_updated": "2026-06-13T06:47:01",
+    "by_rule": {
+      "e2e_command_missing": {
+        "count": 33,
+        "first_ts": "2026-06-13T06:47:01",
+        "last_ts": "2026-06-13T06:47:01",
+        "severity": "warn",
+        "by_phase": {
+          "scope": 11,
+          "build": 11,
+          "verify": 11
+        },
+        "repeat_count_max": 3,
+        "any_override": false
+      }
+    },
+    "by_severity": {
+      "warn": 33,
+      "block_candidate": 0,
+      "block": 0
+    },
+    "escalation_phase": "P4"
+  }
+}

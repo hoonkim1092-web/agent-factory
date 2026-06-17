@@ -1,6 +1,28 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## 🔥 다음 세션 = product-value work-item 신규 선정 — wiring-parity-gate 완료 (2026-06-12, Sonnet)
+## 🔥 다음 세션 = **"AF 완료 계약 — 증거원장 기반 goal-reached 검증" 설계문서 작성** (2026-06-17, Opus)
+
+> **배경 (2026-06-17 회의록 STT 앱 dogfood 세션)**: AF 파이프라인으로 `projects/meeting_stt_app` (PySide6 + faster-whisper + WASAPI loopback) 개발 시 3가지 구조적 실패 패턴 확인:
+> 1. **생성≠완료**: `e2e_command_missing` 게이트가 override 가능 + 실행결과 검증 없음
+> 2. **실행 안 된 테스트 = 없는 테스트보다 나쁨**: 믹서 정렬 회귀 테스트 생성됐으나 아무도 돌리지 않아 거짓 확신 제공
+> 3. **골 검증 3구멍**: 실행 구멍(산출물 유형별 하니스 없음) + 정답 구멍(oracle 없음) + 환경 구멍(CI에 장치 없음)
+>
+> **사용자 핵심 통찰**: "결국 골에 도달했는지를 검증하는 부분이 부족한게 문제다"
+>
+> **설계 범위 (다음 세션 시작 시 문서 작성)**:
+> - **완료 계약 재정의**: `ok:True`를 "산출물 생성됨"이 아니라 "골이 시연됨(증거 첨부)"로
+> - **실행 하니스 추상화**: 유형별 소수 하니스 (GUI→offscreen+probe / CLI→인자+exit code / server→포트+요청)
+> - **인수검사 실행 게이트**: 생성만 DONE 처리 금지 — 실행+green이 DONE 전제
+> - **기계적 vs 의미적 골 분리**: 전자=자동 검증, 후자="미검증" 명시 보고
+> - **증거 원장 출력**: `골 / 증거 / 미검증` 3-section을 1차 출력으로
+> - `project_router_research_decoupling` 메모리 *completion contract* 항목과 연결
+>
+> **파일명**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
+> **작성 모델**: Opus → 다음 세션 Sonnet 구현
+
+---
+
+## (이력) 다음 세션 = product-value work-item 신규 선정 — wiring-parity-gate 완료 (2026-06-12, Sonnet)
 
 > **✅ wiring-parity-gate 완료 (2026-06-12, Sonnet, `5a16df39`)**: `test_gap_analyzer.py`에 배선 단선 검증 룰 추가.
 > - **설계 문서**: `docs/2026-06-12-wiring-parity-gate-design.md` (af-cross-review PASS, 2026-06-12 Opus).

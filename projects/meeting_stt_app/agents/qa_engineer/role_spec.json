@@ -1,0 +1,22 @@
+{
+  "role_id": "qa_engineer",
+  "name": "QA Engineer",
+  "objective": "핵심 플로우와 회귀 시나리오를 검증한다.",
+  "required_skills": [
+    "headless_synthetic_audio_selftest"
+  ],
+  "owned_modules": [
+    "qa_engineer_module_6"
+  ],
+  "feature_slices": [
+    "합성 오디오 헤드리스 셀프테스트 스크립트을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-06-13T07:06:53"
+}

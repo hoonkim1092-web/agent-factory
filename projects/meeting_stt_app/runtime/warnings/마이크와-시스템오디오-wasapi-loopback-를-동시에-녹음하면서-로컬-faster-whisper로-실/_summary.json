@@ -1,0 +1,25 @@
+{
+  "project_slug": "마이크와-시스템오디오-wasapi-loopback-를-동시에-녹음하면서-로컬-faster-whisper로-실",
+  "last_updated": "2026-06-13T07:06:52",
+  "by_rule": {
+    "e2e_command_missing": {
+      "count": 30,
+      "first_ts": "2026-06-13T07:04:59",
+      "last_ts": "2026-06-13T07:04:59",
+      "severity": "warn",
+      "by_phase": {
+        "scope": 10,
+        "build": 10,
+        "verify": 10
+      },
+      "repeat_count_max": 3,
+      "any_override": true
+    }
+  },
+  "by_severity": {
+    "warn": 30,
+    "block_candidate": 0,
+    "block": 0
+  },
+  "escalation_phase": "P4"
+}

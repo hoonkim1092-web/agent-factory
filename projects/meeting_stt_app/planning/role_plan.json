@@ -1,0 +1,741 @@
+{
+  "execution_strategy": "parallel",
+  "planning_steps": [
+    {
+      "id": "scope_contracts",
+      "name": "범위와 계약 정의",
+      "objective": "기능 경계를 모듈 단위로 나누고 역할별 인터페이스를 고정한다.",
+      "exit_criteria": [
+        "모든 작업이 owner_role과 depends_on을 가진다.",
+        "핵심 산출물이 모듈별로 정리된다."
+      ]
+    },
+    {
+      "id": "vertical_slice_build",
+      "name": "기능 슬라이스 구현",
+      "objective": "독립 배포 가능한 작은 기능 단위로 구현을 진행한다.",
+      "exit_criteria": [
+        "각 모듈이 최소 1개의 구현 작업을 가진다.",
+        "기능 슬라이스가 파일/산출물 기준으로 분리된다."
+      ]
+    },
+    {
+      "id": "integration_handoff",
+      "name": "통합과 핸드오프",
+      "objective": "역할 간 의존성을 정리하고 결과를 다음 작업자가 이어받을 수 있게 만든다.",
+      "exit_criteria": [
+        "의존 작업이 정리되고 handoff 기준이 명시된다.",
+        "검증 전에 필요한 연결 작업이 완료된다."
+      ]
+    },
+    {
+      "id": "verification_closeout",
+      "name": "검증과 마감",
+      "objective": "기능 동작, 회귀 리스크, 남은 이슈를 명시적으로 검증한다.",
+      "exit_criteria": [
+        "검증 작업이 존재한다.",
+        "잔여 리스크와 후속 작업이 기록된다."
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "frontend_dev",
+      "name": "Frontend Dev",
+      "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+      "required_skills": [
+        "pyside6_gui_development"
+      ],
+      "owned_modules": [
+        "frontend_dev_module_1",
+        "frontend_dev_module_2",
+        "frontend_dev_module_3",
+        "frontend_dev_module_4",
+        "frontend_dev_module_5",
+        "frontend_dev_module_7",
+        "frontend_dev_module_8",
+        "frontend_dev_module_9"
+      ]
+    },
+    {
+      "id": "backend_dev",
+      "name": "Backend Dev",
+      "objective": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "required_skills": [
+        "wasapi_loopback_audio_capture"
+      ],
+      "owned_modules": [
+        "backend_dev_module_10"
+      ]
+    },
+    {
+      "id": "qa_engineer",
+      "name": "QA Engineer",
+      "objective": "핵심 플로우와 회귀 시나리오를 검증한다.",
+      "required_skills": [
+        "headless_synthetic_audio_selftest"
+      ],
+      "owned_modules": [
+        "qa_engineer_module_6"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "frontend_dev_module_1",
+      "name": "실행 가능한 PySide6 회의록 STT 데스크톱 앱",
+      "summary": "실행 가능한 PySide6 회의록 STT 데스크톱 앱을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "실행 가능한 PySide6 회의록 STT 데스크톱 앱"
+      ],
+      "feature_slices": [
+        "실행 가능한 PySide6 회의록 STT 데스크톱 앱을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_1_scope_1",
+          "title": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "실행 가능한 PySide6 회의록 STT 데스크톱 앱 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_1_build_2",
+          "title": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 기능을 구현한다.",
+          "instruction": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_1_scope_1"
+          ],
+          "acceptance": [
+            "실행 가능한 PySide6 회의록 STT 데스크톱 앱의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_1_verify_3",
+          "title": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 실행 가능한 PySide6 회의록 STT 데스크톱 앱 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_1_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_2",
+      "name": "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진",
+      "summary": "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진"
+      ],
+      "feature_slices": [
+        "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_2_scope_1",
+          "title": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_2_build_2",
+          "title": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 기능을 구현한다.",
+          "instruction": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_2_scope_1"
+          ],
+          "acceptance": [
+            "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_2_verify_3",
+          "title": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_2_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_3",
+      "name": "faster-whisper 실시간 청크 전사 워커",
+      "summary": "faster-whisper 실시간 청크 전사 워커을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "faster-whisper 실시간 청크 전사 워커"
+      ],
+      "feature_slices": [
+        "faster-whisper 실시간 청크 전사 워커을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_3_scope_1",
+          "title": "Frontend Dev: faster-whisper 실시간 청크 전사 워커 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: faster-whisper 실시간 청크 전사 워커 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "faster-whisper 실시간 청크 전사 워커 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_3_build_2",
+          "title": "Frontend Dev: faster-whisper 실시간 청크 전사 워커 기능을 구현한다.",
+          "instruction": "Frontend Dev: faster-whisper 실시간 청크 전사 워커을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_3_scope_1"
+          ],
+          "acceptance": [
+            "faster-whisper 실시간 청크 전사 워커의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_3_verify_3",
+          "title": "Frontend Dev: faster-whisper 실시간 청크 전사 워커 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: faster-whisper 실시간 청크 전사 워커 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_3_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_4",
+      "name": "실시간 자막 패널·장치 선택·레벨 미터 UI",
+      "summary": "실시간 자막 패널·장치 선택·레벨 미터 UI을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "실시간 자막 패널·장치 선택·레벨 미터 UI"
+      ],
+      "feature_slices": [
+        "실시간 자막 패널·장치 선택·레벨 미터 UI을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_4_scope_1",
+          "title": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "실시간 자막 패널·장치 선택·레벨 미터 UI 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_4_build_2",
+          "title": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI 기능을 구현한다.",
+          "instruction": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_4_scope_1"
+          ],
+          "acceptance": [
+            "실시간 자막 패널·장치 선택·레벨 미터 UI의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_4_verify_3",
+          "title": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 실시간 자막 패널·장치 선택·레벨 미터 UI 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_4_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_5",
+      "name": "WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈",
+      "summary": "WAV + 전사 텍스트(.txt/.md) + 세션 메타데이터 영속화 모듈을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "WAV + 전사 텍스트(.txt/.md) + 세션 메타데이터 영속화 모듈"
+      ],
+      "feature_slices": [
+        "WAV + 전사 텍스트(.txt/.md) + 세션 메타데이터 영속화 모듈을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_5_scope_1",
+          "title": "Frontend Dev: WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_5_build_2",
+          "title": "Frontend Dev: WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 기능을 구현한다.",
+          "instruction": "Frontend Dev: WAV + 전사 텍스트(.txt/.md) + 세션 메타데이터 영속화 모듈을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_5_scope_1"
+          ],
+          "acceptance": [
+            "WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_5_verify_3",
+          "title": "Frontend Dev: WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: WAV + 전사 텍스트 + 세션 메타데이터 영속화 모듈 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_5_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "qa_engineer_module_6",
+      "name": "합성 오디오 헤드리스 셀프테스트 스크립트",
+      "summary": "합성 오디오 헤드리스 셀프테스트 스크립트을(를) 구현한다.",
+      "owner_role": "qa_engineer",
+      "depends_on": [],
+      "deliverables": [
+        "합성 오디오 헤드리스 셀프테스트 스크립트"
+      ],
+      "feature_slices": [
+        "합성 오디오 헤드리스 셀프테스트 스크립트을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "qa_engineer_module_6_scope_1",
+          "title": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 범위와 인터페이스를 정의한다.",
+          "instruction": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "qa_engineer",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "합성 오디오 헤드리스 셀프테스트 스크립트 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "qa_engineer_module_6_build_2",
+          "title": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 기능을 구현한다.",
+          "instruction": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "qa_engineer",
+          "phase": "build",
+          "depends_on": [
+            "qa_engineer_module_6_scope_1"
+          ],
+          "acceptance": [
+            "합성 오디오 헤드리스 셀프테스트 스크립트의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "qa_engineer_module_6_verify_3",
+          "title": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "QA Engineer: 합성 오디오 헤드리스 셀프테스트 스크립트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "qa_engineer",
+          "phase": "verify",
+          "depends_on": [
+            "qa_engineer_module_6_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_7",
+      "name": "requirements.txt 의존성 명세",
+      "summary": "requirements.txt 의존성 명세을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "requirements.txt 의존성 명세"
+      ],
+      "feature_slices": [
+        "requirements.txt 의존성 명세을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_7_scope_1",
+          "title": "Frontend Dev: requirements.txt 의존성 명세 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: requirements.txt 의존성 명세 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "requirements.txt 의존성 명세 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_7_build_2",
+          "title": "Frontend Dev: requirements.txt 의존성 명세 기능을 구현한다.",
+          "instruction": "Frontend Dev: requirements.txt 의존성 명세을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_7_scope_1"
+          ],
+          "acceptance": [
+            "requirements.txt 의존성 명세의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_7_verify_3",
+          "title": "Frontend Dev: requirements.txt 의존성 명세 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: requirements.txt 의존성 명세 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_7_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_8",
+      "name": "스크립트",
+      "summary": "PyInstaller onedir 빌드 스펙/스크립트을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "PyInstaller onedir 빌드 스펙/스크립트"
+      ],
+      "feature_slices": [
+        "PyInstaller onedir 빌드 스펙/스크립트을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_8_scope_1",
+          "title": "Frontend Dev: 스크립트 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 스크립트 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "스크립트 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_8_build_2",
+          "title": "Frontend Dev: 스크립트 기능을 구현한다.",
+          "instruction": "Frontend Dev: PyInstaller onedir 빌드 스펙/스크립트을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_8_scope_1"
+          ],
+          "acceptance": [
+            "스크립트의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_8_verify_3",
+          "title": "Frontend Dev: 스크립트 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 스크립트 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_8_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "frontend_dev_module_9",
+      "name": "설치·실행·시스템오디오 캡처 주의사항 README",
+      "summary": "설치·실행·시스템오디오 캡처 주의사항 README을(를) 구현한다.",
+      "owner_role": "frontend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "설치·실행·시스템오디오 캡처 주의사항 README"
+      ],
+      "feature_slices": [
+        "설치·실행·시스템오디오 캡처 주의사항 README을(를) 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "frontend_dev_module_9_scope_1",
+          "title": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README 범위와 인터페이스를 정의한다.",
+          "instruction": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "frontend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "설치·실행·시스템오디오 캡처 주의사항 README 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "frontend_dev_module_9_build_2",
+          "title": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README 기능을 구현한다.",
+          "instruction": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README을(를) 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "frontend_dev",
+          "phase": "build",
+          "depends_on": [
+            "frontend_dev_module_9_scope_1"
+          ],
+          "acceptance": [
+            "설치·실행·시스템오디오 캡처 주의사항 README의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "frontend_dev_module_9_verify_3",
+          "title": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Frontend Dev: 설치·실행·시스템오디오 캡처 주의사항 README 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "frontend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "frontend_dev_module_9_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    },
+    {
+      "id": "backend_dev_module_10",
+      "name": "Backend Dev 구현",
+      "summary": "서버, 데이터, 외부 연동 레이어를 구현한다.",
+      "owner_role": "backend_dev",
+      "depends_on": [],
+      "deliverables": [
+        "실행 가능한 PySide6 회의록 STT 데스크톱 앱"
+      ],
+      "feature_slices": [
+        "서버, 데이터, 외부 연동 레이어를 구현한다."
+      ],
+      "tasks": [
+        {
+          "id": "backend_dev_module_10_scope_1",
+          "title": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의한다.",
+          "instruction": "Backend Dev: Backend Dev 구현 범위와 인터페이스를 정의하고 구현 순서를 고정한다.",
+          "owner_role": "backend_dev",
+          "phase": "scope",
+          "depends_on": [],
+          "acceptance": [
+            "Backend Dev 구현 범위가 명확히 정리된다.",
+            "의존성과 산출물이 명시된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": ""
+        },
+        {
+          "id": "backend_dev_module_10_build_2",
+          "title": "Backend Dev: Backend Dev 구현 기능을 구현한다.",
+          "instruction": "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다. 기능을 작은 슬라이스로 나눠 구현한다.",
+          "owner_role": "backend_dev",
+          "phase": "build",
+          "depends_on": [
+            "backend_dev_module_10_scope_1"
+          ],
+          "acceptance": [
+            "Backend Dev 구현의 핵심 기능이 구현된다.",
+            "관련 파일과 산출물이 갱신된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-001 (build)"
+        },
+        {
+          "id": "backend_dev_module_10_verify_3",
+          "title": "Backend Dev: Backend Dev 구현 결과를 검증하고 handoff를 남긴다.",
+          "instruction": "Backend Dev: Backend Dev 구현 결과를 검증하고 다음 작업자가 이어받을 handoff 메모를 남긴다.",
+          "owner_role": "backend_dev",
+          "phase": "verify",
+          "depends_on": [
+            "backend_dev_module_10_build_2"
+          ],
+          "acceptance": [
+            "검증 결과가 정리된다.",
+            "잔여 리스크와 후속 작업이 기록된다."
+          ],
+          "artifacts": [],
+          "status": "pending",
+          "e2e_command": "# TODO: e2e command for T-002 (verify)"
+        }
+      ]
+    }
+  ],
+  "todo_items": [
+    "Frontend Dev: 사용자 화면과 상호작용 레이어를 구현한다.",
+    "Backend Dev: 서버, 데이터, 외부 연동 레이어를 구현한다.",
+    "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
+  ],
+  "plan_summary": {
+    "goal": "마이크와 시스템오디오(WASAPI loopback)를 동시에 녹음하면서 로컬 faster-whisper로 실시간 한국어 자막을 출력하고 종료 시 WAV와 전사 텍스트를 자동 저장하는 PySide6 Windows 데스크톱 앱을 만든다.",
+    "role_count": 3,
+    "module_count": 10,
+    "task_count": 30
+  },
+  "generated_at": "2026-06-13T06:57:48",
+  "pd_agent": {
+    "id": "pd_director",
+    "name": "Lilith Bootstrap"
+  }
+}

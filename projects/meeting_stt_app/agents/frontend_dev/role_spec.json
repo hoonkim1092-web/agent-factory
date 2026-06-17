@@ -1,0 +1,36 @@
+{
+  "role_id": "frontend_dev",
+  "name": "Frontend Dev",
+  "objective": "사용자 화면과 상호작용 레이어를 구현한다.",
+  "required_skills": [
+    "pyside6_gui_development"
+  ],
+  "owned_modules": [
+    "frontend_dev_module_1",
+    "frontend_dev_module_2",
+    "frontend_dev_module_3",
+    "frontend_dev_module_4",
+    "frontend_dev_module_5",
+    "frontend_dev_module_7",
+    "frontend_dev_module_8",
+    "frontend_dev_module_9"
+  ],
+  "feature_slices": [
+    "실행 가능한 PySide6 회의록 STT 데스크톱 앱을(를) 구현한다.",
+    "마이크+시스템오디오 동시 캡처·믹싱 오디오 엔진을(를) 구현한다.",
+    "faster-whisper 실시간 청크 전사 워커을(를) 구현한다.",
+    "실시간 자막 패널·장치 선택·레벨 미터 UI을(를) 구현한다.",
+    "WAV + 전사 텍스트(.txt/.md) + 세션 메타데이터 영속화 모듈을(를) 구현한다.",
+    "requirements.txt 의존성 명세을(를) 구현한다.",
+    "PyInstaller onedir 빌드 스펙/스크립트을(를) 구현한다.",
+    "설치·실행·시스템오디오 캡처 주의사항 README을(를) 구현한다."
+  ],
+  "planning_steps": [
+    "scope_contracts",
+    "vertical_slice_build",
+    "integration_handoff",
+    "verification_closeout"
+  ],
+  "source": "planning/role_plan.json",
+  "generated_at": "2026-06-13T07:06:52"
+}
