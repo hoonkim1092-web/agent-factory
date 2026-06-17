@@ -9,17 +9,28 @@
 >   - §2.3 단절④에 `verify_result` 기본값 `True` 취약점 추가 권장
 >   - §2.2 라인 번호 정확도 개선 권장
 
-## 🔥 다음 세션 진입점 — AF 완료 계약 S1 구현 (Sonnet)
+## 🔥 다음 세션 진입점 — A·B 둘 다 (2026-06-18 결정, S1 구현은 그 뒤)
 
-> **설계 완료 (2026-06-17)**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
->
-> **S1 구현 내용** (`§8 S1 — GoalContract 구조체 + EvidenceLedger`):
-> - `core/completion_contract.py` 신규: `GoalVerdict`, `GoalEvidence`, `GoalEntry`, `GoalContract`, `HarnessResult`
-> - `core/dogfood.py`: `DogfoodState.goal_contract: GoalContract | None = None` 필드 + 직렬화
-> - 테스트: `tests/test_completion_contract.py` — INV-A~E 불변식
-> - 3-Tier: af-critic + af-test-runner (Tier 2)
->
-> **Advisory 미적용 4건** — S1 구현 중 `test` harness / `contract_status` 구분 필요 여부 결정
+> **이번 세션 핵심 발견(2026-06-18)**: 자동 설계리뷰 watcher(`scripts/design_review_watcher.py`)는 **이미 정상 작동** — provider 무관·headless·UserPromptSubmit 무관으로 `docs/reviews/*.md`에 산출. 단 **결과가 작업자에게 surface 안 됨**(UserPromptSubmit 훅을 코덱스가 미팅앱 작업 때 제거). 그 비용: 자동리뷰가 §6.4를 **Critical BLOCK**했는데 안 보여서 그대로 커밋(`d1022ecd`)함.
+
+### (A) §6.4 inv3 정합 재작성 + 자동리뷰 findings 반영 — **먼저** (잘못된 설계가 push됨)
+> 근거: `docs/reviews/2026-06-18-015950-2026-06-17-af-completion-contract-goal-verification-design-design-review.md` (BLOCK, 6 findings). **6건 전부 grep 검증 완료**.
+- **#1 Critical — §6.4가 inv3 위반 + 사실오류**: `dogfood.py:1896`("failed verify→BLOCK, dogfood retry는 FSALoop 학습 파괴") + `:2044`("no retry in Option 2")가 dogfood 레벨 retry 금지. §6.4의 "dogfood→IMPLEMENT 되돌림"이 위반. + "FSA max-retry 상수 재사용"은 **사실오류**(`fsa_loop.py`에 그런 상수 0건). 실제 bound=`dynamic_orchestrator.py:528` `_task_retry_count<3`(task 레벨, **VERIFY 전**). → **수정**: 골 FAILED→BLOCKED(goal_failed) terminal 유지(inv3 정합), fix loop은 dogfood 밖(상위 재호출) **신규 메커니즘+신규 bound**로 명세 또는 inv3 명시 개정. "재사용" 삭제.
+- **#2 High — GoalContract 생성 SSOT 부재**: 동기 `execute()`(`drive_meeting_stt.py:68`)는 DogfoodState 미경유→contract 영구 None→게이트 미발화. 생성은 `prepare():1246`(criteria 생성처, `PreparedProject:74`)에서 run-board 적재로 §4.2/§8 S3 명시.
+- **#3 Medium — `goal_failed` classifier 추가는 no-op**: `classify_failure:48`이 미매칭시 이미 `IMPLEMENTATION` 기본 반환 + 라우팅 소비처 없음. 변경 제거 또는 신규 소비지점 명세.
+- **#4 Medium — `execute()` ok 판정 2곳**: `:1396`(dashboard) + `:1421`(return). ok 단일 계산 후 양쪽 사용.
+- **#5 Medium — resume 조기반환 게이트 우회**: `:1301` `next_step_cursor=="done"`→`:1306` `already_done`가 1421 게이트 전. contract 재집계 또는 INV-A 예외 명시.
+- **#6 Low — stale 라인**: §2.2/§11.1 `:1845`→`:1891`/`:1899`.
+
+### (B) watcher 결과 surface 메커니즘 — provider 무관 + 사람입력 무관
+> 컴포넌트 전부 정상: enqueue ✓, `detect_providers()`=['claude','codex'] ✓, is_design_doc ✓, trigger ✓(rc0), watcher startup ✓(rc124).
+- surface를 UserPromptSubmit(=사람이 쳐야 발화)에 매달지 말 것. 완료-이벤트(Stop 훅) 또는 커밋 전 `docs/reviews/` 최신본 확인. **CLAUDE.md 의존 금지(멀티 프로바이더 — Codex=AGENTS.md)**.
+- 부수 버그: ① `_is_watcher_alive`가 `os.kill(pid,0)` → Windows WinError 87(생존확인 불가) ② watcher cross-review가 `CreateProcessWithLogonW failed:1909`로 codex 미생산→단일 vendor.
+
+### (C) 그 뒤 — S1 구현 (A 완료 후)
+> `core/completion_contract.py` 신규 + GoalContract.to_dict/from_dict(중첩) + `DogfoodState.goal_contract` + `tests/test_completion_contract.py`. **선행조건**: 실제 LLM criteria 출력 샘플 캡처(파서 baseline) 후 착수.
+
+> **메모리**: `project_completion_contract_and_review_surfacing`
 
 ---
 
