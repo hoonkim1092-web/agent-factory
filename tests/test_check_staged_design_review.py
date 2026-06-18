@@ -135,6 +135,40 @@ class TestFindBlocked:
         assert mod.find_blocked(ws, [review_rel]) == []
 
 
+# ── find_unreviewed ────────────────────────────────────────────────────────
+
+class TestFindUnreviewed:
+    def test_no_review_returned(self, tmp_path):
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        result = mod.find_unreviewed(ws, [src])
+        assert result == [src]
+
+    def test_has_any_verdict_not_returned(self, tmp_path):
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        _write_review(ws, "2026-06-18-015950-foo-design-design-review.md", src, "PASS")
+        assert mod.find_unreviewed(ws, [src]) == []
+
+    def test_block_verdict_not_in_unreviewed(self, tmp_path):
+        # BLOCK 은 find_blocked 가 처리 — find_unreviewed 에는 포함 안 됨.
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        _write_review(ws, "2026-06-18-015950-foo-design-design-review.md", src, "BLOCK")
+        assert mod.find_unreviewed(ws, [src]) == []
+
+    def test_non_design_doc_ignored(self, tmp_path):
+        ws = str(tmp_path)
+        assert mod.find_unreviewed(ws, ["core/x.py"]) == []
+
+    def test_review_dir_itself_ignored(self, tmp_path):
+        ws = str(tmp_path)
+        review_rel = "docs/reviews/2026-06-18-015950-foo-design-design-review.md"
+        _write_review(ws, "2026-06-18-015950-foo-design-design-review.md",
+                      "docs/2026-06-17-foo-design.md", "BLOCK")
+        assert mod.find_unreviewed(ws, [review_rel]) == []
+
+
 # ── main (exit code) ───────────────────────────────────────────────────────
 
 class TestMain:
@@ -156,3 +190,65 @@ class TestMain:
         ws = str(tmp_path)
         monkeypatch.setattr(mod, "_staged_files", lambda w: [])
         assert mod.main(["--workspace", ws]) == 0
+
+
+# ── main — fail-closed (verdict 부재 분기) ─────────────────────────────────
+
+class TestMainFailClosed:
+    def test_unreviewed_provider_skip_returns_0(self, tmp_path, monkeypatch):
+        # 외부 프로바이더 미설치/rate-limited → SKIP (커밋 허용)
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "skip")
+        assert mod.main(["--workspace", ws]) == 0
+
+    def test_unreviewed_auth_expired_returns_1(self, tmp_path, monkeypatch):
+        # 인증 만료 → BLOCK
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "auth_expired")
+        assert mod.main(["--workspace", ws]) == 1
+
+    def test_unreviewed_providers_available_returns_1(self, tmp_path, monkeypatch):
+        # 프로바이더 가용하나 리뷰 없음 = watcher 미실행 → BLOCK
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "available")
+        assert mod.main(["--workspace", ws]) == 1
+
+    def test_block_verdict_plus_unreviewed_skip_still_1(self, tmp_path, monkeypatch):
+        # BLOCK 판정 설계문서 + 미검토 설계문서(skip) → BLOCK이 있어 exit 1
+        ws = str(tmp_path)
+        src_blocked = "docs/2026-06-17-blocked-design.md"
+        src_new = "docs/2026-06-18-new-design.md"
+        _write_review(ws, "2026-06-18-015950-blocked-design-design-review.md", src_blocked, "BLOCK")
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src_blocked, src_new])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "skip")
+        assert mod.main(["--workspace", ws]) == 1
+
+    def test_non_design_doc_only_returns_0_even_available(self, tmp_path, monkeypatch):
+        # 설계문서가 아닌 파일만 staged → 프로바이더 가용해도 0
+        ws = str(tmp_path)
+        monkeypatch.setattr(mod, "_staged_files", lambda w: ["core/x.py"])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "available")
+        assert mod.main(["--workspace", ws]) == 0
+
+    def test_exception_in_find_returns_0(self, tmp_path, monkeypatch):
+        # find_blocked/find_unreviewed 예외 → 게이트 비활성(커밋 허용)
+        ws = str(tmp_path)
+        monkeypatch.setattr(mod, "_staged_files", lambda w: ["docs/2026-06-17-foo-design.md"])
+        monkeypatch.setattr(mod, "find_blocked", lambda ws, s: (_ for _ in ()).throw(RuntimeError("boom")))
+        assert mod.main(["--workspace", ws]) == 0
+
+    def test_unreviewed_available_beats_auth_expired(self, tmp_path, monkeypatch):
+        # AVAILABLE + AUTH_EXPIRED 혼합 → "available" (AVAILABLE 우선)
+        # 실환경: codex_cli=AVAILABLE, gemini_cli=AUTH_EXPIRED → watcher 가 codex 로 리뷰 가능
+        # → BLOCK(watcher 미실행), "재인증" 안내 금지
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
+        monkeypatch.setattr(mod, "_external_provider_status", lambda w: "available")
+        assert mod.main(["--workspace", ws]) == 1

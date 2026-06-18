@@ -119,6 +119,62 @@ def find_blocked(workspace: str, staged: list[str]) -> list[tuple[str, str]]:
     return blocked
 
 
+def find_unreviewed(workspace: str, staged: list[str]) -> list[str]:
+    """staged 설계문서 중 최신 리뷰 자체가 없는 것 → 문서 norm 목록.
+
+    verdict 가 있지만 BLOCK/PASS/WARN 인 것은 포함하지 않는다.
+    리뷰가 전혀 없을 때만 fail-closed 분기 대상이 된다.
+    """
+    if workspace not in sys.path:
+        sys.path.insert(0, workspace)
+    from core.design_review_utils import is_design_doc, normalize_path
+
+    verdicts = load_latest_design_verdicts(workspace)
+    unreviewed: list[str] = []
+    for rel in staged:
+        abspath = os.path.join(workspace, rel)
+        if not is_design_doc(abspath, workspace):
+            continue
+        norm = normalize_path(abspath, workspace)
+        if norm not in verdicts:
+            unreviewed.append(norm)
+    return unreviewed
+
+
+def _external_provider_status(workspace: str) -> str:
+    """외부 프로바이더(non-claude_cli) 가용 상태를 반환한다.
+
+    Returns:
+        "skip"         — 전부 NOT_INSTALLED | RATE_LIMITED (커밋 허용, 노티만)
+        "auth_expired" — 하나 이상 AUTH_EXPIRED (BLOCK + 재인증 안내)
+        "available"    — 가용 프로바이더 있음 (verdict 부재 = watcher 미실행 → BLOCK)
+
+    예외 발생 시 "skip" 반환 — 게이트 오작동으로 정상 커밋을 막지 않는다.
+    provider_detect SSOT 재사용: _all_external_providers_unavailable 와 동일한
+    NOT_INSTALLED | RATE_LIMITED skip 기준, AUTH_EXPIRED는 skip 제외.
+    """
+    try:
+        if workspace not in sys.path:
+            sys.path.insert(0, workspace)
+        from core.provider_detect import (  # type: ignore
+            detect_provider_states, ProviderState, CLI_PROVIDER_IDS,
+        )
+        ext_ids = [p for p in CLI_PROVIDER_IDS if p != "claude_cli"]
+        if not ext_ids:
+            return "skip"
+        states = detect_provider_states(providers=ext_ids, use_cache=True)
+        results = list(states.values())
+        # AVAILABLE 우선: 하나라도 가용이면 watcher 가 리뷰를 산출할 수 있었다 → "available".
+        # AUTH_EXPIRED 는 모든 외부 프로바이더가 unavailable 일 때만 의미있다.
+        if any(r.state == ProviderState.AVAILABLE for r in results):
+            return "available"
+        if any(r.state == ProviderState.AUTH_EXPIRED for r in results):
+            return "auth_expired"
+        return "skip"
+    except Exception:
+        return "skip"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="staged 설계문서의 최신 자동 리뷰 verdict 확인 (BLOCK → 커밋 차단)."
@@ -127,29 +183,67 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     workspace = args.workspace or _repo_root()
 
+    staged = _staged_files(workspace)
     try:
-        blocked = find_blocked(workspace, _staged_files(workspace))
+        blocked = find_blocked(workspace, staged)
+        unreviewed = find_unreviewed(workspace, staged)
     except Exception as exc:
         # 게이트 자체 오작동으로 정상 커밋을 막지 않는다 (surface 는 보조 안전망).
         # 단, 오작동을 silent 로 묻지 않고 stderr 로 가시화한다(import/파싱 버그 조기 발견).
         print(f"[check-staged-design-review] 게이트 비활성(예외, 커밋 비차단): {exc}", file=sys.stderr)
         return 0
 
-    if not blocked:
+    if not blocked and not unreviewed:
         return 0
 
-    print("")
-    print("🛑 [pre-commit] 설계리뷰 BLOCK 미해결 — 자동 리뷰가 차단 판정한 설계문서가 staged 상태입니다:")
-    for doc, review in blocked:
-        print(f"   • {doc}")
-        print(f"     ↳ 리뷰: {review}")
-    print("")
-    print("   조치:")
-    print("     - 리뷰 BLOCK findings 반영 후 재커밋 (watcher 새 리뷰가 최신 PASS/WARN 이면 BLOCK 을 덮음)")
-    print("     - 즉시 재검토: python scripts/design_review_watcher.py . --sync <문서경로>")
-    print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
-    print("")
-    return 1
+    exit_code = 0
+
+    if blocked:
+        exit_code = 1
+        print("")
+        print("🛑 [pre-commit] 설계리뷰 BLOCK 미해결 — 자동 리뷰가 차단 판정한 설계문서가 staged 상태입니다:")
+        for doc, review in blocked:
+            print(f"   • {doc}")
+            print(f"     ↳ 리뷰: {review}")
+        print("")
+        print("   조치:")
+        print("     - 리뷰 BLOCK findings 반영 후 재커밋 (watcher 새 리뷰가 최신 PASS/WARN 이면 BLOCK 을 덮음)")
+        print("     - 즉시 재검토: python scripts/design_review_watcher.py . --sync <문서경로>")
+        print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+        print("")
+
+    if unreviewed:
+        status = _external_provider_status(workspace)
+        if status == "skip":
+            # 프로바이더 미설치/rate-limited → 커밋 허용, 노티만
+            print("")
+            print("ℹ️  [pre-commit] 설계리뷰 없음 — 외부 프로바이더 미설치/rate-limited, 스킵합니다:")
+            for doc in unreviewed:
+                print(f"   • {doc}")
+            print("")
+        elif status == "auth_expired":
+            exit_code = 1
+            print("")
+            print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 인증 만료, 재인증 후 watcher 재실행:")
+            for doc in unreviewed:
+                print(f"   • {doc}")
+            print("")
+            print("   조치: codex/gemini 재인증 후 python scripts/design_review_watcher.py . --sync <문서경로>")
+            print("   우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+            print("")
+        else:  # "available" — watcher 미실행/죽음
+            exit_code = 1
+            print("")
+            print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 가용하나 리뷰 미산출 (watcher 미실행 의심):")
+            for doc in unreviewed:
+                print(f"   • {doc}")
+            print("")
+            print("   조치:")
+            print("     - 수동 실행: python scripts/design_review_watcher.py . --sync <문서경로>")
+            print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+            print("")
+
+    return exit_code
 
 
 if __name__ == "__main__":
