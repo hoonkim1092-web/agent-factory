@@ -96,8 +96,8 @@ def auto_apply_defaults(project_brief, questions):
 ### §2.5 완료계약(2026-06-17) 산출물 — 이 설계의 소비처
 
 - `core/completion_contract.py` (S1 완료): `GoalVerdict`/`GoalEvidence`/`GoalEntry`/`GoalContract`/`HarnessResult`
-- 생성 SSOT = `project_pipeline.prepare():1246` → `task_board.acceptance_criteria` 파싱 → `GoalContract`
-- S2(`ExecutionHarness`+`AcceptanceGate`)·S3(pipeline 통합)는 **미구현**
+- 생성 SSOT = `project_pipeline.prepare_documents():1015-1029` → `task_board.acceptance_criteria` 파싱 → `GoalContract`
+- S2(`ExecutionHarness`+`AcceptanceGate`) 완료(커밋 `03a78052`) · S3(pipeline 통합) 완료(커밋 `6808dd3d`)
 
 ---
 
@@ -114,6 +114,15 @@ def auto_apply_defaults(project_brief, questions):
 
 **INV-Q4 (리서치 합성 기대출력 기준은 구현 전 동결 + async 확인)**
 리서치 합성 기대출력 기준은 **구현 추론과 섞이기 전(intake)에 동결**한다. 같은 LLM이 기대출력 기준·구현·판정을 모두 하면 자기 채점 순환이 최악이 되므로, ⓐ 기대출력 기준을 구현 전에 고정 ⓑ HTML 리포트에 `source=research` 가정을 명시해 사용자가 비동기로 확인.
+
+**Enforcement 수단 (Q-S4 구현 시 적용)**:
+1. **GoalContract snapshot — 저장 시점 및 경로**:
+   - 저장 위치: `ProjectPipeline.prepare_documents()` **반환 직후, `execute()` 호출 전** (구현 단계 개입 불가)
+   - 경로: `runtime_workspace/dogfood/<run_id>/goal_contract.json` (`_state_path()` 기준 동일 디렉터리, `core/dogfood.py:523-524`)
+   - write-once: 파일이 이미 존재하면 덮어쓰기 금지 (파이프라인 재시도 시 원본 유지). 재시도 시 기존 파일을 그대로 사용.
+2. **AcceptanceGate 결과 배선**: AcceptanceGate는 `state.goal_contract`(이미 메모리에 있음)에 verdict를 mutable write(`core/dogfood.py:1904-1907`). 스냅샷 파일은 "구현 전 원본 보관" 목적이며 AcceptanceGate 실행 후 verdict가 갱신된 `state.goal_contract`는 기존 경로(`dogfood.py:1926` `has_failures()`)로 REVIEW 단계에 전달됨. 즉 AcceptanceGate는 `state.goal_contract`에 직접 실행하되, snapshot 파일은 expected_output 원본 변조 감지·감사 용도로 별도 보관.
+3. **구현 단계 수정 금지**: `dogfood._run_develop_full()`에서 `GoalContract` 재생성 금지. `DogfoodState`는 mutable dataclass(`core/dogfood.py:138-180`, `frozen=False`)이므로 구조적 강제 대신 `dogfood.py:1776-1780`의 `is None` 조건부 대입 관례로 보장. frozen dataclass 또는 property 사용 여부는 Q-S4 구현 시 결정.
+4. **테스트**: `test_expected_output_frozen_before_implement` (§11 INV-Q4 항목) — Q-S1 구현 시 추가. snapshot 파일의 expected_output과 AcceptanceGate 실행 후 `state.goal_contract.expected_output`이 동일함을 assertion(구현 단계가 변조하지 않았음 검증).
 
 ---
 
@@ -246,10 +255,10 @@ seam을 deliverable로 승격하지 않으면 INV-Q3 위반(검증 불가 제품
 
 ## §8 완료계약 연결 — `prepare()`가 풍부해진 답을 소비
 
-완료계약 §4.2의 생성 SSOT(`project_pipeline.prepare():1246`)는 현재 `acceptance_criteria`만 파싱한다. 이 설계 후:
+완료계약 §4.2의 생성 SSOT(`project_pipeline.prepare_documents():1015-1029`)는 현재 `acceptance_criteria`만 파싱한다. 이 설계 후:
 
 ```
-prepare():1246
+prepare_documents():1015
    acceptance_criteria  +  enriched["observable_goal"/"golden_example"/"test_seam"]
        ↓
    각 항목 → GoalEntry(description, harness_type, scenario, expected_output, provenance)
@@ -289,10 +298,10 @@ core/qa_report.py (신규):  render_html(evidence_ledger, run_dir) -> path
 | **Q-S1** | `GoalEntry` 확장(scenario/expected_output/provenance) + `TestManifest` 신규 + `GoalContract.manifest` + 직렬화 round-trip 테스트 | Tier 2 (`completion_contract.py`, subprocess 없음) → af-critic + af-test-runner |
 | **Q-S2** | (a) `QuestionRoute.RESEARCH_SYNTHESIZE` enum 추가(`verdicts.py:5-9`) + `question_router.route_batch()` 분기 (b) `goal_clarification.yaml` 4문항 추가 (c) `clarification.py` provenance 전파(`merge_clarification`) | Tier 2 → af-critic + af-test-runner |
 | **Q-S3** | (사전 조사: research 실 API + 어댑터, §6.2) → `synthesize_via_research` + **경로 A·B·C 3곳 배선**(`interview.py:167`/`agent_launcher.py:533`/`stage_router.py:101-106`) | Tier 2~3 (research 엔진 호출) → 풀 3-Tier |
-| **Q-S4** | seam → `deliverables` **명시 승격**(§7, 경로 A/B의 merge_clarification + 경로 C의 route_batch hook 둘 다) + `prepare():1246`가 골/기대출력 기준/manifest를 `GoalContract`로 흡수(§8) | Tier 3 (`project_pipeline.py`/`stage_router.py`) → 풀 3-Tier |
+| **Q-S4** | seam → `deliverables` **명시 승격**(§7, 경로 A/B의 merge_clarification + 경로 C의 route_batch hook 둘 다) + **INV-Q4 enforcement**: `_run_develop_full()`을 `pipeline.prepare()` → snapshot write-once 저장(`runtime_workspace/dogfood/<run_id>/goal_contract.json`, 존재 시 건너뜀) → `pipeline.execute()` **순서로 분해** (현재 `pipeline.run()` 통합 호출로는 저장 시점 달성 불가) + `prepare_documents():1015`가 골/기대출력 기준/manifest를 `GoalContract`로 흡수(§8). **AcceptanceGate**(`dogfood.py:1904-1907`)는 기존과 동일하게 `state.goal_contract`에 직접 실행 — snapshot 파일은 expected_output 원본 감사 전용 | Tier 3 (`project_pipeline.py`/`stage_router.py`) → 풀 3-Tier |
 | **Q-S5** | `core/qa_report.py` HTML 렌더러(§9) — `evidence_ledger` 입력, provenance 뱃지 + [확인 요망] | Tier 1~2 → af-critic + af-test-runner |
 
-> **선행 의존**: Q-S4의 `GoalContract` 흡수·AcceptanceGate 실행은 완료계약 **S2/S3 완료에 의존**한다. 이 설계의 Q-S1·Q-S2·Q-S5는 완료계약 S2와 **병렬 가능**(intake/구조/리포트는 게이트 실행과 독립).
+> **선행 의존**: S2/S3 모두 완료됨(`03a78052`, `6808dd3d`). **Q-S4는 Q-S1 완료 후 착수 가능** — `GoalEntry`/`GoalContract` 타입에 `expected_output`/`provenance`/`scenario`/`manifest` 필드가 Q-S1에서 추가되어야 Q-S4의 흡수 구현 기반이 확보됨(`core/completion_contract.py:49-56`, `:84-86` 현재 해당 필드 없음). **Q-S1·Q-S2·Q-S5는 즉시 착수 가능** (게이트 실행 및 타입 확장과 독립).
 
 ---
 

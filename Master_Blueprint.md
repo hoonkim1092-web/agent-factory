@@ -1137,14 +1137,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-19; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, completion_contract.py (+4)
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, af.spec, design_review_utils.py (+2)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/completion_contract.py` | Completion contract: goal-reached verification via an evidence ledger. | `ExecutionHarness`, `parse_acceptance_criteria()`, `build_evidence_ledger()` |
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
-| `core/project_pipeline.py` | project pipeline | `PreparedProject`, `ProjectPipeline` |
-| `core/work_item_parser.py` | core/work_item_parser.py ======================== 편집된 work-item 마크다운 문서를 다시 구조화 데이터로 변환한다. | `parse_feature_spec()` |
+| `core/design_review_utils.py` | core/design_review_utils.py ============================= 설계 문서 교차 검증 — shared 로직. | `enqueue()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1692,6 +1689,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, af.spec, design_review_utils.py (+2) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, completion_contract.py (+4) |
 | 2026-06-19 | v1.2.34 | feat(completion-contract S3): AcceptanceGate pipeline 배선 완료 — `parse_acceptance_criteria()`/`build_evidence_ledger()` 헬퍼, `PreparedProject.goal_contract` 필드, `project_pipeline.execute()` AcceptanceGate 게이팅(gated_ok/gated_reason/evidence_ledger), already_done 재집계/legacy 폴백, `dogfood._run_develop_full`/`_run_verify_phase`/`_run_review_phase` 2차 배선. 버그픽스 2건: `work_item_parser.py` 영어 heading fallback(Acceptance Criteria), `project_pipeline.py` AcceptanceGate workspace vs state_workspace. `tests/test_acceptance_gate_integration.py` 34건 신규. 3-Tier: af-critic PASS / af-cross-review BLOCK→수정→PASS / af-test-runner 216 PASS. — core/completion_contract.py, core/project_pipeline.py, core/dogfood.py, core/work_item_parser.py, tests/test_acceptance_gate_integration.py, Master_Blueprint.md |
 | 2026-06-18 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, completion_contract.py, test_acceptance_gate.py |

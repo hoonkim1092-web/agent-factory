@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T02:09:39+09:00
-source_commit: 6808dd3d
+generated_at: 2026-06-19T03:13:04+09:00
+source_commit: 28f29b1b
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -876,6 +876,7 @@ _(no top-level symbols)_
 - `pathhash`
 - `_get_pending_dir`
 - `enqueue`
+- `_process_alive`
 - `_is_watcher_alive`
 - `_update_heartbeat`
 - `_start_watcher`
@@ -8431,6 +8432,14 @@ _(no top-level symbols)_
 - `test_cli_export_phase_filter`
 - `test_cli_export_out_atomic`
 - `test_cli_warning_stats_unknown_rule_keeps_data`
+
+## `tests/test_watcher_portability.py`
+
+**Classes:**
+- `TestProcessAliveUnix`
+- `TestProcessAliveWindows`
+- `TestIsWatcherAlive`
+- `TestStartWatcherWindows`
 
 ## `tests/test_web_project_scope.py`
 

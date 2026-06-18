@@ -236,6 +236,38 @@ def enqueue(
 
 HEARTBEAT_STALE_THRESHOLD = 660  # REVIEW_TIMEOUT(600) + POLL_INTERVAL(10) * 6
 
+_STILL_ACTIVE = 259  # Windows STILL_ACTIVE exit code sentinel
+
+
+def _process_alive(pid: int) -> bool:
+    """Cross-platform 프로세스 생존 확인.
+
+    Windows: os.kill(pid, 0)이 WinError 87을 raise하는 케이스가 있어
+    ctypes.OpenProcess + GetExitCodeProcess로 교체.
+    Unix: POSIX kill(pid, 0) 사용.
+    """
+    if platform.system() == "Windows":
+        import ctypes  # stdlib — 항상 사용 가능
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        handle = ctypes.windll.kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+        )
+        if not handle:
+            return False
+        exit_code = ctypes.c_ulong()
+        ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return exit_code.value == _STILL_ACTIVE
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except OSError:
+            return True  # 프로세스 존재하나 권한 없음
+
 
 def _is_watcher_alive(workspace: str) -> bool:
     """PID 파일 기반 watcher 생존 확인 (heartbeat 방식)."""
@@ -253,7 +285,8 @@ def _is_watcher_alive(workspace: str) -> bool:
         pid = int(data["pid"])
         heartbeat = float(data.get("heartbeat", data.get("start_time", 0)))
 
-        os.kill(pid, 0)  # 프로세스 존재 확인
+        if not _process_alive(pid):
+            raise OSError("process not alive")
 
         # heartbeat 기반 stale 감지:
         # process_review()가 최대 REVIEW_TIMEOUT(600s) 동기 블로킹하므로
@@ -302,8 +335,10 @@ def _start_watcher(workspace: str) -> None:
 
     kwargs: dict = {}
     if platform.system() == "Windows":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-        kwargs["close_fds"] = True
+        # DETACHED_PROCESS: 부모 콘솔에서 완전 분리 (codex 등 부모 종료 시 같이 죽지 않음)
+        # CREATE_NEW_PROCESS_GROUP: CTRL+C 시그널 격리
+        _DETACHED_PROCESS = 0x00000008
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | _DETACHED_PROCESS
     else:
         kwargs["start_new_session"] = True
 

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T02:09:39+09:00
-source_commit: 6808dd3d
+generated_at: 2026-06-19T03:13:04+09:00
+source_commit: 28f29b1b
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -407,7 +407,7 @@ sources:
 
 ### `core`
 
-152 modules · 219 classes · 846 functions
+152 modules · 219 classes · 847 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
 - `core/agent_runner.py` — 2 class / 2 func
@@ -435,7 +435,7 @@ sources:
 - `core/critic_skill_router.py` — 0 class / 3 func
 - `core/cross_verification.py` — 3 class / 1 func
 - `core/dashboard.py` — 0 class / 7 func
-- `core/design_review_utils.py` — 0 class / 18 func
+- `core/design_review_utils.py` — 0 class / 19 func
 - `core/destructive_guard.py` — 0 class / 7 func
 - `core/document_chunker.py` — 2 class / 1 func
 - `core/document_index.py` — 4 class / 2 func
@@ -1350,7 +1350,7 @@ sources:
 
 ### `tests`
 
-211 modules · 351 classes · 1807 functions
+212 modules · 355 classes · 1807 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1553,6 +1553,7 @@ sources:
 - `tests/test_warning_registry_schema_evolution.py` — 0 class / 1 func
 - `tests/test_warning_stats.py` — 0 class / 10 func
 - `tests/test_warning_stats_cli.py` — 0 class / 13 func
+- `tests/test_watcher_portability.py` — 4 class / 0 func
 - `tests/test_web_project_scope.py` — 0 class / 3 func
 - `tests/test_wig_summarize_wiring.py` — 0 class / 1 func
 - `tests/test_wiring_parity.py` — 0 class / 13 func
