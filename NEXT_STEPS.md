@@ -1,6 +1,20 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = watcher 이식성 수정(A) 또는 다음 product work-item
+## ▶ 다음 = 리뷰 합의 게이트 S1 구현 (또는 watcher 이식성·다음 product work-item)
+
+### ✅ 리뷰 합의 게이트 설계 완료 (2026-06-19, Opus, 브랜치: `2026-06-04-right-sized-execution-slice1`)
+> **설계 파일**: `docs/2026-06-19-review-consensus-evidence-gate-design.md`
+> **계기**: `docs/2026-06-18-user-perspective-qa-pipeline-design.md` cross-review가 **5라운드 연속 BLOCK** 후 캡 종료. 복기 → **두 독립 실패** 진단.
+> - **실패 B(자기유발 진동)**: 설계문서 경로(`check_design_pending.py`)는 라운드캡·수렴가드 *부재*(코드리뷰는 `MAX_ROUNDS=5` 있음). 매 라운드 내 수정이 다음 BLOCK 유발. → §4 수렴가드+스코프게이트(설계 `MAX_DESIGN_ROUNDS=3`, HOW 모순은 advisory 강등).
+> - **실패 A(증거 미수집)**: finding 단위 증거 API 부재(`build_full`은 전체 파일만), finding은 산문 비가독. 지침으로 "grep 하라" 해도 LLM이 건너뜀. → §5 증거수집 합의기(코드가 caller/callee/test 수집 → 합의 LLM이 증거 위에서만 ACCEPT/REJECT). **코드리뷰 한정(INV-6 메타-재귀 경계)**.
+> - **멀티프로바이더=코드로 중립**: 합의/수렴 로직을 Python에 두면 어느 프로바이더가 게이트 돌려도 같은 코드(INV-2). 산문 지침은 sync(`INSTRUCTIONS.md`→CLAUDE/AGENTS/GEMINI).
+> - **교차검증**: af-cross-review **WARN**(BLOCK 0). §2 baseline 11개 라인인용 전수 사실확인 PASS. Advisory 3건 전부 HOW-깊이로 cross-review가 *자동 강등*(이 설계의 INV-4 작동 실증 — 5라운드 루프와 정반대). Finding 1(§5.6 verdict 연결경로)만 한 줄 보강.
+> - **구현 슬라이스**: S1(설계 라운드캡, 즉효·이번 루프 재발차단) → S2(수렴감지+스코프) ∥ S3(구조화 finding 사이드카) → S4(consensus.py+증거래퍼) → S5(callee) → S6(합의판정+verdict집계). **S1·S2(실패B)는 S3~S6(실패A)와 병렬 가능. S1 먼저 권장.**
+> **다음 = S1 구현(`/model sonnet`)** 또는 watcher(A) 또는 다른 product work-item.
+
+### ✅ watcher 이식성 + 설계문서 재검증 완료 (2026-06-19, `90b5dfb4`)
+- watcher: `_process_alive()` 신설(Windows ctypes OpenProcess / Unix os.kill 분기, WinError 87 해소) + `_is_watcher_alive` 교체 + `_start_watcher` DETACHED_PROCESS 플래그·close_fds 제거. 테스트 13케이스.
+- 설계문서 `docs/2026-06-18-user-perspective-qa-pipeline-design.md`: §2.5 S2/S3 완료 갱신 + INV-Q4 enforcement 구체화 + §10 Q-S4 선행조건·pipeline 분해. **단 cross-review 5라운드 BLOCK 후 캡 종료** — 잔여 advisory는 Q-S4 구현 시 결정. (이 루프가 위 합의 게이트 설계의 계기.)
 
 ### ✅ (B) fail-closed 게이트 완료 (2026-06-18, Sonnet, `1374dd7b`)
 - `scripts/check_staged_design_review.py` 확장: verdict 부재 시 provider 상태별 BLOCK/SKIP 분기
