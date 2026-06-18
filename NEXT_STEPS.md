@@ -1,6 +1,6 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = Completion Contract S3 또는 watcher 이식성 수정(A)
+## ▶ 다음 = watcher 이식성 수정(A) 또는 다음 product work-item
 
 ### ✅ (B) fail-closed 게이트 완료 (2026-06-18, Sonnet, `1374dd7b`)
 - `scripts/check_staged_design_review.py` 확장: verdict 부재 시 provider 상태별 BLOCK/SKIP 분기
@@ -54,9 +54,17 @@
 > - `tests/test_acceptance_gate.py` 46 케이스. 3-Tier: af-critic WARN(2건 수정: DEVNULL+상수화) / af-cross-review WARN(2건 수정: shlex ValueError FAILED→UNVERIFIED, _run_server docstring) / af-test-runner FAIL→46/46 PASS(shlex posix import 추가).
 > - wiring deferred (S3에서 dogfood.py/project_pipeline.py 연결).
 
-### ▶ (C-S3) 다음 = pipeline 배선 (§8 S3)
-> `AcceptanceGate.run(contract, workspace)` 를 `dogfood.py` + `project_pipeline.py` production 호출 경로에 연결. 파서도 S3 범위: `acceptance_criteria` LLM 출력 → `GoalEntry` 목록 변환 (baseline 캡처 먼저).
-
+### ✅ (C-S3) pipeline 배선 완료 (2026-06-19, Sonnet, `6808dd3d`)
+> - `parse_acceptance_criteria()` / `build_evidence_ledger()` 헬퍼 신설
+> - `PreparedProject.goal_contract` 필드 + `prepare_documents()` GoalContract 생성 (TYPE_CHECKING guard)
+> - `execute()`: AcceptanceGate 게이팅 — `gated_ok`/`gated_reason`/`evidence_ledger`
+> - `already_done` 재집계 / `contract=None` → `already_done_legacy` (Finding #5)
+> - `dogfood`: `_run_develop_full` goal_contract 추출 / `_run_verify_phase` AcceptanceGate / `_run_review_phase` BLOCKED(goal_failed) 조기반환 (inv3 terminal)
+> - 버그픽스 2건:
+>   - `work_item_parser.py`: 영어 `Acceptance Criteria` heading fallback 추가 (generator-parser 불일치 해소)
+>   - `project_pipeline.py`: `AcceptanceGate.run(contract, workspace)` — `state_workspace` 오전달 수정
+> - `tests/test_acceptance_gate_integration.py` 34케이스 신규. 3-Tier: af-critic PASS / af-cross-review BLOCK 2건 수정→PASS / af-test-runner 216 PASS
+>
 > **메모리**: `project_completion_contract_and_review_surfacing`
 
 ---
