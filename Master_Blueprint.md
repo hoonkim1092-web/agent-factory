@@ -1137,12 +1137,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-18; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+5)
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, completion_contract.py, test_acceptance_gate.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/completion_contract.py` | Completion contract: goal-reached verification via an evidence ledger. | `GoalEvidence`, `GoalEntry`, `GoalContract`, `HarnessResult` |
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodState` |
+| `core/completion_contract.py` | Completion contract: goal-reached verification via an evidence ledger. | `GoalEntry`, `GoalContract`, `ExecutionHarness`, `AcceptanceGate` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1690,6 +1689,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-18 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, completion_contract.py, test_acceptance_gate.py |
 | 2026-06-18 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+5) |
 | 2026-06-18 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, project_pipeline.py, work_item_generator.py |
 | 2026-06-12 | v1.2.34 | feat(wiring-parity-gate): `test_gap_analyzer.py`에 wiring_parity 룰 추가. 신규 함수/파라미터가 production caller 없으면 warnings 채널 WARN(verdict=PASS 유지). `_WIRING_EXEMPT_PATHS`/`_WIRING_DEFERRED_MARKER` 명명 상수, `_extract_wiring_candidates`/`_find_production_callers`/`_any_caller_passes_param`/`_has_deferred_marker` 헬퍼. `__init__` 파라미터 skip(INV: caller는 ClassName()). `core/utils.py` 면제. `tests/test_wiring_parity.py` 11케이스 신규. af-critic.md Step3 High 1줄 추가. 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(22). §3 갱신. |

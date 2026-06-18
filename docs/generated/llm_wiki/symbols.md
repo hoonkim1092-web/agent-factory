@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T22:56:34+09:00
-source_commit: 1374dd7b
+generated_at: 2026-06-18T23:23:07+09:00
+source_commit: 178fd510
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -591,6 +591,8 @@ _(no top-level symbols)_
 - `GoalEntry`
 - `GoalContract`
 - `HarnessResult`
+- `ExecutionHarness`
+- `AcceptanceGate`
 
 ## `core/concurrency.py`
 
@@ -5438,6 +5440,23 @@ _(no top-level symbols)_
 
 **Functions:**
 - `run_verification`
+
+## `tests/test_acceptance_gate.py`
+
+**Classes:**
+- `TestExecutionHarnessCliMocked`
+- `TestExecutionHarnessLibraryReal`
+- `TestExecutionHarnessOther`
+- `TestExecutionHarnessServerMocked`
+- `TestAcceptanceGate`
+
+**Functions:**
+- `_cli_goal`
+- `_lib_goal`
+- `_server_goal`
+- `_gui_goal`
+- `_none_goal`
+- `_fake_proc`
 
 ## `tests/test_af_doctor.py`
 
