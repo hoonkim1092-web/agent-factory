@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T08:02:29+09:00
-source_commit: f4fa5fb8
+generated_at: 2026-06-18T18:42:41+09:00
+source_commit: 15dd7882
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -13,6 +13,2065 @@ sources:
 > 관련: [[index]] | [[architecture]] | [[source_refs]]
 
 # Codebase Symbols
+
+## `.a/agent_launcher.py`
+
+**Classes:**
+- `AgentFactory`
+
+**Functions:**
+- `_safe_write_json`
+
+## `.a/antigravity_link.py`
+
+**Classes:**
+- `SmartLinker`
+
+**Functions:**
+- `resolve_python_exec`
+- `safe_id`
+- `safe_key`
+- `_truncate`
+- `resolve_global_memory_dir`
+- `mirror_global_memory`
+- `handle_command`
+- `main`
+
+## `.a/build_exe.py`
+
+**Functions:**
+- `_get_version`
+- `main`
+
+## `.a/check_rel.py`
+
+**Functions:**
+- `check_releases`
+
+## `.a/demo_runner.py`
+
+**Functions:**
+- `run_demo`
+
+## `.a/extract_phase3.py`
+
+**Functions:**
+- `main`
+
+## `.a/factory_manager.py`
+
+**Functions:**
+- `find_existing_agent`
+- `load_agent_config`
+- `assemble_and_push`
+
+## `.a/model_utils.py`
+
+**Classes:**
+- `ModelSelection`
+
+**Functions:**
+- `log`
+- `_get_genai_client`
+- `load_cache`
+- `save_cache`
+- `normalize_model_name`
+- `get_forced_model_override`
+- `_is_not_found_error`
+- `_build_gemini_retry_candidates`
+- `generate_content_with_self_heal`
+- `create_chat_with_self_heal`
+- `get_available_models`
+- `fetch_openai_models`
+- `fetch_anthropic_models`
+- `_pick_anthropic_model`
+- `_pick_openai_model`
+- `find_latest_model`
+- `get_dynamic_default_model`
+- `get_best_model`
+- `resolve_dynamic_model`
+- `_load_role_provider_cache`
+- `_save_role_provider_cache`
+- `pick_cli_provider_for_role`
+- `_llm_decide_provider`
+- `_infer_engine_id`
+- `resolve_preferred_model`
+- `print_agent_model_summary`
+
+## `.a/probe_openai.py`
+
+_(no top-level symbols)_
+
+## `.a/project_orchestrator.py`
+
+**Functions:**
+- `print_message`
+- `parse_mentions`
+- `decompose_roles`
+- `forge_roles`
+- `parse_roles`
+- `main`
+
+## `.a/projects/agent_factory/artifacts/db_customization_loader.py`
+
+**Functions:**
+- `load_db`
+- `to_dict_rows`
+- `q_all`
+- `q_one`
+- `fmt_to_strptime`
+- `transform_value`
+- `validate_row`
+- `extract_records`
+- `compute_business_key`
+- `main`
+
+## `.a/projects/agent_factory/runs/r2/dp_skill.py`
+
+**Functions:**
+- `_validate`
+- `_norm`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/projects/agent_factory/runs/r3/dp_skill.py`
+
+**Functions:**
+- `_validate`
+- `_norm`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/projects/agent_factory/syncCompyne/memory_store.py`
+
+**Classes:**
+- `MemoryEntry`
+
+**Functions:**
+- `ensure_db`
+- `_get_project_id`
+- `add_entry`
+- `_period_start_end`
+- `pick_latest_session_day`
+- `read_entries_for_day`
+
+## `.a/projects/agent_factory/syncCompyne/project_log_cli.py`
+
+**Functions:**
+- `now_date`
+- `now_time`
+- `section_header`
+- `ensure_log_file`
+- `ensure_today_section`
+- `add_timeline_entry`
+- `find_section`
+- `cmd_save`
+- `cmd_read`
+- `build_parser`
+- `main`
+
+## `.a/projects/agent_factory/syncCompyne/workspace_context_cli.py`
+
+**Classes:**
+- `TimelineEntry`
+- `SessionBlock`
+
+**Functions:**
+- `parse_day`
+- `now_day`
+- `now_hhmm`
+- `section_header`
+- `resolve_project_path`
+- `log_path`
+- `resolve_db_path`
+- `ensure_log_file`
+- `parse_sessions`
+- `ensure_day_section`
+- `append_timeline`
+- `discover_projects`
+- `in_period`
+- `pick_latest_session`
+- `timeline_before_or_equal`
+- `render_session`
+- `render_memory_timeline`
+- `cmd_list_projects`
+- `cmd_save`
+- `cmd_read`
+- `_run_git`
+- `cmd_auto`
+- `cmd_migrate_log`
+- `build_parser`
+- `main`
+
+## `.a/projects/gemini_live_edit/artifacts/live_edit_check.py`
+
+**Functions:**
+- `status`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/file_handler.py`
+
+**Functions:**
+- `read_file`
+- `write_file`
+- `list_files`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/projects/minesweeper/agents/architect-agent/tools/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/file_handler.py`
+
+**Functions:**
+- `read_file`
+- `write_file`
+- `list_files`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/projects/minesweeper/agents/logicdeveloper-agent/tools/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/file_handler.py`
+
+**Functions:**
+- `read_file`
+- `write_file`
+- `list_files`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/projects/minesweeper/agents/uideveloper-agent/tools/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/repo_shortcuts.py`
+
+**Functions:**
+- `_nearest_git_root`
+- `resolve_repo_path`
+- `handle_repo_shortcut`
+
+## `.a/run_eval_loop.py`
+
+**Functions:**
+- `main`
+- `extract_reasoning`
+
+## `.a/run_factory_cli.py`
+
+**Functions:**
+- `_safe_project_id`
+- `_resolve_projects_root`
+- `_run_skill_creator`
+- `_run_skill_spec`
+- `_run_preflight`
+- `_run_skill_eval`
+- `_run_skill_promote`
+- `_launch_interactive_mode`
+- `main`
+
+## `.a/scripts/check_changed_text_integrity.py`
+
+**Classes:**
+- `IntegrityIssue`
+
+**Functions:**
+- `_run_git`
+- `resolve_repo_root`
+- `list_changed_paths`
+- `load_revision_bytes`
+- `check_paths_against_revision`
+- `main`
+
+## `.a/scripts/claude_session_bridge.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/clean_agents_yaml.py`
+
+**Functions:**
+- `clean_yaml`
+
+## `.a/scripts/cli_hook_bridge.py`
+
+**Functions:**
+- `main`
+
+## `.a/scripts/codex_session_bridge.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/destructive_guard_proxy.py`
+
+**Functions:**
+- `_parse_args`
+- `main`
+
+## `.a/scripts/fix_runner_cwm.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/gemini_session_bridge.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/generate_agents_md.py`
+
+**Classes:**
+- `AgentRecord`
+
+**Functions:**
+- `_resolve_path`
+- `_read_text_with_fallback`
+- `_load_yaml`
+- `_first_non_empty_str`
+- `_coerce_type_role`
+- `_extract_role`
+- `_extract_name`
+- `_extract_dashboard_overrides`
+- `_detect_role_type`
+- `_resolve_core_agent_emoji`
+- `_collect_yaml_files`
+- `_relative_posix`
+- `collect_records`
+- `_md_escape`
+- `render_markdown`
+- `parse_args`
+- `main`
+
+## `.a/scripts/import_external_skill_candidates.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/migrate_registry.py`
+
+**Functions:**
+- `_read_yaml`
+- `main`
+
+## `.a/scripts/project_context_sync.py`
+
+**Functions:**
+- `load_dotenv_simple`
+- `load_dotenv_override`
+- `now_iso`
+- `safe_id`
+- `normalize_match_key`
+- `sync_project_id`
+- `_same_path`
+- `_project_sync_id_for_path`
+- `_is_repo_root_alias`
+- `resolve_project_root`
+- `resolve_global_root`
+- `read_text`
+- `write_text`
+- `b64e`
+- `b64d`
+- `http_json`
+- `try_read_json`
+- `_include_text_file`
+- `_is_excluded`
+- `_include_tree`
+- `_include_root_files`
+- `_parse_exclude_globs`
+- `_apply_exclude_globs`
+- `_collect_run_files`
+- `collect_snapshot`
+- `collect_global_snapshot`
+- `write_snapshot`
+- `make_scope_key`
+- `parse_project_inputs`
+- `main`
+
+## `.a/scripts/replace_react_loop.py`
+
+_(no top-level symbols)_
+
+## `.a/scripts/session_bridge.py`
+
+**Classes:**
+- `SessionBridgeProvider`
+
+**Functions:**
+- `safe_id`
+- `safe_key`
+- `now_iso`
+- `truncate`
+- `resolve_global_root`
+- `load_json`
+- `save_json`
+- `read_env_value`
+- `read_windows_user_env`
+- `is_noise`
+- `_extract_text_chunks`
+- `_join_chunks`
+- `_extract_codex_chat_text`
+- `_extract_generic_role_content_text`
+- `get_provider`
+- `resolve_sessions_root`
+- `iter_session_files`
+- `collect_new_events`
+- `write_memory_entries`
+- `_resolve_user_key`
+- `run_bridge`
+- `main`
+- `main_for_provider`
+
+## `.a/scripts/sync_skill_registry.py`
+
+**Functions:**
+- `now_iso`
+- `safe_id`
+- `read_yaml`
+- `write_yaml`
+- `to_portable`
+- `load_meta`
+- `discover_dir_skills`
+- `discover_forge_skills`
+- `normalize_install_candidates`
+- `sync_registry`
+- `main`
+
+## `.a/scripts/write_resume_brief.py`
+
+**Functions:**
+- `refresh_resume_briefs`
+- `main`
+
+## `.a/skills/ai_funnel_routing/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/core/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/skills/core/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/core/file_handler.py`
+
+**Functions:**
+- `read_file`
+- `write_file`
+- `list_files`
+
+## `.a/skills/core/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/skills/core/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/skills/core/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/skills/core/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/skills/core/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/skills/core_memory/skill.py`
+
+**Functions:**
+- `_safe_id`
+- `_agent_id_from_ctx`
+- `_resolve_scope`
+- `_default_store_scope`
+- `_get_local_data_dir`
+- `_get_global_data_dir`
+- `_memory_roots`
+- `_category_dirs`
+- `_legacy_memory_path`
+- `_store_root`
+- `store`
+- `retrieve`
+- `search`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/create_design_system/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/css_styling/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/data_visualize/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/domain/langchain/langchain_guidelines.py`
+
+**Functions:**
+- `_read_skill_md`
+- `get_framework_selection_guideline`
+- `get_langchain_dependencies_guideline`
+- `get_langchain_fundamentals_guideline`
+- `get_langchain_middleware_guideline`
+- `get_langchain_rag_guideline`
+- `get_langgraph_fundamentals_guideline`
+- `get_langgraph_human_in_the_loop_guideline`
+- `get_langgraph_persistence_guideline`
+- `get_deep_agents_core_guideline`
+- `get_deep_agents_memory_guideline`
+- `get_deep_agents_orchestration_guideline`
+
+## `.a/skills/dp/skill.py`
+
+**Functions:**
+- `_validate`
+- `_norm`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/eval/langsmith_eval.py`
+
+**Functions:**
+- `trace_execution`
+- `summarize_failure`
+- `generate_eval_dataset`
+- `_extract_error_line`
+
+## `.a/skills/evaluator/__init__.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/evaluator/generate_eval_dataset/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+- `_parse_jsonl`
+- `_extract_run_info`
+- `_calc_duration_ms`
+- `_parse_ts`
+- `_balance_dataset`
+- `_deduplicate_cases`
+- `_filter_duration_outliers`
+- `_percentile`
+- `_calc_dataset_quality`
+
+## `.a/skills/evaluator/summarize_failure/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+- `_parse_jsonl`
+- `_collect_error_texts`
+- `_classify_failure`
+- `_extract_root_cause`
+- `_generate_suggestions`
+- `_find_similar_failures`
+- `_trace_error_chain`
+- `_detect_duration_anomaly`
+- `_calc_duration_between`
+- `_calc_refined_severity`
+
+## `.a/skills/evaluator/trace_execution/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+- `_parse_jsonl`
+- `_build_skill_call`
+- `_calc_duration_ms`
+- `_parse_ts`
+- `_summarize_dict`
+- `_detect_timeline_anomalies`
+- `_detect_skill_errors`
+
+## `.a/skills/forge/api_security_vetting.py`
+
+**Functions:**
+- `_security_checks`
+- `vet_api`
+- `propose`
+- `apply`
+- `test`
+- `main`
+
+## `.a/skills/forge/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/skills/forge/database_performance_tuning.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/db_optimizer.py`
+
+**Functions:**
+- `_analyze_query`
+- `optimize_db`
+- `propose`
+- `apply`
+- `test`
+- `main`
+
+## `.a/skills/forge/edomae_sushi_shikomi_playbook.py`
+
+**Functions:**
+- `get_available_ingredients`
+- `find_recipe_steps`
+- `handle_prepare`
+- `handle_status`
+- `handle_recipe`
+- `handle_report`
+- `main`
+
+## `.a/skills/forge/file_handler.py`
+
+**Functions:**
+- `read_file`
+- `write_file`
+- `list_files`
+
+## `.a/skills/forge/infrastructure_scaler.py`
+
+**Functions:**
+- `_build_scale_plan`
+- `scale_report`
+- `propose`
+- `apply`
+- `test`
+- `main`
+
+## `.a/skills/forge/needs_issue.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/new_skill.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/omakase_service_pacing_control.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/perishable_inventory_control.py`
+
+**Functions:**
+- `load_inventory`
+- `save_inventory`
+- `add_item`
+- `update_item`
+- `remove_item`
+- `list_items`
+- `alert_items`
+- `main`
+
+## `.a/skills/forge/precision_knife_techniques.py`
+
+**Classes:**
+- `MasterChef`
+
+**Functions:**
+- `main`
+
+## `.a/skills/forge/scalable_api_architecture.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/seasonal_ingredient_procurement.py`
+
+**Functions:**
+- `load_history`
+- `save_history`
+- `handle_recommend`
+- `handle_order`
+- `handle_history`
+- `main`
+
+## `.a/skills/forge/seasonal_omakase_inventory_optimization.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/forge/zero_downtime_deployment_playbook.py`
+
+_(no top-level symbols)_
+
+## `.a/skills/frontend_ui_ux/skill.py`
+
+**Classes:**
+- `FrontendUIUXSkill`
+
+## `.a/skills/generate_image/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/gherkin_sdd_authoring/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/git_master/skill.py`
+
+**Classes:**
+- `GitMasterSkill`
+
+## `.a/skills/hash_edit/skill.py`
+
+**Functions:**
+- `get_file_with_hashes`
+- `find_hash`
+- `apply_edit`
+- `apply_block_edit`
+- `get_edit_history`
+
+## `.a/skills/hashline_edit/skill.py`
+
+**Classes:**
+- `HashlineEditSkill`
+
+## `.a/skills/hound_librarian/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/issue_tracker/skill.py`
+
+**Functions:**
+- `_load_issues`
+- `_save_issues`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/liability_traceability_design/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/new_skill/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/perform_web_design_review/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/react_coding/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/research_assistant/skill.py`
+
+**Functions:**
+- `_extract_answer`
+- `_is_auth_error`
+- `_reauth_notebooklm`
+- `_query_notebooklm`
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/roi_defense_modeling/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/state_machine_exception_planning/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/stitch_design/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/trigger_rule_design/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/user_flow_optimization/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/skills/zero_integration_parsing_spec/skill.py`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/syncCompyne/memory_store.py`
+
+**Classes:**
+- `MemoryEntry`
+
+**Functions:**
+- `ensure_db`
+- `_get_project_id`
+- `add_entry`
+- `_period_start_end`
+- `pick_latest_session_day`
+- `read_entries_for_day`
+
+## `.a/syncCompyne/project_log_cli.py`
+
+**Functions:**
+- `now_date`
+- `now_time`
+- `section_header`
+- `ensure_log_file`
+- `ensure_today_section`
+- `add_timeline_entry`
+- `find_section`
+- `cmd_save`
+- `cmd_read`
+- `build_parser`
+- `main`
+
+## `.a/syncCompyne/workspace_context_cli.py`
+
+**Classes:**
+- `TimelineEntry`
+- `SessionBlock`
+
+**Functions:**
+- `parse_day`
+- `now_day`
+- `now_hhmm`
+- `section_header`
+- `resolve_project_path`
+- `log_path`
+- `resolve_db_path`
+- `ensure_log_file`
+- `parse_sessions`
+- `ensure_day_section`
+- `append_timeline`
+- `discover_projects`
+- `in_period`
+- `pick_latest_session`
+- `timeline_before_or_equal`
+- `render_session`
+- `render_memory_timeline`
+- `cmd_list_projects`
+- `cmd_save`
+- `cmd_read`
+- `_run_git`
+- `cmd_auto`
+- `cmd_migrate_log`
+- `build_parser`
+- `main`
+
+## `.a/test_complex_skill_build.py`
+
+**Functions:**
+- `ck`
+
+## `.a/test_fallback.py`
+
+**Functions:**
+- `divide_numbers`
+
+## `.a/test_hashline.py`
+
+**Functions:**
+- `test_hashline_operations`
+
+## `.a/test_hashline_v2.py`
+
+**Functions:**
+- `_safe_print`
+- `check`
+
+## `.a/test_hound_librarian.py`
+
+_(no top-level symbols)_
+
+## `.a/test_llm.py`
+
+_(no top-level symbols)_
+
+## `.a/test_model_routing_v3.py`
+
+**Classes:**
+- `_DummyRegistry`
+- `_DummyChat`
+
+**Functions:**
+- `_selection`
+- `_run_with_classifier`
+- `test_simple_task_routes_to_lightweight`
+- `test_complex_task_uses_role_based_engine`
+- `test_research_role_skips_classifier_and_stays_complex`
+
+## `.a/test_output/agents/architect-agent/tools/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/test_output/agents/architect-agent/tools/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/test_output/agents/architect-agent/tools/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/test_output/agents/architect-agent/tools/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/test_output/agents/architect-agent/tools/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/test_output/agents/architect-agent/tools/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/test_output/agents/architect-agent/tools/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/test_output/agents/architect-agent/tools/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/test_output/agents/logicdev-agent/tools/ast_grep.py`
+
+**Functions:**
+- `run_ast_grep`
+
+## `.a/test_output/agents/logicdev-agent/tools/core_module.py`
+
+**Functions:**
+- `setup_logging`
+- `cmd_initialize`
+- `cmd_analyze`
+- `cmd_terminate`
+- `main`
+
+## `.a/test_output/agents/logicdev-agent/tools/cortex.py`
+
+**Classes:**
+- `CortexClient`
+
+**Functions:**
+- `propose`
+- `apply`
+- `test`
+
+## `.a/test_output/agents/logicdev-agent/tools/lsp_hover.py`
+
+**Functions:**
+- `lsp_goto_definition`
+
+## `.a/test_output/agents/logicdev-agent/tools/mcp_client.py`
+
+**Functions:**
+- `call_mcp_tool`
+
+## `.a/test_output/agents/logicdev-agent/tools/mcp_exa_search.py`
+
+**Functions:**
+- `exa_search`
+
+## `.a/test_output/agents/logicdev-agent/tools/memory_pruner.py`
+
+**Functions:**
+- `prune_text`
+
+## `.a/test_output/agents/logicdev-agent/tools/retrofit_cortex.py`
+
+**Functions:**
+- `retrofit_agents`
+
+## `.a/test_terminal.py`
+
+**Functions:**
+- `sp`
+- `ck`
+
+## `.a/tests/check_models.py`
+
+_(no top-level symbols)_
+
+## `.a/tests/conftest.py`
+
+**Functions:**
+- `_cleanup_test_runtime_root`
+- `tmp_path`
+
+## `.a/tests/run_verify_agent.py`
+
+**Functions:**
+- `run_verification`
+
+## `.a/tests/test_builder_cli_fallback.py`
+
+**Functions:**
+- `_load_builder`
+- `test_builder_uses_cli_provider_when_google_key_missing`
+- `test_builder_without_cli_or_google_key_returns_no_api_key`
+
+## `.a/tests/test_builder_multi_pass.py`
+
+**Functions:**
+- `_load_builder`
+- `test_builder_runs_multi_pass_forge_with_reference_candidate`
+
+## `.a/tests/test_capability_intent.py`
+
+**Functions:**
+- `test_capability_intent_analyzer_derives_capabilities_and_evidence`
+
+## `.a/tests/test_cli_providers.py`
+
+**Functions:**
+- `test_config_paths_allows_cli_only_bootstrap_without_api_keys`
+- `test_cli_provider_registry_defaults_and_filtering`
+- `test_config_paths_ignores_engine_api_keys_when_disabled`
+- `test_build_cli_command_uses_provider_specific_defaults`
+- `test_codex_cli_path_override_keeps_exec_subcommand`
+- `test_build_cli_command_falls_back_to_windows_roaming_npm_shim`
+- `test_gemini_cli_default_alias_omits_model_flag`
+- `test_gemini_cli_prompt_prioritizes_task_before_system_context`
+- `test_gemini_cli_normalized_default_alias_omits_model_flag`
+- `test_codex_cli_combined_prompt_prioritizes_task_and_includes_destructive_guard`
+- `test_build_cli_command_uses_stdin_prompt_for_codex_cli`
+- `test_claude_cli_append_system_prompt_includes_destructive_guard`
+- `test_cli_provider_includes_repo_root_when_workspace_is_nested`
+- `test_agent_runner_uses_cli_provider_before_sdk_fallback`
+- `test_agent_runner_cli_only_short_task_does_not_require_todo`
+- `test_agent_runner_cli_only_still_blocks_complex_task_without_todo`
+- `test_execute_cli_chat_persists_failed_launch_state`
+- `test_execute_cli_chat_auto_installs_missing_provider_and_retries`
+- `test_execute_cli_chat_keeps_not_found_when_auto_install_disabled`
+- `test_execute_cli_chat_strips_provider_api_key_env`
+- `test_execute_cli_chat_sends_codex_prompt_via_stdin`
+- `test_execute_cli_chat_runs_codex_auth_preflight_and_auto_login`
+- `test_execute_cli_chat_codex_preflight_stops_on_permission_denied`
+- `test_execute_cli_chat_runs_claude_auth_preflight_and_auto_login`
+- `test_agent_runner_writes_skill_runtime_feedback`
+
+## `.a/tests/test_cli_session_adapter.py`
+
+**Functions:**
+- `_read_json`
+- `test_prepare_cli_session_writes_claude_hook_settings`
+- `test_prepare_cli_session_routes_gemini_hooks_via_generated_defaults_file`
+- `test_prepare_cli_session_sets_codex_shell_guard_on_windows`
+- `test_prepare_cli_session_seeds_codex_auth_files`
+- `test_codex_shell_guard_blocks_destructive_commands_on_windows`
+- `test_handle_hook_event_returns_context_and_runs_bridge`
+- `test_handle_hook_event_skips_gemini_context_in_headless_mode`
+- `test_handle_hook_event_keeps_gemini_context_for_interactive_sessions`
+
+## `.a/tests/test_context_window_manager.py`
+
+**Classes:**
+- `TestEstimateTokens`
+- `TestContextBudget`
+- `TestToolTracker`
+- `TestHistoryManager`
+- `TestKnowledgeInjector`
+- `TestContextWindowManager`
+
+## `.a/tests/test_conversation_collaboration.py`
+
+**Classes:**
+- `TestAgentReservationManager`
+- `TestConversationRoom`
+- `TestConversationTurn`
+- `TestConversationBudget`
+- `TestConsensusEngine`
+- `TestConversationToTaskAdapter`
+- `TestConversationManagerLeaseConflict`
+- `TestInferTurnTypeFromText`
+- `TestConsensusEngineHallucinationDefense`
+- `TestUnstructuredTurnHandling`
+
+## `.a/tests/test_cross_schema.py`
+
+**Functions:**
+- `test_registry_schema_cross_validation`
+
+## `.a/tests/test_destructive_guard.py`
+
+**Functions:**
+- `test_inject_destructive_guard_contract_is_idempotent`
+- `test_merge_claude_destructive_guard_deduplicates_rules`
+- `test_write_gemini_destructive_policy_contains_shell_deny_rules`
+- `test_detect_destructive_process_covers_cmd_and_git_paths`
+
+## `.a/tests/test_documentation_policy.py`
+
+**Functions:**
+- `test_ensure_documentation_files_creates_korean_skeletons`
+- `test_documentation_policy_falls_back_to_english_templates`
+- `test_inject_documentation_contract_is_idempotent`
+- `test_project_pipeline_todo_includes_documentation_tasks`
+
+## `.a/tests/test_dynamic_orchestrator_workspace_scope.py`
+
+**Classes:**
+- `_DummyMR`
+- `_DummyLLM`
+- `_RepeatingLLM`
+- `_DummyRunner`
+- `_FailingRunner`
+- `_DummyAgentManager`
+- `_DummyMemoryHub`
+- `_DummyEvaluator`
+
+**Functions:**
+- `test_workspace_is_propagated_without_rebinding`
+- `test_todo_fallback_assigns_tasks_when_llm_is_unavailable`
+- `test_project_board_fallback_respects_dependencies`
+- `test_execute_agent_task_marks_project_board_completed`
+- `test_retry_failure_reopens_board_task_for_reschedule`
+- `test_completed_todo_blocks_repeated_llm_reassignment`
+- `test_role_scoped_todo_is_not_cross_assigned`
+
+## `.a/tests/test_executor.py`
+
+**Functions:**
+- `test_executor_success`
+- `test_executor_timeout`
+- `test_executor_failure`
+
+## `.a/tests/test_external_skill_candidate_importer.py`
+
+**Functions:**
+- `test_import_external_candidates_from_manifest`
+- `test_import_external_candidates_can_fallback_to_python_scan`
+- `test_import_external_candidates_can_fallback_to_codex_markdown_scan`
+- `test_import_external_candidates_blocks_duplicate_skill_ids_within_same_source`
+- `test_import_external_candidates_replaces_legacy_source_keys`
+- `test_merge_install_candidates_preserves_legacy_list_form_entries`
+- `test_discover_external_candidates_sweeps_custom_sources_when_unspecified`
+- `test_discover_external_candidates_prefers_manifest_before_python_fallback`
+- `test_main_uses_default_paths_for_check_only`
+- `test_main_accepts_legacy_cli_aliases`
+
+## `.a/tests/test_external_skill_sources.py`
+
+**Functions:**
+- `test_external_resolver_prefers_claude_before_codex`
+- `test_external_resolver_records_miss_before_falling_through`
+- `test_external_resolver_treats_prepare_error_as_source_error_then_falls_through`
+- `test_repo_cache_source_reads_imported_candidates`
+- `test_repo_cache_source_uses_same_cache_segment_as_importer`
+- `test_repo_cache_source_falls_back_to_python_scan_when_manifest_missing`
+- `test_external_resolver_surfaces_repo_sync_failure_as_source_error`
+- `test_official_codex_source_reads_skill_directories`
+- `test_external_resolver_prefers_official_codex_before_repo_cache`
+
+## `.a/tests/test_factory_evolution.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_factory_reuses_verified_skill`
+- `test_factory_builds_unresolved_skill_and_registers`
+- `test_factory_run_workflow_sequences_roles`
+
+## `.a/tests/test_fallback_auto_gen.py`
+
+**Functions:**
+- `test_regression_fix`
+
+## `.a/tests/test_hook_event_bus.py`
+
+**Classes:**
+- `_NormalizeArgsHook`
+- `_ReadonlyWorkspaceHook`
+- `_TruncateToolResultHook`
+
+**Functions:**
+- `test_pre_tool_call_hooks_can_mutate_and_block`
+- `test_post_tool_call_hooks_can_transform_result`
+
+## `.a/tests/test_implementation_language_policy.py`
+
+**Functions:**
+- `test_inject_implementation_language_contract_is_idempotent`
+- `test_inject_implementation_language_contract_can_be_disabled`
+- `test_agent_runner_runtime_prompt_includes_implementation_language_contract`
+- `test_codex_cli_prompt_includes_implementation_language_contract`
+
+## `.a/tests/test_key_combos.py`
+
+**Functions:**
+- `test_engine_selection_per_key_combination`
+
+## `.a/tests/test_knowledge_skill.py`
+
+**Classes:**
+- `TestParseSkillMd`
+- `TestScanKnowledgeSkills`
+- `TestFilterRelevantKnowledge`
+- `TestBuildKnowledgePrompt`
+- `TestSkillRegistryKnowledgeType`
+
+**Functions:**
+- `temp_skills_dir`
+- `sample_skill_md`
+- `sample_no_frontmatter`
+
+## `.a/tests/test_korean_encoding.py`
+
+**Functions:**
+- `test_korean_text_is_preserved`
+
+## `.a/tests/test_llm_engine_auto_upgrade_scope.py`
+
+**Functions:**
+- `test_auto_upgrade_is_enabled_by_env_flag`
+- `test_auto_upgrade_is_disabled_without_env_flag`
+
+## `.a/tests/test_manager.py`
+
+**Functions:**
+- `test_agent_manager_cli_bootstrap_creates_fallback_agent`
+
+## `.a/tests/test_midori_skills.py`
+
+**Functions:**
+- `load_skill_module`
+- `run_tests`
+
+## `.a/tests/test_model_name_normalization.py`
+
+**Classes:**
+- `_FakeModels`
+- `_FakeClient`
+
+**Functions:**
+- `test_normalize_model_name_for_gemini_prefix`
+- `test_normalize_model_name_non_gemini_passthrough`
+- `test_forced_model_override`
+- `test_no_project_level_forced_override`
+- `test_generate_content_with_self_heal_retries_on_404`
+- `test_resolve_preferred_model_uses_dynamic_routing_when_not_forced`
+
+## `.a/tests/test_omo_env_parse.py`
+
+**Functions:**
+- `test_build_argv_extracts_leading_env_assignments`
+- `test_build_argv_without_env_prefix_is_unchanged`
+
+## `.a/tests/test_orchestrator_manifest.py`
+
+**Classes:**
+- `_DummyMR`
+- `_DummyLLM`
+- `_DummyRunner`
+- `_DummyAgentManager`
+- `_DummyMemoryHub`
+- `_DummyEvaluator`
+
+**Functions:**
+- `test_manifest_store_converts_active_work_into_interrupted`
+- `test_dynamic_orchestrator_writes_manifest_and_restores_interruptions`
+
+## `.a/tests/test_phase10_memory_foundation.py`
+
+**Classes:**
+- `InMemoryAdapter`
+- `TestMemoryRecord`
+- `TestEpisodeRecord`
+- `TestKnowledgeGraph`
+- `TestAdapterABC`
+- `TestFacade`
+- `TestCortexVectorAdapter`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase11_adapters.py`
+
+**Classes:**
+- `TestCoreMemoryAdapter`
+- `TestAstHubAdapter`
+- `TestContinuityAdapter`
+- `TestSyncCompyneAdapter`
+- `TestTraceLogAdapter`
+- `TestFacadeMultiAdapter`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase12_episodic_memory.py`
+
+**Classes:**
+- `TestEpisodeExtractor`
+- `TestConsolidationHook`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase13_knowledge_graph.py`
+
+**Classes:**
+- `TestKnowledgeGraphAdapter`
+- `TestGraphBuilder`
+- `TestGraphQuery`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase14_decay_cross_project.py`
+
+**Classes:**
+- `TestDecayManager`
+- `TestCrossProjectRecall`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase15_lifecycle_issues.py`
+
+**Classes:**
+- `TestProjectLifecycle`
+- `TestGitHubIssuesAdapter`
+- `TestJiraAdapter`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase16_integration.py`
+
+**Classes:**
+- `TestMemoryRouterClassification`
+- `TestMemoryRouterRouting`
+- `TestE2EScenario`
+
+**Functions:**
+- `run`
+
+## `.a/tests/test_phase1_2_integration.py`
+
+**Classes:**
+- `TestPhase12Integration`
+
+**Functions:**
+- `test_batch_performance`
+
+## `.a/tests/test_phase3_langsmith_tracing.py`
+
+**Classes:**
+- `TestStdoutCapturer`
+- `TestLangSmithTracingHook`
+- `TestPhase3Integration`
+
+## `.a/tests/test_phase4_evaluator_skills.py`
+
+**Classes:**
+- `TestTraceExecution`
+- `TestSummarizeFailure`
+- `TestGenerateEvalDataset`
+
+**Functions:**
+- `tmp_dir`
+- `_write_jsonl`
+- `_make_success_events`
+- `_make_failure_events`
+
+## `.a/tests/test_phase5_context_fork_preflight.py`
+
+**Classes:**
+- `TestContextForkHook`
+- `TestPreflightEvaluator`
+
+## `.a/tests/test_phase6_semantic_matching.py`
+
+**Classes:**
+- `TestCosineSimilarity`
+- `TestBuildSkillText`
+- `TestEmbedderFallback`
+- `TestScoreWeights`
+- `TestDiskCache`
+- `TestQueryCacheLRU`
+- `TestAdapterParsing`
+
+**Functions:**
+- `_make_skill`
+
+## `.a/tests/test_phase7_dep_graph_evolve.py`
+
+**Classes:**
+- `TestSkillDependencyGraph`
+- `TestDynamicSkillLoaderDeps`
+- `TestFSALoopSkillEvolve`
+
+## `.a/tests/test_phase8_retrieval_router.py`
+
+**Classes:**
+- `TestRetrievalRouter`
+- `TestEvidencePackExtension`
+
+## `.a/tests/test_phase9_hybrid_retrieval.py`
+
+**Classes:**
+- `TestDocumentChunker`
+- `TestSparseIndex`
+- `TestDocumentIndex`
+- `TestIngestionPipeline`
+- `TestRouterDocumentIntegration`
+- `TestTokenizer`
+
+## `.a/tests/test_policy_runtime.py`
+
+**Classes:**
+- `_ModelDumpOnlyConfig`
+
+**Functions:**
+- `test_resolve_quality_gate_policy_prefers_model_dump`
+- `test_policy_runtime_resolve_agent_policy_prefers_model_dump`
+
+## `.a/tests/test_project_context_sync.py`
+
+**Functions:**
+- `_write`
+- `test_collect_snapshot_excludes_docs_task_by_default`
+- `test_collect_snapshot_applies_env_excludes`
+- `test_collect_snapshot_applies_env_exclude_glob`
+- `test_resolve_project_root_prefers_local_project_when_repo_name_collides`
+- `test_resolve_project_root_supports_explicit_repo_alias`
+- `test_resolve_project_root_supports_powershell_safe_repo_alias`
+- `test_resolve_project_root_normalizes_project_path_to_collision_safe_sync_id`
+
+## `.a/tests/test_project_overrides.py`
+
+**Functions:**
+- `_load_launcher`
+- `_load_keyless_modules`
+- `test_project_skill_override_priority`
+- `test_agent_override_merge`
+- `test_config_paths_supports_keyless_cli_bootstrap`
+- `test_agent_manager_falls_back_without_engine_api_keys`
+
+## `.a/tests/test_project_pipeline.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_factory_routes_complex_task_to_project_pipeline`
+- `test_project_pipeline_writes_planning_artifacts_and_roles`
+- `test_factory_single_run_auto_creates_todo_for_complex_task`
+- `test_factory_single_run_keeps_existing_todo_file`
+
+## `.a/tests/test_project_policy_defaults.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_project_scaffold_policies_include_external_skill_defaults`
+
+## `.a/tests/test_project_scope.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_project_scaffold_files_created`
+- `test_register_built_updates_skill_lock`
+- `test_context_schema_validation_blocks_run`
+
+## `.a/tests/test_registry.py`
+
+**Functions:**
+- `test_registry_yaml_format`
+- `test_registry_normalizes_list_form_install_candidates_source_id`
+- `test_registry_preserves_external_candidate_metadata`
+
+## `.a/tests/test_registry_manager_codex_skills.py`
+
+**Functions:**
+- `_load_registry_manager`
+- `test_registry_manager_installs_codex_markdown_skill_directory`
+- `test_registry_manager_iter_install_candidates_preserves_source_metadata`
+- `test_registry_manager_init_falls_back_to_read_only_on_permission_error`
+
+## `.a/tests/test_repo_shortcuts.py`
+
+**Functions:**
+- `test_resolve_repo_path_prefers_sibling_repo`
+- `test_resolve_repo_path_falls_back_to_env_root`
+
+## `.a/tests/test_request_router.py`
+
+**Classes:**
+- `_Classifier`
+
+**Functions:**
+- `test_router_selects_project_pipeline_for_complex_build_request`
+- `test_router_keeps_single_pipeline_for_simple_fix_request`
+
+## `.a/tests/test_requirement_llm.py`
+
+**Functions:**
+- `test_model_router_requirement_compares_multiple_engine_candidates`
+- `test_requirement_analyzer_uses_cli_provider_when_engine_api_keys_disabled`
+
+## `.a/tests/test_research_depth.py`
+
+**Classes:**
+- `TestResearchDepth`
+
+## `.a/tests/test_researcher_feedback_ranking.py`
+
+**Functions:**
+- `test_researcher_applies_feedback_aware_ranking_to_evidence`
+
+## `.a/tests/test_resume_brief.py`
+
+**Functions:**
+- `test_write_resume_brief_summarizes_manifest_todo_and_latest_session`
+- `test_refresh_resume_briefs_resolves_collision_safe_project_root`
+
+## `.a/tests/test_resume_brief_session_adapter.py`
+
+**Functions:**
+- `test_finalize_cli_session_updates_resume_brief`
+
+## `.a/tests/test_run_build_separation.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_run_default_skips_build`
+- `test_run_with_build_executes_builder`
+
+## `.a/tests/test_run_factory_cli.py`
+
+**Functions:**
+- `_install_fake_agent_launcher`
+- `test_run_factory_cli_sets_provider_and_projects_root`
+- `test_run_factory_cli_rejects_provider_command_without_provider`
+
+## `.a/tests/test_runner_contracts.py`
+
+**Functions:**
+- `_load_launcher`
+- `_module_from_code`
+- `test_tool_filter_and_ctx_merge`
+- `test_runtime_rule_default_deny`
+- `test_system_prompt_and_signature_resolution`
+- `test_load_skills_uses_cache_and_invalidates_on_file_change`
+- `test_load_skills_collects_knowledge_markdown`
+- `test_load_skills_collects_official_codex_markdown`
+- `test_resolve_runtime_feedback_targets_prefers_used_skills`
+- `test_resolve_runtime_feedback_targets_uses_only_safe_single_fallback`
+
+## `.a/tests/test_session_bridge.py`
+
+**Functions:**
+- `_write_json`
+- `_write_jsonl`
+- `_read_json`
+- `test_provider_registry_exposes_codex_claude_and_gemini`
+- `test_run_bridge_mirrors_codex_sessions_into_global_memory`
+- `test_run_bridge_recovers_from_stale_cursor`
+- `test_run_bridge_supports_generic_role_content_jsonl`
+
+## `.a/tests/test_signatures.py`
+
+**Functions:**
+- `test_signatures`
+
+## `.a/tests/test_skill_eval_harness.py`
+
+**Functions:**
+- `_write_skill`
+- `_make_report`
+- `test_skill_eval_harness_runs_contract_hidden_shadow_and_writes_report`
+- `test_skill_promotion_moves_draft_only_to_candidate`
+- `test_skill_promotion_moves_candidate_to_canary_when_shadow_nonnegative`
+- `test_skill_promotion_demotes_active_skill_on_negative_shadow`
+- `test_skill_promotion_demotes_active_skill_on_partial_external_eval_failure`
+- `test_skill_eval_harness_replays_runtime_traces_for_shadow_eval`
+- `test_skill_eval_harness_replay_compares_against_replayed_baseline_not_recorded_runtime`
+- `test_skill_eval_harness_respects_disabled_replay`
+- `test_skill_eval_harness_rejects_non_dict_return_values`
+- `test_infer_workspace_root_prefers_workspace_for_runs_trace_path`
+
+## `.a/tests/test_skill_feedback.py`
+
+**Functions:**
+- `_read_events`
+- `_make_report`
+- `test_skill_feedback_loop_records_selection_build_runtime`
+- `test_skill_feedback_loop_summarizes_historical_score`
+- `test_skill_promotion_emits_feedback_event`
+- `test_skill_promotion_prefers_workspace_feedback_log`
+- `test_skill_feedback_loop_batches_multiple_summaries`
+- `test_skill_promotion_keeps_canary_without_runtime_evidence`
+- `test_skill_promotion_promotes_canary_with_runtime_evidence`
+- `test_skill_promotion_demotes_active_skill_on_runtime_regression`
+- `test_skill_promotion_rejects_skill_id_mismatch`
+
+## `.a/tests/test_skill_forge.py`
+
+**Functions:**
+- `test_skill_forge_runs_repair_pass_when_critic_requests_it`
+- `test_skill_forge_falls_back_to_local_critic_when_text_output_is_invalid`
+
+## `.a/tests/test_skill_loader_phase2.py`
+
+**Functions:**
+- `test_skill_loader_initialization`
+- `test_12_cap_enforcement`
+- `test_conflict_resolution`
+- `test_keyword_matching`
+- `test_auto_invocable_skips_archived_and_manual_skills`
+
+## `.a/tests/test_skill_loader_phase4.py`
+
+**Classes:**
+- `TestSkillContextConfig`
+- `TestAdaptiveSkillLoader`
+
+## `.a/tests/test_skill_lock_utils.py`
+
+**Functions:**
+- `_load_utils`
+- `test_read_skill_lock_defaults_when_missing`
+- `test_lock_skill_state_sets_defaults_and_normalizes_id`
+- `test_lock_skill_state_merges_patch_without_dropping_existing_fields`
+
+## `.a/tests/test_skill_metadata_phase1.py`
+
+**Classes:**
+- `TestSkillMetadataSchema`
+- `TestSkillMetadataDecorator`
+- `TestSkillRegistry`
+
+## `.a/tests/test_skill_metadata_v2_compat.py`
+
+**Functions:**
+- `test_convert_skill_md_supports_claude_style_frontmatter`
+- `test_convert_skill_yaml_supports_v2_package_fields`
+- `test_auto_detect_prefers_skill_yaml_over_skill_md`
+
+## `.a/tests/test_skill_procurer_exact_reuse.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_procure_multiple_prefers_exact_skill_reuse`
+
+## `.a/tests/test_skill_procurer_external_fallback.py`
+
+**Classes:**
+- `_Research`
+- `_Registry`
+- `_AgentMgr`
+
+**Functions:**
+- `_load_skill_procurer`
+- `test_procure_multiple_passes_external_attempts_to_builder`
+- `test_procure_multiple_denied_external_install_can_still_build`
+- `test_procure_multiple_legacy_external_miss_stays_as_miss`
+
+## `.a/tests/test_skill_procurer_logging.py`
+
+**Classes:**
+- `_Research`
+- `_Registry`
+- `_AgentMgr`
+
+**Functions:**
+- `_load_skill_procurer`
+- `test_procure_multiple_logs_no_key_builder_guidance`
+- `test_procure_multiple_logs_cli_builder_failure_detail`
+
+## `.a/tests/test_skill_procurer_reuse_gate.py`
+
+**Classes:**
+- `_AgentMgr`
+
+**Functions:**
+- `_load_skill_procurer`
+- `test_procure_multiple_reuses_high_confidence_candidate`
+- `test_procure_multiple_medium_confidence_candidate_prefers_adaptation_build`
+- `test_procure_multiple_writes_feedback_events_for_shadow_reuse`
+- `test_procure_multiple_promotes_built_skill_before_install`
+
+## `.a/tests/test_skill_retrieval_engine.py`
+
+**Functions:**
+- `test_retrieval_engine_reuses_high_confidence_verified_candidate`
+- `test_retrieval_engine_uses_shadow_reuse_for_medium_confidence_candidate`
+- `test_retrieval_engine_forges_when_candidate_is_too_weak`
+- `test_retrieval_engine_reranks_candidates_with_feedback_history`
+- `test_retrieval_engine_uses_batched_feedback_summaries`
+
+## `.a/tests/test_skill_spec_synthesizer.py`
+
+**Functions:**
+- `test_skill_spec_synthesizer_writes_spec_and_shadow_eval`
+
+## `.a/tests/test_stage4_7_knowledge_pipeline.py`
+
+**Classes:**
+- `TestKeywordSimilarity`
+- `TestEpisodeMatcher`
+- `TestKnowledgeForger`
+- `TestExtractTags`
+- `TestKnowledgeInjectionHook`
+- `TestJaccardSimilarity`
+- `TestMemoryConsolidationForge`
+
+**Functions:**
+- `_make_episode`
+- `_make_graph_adapter`
+
+## `.a/tests/test_sync_skill_registry.py`
+
+**Functions:**
+- `_load_sync_skill_registry`
+- `test_sync_normalize_install_candidates_preserves_legacy_list_form`
+- `test_sync_normalize_install_candidates_canonicalizes_legacy_external_keys`
+
+## `.a/tests/test_sync_wrappers.py`
+
+**Functions:**
+- `_copy_wrapper_tree`
+- `test_start_db_passes_repo_alias_to_powershell`
+- `test_powershell_start_db_preserves_repo_alias_via_repo_keyword`
+
+## `.a/tests/test_text_integrity.py`
+
+**Functions:**
+- `_git`
+- `test_detect_newline_style`
+- `test_write_text_preserving_format_keeps_bom_and_crlf`
+- `test_find_suspicious_markers_detects_common_mojibake`
+- `test_check_paths_against_revision_flags_new_mojibake`
+- `test_check_script_returns_nonzero_for_new_mojibake`
+
+## `.a/tests/test_utils_cache.py`
+
+**Functions:**
+- `_load_utils`
+- `test_read_yaml_cache_returns_copy_and_refreshes`
+- `test_append_dashboard_run_keeps_recent_300`
+- `test_append_dashboard_run_normalizes_path_fields`
+- `test_append_dashboard_run_uses_current_config_after_config_reload`
+- `test_read_yaml_cache_hash_verify_detects_same_stat_change`
+- `test_read_yaml_cache_eviction_lru`
+
+## `.a/tests/test_web_project_scope.py`
+
+**Functions:**
+- `_write_agent`
+- `test_project_catalog_prefers_project_copy`
+- `test_patch_agent_creates_project_local_copy`
+
+## `.a/tests/test_workflow_autonomy.py`
+
+**Functions:**
+- `_load_launcher`
+- `test_workflow_state_failed_and_stops_next_stage`
+- `test_workflow_persists_portable_paths`
+
+## `.a/tests/verify_aee_cli.py`
+
+**Functions:**
+- `test_ultra_flag`
+- `test_execution_branch`
+
+## `.a/tests/verify_audit_hash.py`
+
+**Functions:**
+- `verify_audit_log`
+
+## `.a/utils/audit_logger.py`
+
+**Functions:**
+- `log_audit_event`
+
+## `.a/verify_project_memory.py`
+
+**Functions:**
+- `verify_project_memory`
+
+## `.a/verify_project_memory_quick.py`
+
+**Functions:**
+- `verify_project_memory_only`
+
+## `.a/version.py`
+
+_(no top-level symbols)_
+
+## `.a/web/api/__init__.py`
+
+_(no top-level symbols)_
+
+## `.a/web/api/agents.py`
+
+**Classes:**
+- `AgentCreateRequest`
+- `AgentPatchRequest`
+
+**Functions:**
+- `_safe_id`
+- `_project_root`
+- `_project_agents_dir`
+- `_agent_file`
+- `_scan_agent_items`
+- `_effective_agent_items`
+- `_resolve_agent_file`
+- `_ensure_editable_agent_file`
+- `_extract_role`
+- `_extract_system_prompt`
+- `_to_catalog_item`
+- `_load_agent_yaml`
+- `_load_agent_dir`
+- `list_agents`
+- `list_agent_catalog`
+- `create_agent`
+- `patch_agent`
+- `get_agent_model_info`
+- `update_agent_model`
+- `backfill_preferred_models`
+
+## `.a/web/api/run.py`
+
+**Classes:**
+- `RunRequest`
+
+**Functions:**
+- `_safe_id`
+- `run_agent`
+
+## `.a/web/api/settings.py`
+
+**Classes:**
+- `KeyUpdate`
+
+**Functions:**
+- `get_engine_status`
+- `update_api_key`
+
+## `.a/web/app.py`
+
+**Functions:**
+- `lifespan`
+- `get_i18n`
+- `index`
 
 ## `af.py`
 
@@ -2889,10 +4948,6 @@ _(no top-level symbols)_
 **Functions:**
 - `run_demo`
 
-## `drive_meeting_stt.py`
-
-_(no top-level symbols)_
-
 ## `end_db.py`
 
 **Functions:**
@@ -3747,191 +5802,6 @@ _(no top-level symbols)_
 - `test_report_validates_inputs`
 - `test_write_report_appends_newline_if_missing`
 
-## `projects/meeting_stt_app/app/__init__.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/audio/__init__.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/audio/capture.py`
-
-**Classes:**
-- `CaptureThread`
-
-## `projects/meeting_stt_app/app/audio/devices.py`
-
-**Classes:**
-- `Device`
-
-**Functions:**
-- `detect_compute_device`
-- `enumerate_devices`
-
-## `projects/meeting_stt_app/app/audio/mixer.py`
-
-**Classes:**
-- `AudioMixer`
-
-**Functions:**
-- `to_mono_float32`
-- `resample_to_16k`
-- `rms`
-
-## `projects/meeting_stt_app/app/config.py`
-
-**Classes:**
-- `AppSettings`
-
-**Functions:**
-- `_config_path`
-- `resolve_save_root`
-
-## `projects/meeting_stt_app/app/io/__init__.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/io/recorder.py`
-
-**Classes:**
-- `WavRecorder`
-
-## `projects/meeting_stt_app/app/io/session.py`
-
-**Classes:**
-- `RecordingSession`
-
-## `projects/meeting_stt_app/app/io/transcript_writer.py`
-
-**Classes:**
-- `TranscriptWriter`
-
-**Functions:**
-- `_fmt_ts`
-
-## `projects/meeting_stt_app/app/main.py`
-
-**Classes:**
-- `PipelineController`
-
-**Functions:**
-- `_now_iso`
-- `_new_session_id`
-- `main`
-
-## `projects/meeting_stt_app/app/qt_compat.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/stt/__init__.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/stt/transcriber.py`
-
-**Classes:**
-- `Transcriber`
-
-## `projects/meeting_stt_app/app/stt/types.py`
-
-**Classes:**
-- `TranscriptChunk`
-
-## `projects/meeting_stt_app/app/stt/worker.py`
-
-**Classes:**
-- `TranscribeWorker`
-
-## `projects/meeting_stt_app/app/ui/__init__.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/ui/main_window.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/app/ui/widgets.py`
-
-_(no top-level symbols)_
-
-## `projects/meeting_stt_app/build.py`
-
-**Functions:**
-- `run_selftest`
-- `run_pyinstaller`
-- `main`
-
-## `projects/meeting_stt_app/build_onedir.py`
-
-**Functions:**
-- `_parse_args`
-- `_ensure_pyinstaller_available`
-- `_build_command`
-- `main`
-
-## `projects/meeting_stt_app/meeting_stt.py`
-
-**Functions:**
-- `_check_devices`
-- `main`
-
-## `projects/meeting_stt_app/scripts/synthetic_audio_headless_selftest.py`
-
-**Classes:**
-- `AudioSpec`
-- `ValidationResult`
-
-**Functions:**
-- `parse_args`
-- `validate_spec`
-- `synthesize_samples`
-- `write_wav`
-- `read_wav_samples`
-- `rms`
-- `estimate_frequency`
-- `validate_wav`
-- `write_report`
-- `main`
-
-## `projects/meeting_stt_app/tests/selftest_pipeline.py`
-
-**Classes:**
-- `FakeTranscriber`
-
-**Functions:**
-- `_sine`
-- `_check`
-- `test_imports`
-- `test_resolve_save_root`
-- `test_mixer_chunk`
-- `test_pipeline_e2e`
-- `test_real_whisper_optional`
-- `main`
-
-## `projects/meeting_stt_app/tests/test_audio_mixer.py`
-
-**Functions:**
-- `_block`
-- `_sine`
-- `test_to_mono_float32_int16_정규화`
-- `test_to_mono_float32_다채널_평균`
-- `test_resample_to_16k_shape_rate`
-- `test_rms_값`
-- `test_믹싱_번갈아_push_정렬`
-- `test_믹싱_bulk_push_정렬`
-- `test_믹싱_부분_겹침`
-- `test_합성_사인파_이중스트림_헤드리스`
-- `test_max_chunk_sec_컷`
-- `test_vad_무음_tail_컷`
-- `test_flush_잔여_반환`
-- `test_단일_소스_마이크_단독`
-- `test_단일_소스_loopback_단독`
-- `test_2소스_파트너_영구부재_holdoff_통과`
-- `test_capture_device_none_무동작`
-- `test_level_changed_시그널`
-- `_run_all`
-
 ## `projects/minesweeper-baseline/minesweeper.py`
 
 **Classes:**
@@ -4355,21 +6225,6 @@ _(no top-level symbols)_
 - `build`
 - `main`
 
-## `scripts/build_resume_docx.py`
-
-**Functions:**
-- `_make_rpr`
-- `_make_run`
-- `make_p`
-- `make_empty_p`
-- `insert_after`
-- `insert_sequence`
-- `make_image_p`
-- `build_stock_analyzer_content`
-- `replace_stock_analyzer`
-- `build_af_content`
-- `main`
-
 ## `scripts/build_review_bundle.py`
 
 **Functions:**
@@ -4535,15 +6390,6 @@ _(no top-level symbols)_
 ## `scripts/gemini_session_bridge.py`
 
 _(no top-level symbols)_
-
-## `scripts/gen_resume_diagrams.py`
-
-**Functions:**
-- `rbox`
-- `arrow`
-- `make_architecture`
-- `make_workflow`
-- `make_pipeline`
 
 ## `scripts/generate_agents_md.py`
 
@@ -8483,11 +10329,6 @@ _(no top-level symbols)_
 
 **Functions:**
 - `verify_audit_log`
-
-## `tmp_measure_wiring.py`
-
-**Functions:**
-- `_spy`
 
 ## `utils/audit_logger.py`
 

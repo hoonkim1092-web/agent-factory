@@ -1,5 +1,27 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## 🔧 다음 세션 최우선 = 설계리뷰 자동발화 enforcement 수정 (2026-06-18 진단, Opus)
+
+> **제약 (사용자 명시 2026-06-18)**: 수정은 **멀티 프로바이더(Claude/Codex/Gemini)** + **크로스플랫폼(Windows/Mac/Linux)** 양쪽에서 동작해야 한다. Windows 전용 우회 금지.
+
+**현재 배선 (실측 grep/경험)**: 설계리뷰 트리거는 UserPromptSubmit(`check_design_pending.py` `[af-design-review-pending]`) **제거됨** → **PostToolUse `post_edit_design_review`(settings.json) → `scripts/design_review_trigger.py`(enqueue + ensure_watcher)**로 이동. 백그라운드 `design_review_watcher.py`가 cross-review headless 실행 → `docs/reviews/{ts}-{stem}-design-review.md` verdict 산출. 커밋 시 `scripts/check_staged_design_review.py`가 최신 verdict BLOCK이면 차단.
+
+**진단된 2개 soft spot (이번 세션 경험적 확인)**:
+- **(A) watcher가 Windows에서 죽음** — enqueue는 됨(`.af_review_queue/pending/design/`에 2건), 그러나 **큐 미배수 + `docs/reviews/`에 verdict 미산출**. NEXT_STEPS A/B 기록 버그와 일치: `_is_watcher_alive` os.kill **WinError 87**, watcher codex **CreateProcessWithLogonW**. → cross-platform 프로세스 liveness 체크 + subprocess spawn 이식성 필요. **이번 세션 두 설계문서 리뷰는 watcher가 아니라 수동 af-cross-review 에이전트가 했다.**
+- **(B) 게이트 absence=pass** — `check_staged_design_review.py`는 `info and info[0]==BLOCK`일 때만 차단 → **verdict 부재 시 통과**. watcher가 죽어 리뷰가 아예 없으면 미검증 설계문서가 그대로 커밋됨(안전망 구멍).
+
+**수정 방향 (둘 중/병행, 다음 세션 결정)**:
+- **(B) provider-aware fail-closed 게이트** (싸고 확실, 단 **프로바이더 무관 아님 — provider-state SSOT 참조 필수**): 설계문서 staged인데 최신 verdict 부재일 때 **원인별 분기** (사용자 명시 2026-06-18):
+  - **프로바이더 토큰/rate limit · 미설치 · 0개** → **노티 + SKIP(커밋 허용)**. 무조건 BLOCK하면 리밋 걸렸을 때 커밋·푸시 자체가 막힘. **기존 정책과 동일** — `check_pending_review._all_external_providers_unavailable`(`NOT_INSTALLED|RATE_LIMITED`→skip) + `provider_detect.py` SSOT(`RATE_LIMITED`/`mark_rate_limited`/`detect_rate_limit_signal`) **재사용**(새 로직 금지).
+  - **AUTH_EXPIRED** → BLOCK + 재인증 안내 (CLAUDE.md 기존 정책).
+  - **프로바이더 가용한데 verdict 부재**(=watcher 죽음/미실행) → BLOCK (리뷰가 가능했는데 없음 = (A) 안전망).
+- **(A) watcher 이식성 수정**: os.kill liveness → `psutil` 또는 플랫폼 분기, CreateProcessWithLogonW 회피(spawn 방식 점검). 멀티 프로바이더 headless 실행 경로 검증.
+- 메모리: `project_design_review_enforcement_gap`. 관련: [[project_model_routing_facts]](rate-limit skip), `feedback_review_gate_hook`.
+
+**미결 산출물 (이번 세션)**: 설계문서 2건 Draft 완료 — `docs/2026-06-18-user-perspective-qa-pipeline-design.md`(af-cross-review BLOCK 3건 수동수정 완료, **재검증 미실시**) + `docs/2026-06-18-product-output-isolation-design.md`(af-cross-review PASS). 둘 다 구현 대기.
+
+---
+
 ## ✅ "AF 완료 계약 — 증거원장 기반 goal-reached 검증" 설계문서 완료 (2026-06-17, Sonnet)
 
 > **설계 파일**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md`
