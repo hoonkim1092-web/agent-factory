@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T23:24:08+09:00
-source_commit: 03a78052
+generated_at: 2026-06-19T02:09:01+09:00
+source_commit: 2c769f1a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -407,7 +407,7 @@ sources:
 
 ### `core`
 
-152 modules · 219 classes · 842 functions
+152 modules · 219 classes · 846 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
 - `core/agent_runner.py` — 2 class / 2 func
@@ -422,7 +422,7 @@ sources:
 - `core/capability_intent.py` — 2 class / 5 func
 - `core/clarification.py` — 0 class / 5 func
 - `core/cli_session_cleanup.py` — 0 class / 1 func
-- `core/completion_contract.py` — 6 class / 0 func
+- `core/completion_contract.py` — 6 class / 4 func
 - `core/concurrency.py` — 3 class / 0 func
 - `core/config_paths.py` — 0 class / 2 func
 - `core/consensus_engine.py` — 1 class / 0 func
@@ -1350,12 +1350,13 @@ sources:
 
 ### `tests`
 
-210 modules · 342 classes · 1803 functions
+211 modules · 351 classes · 1807 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
 - `tests/run_verify_agent.py` — 0 class / 1 func
 - `tests/test_acceptance_gate.py` — 5 class / 6 func
+- `tests/test_acceptance_gate_integration.py` — 9 class / 4 func
 - `tests/test_af_doctor.py` — 0 class / 27 func
 - `tests/test_af_project_inspect.py` — 11 class / 4 func
 - `tests/test_af_project_symbols.py` — 4 class / 1 func

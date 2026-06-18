@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-18T23:24:08+09:00
-source_commit: 03a78052
+generated_at: 2026-06-19T02:09:01+09:00
+source_commit: 2c769f1a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -593,6 +593,12 @@ _(no top-level symbols)_
 - `HarnessResult`
 - `ExecutionHarness`
 - `AcceptanceGate`
+
+**Functions:**
+- `_infer_harness_type`
+- `_extract_command`
+- `parse_acceptance_criteria`
+- `build_evidence_ledger`
 
 ## `core/concurrency.py`
 
@@ -5457,6 +5463,25 @@ _(no top-level symbols)_
 - `_gui_goal`
 - `_none_goal`
 - `_fake_proc`
+
+## `tests/test_acceptance_gate_integration.py`
+
+**Classes:**
+- `TestVerifiedGoalOkTrue`
+- `TestFailedGoalBlocks`
+- `TestExecuteDirectPathGated`
+- `TestNullContractEmptyVerifyBlocks`
+- `TestCannotVerifyNotBlocked`
+- `TestDashboardAndReturnOkMatch`
+- `TestAlreadyDoneReaggregates`
+- `TestParseAcceptanceCriteria`
+- `TestBuildEvidenceLedger`
+
+**Functions:**
+- `_verified_contract`
+- `_cannot_verify_contract`
+- `_failed_contract`
+- `_unverified_contract`
 
 ## `tests/test_af_doctor.py`
 

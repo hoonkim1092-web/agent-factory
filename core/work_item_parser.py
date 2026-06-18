@@ -86,7 +86,9 @@ def parse_feature_spec(text: str) -> dict[str, Any]:
         {requirements, acceptance_criteria, scenarios}
     """
     requirements = _bullet_list(_extract_section(text, "기능 요구사항"))
-    acceptance_criteria = _bullet_list(_extract_section(text, "수용 기준"))
+    acceptance_criteria = _bullet_list(
+        _extract_section(text, "수용 기준") or _extract_section(text, "Acceptance Criteria")
+    )
     scenarios = _bullet_list(_extract_section(text, "사용자 시나리오"))
 
     return {

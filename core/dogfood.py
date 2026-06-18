@@ -1772,6 +1772,14 @@ def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     if not changed:
         changed = _changed_files_fallback(state, worktree)
     state.develop_changed_paths = changed
+    # §8 S3: GoalContract persist (VERIFY/REVIEW 단계 접근용)
+    _gc_dict = result.get("goal_contract")
+    if _gc_dict is not None and state.goal_contract is None:
+        try:
+            from core.completion_contract import GoalContract
+            state.goal_contract = GoalContract.from_dict(_gc_dict)
+        except Exception:
+            pass
     return _normalize_develop_result(result, changed)
 
 
@@ -1892,6 +1900,14 @@ def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
         if not ok:
             failures.append(cmd)
 
+    # §8 S3: AcceptanceGate 2차 배선 (idempotent — 이미 채워진 verdict skip)
+    if state.goal_contract is not None:
+        try:
+            from core.completion_contract import AcceptanceGate
+            AcceptanceGate().run(state.goal_contract, cwd)
+        except Exception:
+            pass
+
     return VerifyResult(
         passed=len(failures) == 0,
         commands_run=list(commands),
@@ -1906,6 +1922,13 @@ def _run_review_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
     a dogfood-level retry is redundant and its reset destroys FSALoop learning.
     A failed verify always maps to BLOCK (inv3).
     """
+    # §8 S3 §6.4: GoalContract 실패 체크 — FAILED → BLOCKED(goal_failed) terminal (inv3 정합)
+    if state.goal_contract is not None and state.goal_contract.has_failures():
+        return ReviewDecision(
+            decision="block",
+            reason="goal_failed — see evidence_ledger",
+        ).to_dict()
+
     verify_result = context.get("verify_result", {})
     passed = verify_result.get("passed", True)
 

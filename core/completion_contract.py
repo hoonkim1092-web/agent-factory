@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import re
 import shlex
 import subprocess
 import sys
@@ -315,6 +316,108 @@ class ExecutionHarness:
                 evidence_value=f"error: {exc}",
                 command_run=goal.command,
             )
+
+
+# ---------------------------------------------------------------------------
+# S3 helpers: parser + evidence ledger
+# ---------------------------------------------------------------------------
+
+def _infer_harness_type(text: str) -> str:
+    """키워드 기반 harness_type 추론 — §4.2 파서 폴백."""
+    t = text.lower()
+    # GUI 우선 체크 (가장 구체적)
+    if any(k in t for k in ("gui", "화면", "window", "창", "display", " ui ", "tkinter", "qt")):
+        return "gui"
+    # server 체크
+    if any(k in t for k in ("server", "서버", " http ", "api ", " port", "포트", "flask", "fastapi", "django")):
+        return "server"
+    # library 체크
+    if any(k in t for k in ("import ", "library", "라이브러리", "python -c", "import\t")):
+        return "library"
+    # cli 체크
+    if any(k in t for k in ("cli", "명령줄", "명령어", "exit code", "exit_code", "bash ", " sh ", "실행 시", "실행하면")):
+        return "cli"
+    return "none"
+
+
+def _extract_command(text: str) -> str:
+    """텍스트에서 실행 명령 추출 — 백틱 인용 또는 python/pytest 패턴."""
+    # 백틱 인용 우선
+    m = re.search(r"`([^`]+)`", text)
+    if m:
+        return m.group(1).strip()
+    # python script.py 패턴
+    m = re.search(r"(python\s+\S+\.py(?:\s+\S+)*)", text)
+    if m:
+        return m.group(1).strip()
+    # pytest 패턴
+    m = re.search(r"(pytest\s+\S+)", text)
+    if m:
+        return m.group(1).strip()
+    # curl 패턴
+    m = re.search(r"(curl\s+\S+)", text)
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
+def parse_acceptance_criteria(criteria: list[str], task_id: str) -> "GoalContract":
+    """acceptance_criteria 문자열 목록 → GoalContract (§8 S3 파서).
+
+    각 항목에서 harness_type 추론 + 명령 추출. 추론 불가 → harness_type="none" → UNVERIFIED.
+    """
+    goals = []
+    for i, criterion in enumerate(criteria):
+        stripped = criterion.strip()
+        if not stripped:
+            continue
+        goals.append(GoalEntry(
+            goal_id=f"G-{i + 1}",
+            description=stripped,
+            harness_type=_infer_harness_type(stripped),
+            command=_extract_command(stripped),
+        ))
+    return GoalContract(task_id=task_id, goals=goals)
+
+
+def build_evidence_ledger(contract: "GoalContract") -> dict[str, Any]:
+    """GoalContract → evidence_ledger dict (§7 포맷)."""
+    goal_entries = []
+    cannot_verify: list[str] = []
+    unverified: list[str] = []
+    for g in contract.goals:
+        entry: dict[str, Any] = {
+            "goal_id": g.goal_id,
+            "description": g.description,
+            "verdict": g.verdict,
+        }
+        if g.evidence:
+            entry["evidence_type"] = g.evidence.evidence_type
+            entry["evidence_value"] = g.evidence.evidence_value
+            if g.evidence.command_run:
+                entry["command_run"] = g.evidence.command_run
+        if g.cannot_verify_reason:
+            entry["cannot_verify_reason"] = g.cannot_verify_reason
+        goal_entries.append(entry)
+        if g.verdict == "CANNOT_VERIFY":
+            cannot_verify.append(g.goal_id)
+        elif g.verdict == "UNVERIFIED":
+            unverified.append(g.goal_id)
+
+    verified = sum(1 for g in contract.goals if g.verdict == "VERIFIED")
+    failed = sum(1 for g in contract.goals if g.verdict == "FAILED")
+    total = len(contract.goals)
+    summary = (
+        f"{total} goals: {verified} VERIFIED, {failed} FAILED, "
+        f"{len(cannot_verify)} CANNOT_VERIFY, {len(unverified)} UNVERIFIED"
+    )
+    return {
+        "task_id": contract.task_id,
+        "summary": summary,
+        "goals": goal_entries,
+        "unverified": unverified,
+        "cannot_verify": cannot_verify,
+    }
 
 
 # wiring: deferred — S3에서 dogfood.py / project_pipeline.py 연결 예정

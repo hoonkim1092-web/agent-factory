@@ -4,6 +4,10 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.completion_contract import GoalContract
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +102,8 @@ class PreparedProject:
     research_evidence_path: str = ""
     # target_path가 있으면 문서는 그 경로에, 없으면 workspace에 생성
     doc_root: str = ""
+    # goal-reached verification contract (§8 S3, None = 전환기 INV-D 폴백)
+    goal_contract: "GoalContract | None" = None
 
     def _effective_doc_root(self) -> str:
         """work-item 문서가 실제로 저장된 루트 경로."""
@@ -1006,6 +1012,22 @@ class ProjectPipeline:
             blast_radius=str(project_brief.get("blast_radius") or ""),
         )
 
+        # -- GoalContract 생성 (§8 S3 AcceptanceGate 생성 SSOT = prepare) --
+        _goal_contract = None
+        try:
+            from core.completion_contract import parse_acceptance_criteria
+            from core.work_item_parser import parse_feature_spec as _parse_spec
+            _spec_path = work_item_files.get("feature-spec.md", "")
+            _ac_list: list[str] = []
+            if _spec_path and os.path.exists(_spec_path):
+                with open(_spec_path, encoding="utf-8", errors="replace") as _sf:
+                    _spec_data = _parse_spec(_sf.read())
+                _ac_list = _spec_data.get("acceptance_criteria") or []
+            if _ac_list:
+                _goal_contract = parse_acceptance_criteria(_ac_list, slug)
+        except Exception as _gc_err:
+            _safe_print(f"[Pipeline] goal_contract generation skipped: {_gc_err}")
+
         # -- Plan-Critique-Verify --
         try:
             from core.plan_verifier import PlanVerifier
@@ -1192,6 +1214,7 @@ class ProjectPipeline:
             research_evidence=research_evidence,
             research_evidence_path=to_portable_path(research_evidence_path),
             doc_root=doc_root,
+            goal_contract=_goal_contract,
         )
 
         # T1-1: canonical checkpoint double-write (이중 쓰기 phase)
@@ -1300,12 +1323,29 @@ class ProjectPipeline:
             _cp = _get_store(state_workspace).load(prepared.run_id)
             if _cp and _cp.next_step_cursor == "done":
                 logger.info("[execute] run_id=%s already done — skipping", prepared.run_id)
+                # Finding #5: contract 재집계 or already_done_legacy (§8 S3)
+                _ad_contract = prepared.goal_contract
+                if _ad_contract is not None:
+                    from core.completion_contract import build_evidence_ledger
+                    _ad_ok = _ad_contract.is_done()
+                    _ad_reason = "already_done" if _ad_ok else (
+                        "goal_failed" if _ad_contract.has_failures() else "goal_unverified"
+                    )
+                    return {
+                        "run_id": prepared.run_id,
+                        "pipeline": "project",
+                        "ok": _ad_ok,
+                        "reason": _ad_reason,
+                        "work_item_slug": prepared.work_item_slug,
+                        "evidence_ledger": build_evidence_ledger(_ad_contract),
+                    }
                 return {
                     "run_id": prepared.run_id,
                     "pipeline": "project",
                     "ok": True,
-                    "reason": "already_done",
+                    "reason": "already_done_legacy",
                     "work_item_slug": prepared.work_item_slug,
+                    "evidence_ledger": {"summary": "evidence absent — legacy done-run before AcceptanceGate"},
                 }
         except Exception:
             pass
@@ -1378,6 +1418,21 @@ class ProjectPipeline:
         )
         status = str(run_board.get("current_status", "unknown"))
 
+        # ── AcceptanceGate: gated ok 계산 (Finding #4 — append_dashboard_run 이전 1회) ──
+        _contract = prepared.goal_contract
+        if _contract is not None:
+            from core.completion_contract import AcceptanceGate, build_evidence_ledger
+            AcceptanceGate().run(_contract, workspace)
+            gated_ok = (status == "completed") and _contract.is_done()
+            gated_reason = "" if gated_ok else (
+                "goal_failed" if _contract.has_failures() else "goal_unverified"
+            )
+            evidence_ledger = build_evidence_ledger(_contract)
+        else:
+            gated_ok = (status == "completed")
+            gated_reason = status if not gated_ok else ""
+            evidence_ledger = {}
+
         # ── strategy ledger: 모듈별 outcome 기록 (B2-6) ──────────────
         self._record_ledger_outcomes(
             status=status,
@@ -1393,8 +1448,8 @@ class ProjectPipeline:
                 "type": "project_run",
                 "project_id": os.path.basename(workspace),
                 "task": task_input[:300],
-                "ok": status == "completed",
-                "reason": status,
+                "ok": gated_ok,
+                "reason": gated_reason or status,
                 "pipeline": "project",
                 "roles": roles,
                 "planning_files": prepared.planning_files,
@@ -1418,14 +1473,16 @@ class ProjectPipeline:
         return {
             "run_id": prepared.run_id,
             "pipeline": "project",
-            "ok": status == "completed",
-            "reason": status,
+            "ok": gated_ok,
+            "reason": gated_reason or status,
             "roles": roles,
             "installed_skills": installed_map,
             "work_item_slug": prepared.work_item_slug,
             "work_item_dir": prepared.work_item_dir(),
             "planning_files": prepared.planning_files,
             "board": run_board,
+            "evidence_ledger": evidence_ledger,
+            "goal_contract": _contract.to_dict() if _contract is not None else None,
             # 하위 호환 — 기존 코드가 직접 키로 접근하는 경우를 위해
             "project_brief_path": prepared.project_brief_path,
             "role_plan_path": prepared.role_plan_path,
