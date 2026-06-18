@@ -1,6 +1,6 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = watcher 이식성 수정(A) 또는 Completion Contract S2
+## ▶ 다음 = Completion Contract S3 또는 watcher 이식성 수정(A)
 
 ### ✅ (B) fail-closed 게이트 완료 (2026-06-18, Sonnet, `1374dd7b`)
 - `scripts/check_staged_design_review.py` 확장: verdict 부재 시 provider 상태별 BLOCK/SKIP 분기
@@ -48,10 +48,14 @@
 >
 > **선행조건 메모(S1엔 불필요, S3 파서용)**: 실제 LLM criteria(task_board `acceptance_criteria`) 출력 샘플 캡처는 §10에서 "파싱 로직은 S3에서 결정"으로 분리 — S1 산출물(구조체+직렬화)엔 파서 없음. S3 진입 전 baseline 캡처(메모리 `analysis_doc_baseline_must_be_real_code`).
 
-### ▶ (C-S2) 다음 = ExecutionHarness + AcceptanceGate (§8 S2)
-> `core/completion_contract.py`에 `ExecutionHarness.run()` + `_run_cli`/`_run_server`/`_run_library`(§5.2, `_run_file_exists`는 §5.1 정정으로 제거) + `AcceptanceGate.run(contract, workspace)`. **subprocess.run 도입 → blast_radius Tier 3 가능 → af-critic + af-cross-review 필요**. verdict 매핑: `evidence_type=="unverified"`→`UNVERIFIED`, gui→`CANNOT_VERIFY`(§6.2/§5.2). 테스트 `tests/test_acceptance_gate*`.
+### ✅ (C-S2) ExecutionHarness + AcceptanceGate 완료 (2026-06-18, Haiku, `03a78052`)
+> - `ExecutionHarness`: cli/server/library/gui/none harness_type별 subprocess 실행. DEVNULL deadlock 방지. `shlex.split ValueError → evidence_type="unverified"` (§6.2 불변식). `_SERVER_STARTUP_WAIT_SEC` 상수.
+> - `AcceptanceGate`: GoalContract 순회, idempotent (VERIFIED/FAILED/CANNOT_VERIFY skip), gui→CANNOT_VERIFY, evidence_type="unverified"→UNVERIFIED 판정.
+> - `tests/test_acceptance_gate.py` 46 케이스. 3-Tier: af-critic WARN(2건 수정: DEVNULL+상수화) / af-cross-review WARN(2건 수정: shlex ValueError FAILED→UNVERIFIED, _run_server docstring) / af-test-runner FAIL→46/46 PASS(shlex posix import 추가).
+> - wiring deferred (S3에서 dogfood.py/project_pipeline.py 연결).
 
-> **부트스트랩 주의**: §6.4 수정본 커밋 시 (B) 게이트가 stale BLOCK(`2026-06-18-015950`)을 잡는다 — af-cross-review가 inv3 해소를 독립 확증했으므로 `AF_SKIP_REVIEW_GATE=1`로 커밋(또는 watcher 재리뷰로 PASS 산출).
+### ▶ (C-S3) 다음 = pipeline 배선 (§8 S3)
+> `AcceptanceGate.run(contract, workspace)` 를 `dogfood.py` + `project_pipeline.py` production 호출 경로에 연결. 파서도 S3 범위: `acceptance_criteria` LLM 출력 → `GoalEntry` 목록 변환 (baseline 캡처 먼저).
 
 > **메모리**: `project_completion_contract_and_review_surfacing`
 
