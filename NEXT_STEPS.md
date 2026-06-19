@@ -39,15 +39,14 @@
 > - **INV-Q4** (`core/dogfood.py`): `_run_develop_full()` 분해 → `pipeline.prepare()` + write-once snapshot(`goal_contract.json`) + 자동승인 + `pipeline.execute()`
 > - 테스트 16건 신규 / 회귀 41건 PASS. 3-Tier: af-critic WARN(4)/BLOCK(0)→수정1건 / af-cross-review SKIP(Codex 세션 한도) / af-test-runner PASS(41)
 
-## ▶ 다음 — Q-S6 (AcceptanceGate 실행 + qa_report.py wiring)
+### ✅ (Q-S6) render_html() wiring 완료 (2026-06-20, Sonnet, 커밋 `ee119a1b`)
+> - `project_pipeline.execute()`: evidence_ledger 생성 후 `render_html()` 호출, 반환 dict에 `qa_report_path` 추가
+> - `dogfood._run_verify_phase()`: AcceptanceGate 후 `build_evidence_ledger()` + `render_html()`, `state.qa_report_path` 기록
+> - `DogfoodState.qa_report_path: str = ""` 필드 신규 + `to_dict`/`from_dict` 배선
+> - `tests/test_qa_report_wiring.py`: 8케이스 신규 (pipeline 3 + verify 2 + round-trip 3)
+> - 2-Tier: af-critic WARN(2→반영: except 로깅) / af-test-runner PASS(958/965, 7건 pre-existing)
 
-> **범위** (설계 상세는 이전 세션 대화 참고):
-> - Step 1 — `core/project_pipeline.py` `execute()` (~라인 1455): `evidence_ledger` 생성 직후 `render_html(evidence_ledger, workspace)` 호출 + 반환 dict에 `qa_report_path` 추가
-> - Step 2 — `core/dogfood.py` `_run_verify_phase()` (~라인 1914): `AcceptanceGate().run()` 직후 `build_evidence_ledger()` + `render_html()` 호출, 경로를 `state.qa_report_path`에 저장
-> - Step 3 — `DogfoodState`에 `qa_report_path: str = ""` 필드 추가 (`to_dict`/`from_dict` 포함)
-> - Step 4 — 테스트 5건: pipeline execute → qa_report_path 결과 포함 / dogfood verify → state.qa_report_path 설정 / HTML 생성 확인 / no-contract 무충돌
-> - **Tier**: Tier 1~2 (subprocess 없음, 파일 I/O만) → af-critic + af-test-runner 충분
-> - **모델**: Sonnet 4.6
+## ▶ 다음 — QA 파이프라인 product work-item 신규 선정 또는 dogfood 실증 run
 
 ## ▶ (이전) Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
