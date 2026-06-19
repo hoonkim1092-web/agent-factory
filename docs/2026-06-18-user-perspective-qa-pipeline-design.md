@@ -233,6 +233,99 @@ synthesize_via_research(brief, questions):
 - 합성 실패(엔진 미가용/빈 결과/어댑터 부재) → `provenance="default"` + 해당 골 `verdict="UNVERIFIED"`(완료계약 §4.2 파서 폴백과 정합: 검증 못 정함 = UNVERIFIED = `is_done()==False`).
 - **재사용 우선**: research_router/engine은 기존 모듈. 새 LLM 호출 경로를 만들지 않는다.
 
+> **2026-06-19 합성 메커니즘 확정 (선행 조사 완료, Q-S3)**: research 실 API를 read/grep 전수 조사한 결과 — `ResearchRouter.plan()`(`research_router.py:214`)은 **모드 분류기**(archive/live/fast_synthesis/fresh_lookup + domain hint)일 뿐 findings/content를 생산하지 않는다. "goal 텍스트 → 구조화 산출물"의 유일한 실제 엔진은 `HimariResearchAgent.research_project_brief()`(`researcher.py:1240`)이고, 그 반환 brief의 필드(`goal`/`architecture_style`/`user_flows`/`verification_focus`/`non_goals`)는 Q-S3가 필요한 4개 `output_field` 중 **`architecture_style→harness_type`만 깨끗이 매핑**되고 `golden_example`/`test_seam`/`manual_only`는 **그 엔진이 생산하지 않는다**. 따라서 "기존 brief 출력 어댑터"는 불가. **사용자 결정(2026-06-19): 전용 합성 프롬프트** — 기존 `execute_requirement_prompt`(JSON 헬퍼, `generate_clarification_questions`가 이미 사용 중) 재사용 + `ResearchRouter().plan()`은 모드 신호로만. 신규 인프라·신규 provider 경로 0. `synthesize_research_answers(goal, questions) -> {output_field: value}` 1회 호출로 4필드 일괄 산출. 실패(ok=False/빈 응답) → 각 필드 `value=""` + `provenance="default"` → 완료계약 `verdict="UNVERIFIED"`(INV-Q5).
+
+---
+
+## §6.3 경로 C 활성화 — "직원 배치" + HITL 멈춤 회피 (2026-06-19 추가)
+
+> **계기**: §6.1 경로 C(stage_router/route_batch)는 설계 초안이 "live 3번째 intake"로 전제했으나, Q-S3 배선 조사에서 **production 휴면**임이 확정됐다(grep/read 전수). 사용자 결정(2026-06-19): **경로 C에 직원 배치(question_router 주입) + 스킵 시 A·B와 동일 합성 동작**. 본 §6.3이 그 안전한 활성화를 설계한다.
+
+### §6.3.1 휴면 진단 (grep/read 확정)
+
+| 사실 | 좌표 | 함의 |
+|---|---|---|
+| 유일 production caller가 `question_router` 미전달 → `None` | `work_item_generator.py:1172` `_stage_router.run(work_dir=..., work_kind=..., run_id=..., doc_root=..., slug=...)` | route_batch 진입 자체가 막힘 |
+| 가드가 None에서 거짓 | `stage_router.py:104` `if gc_schema and question_router:` | `gc_result=None` → `_write_project_goal` 미호출(`:127`) → **`project-goal.md` 자체가 production에서 미생성** |
+| 구체 `QuestionRouterLLMCaller` 부재 | `question_router.py:147` 추상 베이스만 (production 구현체 0, grep 확정) | llm_delegate 질문에 응답할 주체 없음 |
+| RESEARCH_SYNTHESIZE는 pending stub | `stage_router.py`(route_batch `:247-257`) `source="research_synthesize_pending"`, `value=None` | Q-S2가 깐 분기는 값 미충전 |
+| 4개 QA 필드가 artifact에 없음 | `stage_artifacts.py:25-35` `ProjectGoalArtifact`(goal_summary/deployment_target/success_criteria/out_of_scope/assumptions_used) | 합성해도 `_write_project_goal:270` `values` dict에서 silent 누락 |
+
+### §6.3.2 HITL cascade 위험 (활성화의 핵심 난관)
+
+`question_router`를 단순히 non-None으로 주입하면 route_batch가 깨어나며 **llm_delegate 필수 질문이 멈춤을 유발**한다(코드 추적 확정):
+
+```
+route_batch (question_router.py:192-204): self._llm is None → llm_answers={} (llm_questions 미리셋)
+  → 본 루프 :228  goal_summary(required=True, fallback=None) → _process_llm_answer(raw=None)
+  → _handle_llm_failure :309  required ∧ fallback 無 → QuestionRoute.HITL → paused_hitl_ids
+  → _run_new_project :120  hitl_ids → _emit_paused → 새 프로젝트마다 production 정지
+```
+즉 **휴면이 오늘 멈춤을 막고 있다.** 그냥 켜면 새 프로젝트마다 HITL.
+
+### §6.3.3 설계 — brief 기반 응답기 + synthesizer adapter
+
+리서치가 **앞 단계에서 이미 생산한 `project_brief`**(generate_work_items가 보유, `goal`/`non_goals`/`deliverables` 등 포함)를 llm_delegate 응답원으로 쓴다. 실 LLM 호출 0 → 무정지.
+
+1. **`BriefBackedQuestionCaller(QuestionRouterLLMCaller)`** (`question_router.py`에 신설 — 추상 베이스와 같은 파일, 신규 모듈/af.spec 불필요):
+   - `batch_route(questions, context, timeout_sec)` → llm_delegate 질문만 수신(route_batch 계약). brief 필드 매핑으로 응답:
+     - `goal_summary ← brief["goal"]`
+     - `deployment_target ← brief의 배포 힌트(constraints "배포:" 항목) 또는 fallback "development"`
+     - `success_criteria ← brief["deliverables"]`(있으면) 아니면 빈값(required=False → PASS)
+     - `out_of_scope ← brief["non_goals"]`
+   - **HITL 0 보장을 위한 caller 계약 (cross-review #1·#3 반영)**:
+     - **필수 키 항상 반환**: `batch_route`는 `goal_summary`·`deployment_target` 키를 **반드시 응답 dict에 포함**한다(brief 값 없으면 명시 fallback — goal_summary는 brief["goal"] 또는 task_input, deployment_target은 "development"). 키를 누락하면 `_handle_llm_failure`로 빠지고, deployment_target은 `blast_radius in (cross_module, system_wide)`일 때 HITL이 되므로(`question_router.py:339-345`) **누락 금지**. required=False(success_criteria/out_of_scope)는 누락 시 PASS라 무해.
+     - **내부 예외 격리**: `batch_route`는 자체 try-except로 **예외를 절대 전파하지 않는다**. route_batch의 catch 블록(`question_router.py:196-204`)이 받으면 goal_summary(required, fallback 無)가 HITL이 되므로, caller는 실패 시에도 fallback dict를 반환한다.
+   - 매핑 없는 required=False 질문은 키 누락 → route_batch가 PASS 처리. 위 계약으로 필수 2개는 항상 응답됨 → **스킵 경로 HITL 0**(INV-Q6).
+
+2. **synthesizer adapter** (research_synthesize 질문 전용 — QuestionRouter의 LLM-위임 원칙 유지):
+   - `QuestionRouter.__init__`에 `synthesizer: Callable[[list[Question]], dict[str, str]] | None = None` 추가(additive).
+   - route_batch RESEARCH_SYNTHESIZE 분기: synthesizer 있으면 **research_synthesize 질문 전체에 1회 호출** → `{output_field: value}`. 각 질문에 `value` 할당, `source="research_synthesize"`, `provenance="research" if value else "default"`. synthesizer 없으면 기존 pending(하위호환).
+   - synthesizer = `lambda qs: synthesize_research_answers(brief["goal"], qs, workspace=..., run_id=...)` — clarification.py 1차 산물의 closure. goal은 construction 시점 bind.
+
+3. **`QuestionResult.provenance: str = "default"`** 신규 필드(additive) — artifact까지 출처 전파(INV-Q2).
+
+> **stage_router 무-LLM 불변 유지**: 합성(execute_requirement_prompt)은 synthesizer closure 안 → QuestionRouter adapter 경유 → `stage_router.py`는 여전히 "LLM 호출 없음(QuestionRouter에 위임)"(`stage_router.py:4` 주석) 충족. work_item_generator가 caller·synthesizer를 조립해 주입.
+
+### §6.3.4 데이터 흐름
+
+```
+work_item_generator.generate_work_items (project_brief 보유)
+  ├─ BriefBackedQuestionCaller(project_brief)             # llm_delegate 응답원
+  ├─ synthesizer = λ qs: synthesize_research_answers(goal, qs)
+  ├─ qr = QuestionRouter(llm_caller=caller, synthesizer=synthesizer)
+  └─ StageRouter.run(..., question_router=qr)             # ← 직원 배치 (배포 동등성)
+       └─ _run_new_project → route_batch(goal_clarification questions)
+            ├─ llm_delegate(goal_summary 등) → caller → brief 값 (HITL 0)
+            └─ research_synthesize(4 QA) → synthesizer 1회 → value+provenance
+       └─ _write_project_goal → ProjectGoalArtifact(+4 QA 필드+provenance) → project-goal.md
+```
+
+### §6.3.5 ProjectGoalArtifact 확장 (surface)
+
+`stage_artifacts.py` `ProjectGoalArtifact`에 additive 필드:
+```python
+    observable_goal: str = ""
+    golden_example: str = ""
+    test_seam: str = ""
+    manual_only: str = ""
+    qa_provenance: dict[str, str] = field(default_factory=dict)   # output_field → user|research|default
+```
+`stage_router._write_project_goal`(`:270-285`)이 4필드를 `values`에서 채우고 `provenance`를 `result.results`에서 수집. `_render_project_goal`(`:454`)에 4개 섹션 + 출처 뱃지 렌더. **`values` 누락 버그 해소**: 현재 `value is not None` 필터(`:270`)에 빈 문자열("")은 통과(누락 아님) — 합성 실패 시 ""+provenance=default로 surface.
+
+### §6.3.6 배포 동등성 (CLAUDE.md 규칙)
+
+- **production caller 실제 주입**: `work_item_generator.py:1172`가 `question_router=qr`을 실제로 전달 → 픽스처 전용 아님. `test_generate_work_items_passes_question_router`로 강제.
+- **brief 결손 방어**: project_brief가 비거나 `goal` 부재 시 → caller가 fallback("development" 등) + synthesizer는 빈 goal → 빈 합성 → provenance=default(무정지, UNVERIFIED). generate_work_items가 brief를 항상 보유함은 기존 계약(`:1145` 파라미터 필수).
+
+### §6.3.7 위험 / 잔여
+
+| 위험 | 대응 |
+|---|---|
+| **신규 artifact 등장** — 활성화로 `project-goal.md`가 처음으로 production 생성 | 추가(additive) 산출물. 소비처 확인 의무: `grep -rn "project-goal.md\|project_goal"` 로 "부재 전제" 소비자 0 확인 후 머지. (구현 전 검증 항목) |
+| caller 매핑이 빈약하면 success_criteria/out_of_scope가 약함 | required=False라 무정지. 품질은 후속 — Q-S3는 무정지+4 QA surface가 완료기준 |
+| synthesizer LLM 호출 1회 추가(신규 프로젝트당) | 1회 한정(4필드 batch). research가 이미 도는 파이프라인이라 한계비용 작음 |
+
 ---
 
 ## §7 seam = 구현 요구사항 (INV-Q3)
@@ -297,7 +390,7 @@ core/qa_report.py (신규):  render_html(evidence_ledger, run_dir) -> path
 |---|---|---|
 | **Q-S1** | `GoalEntry` 확장(scenario/expected_output/provenance) + `TestManifest` 신규 + `GoalContract.manifest` + 직렬화 round-trip 테스트 | Tier 2 (`completion_contract.py`, subprocess 없음) → af-critic + af-test-runner |
 | **Q-S2** | (a) `QuestionRoute.RESEARCH_SYNTHESIZE` enum 추가(`verdicts.py:5-9`) + `question_router.route_batch()` 분기 (b) `goal_clarification.yaml` 4문항 추가 (c) `clarification.py` provenance 전파(`merge_clarification`) | Tier 2 → af-critic + af-test-runner |
-| **Q-S3** | (사전 조사: research 실 API + 어댑터, §6.2) → `synthesize_via_research` + **경로 A·B·C 3곳 배선**(`interview.py:167`/`agent_launcher.py:533`/`stage_router.py:101-106`) | Tier 2~3 (research 엔진 호출) → 풀 3-Tier |
+| **Q-S3** | ✅ 사전 조사 완료(§6.2 2026-06-19: 전용 합성 프롬프트 확정) → `synthesize_research_answers`+`synthesize_via_research`(clarification.py) + **경로 A·B live 배선**(`interview.py:167`/`agent_launcher.py:533`) + **경로 C 활성화**(§6.3: `BriefBackedQuestionCaller`+synthesizer adapter+`QuestionRouter.synthesizer`+`QuestionResult.provenance`+`ProjectGoalArtifact` 4필드+`work_item_generator.py:1172` 주입) | Tier 2~3 (research 엔진 호출 + 휴면경로 활성화·subprocess 무) → 풀 3-Tier |
 | **Q-S4** | seam → `deliverables` **명시 승격**(§7, 경로 A/B의 merge_clarification + 경로 C의 route_batch hook 둘 다) + **INV-Q4 enforcement**: `_run_develop_full()`을 `pipeline.prepare()` → snapshot write-once 저장(`runtime_workspace/dogfood/<run_id>/goal_contract.json`, 존재 시 건너뜀) → `pipeline.execute()` **순서로 분해** (현재 `pipeline.run()` 통합 호출로는 저장 시점 달성 불가) + `prepare_documents():1015`가 골/기대출력 기준/manifest를 `GoalContract`로 흡수(§8). **AcceptanceGate**(`dogfood.py:1904-1907`)는 기존과 동일하게 `state.goal_contract`에 직접 실행 — snapshot 파일은 expected_output 원본 감사 전용 | Tier 3 (`project_pipeline.py`/`stage_router.py`) → 풀 3-Tier |
 | **Q-S5** | `core/qa_report.py` HTML 렌더러(§9) — `evidence_ledger` 입력, provenance 뱃지 + [확인 요망] | Tier 1~2 → af-critic + af-test-runner |
 
@@ -314,6 +407,9 @@ core/qa_report.py (신규):  render_html(evidence_ledger, run_dir) -> path
 | INV-Q3 | `test_seam`/`seam_requirements` → `deliverables` 승격 → planner 태스크화 | `test_seam_becomes_deliverable` |
 | INV-Q4 | 리서치 합성 기대출력 기준은 구현 전 동결(intake에서 GoalContract 고정), 구현 단계가 기대출력 기준을 못 바꿈 | `test_expected_output_frozen_before_implement` |
 | INV-Q5 | 합성 못한 골(provenance=default + harness_type=none) → `verdict="UNVERIFIED"` → `is_done()==False` (완료계약 INV-F 정합) | `test_unsynthesized_goal_unverified` |
+| INV-Q6 | 경로 C 활성화 시 llm_delegate 필수 질문(goal_summary·deployment_target)은 brief/fallback으로 응답 → **스킵 경로 HITL pause 0** (휴면이 막던 멈춤이 활성화로 재발하지 않음) | `test_path_c_no_hitl_on_skip`, `test_brief_backed_caller_answers_required` |
+| INV-Q7 | 경로 C research_synthesize 합성값이 `ProjectGoalArtifact` 4필드 + `project-goal.md`에 provenance 뱃지와 함께 렌더(silent 누락 0) | `test_path_c_qa_fields_rendered`, `test_question_result_provenance_propagates` |
+| INV-Q8 (배포 동등성) | `work_item_generator.generate_work_items`가 `question_router`를 **실제로 주입**(픽스처 전용 아님) — production 경로에서 route_batch 활성 | `test_generate_work_items_passes_question_router` |
 
 ---
 
@@ -352,4 +448,5 @@ core/qa_report.py (신규):  render_html(evidence_ledger, run_dir) -> path
 | 날짜 | 내용 |
 |---|---|
 | 2026-06-18 | Draft 작성 (Opus 4.8) — 완료계약 §10이 던진 criteria 품질·정답 검증 구멍을 intake 테스트 명료화 + 스킵→리서치 합성 + provenance 신뢰등급 + seam=구현요구 + HTML 리포트로 메우는 설계. 좌표 grep 확정(`interview.py:167`/`agent_launcher.py:533`/`clarification.py:178`/`goal_clarification.yaml`/`research_router.py:214`). |
+| 2026-06-19 | **Q-S3 선행 조사 완료 + 경로 C 활성화 설계 추가 (Opus, grep/read 전수 확정)**: ① §6.2 합성 메커니즘 확정 — research 실 API 조사 결과 기존 brief 엔진(`research_project_brief`)이 4개 QA 필드 중 harness_type만 매핑 → 사용자 결정 "전용 합성 프롬프트"(기존 `execute_requirement_prompt` 재사용, 신규 인프라 0). ② §6.1 경로 C가 production **휴면**(`work_item_generator.py:1172` question_router 미전달 → None, 구체 LLM caller 부재, `project-goal.md` 미생성) 확정 → 사용자 결정 "직원 배치+스킵 동작". ③ §6.3 신설 — `BriefBackedQuestionCaller`(brief 응답원, HITL cascade 회피) + `QuestionRouter.synthesizer` adapter(stage_router 무-LLM 불변 유지) + `QuestionResult.provenance` + `ProjectGoalArtifact` 4필드 + `work_item_generator` 실주입(배포 동등성). ④ §10 Q-S3 범위 갱신, §11 INV-Q6/Q7/Q8 추가. 위험: `project-goal.md` 신규 등장(소비처 0 확인 의무). |
 | 2026-06-18 | af-cross-review **BLOCK 3건 반영 (Opus, 전건 grep 재확인)**: ① **#1** §6.2 `research_engine.run()`/`findings.field_for()` 미존재(실재는 `query_notebooklm`/`ResearchMode`/`classify_research_depth` + `ResearchRouter.plan()`만) → pseudo-code를 illustrative로 강등 + Q-S3 선행 "실 API 조사+어댑터" 명세, 어댑터 불가 시 스킵=UNVERIFIED로 축소 ② **#2** §6.1 intake 경로 누락 — `stage_router.py:101-106 _run_new_project`(goal_clarification을 route_batch로 독립 처리, `work_item_generator.py:1170-1171` 호출)이 3번째 경로 → 경로 C 추가, Q-S3을 3곳 배선으로 ③ **#3** §4 `default_route: research_synthesize`가 `QuestionRoute` enum(`verdicts.py:5-9` PASS/LLM_DELEGATE/HITL/BLOCK)에 부재 → Q-S2에 enum 추가+route_batch 분기 / §7 seam→deliverables가 "자동 같은 채널" 아님(yaml은 output_field 기반, merge_clarification은 category 기반) → 명시 승격 로직(경로 A/B+C 둘 다)으로 정정. Advisory(INV-Q4 동결 enforcement 메커니즘 미명시)는 Q-S1 구현 시 결정으로 보류. |
