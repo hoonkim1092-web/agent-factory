@@ -33,6 +33,12 @@ class ProjectGoalArtifact:
     success_criteria: list[str] = field(default_factory=list)
     out_of_scope: list[str] = field(default_factory=list)
     assumptions_used: list[str] = field(default_factory=list)
+    # Q-S3 additive: QA 명료화 필드 (INV-Q7)
+    observable_goal: str = ""
+    golden_example: str = ""
+    test_seam: str = ""
+    manual_only: str = ""
+    qa_provenance: dict[str, str] = field(default_factory=dict)  # output_field → provenance
 
 
 @dataclass

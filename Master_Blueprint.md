@@ -1141,12 +1141,16 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-19; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+14)
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, agent_launcher.py (+12)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/providers/cli.py` | cli | `compose_cli_prompt()`, `build_cli_command()` |
-| `core/sandbox_config.py` | sandbox_config — AF sandbox 활성 여부 SSOT. | `sandbox_enabled()`, `set_sandbox_enabled()` |
+| `core/clarification.py` | core/clarification.py ===================== Clarification 단계: Brief 분석 → 질문 생성 → 사용자 답변 → Brief 병합. | `auto_apply_defaults()`, `synthesize_research_answers()`, `synthesize_via_research()` |
+| `core/control/question_router.py` | Stage 0 QuestionRouter — 순수 분류기 (파일 쓰기·side effect 없음). | `QuestionResult`, `QuestionRouterLLMCaller`, `BriefBackedQuestionCaller`, `QuestionRouter` |
+| `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass 정의 (설계 §7). | `ProjectGoalArtifact` |
+| `core/control/stage_router.py` | StageRouter — Stage 0 오케스트레이터 (설계 §4.2, §5.2.1, §3.1). | `StageRouter` |
+| `core/interview.py` | User-facing deep interview workflow. | `run_interview()` |
+| `core/work_item_generator.py` | Generate work-item markdown documents from planning artifacts. | `generate_work_items()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1694,6 +1698,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, agent_launcher.py (+12) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+14) |
 | 2026-06-19 | v1.2.34 | feat(sandbox): `af sandbox on\|off\|status` — Windows native sandbox 미지원(CreateProcessWithLogonW 1326) 해소. `core/sandbox_config.py` 신규(sandbox SSOT: env `AF_SANDBOX` > `~/.af/sandbox.json` > 플랫폼기본). `core/providers/cli.py` `_apply_sandbox_mode`/`_swap_flag_value` 신규 + `build_cli_command` 최종 return 직전 배선(codex: `--sandbox danger-full-access`, gemini: `--sandbox` 제거 · `--approval-mode yolo` 보존 INV-S7). `scripts/af_sandbox.py` 신규(on/off/status dispatch). `agent_launcher.py`/`af.py` sandbox 서브커맨드 추가. `af.spec` hiddenimports 추가. 테스트 16건 신규(INV-S1~S7). 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0) / af-test-runner PASS(57). §0 갱신. — core/sandbox_config.py, core/providers/cli.py, scripts/af_sandbox.py, agent_launcher.py, af.py, af.spec, tests/test_sandbox_config.py, tests/test_cli_providers.py, Master_Blueprint.md |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, af.spec, agent_launcher.py (+6) |

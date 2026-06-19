@@ -268,6 +268,12 @@ class StageRouter:
         self, work_dir: str, result: QuestionBatchResult, blast_radius: str
     ) -> str:
         values = {r.output_field: r.value for r in result.results if r.value is not None}
+        # QA 필드 provenance 수집 (빈 문자열도 surface — 합성 실패를 숨기지 않음)
+        qa_prov: dict[str, str] = {
+            r.output_field: r.provenance
+            for r in result.results
+            if r.output_field in ("observable_goal", "golden_example", "test_seam", "manual_only")
+        }
         artifact = ProjectGoalArtifact(
             artifact_type="project_goal",
             question_set_id=result.question_set_id,
@@ -279,6 +285,11 @@ class StageRouter:
             success_criteria=_to_list(values.get("success_criteria")),
             out_of_scope=_to_list(values.get("out_of_scope")),
             assumptions_used=_to_list(values.get("assumptions_used")),
+            observable_goal=str(values.get("observable_goal", "")),
+            golden_example=str(values.get("golden_example", "")),
+            test_seam=str(values.get("test_seam", "")),
+            manual_only=str(values.get("manual_only", "")),
+            qa_provenance=qa_prov,
         )
         path = os.path.join(work_dir, "project-goal.md")
         _atomic_write_text(path, _render_project_goal(artifact))
@@ -452,6 +463,10 @@ def _atomic_write_text(path: str, content: str) -> None:
 # ------------------------------------------------------------------
 
 def _render_project_goal(a: ProjectGoalArtifact) -> str:
+    def _prov_badge(field: str) -> str:
+        p = a.qa_provenance.get(field, "default")
+        return f" [출처: {p}]"
+
     lines = [
         "# project-goal.md",
         f"artifact_type: {a.artifact_type}",
@@ -469,6 +484,15 @@ def _render_project_goal(a: ProjectGoalArtifact) -> str:
     lines.append("## Out of Scope")
     for o in a.out_of_scope:
         lines.append(f"- {o}")
+    # QA 명료화 섹션 (INV-Q7)
+    lines.append(f"## Observable Goal{_prov_badge('observable_goal')}")
+    lines.append(a.observable_goal or "")
+    lines.append(f"## Golden Example{_prov_badge('golden_example')}")
+    lines.append(a.golden_example or "")
+    lines.append(f"## Test Seam{_prov_badge('test_seam')}")
+    lines.append(a.test_seam or "")
+    lines.append(f"## Manual Only{_prov_badge('manual_only')}")
+    lines.append(a.manual_only or "")
     return "\n".join(lines) + "\n"
 
 

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T15:50:12+09:00
-source_commit: 7ced24b9
+generated_at: 2026-06-19T19:26:04+09:00
+source_commit: 53dc15ce
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -411,7 +411,7 @@ sources:
 
 ### `core`
 
-153 modules · 220 classes · 849 functions
+153 modules · 220 classes · 851 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
 - `core/agent_runner.py` — 2 class / 2 func
@@ -424,7 +424,7 @@ sources:
 - `core/bootstrap_roles.py` — 1 class / 3 func
 - `core/builder.py` — 1 class / 0 func
 - `core/capability_intent.py` — 2 class / 5 func
-- `core/clarification.py` — 0 class / 5 func
+- `core/clarification.py` — 0 class / 7 func
 - `core/cli_session_cleanup.py` — 0 class / 1 func
 - `core/completion_contract.py` — 7 class / 4 func
 - `core/concurrency.py` — 3 class / 0 func
@@ -586,7 +586,7 @@ sources:
 
 ### `core/control`
 
-19 modules · 38 classes · 10 functions
+19 modules · 39 classes · 10 functions
 
 - `core/control/__init__.py` — 0 class / 0 func
 - `core/control/change_impact.py` — 2 class / 0 func
@@ -598,7 +598,7 @@ sources:
 - `core/control/lifecycle_bridge.py` — 2 class / 0 func
 - `core/control/maintenance_pipeline.py` — 1 class / 0 func
 - `core/control/maintenance_state.py` — 2 class / 0 func
-- `core/control/question_router.py` — 5 class / 3 func
+- `core/control/question_router.py` — 6 class / 3 func
 - `core/control/regression_gate.py` — 1 class / 0 func
 - `core/control/rollback.py` — 2 class / 0 func
 - `core/control/run_ledger.py` — 2 class / 0 func
@@ -1357,7 +1357,7 @@ sources:
 
 ### `tests`
 
-215 modules · 384 classes · 1833 functions
+216 modules · 392 classes · 1835 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1483,6 +1483,7 @@ sources:
 - `tests/test_project_task_board_dispatch.py` — 0 class / 30 func
 - `tests/test_provider_detect.py` — 0 class / 35 func
 - `tests/test_provider_instruction_sync.py` — 0 class / 25 func
+- `tests/test_q_s3_path_c.py` — 8 class / 2 func
 - `tests/test_quality_contract.py` — 2 class / 2 func
 - `tests/test_registry.py` — 0 class / 3 func
 - `tests/test_registry_manager_codex_skills.py` — 0 class / 8 func

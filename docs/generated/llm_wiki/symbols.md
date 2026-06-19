@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T15:50:12+09:00
-source_commit: 7ced24b9
+generated_at: 2026-06-19T19:26:04+09:00
+source_commit: 53dc15ce
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -579,6 +579,8 @@ _(no top-level symbols)_
 - `should_skip_clarification`
 - `merge_clarification`
 - `auto_apply_defaults`
+- `synthesize_research_answers`
+- `synthesize_via_research`
 
 ## `core/cli_session_cleanup.py`
 
@@ -731,6 +733,7 @@ _(no top-level symbols)_
 - `QuestionResult`
 - `QuestionBatchResult`
 - `QuestionRouterLLMCaller`
+- `BriefBackedQuestionCaller`
 - `QuestionRouter`
 
 **Functions:**
@@ -7428,6 +7431,22 @@ _(no top-level symbols)_
 - `test_inv8_render_roster_function_exists`
 - `test_inv8_render_roster_no_markers`
 - `test_inv8_main_does_not_write_agents_md_directly`
+
+## `tests/test_q_s3_path_c.py`
+
+**Classes:**
+- `TestBriefBackedCaller`
+- `TestPathCNoHitlOnSkip`
+- `TestQuestionResultProvenance`
+- `TestProjectGoalArtifactQaFields`
+- `TestWriteProjectGoalQaFields`
+- `TestGenerateWorkItemsPassesQuestionRouter`
+- `TestSynthesizeResearchAnswers`
+- `TestSynthesizeViaResearch`
+
+**Functions:**
+- `_make_rs_question`
+- `_make_llm_question`
 
 ## `tests/test_quality_contract.py`
 

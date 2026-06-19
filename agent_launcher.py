@@ -528,6 +528,7 @@ class AgentFactory:
                     generate_clarification_questions,
                     should_skip_clarification,
                     merge_clarification,
+                    synthesize_via_research,
                 )
                 pipeline_type = str((route or {}).get("pipeline", "project"))
                 if not should_skip_clarification(
@@ -555,6 +556,19 @@ class AgentFactory:
                                 )
                             except Exception as _write_exc:
                                 print(f"  [Clarification] brief 파일 갱신 실패: {_write_exc}")
+                else:
+                    # 스킵 경로: 리서치 합성으로 4 QA 필드 채움 (INV-Q1)
+                    questions = generate_clarification_questions(
+                        prepared_brief.project_brief,
+                        workspace=workspace,
+                        run_id=prepared_brief.run_id,
+                    )
+                    if questions:
+                        prepared_brief.project_brief = synthesize_via_research(
+                            prepared_brief.project_brief, questions,
+                            workspace=workspace,
+                            run_id=prepared_brief.run_id,
+                        )
             except Exception as _clar_exc:
                 print(f"  [Clarification] 스킵 (오류): {_clar_exc}")
 

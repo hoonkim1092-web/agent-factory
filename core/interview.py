@@ -12,9 +12,9 @@ import tempfile
 from typing import Any, Callable
 
 from core.clarification import (
-    auto_apply_defaults,
     generate_clarification_questions,
     merge_clarification,
+    synthesize_via_research,
 )
 
 
@@ -164,7 +164,11 @@ def run_interview(
     )
     should_auto_answer = bool(non_interactive or deep_skip)
     if should_auto_answer:
-        enriched = auto_apply_defaults(base_brief, questions)
+        enriched = synthesize_via_research(
+            base_brief, questions,
+            workspace=target_workspace,
+            run_id=run_id,
+        )
         answers = [entry.get("answer", "") for entry in enriched.get("clarification_log", [])]
     else:
         answers = collect_answers(questions, input_fn=input_fn, print_fn=print_fn) if questions else []

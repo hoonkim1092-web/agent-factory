@@ -38,6 +38,7 @@ class QuestionResult:
     used_fallback: bool = False
     source: str = ""
     warning: str = ""
+    provenance: str = "default"  # user | research | default (INV-Q2)
 
 
 @dataclass
@@ -156,6 +157,60 @@ class QuestionRouterLLMCaller:
         raise NotImplementedError
 
 
+class BriefBackedQuestionCaller(QuestionRouterLLMCaller):
+    """project_brief 필드를 이용해 llm_delegate 질문에 응답하는 concrete caller.
+
+    실 LLM 호출 0 → HITL cascade 없음(INV-Q6).
+    필수 2개(goal_summary/deployment_target)는 항상 응답 — 키 누락 금지(§6.3.3).
+    """
+
+    def __init__(self, project_brief: dict[str, Any]) -> None:
+        self._brief = project_brief
+
+    def batch_route(
+        self,
+        questions: list[Question],
+        context: dict[str, Any],
+        timeout_sec: float,
+    ) -> dict[str, Any]:
+        try:
+            brief = self._brief
+            goal = str(brief.get("goal") or brief.get("task_input") or "")
+
+            # deployment_target: constraints에서 "배포:" 항목 우선, fallback="development"
+            deploy = "development"
+            for c in brief.get("constraints") or []:
+                cs = str(c)
+                if cs.startswith("배포:"):
+                    deploy = cs[3:].strip()
+                    break
+
+            answers: dict[str, Any] = {
+                "goal_summary": goal or "project goal",
+                "deployment_target": deploy,
+            }
+
+            deliverables = brief.get("deliverables")
+            if deliverables:
+                answers["success_criteria"] = (
+                    deliverables if isinstance(deliverables, list) else [str(deliverables)]
+                )
+
+            non_goals = brief.get("non_goals")
+            if non_goals:
+                answers["out_of_scope"] = (
+                    non_goals if isinstance(non_goals, list) else [str(non_goals)]
+                )
+
+            return answers
+        except Exception:
+            # 예외를 전파하지 않음 — route_batch catch 블록이 받으면 HITL 유발(§6.3.3)
+            return {
+                "goal_summary": "project goal",
+                "deployment_target": "development",
+            }
+
+
 # ---------------------------------------------------------------------------
 # QuestionRouter
 # ---------------------------------------------------------------------------
@@ -170,9 +225,11 @@ class QuestionRouter:
         self,
         llm_caller: QuestionRouterLLMCaller | None = None,
         timeout_sec: float = 300.0,
+        synthesizer: Any = None,
     ):
         self._llm = llm_caller
         self._timeout_sec = timeout_sec
+        self._synthesizer = synthesizer  # Callable[[list[Question]], dict[str, str]] | None
 
     def route_batch(
         self,
@@ -245,14 +302,28 @@ class QuestionRouter:
                 )
 
             elif q.default_route == QuestionRoute.RESEARCH_SYNTHESIZE:
-                # Q-S3에서 ResearchRouter로 합성 예정 (INV-Q1)
-                # 지금은 pending 표시만 — 실제 합성은 synthesize_via_research()가 담당
+                pass  # 아래 synthesizer 일괄 처리로 대체됨
+
+        # RESEARCH_SYNTHESIZE 일괄 처리 — synthesizer 있으면 1회 호출, 없으면 pending
+        rs_questions = [q for q in questions if q.default_route == QuestionRoute.RESEARCH_SYNTHESIZE]
+        if rs_questions:
+            synthesized: dict[str, str] = {}
+            if self._synthesizer is not None:
+                try:
+                    synthesized = self._synthesizer(rs_questions) or {}
+                except Exception:
+                    synthesized = {}
+            for q in rs_questions:
+                value = synthesized.get(q.output_field)
+                prov = "research" if value else "default"
                 results.append(
                     QuestionResult(
                         question_id=q.id,
                         output_field=q.output_field,
                         question_route=QuestionRoute.RESEARCH_SYNTHESIZE,
-                        source="research_synthesize_pending",
+                        value=value,
+                        source="research_synthesize" if value else "research_synthesize_pending",
+                        provenance=prov,
                     )
                 )
 

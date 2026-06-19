@@ -188,3 +188,88 @@ def auto_apply_defaults(
     """FSA 모드: 모든 질문에 기본값 자동 적용."""
     answers = [q.get("default", "") for q in questions]
     return merge_clarification(project_brief, questions, answers)
+
+
+# ── 리서치 합성 (Q-S3) ─────────────────────────────────────────────────
+
+_RESEARCH_SYNTHESIZE_PROMPT = """\
+You are a QA engineer. Given the project goal below, answer the four test \
+clarification questions as concisely as possible.
+
+## Project Goal
+{goal}
+
+## Questions
+1. observable_goal: What specific, observable behavior proves this goal is met? \
+(e.g., "Running `af sandbox off` prints 'sandbox disabled' and no console windows appear on next launch")
+2. golden_example: A concrete golden example — exact input → expected output / behavior.
+3. test_seam: What seam (CLI flag, test file input, env var, mock) enables automated testing \
+without physical device or GUI?
+4. manual_only: Which scenarios, if any, cannot be automated and must be verified manually?
+
+## Output (JSON)
+{{
+  "observable_goal": "...",
+  "golden_example": "...",
+  "test_seam": "...",
+  "manual_only": "..."
+}}
+"""
+
+
+def synthesize_research_answers(
+    goal: str,
+    questions: "list[Any]",
+    *,
+    workspace: str | None = None,
+    run_id: str = "",
+) -> dict[str, str]:
+    """리서치 합성: goal 텍스트 + 4 QA 질문 → {output_field: value}.
+
+    LLM 호출 1회로 observable_goal/golden_example/test_seam/manual_only를 batch 합성.
+    실패 시 빈 dict 반환 (합성 실패 → provenance=default, UNVERIFIED — 무정지).
+    """
+    prompt = _RESEARCH_SYNTHESIZE_PROMPT.format(goal=goal or "")
+    try:
+        result = execute_requirement_prompt(prompt, workspace=workspace, run_id=run_id)
+        if not result.get("ok"):
+            return {}
+        parsed = _safe_json_load(result.get("text", ""))
+        out: dict[str, str] = {}
+        for field in ("observable_goal", "golden_example", "test_seam", "manual_only"):
+            val = parsed.get(field)
+            if val and isinstance(val, str) and val.strip():
+                out[field] = val.strip()
+        return out
+    except Exception:
+        return {}
+
+
+def synthesize_via_research(
+    project_brief: dict[str, Any],
+    questions: list[dict[str, Any]],
+    *,
+    workspace: str | None = None,
+    run_id: str = "",
+) -> dict[str, Any]:
+    """경로 A/B 스킵 시 리서치 합성으로 brief를 enrich한다 (INV-Q1).
+
+    synthesize_research_answers를 호출해 4 QA 필드를 합성하고
+    merge_clarification(provenance="research")으로 병합.
+    합성 실패 시 merge_clarification(provenance="default")로 정적 기본값 적용.
+    """
+    goal = str(project_brief.get("goal") or project_brief.get("task_input") or "")
+    synthesized = synthesize_research_answers(goal, questions, workspace=workspace, run_id=run_id)
+    if synthesized:
+        # 합성 성공: research 출처로 병합
+        return merge_clarification(
+            project_brief, questions,
+            [synthesized.get(q.get("output_field", ""), q.get("default", "")) for q in questions],
+            provenance="research",
+        )
+    # 합성 실패: 정적 기본값 적용
+    return merge_clarification(
+        project_brief, questions,
+        [q.get("default", "") for q in questions],
+        provenance="default",
+    )

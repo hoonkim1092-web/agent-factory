@@ -1168,12 +1168,26 @@ def generate_work_items(
     try:
         from core.control.run_ledger import RunLedger
         from core.control.stage_router import StageRouter
+        from core.control.question_router import BriefBackedQuestionCaller, QuestionRouter
+        from core.clarification import synthesize_research_answers
+
+        goal = str(project_brief.get("goal") or project_brief.get("task_input") or "")
+        _brief_caller = BriefBackedQuestionCaller(project_brief)
+        _synthesizer = lambda qs: synthesize_research_answers(  # noqa: E731
+            goal, qs, workspace=workspace, run_id=run_id
+        )
+        _question_router = QuestionRouter(
+            llm_caller=_brief_caller,
+            synthesizer=_synthesizer,
+        )
+
         _stage_router = StageRouter(workspace=workspace, run_ledger=RunLedger(workspace))
         stage0_files = _stage_router.run(
             work_dir=work_dir,
             work_kind=work_kind,
             blast_radius=blast_radius,
             run_id=run_id,
+            question_router=_question_router,
             doc_root=doc_root,
             slug=slug,
         )
