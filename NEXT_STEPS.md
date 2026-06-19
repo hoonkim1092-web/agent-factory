@@ -2,6 +2,19 @@
 
 ## ▶ 다음 = Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
+> **설계**: `docs/2026-06-18-user-perspective-qa-pipeline-design.md §6.2`, 구현표 §10 Q-S3
+> **모델**: Opus 4.8로 전환됨 (설계성 사전 조사 포함이라 Opus 적합)
+>
+> **선행 조사 (구현 전 필수, §6.2)**: `research_engine.py`/`researcher.py`/`research_brief.py`의 실제 진입 함수 중 "goal 텍스트 → 골/기대출력/seam 후보"를 얻는 경로를 식별하고, 그 반환 구조에서 `output_field`별 값을 뽑는 **어댑터 함수**를 명세. ⚠️ 초안의 `research_engine.run()`/`findings.field_for()`는 **미존재** — 실재는 `ResearchRouter.plan()`(`research_router.py:214`) + `query_notebooklm`/`ResearchMode`/`classify_research_depth`만. 어댑터 불가 시 §10 Q-S3을 "리서치 합성 미지원 → 스킵=UNVERIFIED"로 축소(폴백 안전망).
+>
+> **배선 3곳**: ① `interview.py:167` `auto_apply_defaults`→`synthesize_via_research` ② `agent_launcher.py:533` should_skip 시에도 골/테스트 합성 1회 ③ `stage_router.py:101-106` `_run_new_project` route_batch 경로
+>
+> **합성 실패 처리**: 엔진 미가용/빈 결과/어댑터 부재 → `provenance="default"` + `verdict="UNVERIFIED"` (완료계약 §4.2 폴백 정합, `is_done()==False`)
+>
+> **Q-S2 잔여 advisory (Q-S3에서 해소)**: RESEARCH_SYNTHESIZE pending 결과가 `value=None`이라 `stage_router.py:270`의 `values` dict + `ProjectGoalArtifact`에서 silent 누락 → 현재 사용자 피드백 부재. Q-S3에서 4개 필드(observable_goal 등)를 artifact에 surface해야 함.
+>
+> **순서 무관 대안**: Q-S5(`core/qa_report.py` HTML 렌더러, §9)는 Q-S3 독립 — `evidence_ledger` 입력 + provenance 뱃지/[확인 요망]. 더 가벼운 Tier 1~2.
+
 ### ✅ (Q-S2) RESEARCH_SYNTHESIZE + 4문항 + provenance 완료 (2026-06-19, Sonnet, `be884287`+`5fb3d8ad`)
 > - `core/control/verdicts.py`: `QuestionRoute.RESEARCH_SYNTHESIZE = "research_synthesize"` (INV-Q1)
 > - `core/control/question_router.py`: `route_batch()`에 RESEARCH_SYNTHESIZE 분기 추가 → `source="research_synthesize_pending"` (BLOCK/HITL 기여 안 함)
