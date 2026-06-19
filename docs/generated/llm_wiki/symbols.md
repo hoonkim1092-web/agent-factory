@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T00:11:23+09:00
-source_commit: f5b43f0e
+generated_at: 2026-06-20T00:32:17+09:00
+source_commit: 84ee28df
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -7484,6 +7484,16 @@ _(no top-level symbols)_
 **Functions:**
 - `_ledger`
 - `_goal`
+
+## `tests/test_qa_report_wiring.py`
+
+**Classes:**
+- `TestPipelineQaReportPath`
+- `TestDogfoodVerifyQaReportPath`
+- `TestDogfoodStateQaReportPathRoundTrip`
+
+**Functions:**
+- `_verified_contract`
 
 ## `tests/test_quality_contract.py`
 

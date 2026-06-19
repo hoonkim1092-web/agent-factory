@@ -179,6 +179,8 @@ class DogfoodState:
     # goal-reached verification contract (persist channel; generation SSOT is
     # project_pipeline.prepare() — see completion-contract design §4.2/§8 S1)
     goal_contract: GoalContract | None = None
+    # Q-S6: QA HTML 리포트 경로 (verify phase에서 render_html 호출 후 기록)
+    qa_report_path: str = ""
 
     # F-RUN-BUDGET-STATE: snapshot of core.run_budget singleton for restart survival
     budget_consumed: int = 0
@@ -231,6 +233,7 @@ class DogfoodState:
             "approval_policy": self.approval_policy,
             "completion_criteria": self.completion_criteria,
             "goal_contract": self.goal_contract.to_dict() if self.goal_contract else None,
+            "qa_report_path": self.qa_report_path,
             "budget_consumed": self.budget_consumed,
             "budget_max_tokens": self.budget_max_tokens,
             "budget_stopped": self.budget_stopped,
@@ -274,6 +277,7 @@ class DogfoodState:
                 if (gc := data.get("goal_contract"))
                 else None
             ),
+            qa_report_path=data.get("qa_report_path", "") or "",
             budget_consumed=int(data.get("budget_consumed", 0) or 0),
             budget_max_tokens=int(data.get("budget_max_tokens", 0) or 0),
             budget_stopped=bool(data.get("budget_stopped", False)),
@@ -1912,12 +1916,16 @@ def _run_verify_phase(state: DogfoodState, context: dict[str, Any]) -> dict[str,
             failures.append(cmd)
 
     # §8 S3: AcceptanceGate 2차 배선 (idempotent — 이미 채워진 verdict skip)
+    # Q-S6: AcceptanceGate 후 render_html → state.qa_report_path
     if state.goal_contract is not None:
         try:
-            from core.completion_contract import AcceptanceGate
+            from core.completion_contract import AcceptanceGate, build_evidence_ledger
+            from core.qa_report import render_html as _render_qa_html
             AcceptanceGate().run(state.goal_contract, cwd)
-        except Exception:
-            pass
+            _ledger = build_evidence_ledger(state.goal_contract)
+            state.qa_report_path = _render_qa_html(_ledger, cwd)
+        except Exception as _e:
+            print(f"[_run_verify_phase] render_html skipped: {_e}", file=sys.stderr)
 
     return VerifyResult(
         passed=len(failures) == 0,

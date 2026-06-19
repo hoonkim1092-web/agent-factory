@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-19 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-20 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1140,17 +1140,15 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-19; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+12)
+최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, project_pipeline.py, qa_report.py, test_dogfood.py, test_qa_report_wiring.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/clarification.py` | core/clarification.py ===================== Clarification 단계: Brief 분석 → 질문 생성 → 사용자 답변 → Brief 병합. | `merge_clarification()` |
-| `core/control/stage_router.py` | StageRouter — Stage 0 오케스트레이터 (설계 §4.2, §5.2.1, §3.1). | `StageRouter` |
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodState` |
 | `core/project_pipeline.py` | project pipeline | `ProjectPipeline` |
-| `core/work_item_generator.py` | Generate work-item markdown documents from planning artifacts. | `generate_work_items()` |
+| `core/qa_report.py` | QA 리포트 렌더러 — evidence_ledger → 자기완결 HTML 파일. | `render_html()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1698,6 +1696,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-20 | v1.2.34 | chore(core): code update — dogfood.py, project_pipeline.py, qa_report.py, test_dogfood.py, test_qa_report_wiring.py |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+12) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+10) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, agent_launcher.py (+12) |

@@ -1453,10 +1453,16 @@ class ProjectPipeline:
                 "goal_failed" if _contract.has_failures() else "goal_unverified"
             )
             evidence_ledger = build_evidence_ledger(_contract)
+            try:
+                from core.qa_report import render_html as _render_qa_html
+                qa_report_path = _render_qa_html(evidence_ledger, workspace)
+            except Exception:
+                qa_report_path = ""
         else:
             gated_ok = (status == "completed")
             gated_reason = status if not gated_ok else ""
             evidence_ledger = {}
+            qa_report_path = ""
 
         # ── strategy ledger: 모듈별 outcome 기록 (B2-6) ──────────────
         self._record_ledger_outcomes(
@@ -1507,6 +1513,7 @@ class ProjectPipeline:
             "planning_files": prepared.planning_files,
             "board": run_board,
             "evidence_ledger": evidence_ledger,
+            "qa_report_path": qa_report_path,
             "goal_contract": _contract.to_dict() if _contract is not None else None,
             # 하위 호환 — 기존 코드가 직접 키로 접근하는 경우를 위해
             "project_brief_path": prepared.project_brief_path,

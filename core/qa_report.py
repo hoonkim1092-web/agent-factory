@@ -41,8 +41,6 @@ def render_html(evidence_ledger: dict[str, Any], run_dir: str) -> str:
     """evidence_ledger를 입력받아 run_dir/qa_report.html 생성 후 경로 반환.
 
     INV-Q2: provenance=research 골은 verdict 섹션 외에 [확인 요망]에도 동시 표기.
-
-    # wiring: deferred — Q-S4/Q-S6 또는 project_pipeline.py에서 연결 예정
     """
     goals: list[dict[str, Any]] = evidence_ledger.get("goals", [])
     task_id = html.escape(str(evidence_ledger.get("task_id", "")))

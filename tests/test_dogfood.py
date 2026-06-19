@@ -130,6 +130,7 @@ def test_state_to_dict_keys(tmp_path):
         "develop_changed_paths", "route_decision",
         "attempts", "last_failure", "next_action", "approval_policy",
         "completion_criteria", "goal_contract",
+        "qa_report_path",
         "budget_consumed", "budget_max_tokens", "budget_stopped", "budget_project_id",
     }
     assert required == set(d.keys())
