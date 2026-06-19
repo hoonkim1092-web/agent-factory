@@ -168,7 +168,7 @@ def run_interview(
         answers = [entry.get("answer", "") for entry in enriched.get("clarification_log", [])]
     else:
         answers = collect_answers(questions, input_fn=input_fn, print_fn=print_fn) if questions else []
-        enriched = merge_clarification(base_brief, questions, answers) if questions else {
+        enriched = merge_clarification(base_brief, questions, answers, provenance="user") if questions else {
             **base_brief,
             "clarification_log": [],
         }

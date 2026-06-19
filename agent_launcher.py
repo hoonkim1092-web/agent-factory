@@ -543,7 +543,8 @@ class AgentFactory:
                     if questions:
                         answers = self._collect_clarification_answers(questions)
                         prepared_brief.project_brief = merge_clarification(
-                            prepared_brief.project_brief, questions, answers
+                            prepared_brief.project_brief, questions, answers,
+                            provenance="user",
                         )
                         # Clarification 반영 후 disk의 project_brief.json 원자적 갱신
                         _pb_path = prepared_brief.project_brief_path

@@ -1139,13 +1139,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-19; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+11)
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, af.spec, agent_launcher.py (+6)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/clarification.py` | core/clarification.py ===================== Clarification 단계: Brief 분석 → 질문 생성 → 사용자 답변 → Brief 병합. | `merge_clarification()` |
-| `core/control/question_router.py` | Stage 0 QuestionRouter — 순수 분류기 (파일 쓰기·side effect 없음). | `QuestionRouter` |
-| `core/control/verdicts.py` | Stage 0 Question Router — verdict/route/cause enum 단일 원천. | `QuestionRoute` |
+| `core/interview.py` | User-facing deep interview workflow. | `run_interview()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1693,6 +1691,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, af.spec, agent_launcher.py (+6) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+11) |
 | 2026-06-19 | v1.2.34 | feat(qa-pipeline Q-S2): `QuestionRoute.RESEARCH_SYNTHESIZE` enum 추가(`verdicts.py`) + `route_batch()` 분기(→ source="research_synthesize_pending", BLOCK/HITL 기여 안 함) + `goal_clarification.yaml` 4문항(`observable_goal`/`golden_example`/`test_seam`/`manual_only`, default_route: research_synthesize) + `merge_clarification(provenance="default")` — clarification_log 엔트리에 `provenance` 태깅(Q-S3 synthesize_via_research가 "research"로 호출 예정). 테스트 9건 신규(TestResearchSynthesizeRoute 4 + TestMergeClarificationProvenance 5) / 총 43 PASS. — core/control/verdicts.py, core/control/question_router.py, core/control/questions/goal_clarification.yaml, core/clarification.py, tests/test_stage0_question_router.py, Master_Blueprint.md |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+8) |

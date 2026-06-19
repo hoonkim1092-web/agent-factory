@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T12:48:17+09:00
-source_commit: bacafe3d
+generated_at: 2026-06-19T13:07:12+09:00
+source_commit: be884287
 sources:
   - "docs/code_review/code-review.md"
 ---
