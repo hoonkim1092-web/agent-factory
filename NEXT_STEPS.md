@@ -15,7 +15,8 @@
 - **S1 (cli.py)**: `batch file arguments are invalid` → `shell_error` 분류 → codex ok-승격 차단
 - **S2 (agent_runner.py:1226)**: 보수적 가짜성공 가드(`ok&&rc!=0&&파일변경0`→강등). `_workspace_mutation_signature` 신규
 - **S3 (dynamic_orchestrator.py)**: 무진전 fail-fast(`AGENT_HARD_NO_PROGRESS=20` + `all_infra||retry_exhausted`→`blocked_no_progress` BLOCK)
-- **▶ 다음 = Sonnet 병렬 구현** (S1·S3 먼저 → S2). 각 Tier-3 → 3-Tier 리뷰. 우선순위 3·5는 §6 별도 설계로 분리(baseline churn BLOCK루프 회피).
+- **✅ S1+S3 구현 완료** (2026-06-20, Sonnet, 커밋 `32f77a60`). 3-Tier PASS. 회귀 없음.
+- **▶ 다음 = S2 구현** (agent_runner.py:1226 — `ok&&rc!=0&&파일변경0`→강등, `_workspace_mutation_signature` 신규). 또는 우선순위 3·5 별도 설계.
 
 **원 진단 우선순위(동결)**:
 1. **Bug1 가짜성공 탐지** → S2로 설계됨
