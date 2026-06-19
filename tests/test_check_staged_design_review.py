@@ -252,3 +252,240 @@ class TestMainFailClosed:
         monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
         monkeypatch.setattr(mod, "_external_provider_status", lambda w: "available")
         assert mod.main(["--workspace", ws]) == 1
+
+
+# ── S2: _extract_block_sections ───────────────────────────────────────────────
+
+class TestExtractBlockSections:
+    def test_extracts_simple_sections(self):
+        text = "§3에서 오류 발생. §4.1도 참조."
+        assert mod._extract_block_sections(text) == ["§3", "§4.1"]
+
+    def test_deduplicates(self):
+        text = "§3 문제, §3 재발, §5 추가"
+        result = mod._extract_block_sections(text)
+        assert result.count("§3") == 1
+        assert "§5" in result
+
+    def test_preserves_order(self):
+        text = "§5 먼저, §2 다음"
+        assert mod._extract_block_sections(text) == ["§5", "§2"]
+
+    def test_no_sections(self):
+        assert mod._extract_block_sections("no section markers here") == []
+
+    def test_deep_subsection(self):
+        text = "§10.2.3 하위 섹션"
+        assert mod._extract_block_sections(text) == ["§10.2.3"]
+
+
+# ── S2: _map_doc_to_queue_fname ───────────────────────────────────────────────
+
+class TestMapDocToQueueFname:
+    def test_finds_matching_queue_file(self, tmp_path):
+        import json
+        ws = str(tmp_path)
+        qdir = os.path.join(ws, ".af_review_queue", "pending", "design")
+        os.makedirs(qdir)
+        data = {"file_path": "docs/2026-06-19-foo-design.md", "timestamp": 1.0}
+        with open(os.path.join(qdir, "q1.json"), "w") as f:
+            json.dump(data, f)
+        assert mod._map_doc_to_queue_fname(ws, "docs/2026-06-19-foo-design.md") == "q1.json"
+
+    def test_no_match_returns_none(self, tmp_path):
+        import json
+        ws = str(tmp_path)
+        qdir = os.path.join(ws, ".af_review_queue", "pending", "design")
+        os.makedirs(qdir)
+        data = {"file_path": "docs/other.md", "timestamp": 1.0}
+        with open(os.path.join(qdir, "q1.json"), "w") as f:
+            json.dump(data, f)
+        assert mod._map_doc_to_queue_fname(ws, "docs/2026-06-19-foo-design.md") is None
+
+    def test_no_queue_dir_returns_none(self, tmp_path):
+        assert mod._map_doc_to_queue_fname(str(tmp_path), "docs/foo.md") is None
+
+
+# ── S2: _record_verdicts_to_fired_marker ──────────────────────────────────────
+
+class TestRecordVerdictsToFiredMarker:
+    def _make_queue(self, ws: str, fname: str, file_path: str) -> None:
+        import json
+        qdir = os.path.join(ws, ".af_review_queue", "pending", "design")
+        os.makedirs(qdir, exist_ok=True)
+        with open(os.path.join(qdir, fname), "w") as f:
+            json.dump({"file_path": file_path, "timestamp": 1.0}, f)
+
+    def _write_fired(self, ws: str, data: dict) -> None:
+        import json
+        path = os.path.join(ws, ".af_review_queue", ".design_review_fired.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f)
+
+    def _read_fired(self, ws: str) -> dict:
+        import json
+        path = os.path.join(ws, ".af_review_queue", ".design_review_fired.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def test_records_block_verdict(self, tmp_path):
+        ws = str(tmp_path)
+        doc = "docs/2026-06-19-foo-design.md"
+        self._make_queue(ws, "q1.json", doc)
+        review = "docs/reviews/2026-06-19-001000-foo-design-design-review.md"
+        review_abs = os.path.join(ws, review)
+        os.makedirs(os.path.dirname(review_abs), exist_ok=True)
+        with open(review_abs, "w", encoding="utf-8") as f:
+            f.write("### Verdict: BLOCK\n§3 오류 발견.\n")
+
+        mod._record_verdicts_to_fired_marker(ws, [(doc, review)])
+
+        saved = self._read_fired(ws)
+        assert "q1.json" in saved
+        assert saved["q1.json"]["last_verdict"] == "BLOCK"
+        assert "§3" in saved["q1.json"]["last_block_sections"]
+
+    def test_oscillation_detected_on_same_sections(self, tmp_path):
+        ws = str(tmp_path)
+        doc = "docs/2026-06-19-foo-design.md"
+        self._make_queue(ws, "q1.json", doc)
+        # 직전 라운드도 BLOCK + §3 겹침
+        self._write_fired(ws, {
+            "q1.json": {
+                "fired_at": 0.0, "round_count": 1,
+                "last_verdict": "BLOCK", "last_block_sections": ["§3"],
+                "oscillation_detected": False, "capped_notified_at": 0.0,
+            }
+        })
+        review = "docs/reviews/2026-06-19-001000-foo-design-design-review.md"
+        review_abs = os.path.join(ws, review)
+        os.makedirs(os.path.dirname(review_abs), exist_ok=True)
+        with open(review_abs, "w", encoding="utf-8") as f:
+            f.write("§3 오류 재발.\n")
+
+        mod._record_verdicts_to_fired_marker(ws, [(doc, review)])
+
+        saved = self._read_fired(ws)
+        assert saved["q1.json"]["oscillation_detected"] is True
+
+    def test_no_oscillation_on_different_sections(self, tmp_path):
+        ws = str(tmp_path)
+        doc = "docs/2026-06-19-foo-design.md"
+        self._make_queue(ws, "q1.json", doc)
+        self._write_fired(ws, {
+            "q1.json": {
+                "fired_at": 0.0, "round_count": 1,
+                "last_verdict": "BLOCK", "last_block_sections": ["§2"],
+                "oscillation_detected": False, "capped_notified_at": 0.0,
+            }
+        })
+        review = "docs/reviews/2026-06-19-001000-foo-design-design-review.md"
+        review_abs = os.path.join(ws, review)
+        os.makedirs(os.path.dirname(review_abs), exist_ok=True)
+        with open(review_abs, "w", encoding="utf-8") as f:
+            f.write("§5 새 발견.\n")
+
+        mod._record_verdicts_to_fired_marker(ws, [(doc, review)])
+
+        saved = self._read_fired(ws)
+        assert saved["q1.json"]["oscillation_detected"] is False
+
+    def test_no_queue_file_skips_gracefully(self, tmp_path):
+        """queue 파일 없어도 예외 없음."""
+        ws = str(tmp_path)
+        review = "docs/reviews/2026-06-19-001000-foo-design-design-review.md"
+        review_abs = os.path.join(ws, review)
+        os.makedirs(os.path.dirname(review_abs), exist_ok=True)
+        with open(review_abs, "w", encoding="utf-8") as f:
+            f.write("§3 오류.\n")
+        # should not raise
+        mod._record_verdicts_to_fired_marker(ws, [("docs/nonexistent.md", review)])
+
+
+# ── S2 fix: PASS/WARN 중간 → oscillation false-positive 방지 ──────────────────
+
+class TestResetVerdictInFiredMarker:
+    def _make_queue(self, ws: str, fname: str, file_path: str) -> None:
+        import json
+        qdir = os.path.join(ws, ".af_review_queue", "pending", "design")
+        os.makedirs(qdir, exist_ok=True)
+        with open(os.path.join(qdir, fname), "w") as f:
+            json.dump({"file_path": file_path, "timestamp": 1.0}, f)
+
+    def _write_fired(self, ws: str, data: dict) -> None:
+        import json
+        path = os.path.join(ws, ".af_review_queue", ".design_review_fired.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+    def _read_fired(self, ws: str) -> dict:
+        import json
+        path = os.path.join(ws, ".af_review_queue", ".design_review_fired.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def test_reset_clears_last_verdict(self, tmp_path):
+        """PASS 시 last_verdict 초기화 → 이후 BLOCK이 oscillation으로 오판되지 않음."""
+        ws = str(tmp_path)
+        doc = "docs/2026-06-19-foo-design.md"
+        self._make_queue(ws, "q1.json", doc)
+        self._write_fired(ws, {
+            "q1.json": {
+                "fired_at": 0.0, "round_count": 1,
+                "last_verdict": "BLOCK", "last_block_sections": ["§3"],
+                "oscillation_detected": False, "capped_notified_at": 0.0,
+            }
+        })
+
+        mod._reset_verdict_in_fired_marker(ws, [doc])
+
+        saved = self._read_fired(ws)
+        assert saved["q1.json"]["last_verdict"] == ""
+        assert saved["q1.json"]["oscillation_detected"] is False
+
+    def test_reset_no_queue_file_skips(self, tmp_path):
+        """queue 없어도 예외 없음."""
+        mod._reset_verdict_in_fired_marker(str(tmp_path), ["docs/foo.md"])
+
+    def test_pass_then_block_no_oscillation(self, tmp_path):
+        """BLOCK → PASS(reset) → BLOCK(same §): oscillation_detected가 False여야 함."""
+        import json
+        ws = str(tmp_path)
+        doc = "docs/2026-06-19-foo-design.md"
+        self._make_queue(ws, "q1.json", doc)
+
+        # 라운드 1: BLOCK + §3 기록
+        self._write_fired(ws, {
+            "q1.json": {
+                "fired_at": 0.0, "round_count": 1,
+                "last_verdict": "BLOCK", "last_block_sections": ["§3"],
+                "oscillation_detected": False, "capped_notified_at": 0.0,
+            }
+        })
+
+        # 라운드 2: PASS → last_verdict 초기화
+        mod._reset_verdict_in_fired_marker(ws, [doc])
+
+        saved = self._read_fired(ws)
+        assert saved["q1.json"]["last_verdict"] == ""
+
+        # 라운드 3: 다시 BLOCK + §3 → oscillation이면 안 됨
+        review = "docs/reviews/2026-06-19-003000-foo-design-design-review.md"
+        review_abs = os.path.join(ws, review)
+        os.makedirs(os.path.dirname(review_abs), exist_ok=True)
+        with open(review_abs, "w", encoding="utf-8") as f:
+            f.write("§3 오류 재발.\n")
+
+        mod._record_verdicts_to_fired_marker(ws, [(doc, review)])
+
+        saved2 = self._read_fired(ws)
+        # last_verdict가 ""이었으므로 oscillation 조건(prev==BLOCK) 미충족 → False
+        assert saved2["q1.json"]["oscillation_detected"] is False

@@ -229,6 +229,12 @@ BUNDLE_PLACEHOLDER
 5. 각 항목에 심각도(Critical/High/Medium/Low), 파일명:라인번호, 코드 인용을 포함해라.
 6. [PRIMARY]에 Critical/High 결함이 없으면 "No BLOCK-level findings"를 명시해라.
 7. 출력 직전 자기 검증: 각 file:line 인용의 실제 코드를 다시 읽고, 일치하지 않으면 항목 제거.
+8. 설계문서(docs/YYYY-MM-DD-*.md) 리뷰 시 스코프 게이트를 반드시 적용하라:
+   - WHAT(논리 결함, 계약 위반, 전제 모순) → BLOCK/WARN 대상
+   - HOW(구현 상세, "어떻게 만들지") → ACCEPT-ADV(advisory)로 강등, BLOCK 금지
+   - 판별 기준: finding이 "목표·전제가 틀렸다"면 WHAT. "구현 방식이 이래야 한다"면 HOW.
+   - 예) "§3.2의 round_count 상한이 §2 목표(무한루프 방지)와 모순" → BLOCK(WHAT).
+         "round_count를 AtomicInt로 구현해야" → ACCEPT-ADV(HOW, BLOCK 금지).
 
 [출력 형식]
 ## [PRIMARY]

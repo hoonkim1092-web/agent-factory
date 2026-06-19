@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T10:41:30+09:00
-source_commit: feaa5676
+generated_at: 2026-06-19T11:28:28+09:00
+source_commit: 5771abec
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -48,7 +48,8 @@ sources:
 | `core/ast_memory_hub.py` | AST 기반 메모리 허브 | Master_Blueprint.md §0 |
 | `core/review_bundle.py` | 8섹션 리뷰 번들 생성기 (Phase 2) — 100KB cap, source_hash, stale 감지 | Master_Blueprint.md §0 |
 | `scripts/build_review_bundle.py` | review_bundle.md 빌드 스크립트 (Phase 2) — build_full() 호출 | Master_Blueprint.md §0 |
-| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. **외부 프로젝트 지원**: AF 문서 3종 부재 시 해당 페이지 skip + AST 디렉터리/모듈 navigation(`_build_codebase_tree`)만으로 full-wiki 생성(`af project wiki <path>`). | Master_Blueprint.md §0 |
+| `scripts/codebase_symbols.py` | 외부 프로젝트 코드 심볼 인덱서. Python은 표준 `ast`, C#은 보수적 선언 패턴으로 `.py`/`.cs` 파일의 클래스·함수·메서드를 결정적으로 수집하고 `symbols.md`를 렌더링. | Master_Blueprint.md §0 |
+| `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python/C# AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. **외부 프로젝트 지원**: AF 문서 3종 부재 시 해당 페이지 skip + AST 디렉터리/모듈 navigation(`_build_codebase_tree`)만으로 full-wiki 생성(`af project wiki <path>`). | Master_Blueprint.md §0 |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | Master_Blueprint.md §0 |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | Master_Blueprint.md §0 |
 | `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | Master_Blueprint.md §0 |
@@ -58,7 +59,7 @@ sources:
 | `scripts/enqueue_staged_review.py` | provider/OS 독립 pre-commit 큐잉 fallback. Claude hook 없이 Codex·IDE·shell에서 staged review 대상 `.py`가 커밋될 때 Git index 기준으로 review queue를 먼저 채움 | Master_Blueprint.md §0 |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | Master_Blueprint.md §0 |
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
-| `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | Master_Blueprint.md §0 |
+| `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python/C# 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | Master_Blueprint.md §0 |
 | `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | Master_Blueprint.md §0 |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | Master_Blueprint.md §0 |
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
@@ -1059,7 +1060,7 @@ sources:
 
 ### `scripts`
 
-54 modules · 8 classes · 456 functions
+54 modules · 8 classes · 462 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
@@ -1074,12 +1075,12 @@ sources:
 - `scripts/check_design_pending.py` — 0 class / 6 func
 - `scripts/check_model_escalation.py` — 0 class / 2 func
 - `scripts/check_pending_review.py` — 0 class / 6 func
-- `scripts/check_staged_design_review.py` — 0 class / 7 func
+- `scripts/check_staged_design_review.py` — 0 class / 11 func
 - `scripts/claude_session_bridge.py` — 0 class / 0 func
 - `scripts/clean_agents_yaml.py` — 0 class / 1 func
 - `scripts/cli_hook_bridge.py` — 0 class / 2 func
 - `scripts/code_review_updater.py` — 0 class / 14 func
-- `scripts/codebase_symbols.py` — 0 class / 6 func
+- `scripts/codebase_symbols.py` — 0 class / 8 func
 - `scripts/codex_session_bridge.py` — 0 class / 0 func
 - `scripts/design_review_trigger.py` — 0 class / 2 func
 - `scripts/design_review_watcher.py` — 0 class / 16 func
@@ -1350,7 +1351,7 @@ sources:
 
 ### `tests`
 
-213 modules · 360 classes · 1811 functions
+213 modules · 365 classes · 1816 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1382,13 +1383,13 @@ sources:
 - `tests/test_builder_multi_pass.py` — 0 class / 2 func
 - `tests/test_bulk_enrich_trigger_routing.py` — 1 class / 0 func
 - `tests/test_capability_intent.py` — 0 class / 1 func
-- `tests/test_check_design_pending.py` — 5 class / 4 func
+- `tests/test_check_design_pending.py` — 6 class / 4 func
 - `tests/test_check_model_escalation.py` — 0 class / 5 func
 - `tests/test_check_pending_review.py` — 1 class / 0 func
-- `tests/test_check_staged_design_review.py` — 5 class / 1 func
+- `tests/test_check_staged_design_review.py` — 9 class / 1 func
 - `tests/test_cli_providers.py` — 1 class / 31 func
 - `tests/test_cli_session_adapter.py` — 0 class / 10 func
-- `tests/test_codebase_symbols.py` — 0 class / 17 func
+- `tests/test_codebase_symbols.py` — 0 class / 22 func
 - `tests/test_coding_conventions.py` — 0 class / 7 func
 - `tests/test_compact_step2.py` — 4 class / 1 func
 - `tests/test_completion_contract.py` — 0 class / 19 func

@@ -72,10 +72,14 @@ def _coerce_float(value) -> float:
 def _normalize_entry(v) -> dict:
     """기존 float 포맷(fired_at만) 또는 신규 dict 포맷을 정규화한다."""
     if isinstance(v, dict):
+        raw_sections = v.get("last_block_sections")
+        sections = list(raw_sections) if isinstance(raw_sections, (list, tuple)) else []
         return {
             "fired_at": _coerce_float(v.get("fired_at", 0)),
             "round_count": max(0, int(_coerce_float(v.get("round_count", 0)))),
             "last_verdict": str(v.get("last_verdict") or ""),
+            "last_block_sections": sections,           # S2: 직전 BLOCK 섹션 목록
+            "oscillation_detected": bool(v.get("oscillation_detected", False)),  # S2: 진동 신호
             "capped_notified_at": _coerce_float(v.get("capped_notified_at", 0)),
         }
     # 기존 포맷: fired_at float만 저장됐던 구버전
@@ -83,6 +87,8 @@ def _normalize_entry(v) -> dict:
         "fired_at": _coerce_float(v),
         "round_count": 0,
         "last_verdict": "",
+        "last_block_sections": [],
+        "oscillation_detected": False,
         "capped_notified_at": 0.0,
     }
 
@@ -172,6 +178,21 @@ def main() -> None:
                 dirty = True
             continue
 
+        # oscillation 감지 (INV-3 §4.2): 직전 BLOCK + 같은 섹션 재발 → 즉시 중단
+        if entry["oscillation_detected"]:
+            print(
+                f"[af-design-review-oscillation] {file_path}: "
+                "직전 라운드 수정이 같은 섹션에 새 BLOCK을 유발했습니다(진동 의심)."
+            )
+            print("[af-design-review-oscillation] 자동 재수정을 중단합니다. 다음 중 택일:")
+            print("  - HOW 디테일이면: 해당 항목을 '구현 시 결정'으로 강등하세요")
+            print("  - 진짜 논리결함이면: 사용자가 직접 결정하세요")
+            # 플래그 리셋 — 사용자가 내용을 바꾸면 다음 라운드 다시 시작
+            entry["oscillation_detected"] = False
+            fired[fname] = entry
+            dirty = True
+            continue
+
         last_fired_at = entry["fired_at"]
         if last_fired_at and ts <= last_fired_at:
             continue  # 마지막 발화 이후 새 편집 없음
@@ -202,6 +223,8 @@ def main() -> None:
             "fired_at": now,
             "round_count": entry["round_count"] + 1,
             "last_verdict": entry["last_verdict"],
+            "last_block_sections": entry["last_block_sections"],
+            "oscillation_detected": False,
             "capped_notified_at": entry["capped_notified_at"],
         }
     _save_fired(ws, fired)

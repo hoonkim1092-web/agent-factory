@@ -1,7 +1,8 @@
 """tests/test_check_design_pending.py
 
-check_design_pending.py — 라운드 캡(S1) 단위 테스트.
+check_design_pending.py — 라운드 캡(S1) + 진동 감지(S2) 단위 테스트.
 INV-3: round_count >= MAX_DESIGN_ROUNDS → 자동발화 중단.
+S2: oscillation_detected=True → 즉시 중단 + 플래그 리셋.
 """
 from __future__ import annotations
 
@@ -296,3 +297,127 @@ class TestLastVerdictPreserved:
 
         saved = _read_fired(ws)
         assert saved[fname]["last_verdict"] == "block"
+
+
+# ── 진동 감지 (S2, INV-3 §4.2) ───────────────────────────────────────────────
+
+class TestOscillationDetection:
+    def test_oscillation_blocks_fire(self, tmp_path):
+        """oscillation_detected=True → 발화 없음, oscillation 메시지 출력."""
+        ws = str(tmp_path)
+        fname = "q1.json"
+        _make_queue_entry(ws, fname, "docs/2026-06-19-foo-design.md")
+        _write_fired(ws, {
+            fname: {
+                "fired_at": 0.0,
+                "round_count": 1,
+                "last_verdict": "BLOCK",
+                "last_block_sections": ["§3", "§4.1"],
+                "oscillation_detected": True,
+                "capped_notified_at": 0.0,
+            }
+        })
+
+        out = _run_main(ws)
+        assert "[af-design-review-pending]" not in out
+        assert "[af-design-review-oscillation]" in out
+
+    def test_oscillation_resets_flag_after_warning(self, tmp_path):
+        """oscillation 경고 후 oscillation_detected 플래그가 False로 리셋된다."""
+        ws = str(tmp_path)
+        fname = "q1.json"
+        _make_queue_entry(ws, fname, "docs/2026-06-19-foo-design.md")
+        _write_fired(ws, {
+            fname: {
+                "fired_at": 0.0,
+                "round_count": 1,
+                "last_verdict": "BLOCK",
+                "last_block_sections": ["§3"],
+                "oscillation_detected": True,
+                "capped_notified_at": 0.0,
+            }
+        })
+
+        _run_main(ws)
+
+        saved = _read_fired(ws)
+        assert saved[fname]["oscillation_detected"] is False
+
+    def test_oscillation_false_fires_normally(self, tmp_path):
+        """oscillation_detected=False → 정상 발화."""
+        ws = str(tmp_path)
+        fname = "q1.json"
+        _make_queue_entry(ws, fname, "docs/2026-06-19-foo-design.md")
+        _write_fired(ws, {
+            fname: {
+                "fired_at": 0.0,
+                "round_count": 1,
+                "last_verdict": "BLOCK",
+                "last_block_sections": ["§3"],
+                "oscillation_detected": False,
+                "capped_notified_at": 0.0,
+            }
+        })
+
+        out = _run_main(ws)
+        assert "[af-design-review-pending]" in out
+        assert "[af-design-review-oscillation]" not in out
+
+    def test_fire_saves_last_block_sections(self, tmp_path):
+        """발화 기록에 last_block_sections가 포함된다."""
+        ws = str(tmp_path)
+        fname = "q1.json"
+        ts = time.time() - mod.MIN_BATCH_INTERVAL_SEC - 5
+        _make_queue_entry(ws, fname, "docs/2026-06-19-foo-design.md", ts=ts)
+        _write_fired(ws, {
+            fname: {
+                "fired_at": ts - 20,
+                "round_count": 0,
+                "last_verdict": "",
+                "last_block_sections": ["§2", "§5"],
+                "oscillation_detected": False,
+                "capped_notified_at": 0.0,
+            }
+        })
+
+        _run_main(ws)
+
+        saved = _read_fired(ws)
+        entry = saved[fname]
+        assert "last_block_sections" in entry
+        assert entry["last_block_sections"] == ["§2", "§5"]  # 기존 값 보존
+
+    def test_fire_saves_oscillation_detected_false(self, tmp_path):
+        """발화 기록 시 oscillation_detected=False로 저장된다."""
+        ws = str(tmp_path)
+        fname = "q1.json"
+        _make_queue_entry(ws, fname, "docs/2026-06-19-foo-design.md")
+
+        _run_main(ws)
+
+        saved = _read_fired(ws)
+        assert saved[fname]["oscillation_detected"] is False
+
+    def test_normalize_entry_s2_fields_default(self):
+        """_normalize_entry: float 레거시 → S2 필드 기본값."""
+        e = mod._normalize_entry(123.0)
+        assert e["last_block_sections"] == []
+        assert e["oscillation_detected"] is False
+
+    def test_normalize_entry_s2_fields_from_dict(self):
+        """_normalize_entry: dict에 S2 필드 있으면 보존."""
+        e = mod._normalize_entry({
+            "fired_at": 100.0,
+            "round_count": 2,
+            "last_verdict": "BLOCK",
+            "last_block_sections": ["§1", "§2.3"],
+            "oscillation_detected": True,
+            "capped_notified_at": 0.0,
+        })
+        assert e["last_block_sections"] == ["§1", "§2.3"]
+        assert e["oscillation_detected"] is True
+
+    def test_normalize_entry_bad_sections_type(self):
+        """last_block_sections가 str 등 비정상 타입 → 빈 리스트."""
+        e = mod._normalize_entry({"last_block_sections": "§3"})
+        assert e["last_block_sections"] == []

@@ -1,6 +1,13 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = 리뷰 합의 게이트 S2 구현 (수렴 감지 + 스코프 게이트) 또는 다른 product work-item
+## ▶ 다음 = 리뷰 합의 게이트 S3~S6 구현 (증거수집 합의기) 또는 다른 product work-item
+
+### ✅ (S2) 수렴감지 + 스코프게이트 완료 (2026-06-19, Sonnet, 브랜치: `2026-06-04-right-sized-execution-slice1`)
+> - `scripts/check_design_pending.py`: `_normalize_entry`에 `last_block_sections`/`oscillation_detected` 필드, candidate 루프에 oscillation 체크(`[af-design-review-oscillation]` + 플래그 리셋), 발화 기록 dict 신규 필드 포함
+> - `scripts/check_staged_design_review.py`: `_extract_block_sections()`/`_map_doc_to_queue_fname()`/`_record_verdicts_to_fired_marker()`/`_reset_verdict_in_fired_marker()` 신규, `main()`에 BLOCK verdict 기록 + PASS/WARN 시 last_verdict 초기화(false-positive 방지), importlib 실패 stderr 진단
+> - `.claude/agents/af-cross-review.md` / `.codex/agents/af-cross-review.toml`: Step 2a 스코프게이트 지시사항 8번(WHAT→BLOCK, HOW→ACCEPT-ADV 강등)
+> - 테스트: 72케이스 PASS (TestOscillationDetection 8 + TestExtractBlockSections 5 + TestMapDocToQueueFname 3 + TestRecordVerdictsToFiredMarker 4 + TestResetVerdictInFiredMarker 3)
+> - 3-Tier: af-critic WARN(3) / af-cross-review BLOCK→2건 수정(PASS중간-last_verdict 미갱신, importlib stderr) / af-test-runner PASS(72)
 
 ### ✅ (S1) 설계문서 라운드 캡 완료 (2026-06-19, Sonnet, 브랜치: `2026-06-04-right-sized-execution-slice1`)
 > - `scripts/check_design_pending.py`: `MAX_DESIGN_ROUNDS=3` + `_normalize_entry()` (float/dict 정규화, nan 방어) + candidate 루프 캡 체크(`[af-design-review-capped]` 1회 알림 + 발화 중단) + dict 포맷 발화 기록

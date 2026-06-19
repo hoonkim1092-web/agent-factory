@@ -1,12 +1,13 @@
 ---
-generated_at: 2026-06-19T10:41:30+09:00
-source_commit: feaa5676
+generated_at: 2026-06-19T11:28:29+09:00
+source_commit: 5771abec
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
   - "NEXT_STEPS.md"
   - "scripts/codebase_symbols.py"
   - "**/*.py"
+  - "**/*.cs"
 ---
 
 > Source: scripts/codebase_symbols.py (AST 추출, read-only)
@@ -4430,6 +4431,10 @@ _(no top-level symbols)_
 ## `scripts/check_staged_design_review.py`
 
 **Functions:**
+- `_extract_block_sections`
+- `_map_doc_to_queue_fname`
+- `_record_verdicts_to_fired_marker`
+- `_reset_verdict_in_fired_marker`
 - `_repo_root`
 - `_staged_files`
 - `load_latest_design_verdicts`
@@ -4476,6 +4481,8 @@ _(no top-level symbols)_
 **Functions:**
 - `_is_excluded`
 - `extract_symbols`
+- `extract_csharp_symbols`
+- `_extract_path_symbols`
 - `collect_symbols`
 - `render`
 - `build`
@@ -5804,6 +5811,7 @@ _(no top-level symbols)_
 - `TestRoundCountIncrement`
 - `TestLegacyFloatMigration`
 - `TestLastVerdictPreserved`
+- `TestOscillationDetection`
 
 **Functions:**
 - `_make_queue_entry`
@@ -5833,6 +5841,10 @@ _(no top-level symbols)_
 - `TestFindUnreviewed`
 - `TestMain`
 - `TestMainFailClosed`
+- `TestExtractBlockSections`
+- `TestMapDocToQueueFname`
+- `TestRecordVerdictsToFiredMarker`
+- `TestResetVerdictInFiredMarker`
 
 **Functions:**
 - `_write_review`
@@ -5896,19 +5908,24 @@ _(no top-level symbols)_
 - `test_extract_symbols_includes_async_functions`
 - `test_extract_symbols_excludes_methods_and_nested`
 - `test_extract_symbols_empty_source`
+- `test_extract_csharp_symbols_types_and_methods`
+- `test_extract_csharp_symbols_does_not_treat_primary_constructor_as_method`
 - `test_collect_symbols_finds_python_files`
 - `test_collect_symbols_recurses_with_posix_keys`
 - `test_collect_symbols_ignores_non_python`
+- `test_collect_symbols_finds_csharp_files`
 - `test_collect_symbols_skips_runtime_and_cache_directories`
 - `test_collect_symbols_empty_directory`
 - `test_collect_symbols_does_not_modify_source`
 - `test_collect_symbols_tolerates_syntax_error`
 - `test_collect_symbols_respects_python_encoding_cookie`
+- `test_collect_symbols_tolerates_csharp_decode_error`
 - `test_collect_symbols_tolerates_decode_error`
 - `test_build_returns_markdown_string`
 - `test_build_is_deterministic`
 - `test_build_empty_directory_returns_string`
 - `test_build_accepts_str_path`
+- `test_build_renders_csharp_symbols`
 
 ## `tests/test_coding_conventions.py`
 

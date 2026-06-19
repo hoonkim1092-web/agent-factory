@@ -35,6 +35,126 @@ _SOURCE_RE = re.compile(r"^>\s*Source:\s*(.+?)\s*$", re.MULTILINE)
 _VERDICT_RE = re.compile(r"^#+\s*Verdict:\s*\*{0,2}([A-Za-z_]+)", re.MULTILINE)
 
 _BLOCK = "BLOCK"
+_BLOCK_SECTION_RE = re.compile(r"§\d+(?:\.\d+)*")
+
+
+def _extract_block_sections(text: str) -> list[str]:
+    """BLOCK 리뷰 텍스트에서 §섹션 ID 목록을 순서 보존·중복 제거하여 반환."""
+    return list(dict.fromkeys(_BLOCK_SECTION_RE.findall(text)))
+
+
+def _map_doc_to_queue_fname(workspace: str, doc_norm: str) -> "str | None":
+    """정규화된 문서 rel 경로 → 큐 JSON 파일명 (없으면 None)."""
+    import json as _json
+    queue_dir = os.path.join(workspace, ".af_review_queue", "pending", "design")
+    if not os.path.isdir(queue_dir):
+        return None
+    ws_prefix = workspace.replace("\\", "/").rstrip("/") + "/"
+    try:
+        for fname in os.listdir(queue_dir):
+            if not fname.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(queue_dir, fname), encoding="utf-8") as f:
+                    data = _json.load(f)
+                if not isinstance(data, dict):
+                    continue
+                fp = str(data.get("file_path", "") or "").replace("\\", "/")
+                if fp.startswith(ws_prefix):
+                    fp = fp[len(ws_prefix):]
+                if fp == doc_norm:
+                    return fname
+            except Exception:
+                continue
+    except OSError:
+        pass
+    return None
+
+
+def _record_verdicts_to_fired_marker(
+    workspace: str, blocked: "list[tuple[str, str]]"
+) -> None:
+    """BLOCK verdict + §섹션을 fired marker에 기록하고 oscillation_detected를 갱신한다.
+
+    pre-commit 게이트가 호출 — 실패해도 커밋을 막지 않는다.
+    check_design_pending.py 헬퍼를 동적 로드해 SSOT 재사용.
+    """
+    try:
+        import importlib.util
+        cdp_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_design_pending.py")
+        spec = importlib.util.spec_from_file_location("check_design_pending", cdp_path)
+        if spec is None or spec.loader is None:
+            return
+        cdp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cdp)  # type: ignore[union-attr]
+    except Exception as _e:
+        print(f"[check-staged-design-review] verdict 기록 스킵(로드 실패, 커밋 비차단): {_e}", file=sys.stderr)
+        return
+
+    try:
+        fired = cdp._load_fired(workspace)
+        dirty = False
+        for doc_norm, review_rel in blocked:
+            fname = _map_doc_to_queue_fname(workspace, doc_norm)
+            if fname is None:
+                continue
+            review_path = os.path.join(workspace, review_rel)
+            try:
+                with open(review_path, encoding="utf-8", errors="replace") as f:
+                    review_text = f.read()
+            except OSError:
+                review_text = ""
+            new_sections = _extract_block_sections(review_text)
+            entry = cdp._normalize_entry(fired.get(fname, 0))
+            prev_sections = entry["last_block_sections"]
+            if entry["last_verdict"] == _BLOCK and set(prev_sections) & set(new_sections):
+                entry["oscillation_detected"] = True
+            entry["last_verdict"] = _BLOCK
+            entry["last_block_sections"] = new_sections
+            fired[fname] = entry
+            dirty = True
+        if dirty:
+            cdp._save_fired(workspace, fired)
+    except Exception:
+        pass
+
+
+def _reset_verdict_in_fired_marker(workspace: str, doc_norms: "list[str]") -> None:
+    """PASS/WARN verdict 산출 시 fired marker의 last_verdict를 초기화한다.
+
+    이전 라운드가 BLOCK이었어도 PASS가 나온 뒤 새 BLOCK이 오면 oscillation이 아니다.
+    last_verdict 초기화로 false-positive 방지 (S2 fix).
+    """
+    if not doc_norms:
+        return
+    try:
+        import importlib.util
+        cdp_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_design_pending.py")
+        spec = importlib.util.spec_from_file_location("check_design_pending", cdp_path)
+        if spec is None or spec.loader is None:
+            return
+        cdp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cdp)  # type: ignore[union-attr]
+    except Exception as _e:
+        print(f"[check-staged-design-review] verdict 초기화 스킵(로드 실패): {_e}", file=sys.stderr)
+        return
+
+    try:
+        fired = cdp._load_fired(workspace)
+        dirty = False
+        for doc_norm in doc_norms:
+            fname = _map_doc_to_queue_fname(workspace, doc_norm)
+            if fname is None:
+                continue
+            entry = cdp._normalize_entry(fired.get(fname, 0))
+            entry["last_verdict"] = ""
+            entry["oscillation_detected"] = False
+            fired[fname] = entry
+            dirty = True
+        if dirty:
+            cdp._save_fired(workspace, fired)
+    except Exception:
+        pass
 
 
 def _repo_root() -> str:
@@ -242,6 +362,27 @@ def main(argv: list[str] | None = None) -> int:
             print("     - 수동 실행: python scripts/design_review_watcher.py . --sync <문서경로>")
             print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
             print("")
+
+    # verdict fired marker 기록 — oscillation_detected 갱신 (S2)
+    # try/except 래핑: 기록 실패가 커밋을 막지 않도록
+    try:
+        if blocked:
+            _record_verdicts_to_fired_marker(workspace, blocked)
+        # PASS/WARN 문서: last_verdict 초기화 → PASS 이후 새 BLOCK이 oscillation으로 오판되는 것 방지
+        verdicts_map = load_latest_design_verdicts(workspace)
+        blocked_norms = {d for d, _ in blocked}
+        unreviewed_set = set(unreviewed)
+        pass_docs = [
+            doc_norm
+            for doc_norm, (verdict, _) in verdicts_map.items()
+            if doc_norm not in blocked_norms
+            and doc_norm not in unreviewed_set
+            and verdict != _BLOCK
+        ]
+        if pass_docs:
+            _reset_verdict_in_fired_marker(workspace, pass_docs)
+    except Exception:
+        pass
 
     return exit_code
 
