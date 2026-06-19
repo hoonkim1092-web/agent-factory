@@ -293,6 +293,7 @@ class TestBuild:
         assert "wiki_run" in symbols
         assert "scripts/codebase_symbols.py" in symbols
         assert "**/*.py" in symbols
+        assert "**/*.cs" in symbols
 
     def test_source_refs_includes_symbols_sources(self, tmp_path):
         self._build_with_samples(tmp_path)
@@ -300,12 +301,15 @@ class TestBuild:
         assert "Codebase Symbols" in source_refs
         assert "scripts/codebase_symbols.py" in source_refs
         assert "**/*.py" in source_refs
+        assert "**/*.cs" in source_refs
 
     def test_frontmatter_quotes_glob_sources(self, tmp_path):
         self._build_with_samples(tmp_path)
         symbols = (tmp_path / "wiki" / "symbols.md").read_text(encoding="utf-8")
         assert '- "**/*.py"' in symbols
+        assert '- "**/*.cs"' in symbols
         assert "- **/*.py" not in symbols
+        assert "- **/*.cs" not in symbols
 
     # --- source reference ---
     def test_each_page_has_source_ref(self, tmp_path):
@@ -391,6 +395,21 @@ class TestBuild:
         # AST 도출 섹션 추가
         assert "AST" in arch
         assert "sample_mod.py" in arch
+
+    def test_symbols_page_contains_csharp_ast_content(self, tmp_path):
+        (tmp_path / "PlayerController.cs").write_text(
+            "public class PlayerController {\n"
+            "    public void Move() {}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        self._build_with_samples(tmp_path)
+        symbols = (tmp_path / "wiki" / "symbols.md").read_text(encoding="utf-8")
+        arch = (tmp_path / "wiki" / "architecture.md").read_text(encoding="utf-8")
+        assert "PlayerController.cs" in symbols
+        assert "PlayerController" in symbols
+        assert "Move" in symbols
+        assert "PlayerController.cs" in arch
 
 
 # ---------------------------------------------------------------------------

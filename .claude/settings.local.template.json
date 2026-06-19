@@ -29,16 +29,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
     "PreCompact": [
       {
         "hooks": [

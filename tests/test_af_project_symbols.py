@@ -41,6 +41,19 @@ class TestSymbolsStdout:
         result = _run(["project", "symbols", str(tmp_path)])
         assert "my_func" in result.stdout
 
+    def test_stdout_contains_csharp_symbols(self, tmp_path: Path) -> None:
+        (tmp_path / "PlayerController.cs").write_text(
+            "public class PlayerController {\n"
+            "    public void Move() {}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        result = _run(["project", "symbols", str(tmp_path)])
+        assert result.returncode == 0
+        assert "PlayerController.cs" in result.stdout
+        assert "PlayerController" in result.stdout
+        assert "Move" in result.stdout
+
     def test_stdout_current_dir_default(self) -> None:
         """경로 미지정 시 CWD(repo root)를 대상으로 실행된다."""
         result = _run(["project", "symbols"], cwd=str(REPO_ROOT))

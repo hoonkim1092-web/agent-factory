@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import ast
+import re
 import sys
 import tokenize
 from pathlib import Path
@@ -36,6 +37,25 @@ _EXCLUDED_DIR_NAMES = frozenset(
         "node_modules",
         "venv",
     }
+)
+
+_CS_TYPE_RE = re.compile(
+    r"^\s*(?:\[[^\]]+\]\s*)*"
+    r"(?:(?:public|private|protected|internal|static|abstract|sealed|partial|new)\s+)*"
+    r"(?:class|interface|struct|enum|record(?:\s+class|\s+struct)?)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+_CS_METHOD_RE = re.compile(
+    r"^\s*(?:\[[^\]]+\]\s*)*"
+    r"(?:(?:public|private|protected|internal|static|virtual|override|async|sealed|new|extern|unsafe|partial)\s+)+"
+    r"(?!(?:class|interface|struct|enum|record)\b)(?:[A-Za-z_][A-Za-z0-9_<>,\[\].?]*|void)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*"
+    r"(?:<[^>{};=]*>)?\s*\(",
+    re.MULTILINE,
+)
+_CS_NON_METHOD_NAMES = frozenset(
+    {"if", "for", "foreach", "while", "switch", "catch", "using", "lock", "return", "new"}
 )
 
 
@@ -70,6 +90,38 @@ def extract_symbols(source: str) -> dict:
     return {"classes": classes, "functions": functions}
 
 
+def extract_csharp_symbols(source: str) -> dict:
+    """Return C# type and method names using conservative declaration patterns."""
+    classes = list(dict.fromkeys(_CS_TYPE_RE.findall(source)))
+    functions = [
+        name for name in _CS_METHOD_RE.findall(source)
+        if name not in _CS_NON_METHOD_NAMES
+    ]
+    return {"classes": classes, "functions": list(dict.fromkeys(functions))}
+
+
+def _extract_path_symbols(path: Path) -> dict:
+    if path.suffix == ".py":
+        try:
+            with tokenize.open(path) as f:
+                source = f.read()
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            source = ""
+        return extract_symbols(source)
+    if path.suffix == ".cs":
+        try:
+            source = path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError:
+            try:
+                source = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                source = ""
+        except OSError:
+            source = ""
+        return extract_csharp_symbols(source)
+    return {"classes": [], "functions": []}
+
+
 def collect_symbols(directory) -> dict:
     """디렉터리를 재귀 walk 하여 posix 상대경로 → 심볼 dict 매핑을 반환한다.
 
@@ -78,18 +130,17 @@ def collect_symbols(directory) -> dict:
     """
     root = Path(directory)
     result: dict[str, dict] = {}
-    for path in sorted(root.rglob("*.py")):
+    candidates = sorted(
+        p for suffix in ("*.py", "*.cs")
+        for p in root.rglob(suffix)
+    )
+    for path in candidates:
         if not path.is_file():
             continue
         if _is_excluded(path, root):
             continue
         rel = path.relative_to(root).as_posix()  # 백슬래시 금지 (Windows 결정성)
-        try:
-            with tokenize.open(path) as f:
-                source = f.read()
-        except (OSError, SyntaxError, UnicodeDecodeError):
-            source = ""
-        result[rel] = extract_symbols(source)
+        result[rel] = _extract_path_symbols(path)
     return result
 
 

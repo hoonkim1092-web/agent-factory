@@ -26,6 +26,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.codebase_symbols import (  # noqa: E402
     extract_symbols,
+    extract_csharp_symbols,
     collect_symbols,
     build,
 )
@@ -84,6 +85,30 @@ def test_extract_symbols_empty_source():
     assert result["functions"] == []
 
 
+def test_extract_csharp_symbols_types_and_methods():
+    source = """
+using UnityEngine;
+
+public partial class PlayerController : MonoBehaviour
+{
+    public void Move(Vector3 direction) {}
+    private async Task LoadInventoryAsync() { await Task.CompletedTask; }
+}
+
+internal interface IDamageable {}
+public record struct DamageEvent(int Amount);
+"""
+    result = extract_csharp_symbols(source)
+    assert result["classes"] == ["PlayerController", "IDamageable", "DamageEvent"]
+    assert result["functions"] == ["Move", "LoadInventoryAsync"]
+
+
+def test_extract_csharp_symbols_does_not_treat_primary_constructor_as_method():
+    result = extract_csharp_symbols("public class PlayerController(int speed) {}\n")
+    assert result["classes"] == ["PlayerController"]
+    assert result["functions"] == []
+
+
 # ---------------------------------------------------------------------------
 # collect_symbols — 디렉터리 walk
 # ---------------------------------------------------------------------------
@@ -116,6 +141,20 @@ def test_collect_symbols_ignores_non_python(tmp_path):
     assert "real.py" in result
     assert "readme.md" not in result
     assert "data.txt" not in result
+
+
+def test_collect_symbols_finds_csharp_files(tmp_path):
+    (tmp_path / "PlayerController.cs").write_text(
+        "public class PlayerController {\n"
+        "    public void Jump() {}\n"
+        "    private int Score() { return 1; }\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    result = collect_symbols(tmp_path)
+    assert "PlayerController.cs" in result
+    assert result["PlayerController.cs"]["classes"] == ["PlayerController"]
+    assert result["PlayerController.cs"]["functions"] == ["Jump", "Score"]
 
 
 def test_collect_symbols_skips_runtime_and_cache_directories(tmp_path):
@@ -167,6 +206,14 @@ def test_collect_symbols_respects_python_encoding_cookie(tmp_path):
     assert result["encoded.py"]["classes"] == ["KoreanName"]
 
 
+def test_collect_symbols_tolerates_csharp_decode_error(tmp_path):
+    (tmp_path / "bad_encoding.cs").write_bytes(b"\xff\xfe\x00\x00")
+
+    result = collect_symbols(tmp_path)
+
+    assert result["bad_encoding.cs"] == {"classes": [], "functions": []}
+
+
 def test_collect_symbols_tolerates_decode_error(tmp_path):
     (tmp_path / "bad_encoding.py").write_bytes(b"\xff\xfe\x00\x00")
 
@@ -211,3 +258,16 @@ def test_build_accepts_str_path(tmp_path):
     md = build(str(tmp_path))
     assert "x.py" in md
     assert "x" in md
+
+
+def test_build_renders_csharp_symbols(tmp_path):
+    (tmp_path / "GameManager.cs").write_text(
+        "public class GameManager {\n"
+        "    public void StartGame() {}\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    md = build(tmp_path)
+    assert "GameManager.cs" in md
+    assert "GameManager" in md
+    assert "StartGame" in md

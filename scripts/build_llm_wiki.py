@@ -388,7 +388,7 @@ def _build_open_items(workspace: str, sources: list[str], items: list[dict]) -> 
 
 
 def _build_symbols(workspace: str, sources: list[str], symbols: dict) -> str:
-    fm = _make_frontmatter(workspace, sources + ["scripts/codebase_symbols.py", "**/*.py"])
+    fm = _make_frontmatter(workspace, sources + ["scripts/codebase_symbols.py", "**/*.py", "**/*.cs"])
     header = (
         "> Source: scripts/codebase_symbols.py (AST 추출, read-only)\n"
         "> 관련: [[index]] | [[architecture]] | [[source_refs]]\n\n"
@@ -514,7 +514,7 @@ def _build_source_refs(workspace: str, sources: list[str],
         "| 항목 | 원본 경로 |\n",
         "|------|----------|\n",
         "| AST 심볼 추출기 | `scripts/codebase_symbols.py` |\n",
-        "| Python top-level classes/functions | `**/*.py` (runtime/cache/vendor 디렉터리 제외) |\n",
+        "| Python/C# classes/functions | `**/*.py`, `**/*.cs` (runtime/cache/vendor 디렉터리 제외) |\n",
     ]
     return fm + "".join(lines)
 

@@ -52,32 +52,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py check_pending_review.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py check_design_pending.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/run.py cli_hook_bridge --provider claude --run-id claude_cli_run"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
