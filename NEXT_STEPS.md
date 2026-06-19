@@ -45,8 +45,13 @@
 > - `DogfoodState.qa_report_path: str = ""` 필드 신규 + `to_dict`/`from_dict` 배선
 > - `tests/test_qa_report_wiring.py`: 8케이스 신규 (pipeline 3 + verify 2 + round-trip 3)
 > - 2-Tier: af-critic WARN(2→반영: except 로깅) / af-test-runner PASS(958/965, 7건 pre-existing)
+>
+> **dogfood 실증 결과 (2026-06-20)**:
+> - 직접 통합 테스트 PASS: `AcceptanceGate().run(gc, cwd) → build_evidence_ledger → render_html` 체인, verdict=VERIFIED, qa_report.html 1619 bytes 생성 확인
+> - Full-route dogfood run (`1781884669-a7502e9b`): Tier-3 Floor 2 → `design+review+cross_review` 강제 → DynamicOrchestrator `stopped_max_cycles` BLOCK — Q-S6 회귀 아님(기존 오케스트레이터 사이클 한도 문제). VERIFY 단계 미도달.
+> - 단위 테스트 8건이 wiring의 유효한 검증 수단으로 충분.
 
-## ▶ 다음 — QA 파이프라인 product work-item 신규 선정 또는 dogfood 실증 run
+## ▶ 다음 — QA 파이프라인 product work-item 신규 선정
 
 ## ▶ (이전) Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
