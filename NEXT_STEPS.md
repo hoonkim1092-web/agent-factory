@@ -1,13 +1,14 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = 3-Tier 완주 (af-critic → af-cross-review → af-test-runner) 후 merge 또는 신규 product work-item
+## ▶ 다음 = 리뷰 합의 게이트 자연 발화 검증 또는 신규 product work-item
 
-### ✅ (S3~S6) 증거수집 합의기 완료 (2026-06-19, Sonnet, 브랜치: `2026-06-04-right-sized-execution-slice1`)
+### ✅ (S3~S6) 증거수집 합의기 완료 (2026-06-19, Sonnet, 커밋: `6ec0d1bb`)
 > - `scripts/review_consensus.py` 신규: finding-level 증거수집기(LLM 미호출). ACCEPT/ACCEPT★ finding마다 surrounding_code·callers(grep 1-hop)·callees(AST 1-hop, `_enclosing_function`+`_find_callees`)·tests 수집 → `cr_evidence.json` 생성
 > - `af-cross-review.md` / `.codex/agents/af-cross-review.toml`: S3(finding 사이드카 `cr_findings.json` 저장 지시) + S6(Step 6: review_consensus.py 호출 → cr_evidence.json 읽기 → LLM 합의판정 ACCEPT/REJECT/UNVERIFIED → cr_consensus.json → verdict fence 재발행)
-> - UNVERIFIED는 BLOCK 기여 안 함(INV-5). 프로바이더 중립(INV-2). review_gate.py 마지막 fence 사용 = Step 6 재발행이 Step 5 fence 대체
-> - 테스트: `test_review_consensus.py` 26케이스 PASS (INV-1/2/5/7 + enclosing-func·callees·callers·surrounding·main 통합)
-> - 3-Tier: 미완주 — 커밋 전 af-critic + af-cross-review + af-test-runner 순서 실행 필요
+> - `scripts/review_gate.py`: `_extract_verdict_from_content`에서 `search()` → `finditer()[-1]` 교체 — 마지막 fence 우선(S6 재발행이 S5 fence 올바르게 대체). `test_c6_multiple_fences_last_pair_wins` 갱신.
+> - UNVERIFIED는 BLOCK 기여 안 함(INV-5). 프로바이더 중립(INV-2).
+> - 테스트: `test_review_consensus.py` 28케이스 PASS (INV-1/2/5/7 + enclosing-func·callees·callers·surrounding·ACCEPT★ 2건)
+> - 3-Tier: af-critic BLOCK→수정(마지막 fence 정책) / af-cross-review SKIP(외부 프로바이더 없음) / af-test-runner 158 PASS
 
 ### ✅ (S2) 수렴감지 + 스코프게이트 완료 (2026-06-19, Sonnet, 브랜치: `2026-06-04-right-sized-execution-slice1`)
 > - `scripts/check_design_pending.py`: `_normalize_entry`에 `last_block_sections`/`oscillation_detected` 필드, candidate 루프에 oscillation 체크(`[af-design-review-oscillation]` + 플래그 리셋), 발화 기록 dict 신규 필드 포함
