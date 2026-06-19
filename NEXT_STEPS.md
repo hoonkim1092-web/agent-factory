@@ -11,11 +11,18 @@
 > - 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0, Advisory 3건) / af-test-runner PASS(57)
 > - **사용법**: `af sandbox off` → Claude Code 재시작 → 검은 콘솔 창 해소
 
-## ▶ (병행 대기) Q-S3 경로 C 활성화 — 설계 완료·구현 대기 (커밋 `92f151dc`)
+### ✅ (Q-S3) 경로 C 활성화 완료 (2026-06-19, Sonnet, 커밋 `e4f2dac0`)
+> - `core/control/question_router.py`: `QuestionResult.provenance` 필드 + `BriefBackedQuestionCaller` + `QuestionRouter.synthesizer` (INV-Q6/Q7)
+> - `core/control/stage_artifacts.py`: `ProjectGoalArtifact` 4 QA 필드 + `qa_provenance` (additive)
+> - `core/control/stage_router.py`: `_write_project_goal` QA 수집 + `_render_project_goal` provenance 뱃지
+> - `core/clarification.py`: `synthesize_research_answers` + `synthesize_via_research` 신규
+> - `core/interview.py` 경로 A + `agent_launcher.py` 경로 B: `synthesize_via_research` 배선
+> - `core/work_item_generator.py`: Stage 0 `question_router` 실주입 (INV-Q8)
+> - `tests/test_q_s3_path_c.py`: 24케이스 신규 PASS (INV-Q6/Q7/Q8)
+> - 3-Tier: af-critic WARN(수정) / af-cross-review WARN(BLOCK 0, Advisory 2건) / af-test-runner PASS(24+3469)
+> - Advisory 잔여: `synthesize_via_research` 내 general clarification questions의 output_field 매핑 무효 — 기능 영향 없음(path C가 메인 경로, Q-S4 대상)
 
-> **설계**: `docs/2026-06-18-user-perspective-qa-pipeline-design.md §6.2/§6.3` (af-cross-review WARN/BLOCK0, 2026-06-19 Opus, 커밋 `92f151dc`). 선행 조사 완료 — 전용 합성 프롬프트 확정.
-> **구현 범위**: `synthesize_research_answers`+`synthesize_via_research`(clarification.py) + 경로 A·B live(`interview.py:167`/`agent_launcher.py:533`) + 경로 C 활성화(§6.3: `BriefBackedQuestionCaller`+`QuestionRouter.synthesizer`+`QuestionResult.provenance`+`ProjectGoalArtifact` 4필드+`work_item_generator:1172` 주입). INV-Q6(HITL 0)/Q7(surface)/Q8(배포 동등성).
-> **위험**: 활성화로 `project-goal.md` 신규 등장(소비처 0 확인 의무).
+## ▶ 다음 — Q-S4 또는 Q-S5
 
 ## ▶ (이전) Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
