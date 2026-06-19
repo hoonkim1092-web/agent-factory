@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T03:50:28+09:00
-source_commit: 90b5dfb4
+generated_at: 2026-06-19T10:41:30+09:00
+source_commit: feaa5676
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4407,6 +4407,7 @@ _(no top-level symbols)_
 - `_detect_workspace`
 - `_load_fired`
 - `_coerce_float`
+- `_normalize_entry`
 - `_save_fired`
 - `main`
 
@@ -5794,6 +5795,21 @@ _(no top-level symbols)_
 
 **Functions:**
 - `test_capability_intent_analyzer_derives_capabilities_and_evidence`
+
+## `tests/test_check_design_pending.py`
+
+**Classes:**
+- `TestNormalizeEntry`
+- `TestRoundCap`
+- `TestRoundCountIncrement`
+- `TestLegacyFloatMigration`
+- `TestLastVerdictPreserved`
+
+**Functions:**
+- `_make_queue_entry`
+- `_write_fired`
+- `_read_fired`
+- `_run_main`
 
 ## `tests/test_check_model_escalation.py`
 

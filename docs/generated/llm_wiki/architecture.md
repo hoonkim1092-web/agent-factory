@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T03:50:27+09:00
-source_commit: 90b5dfb4
+generated_at: 2026-06-19T10:41:30+09:00
+source_commit: feaa5676
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1059,7 +1059,7 @@ sources:
 
 ### `scripts`
 
-54 modules · 8 classes · 455 functions
+54 modules · 8 classes · 456 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
@@ -1071,7 +1071,7 @@ sources:
 - `scripts/build_resume_docx.py` — 0 class / 11 func
 - `scripts/build_review_bundle.py` — 0 class / 5 func
 - `scripts/check_changed_text_integrity.py` — 1 class / 6 func
-- `scripts/check_design_pending.py` — 0 class / 5 func
+- `scripts/check_design_pending.py` — 0 class / 6 func
 - `scripts/check_model_escalation.py` — 0 class / 2 func
 - `scripts/check_pending_review.py` — 0 class / 6 func
 - `scripts/check_staged_design_review.py` — 0 class / 7 func
@@ -1350,7 +1350,7 @@ sources:
 
 ### `tests`
 
-212 modules · 355 classes · 1807 functions
+213 modules · 360 classes · 1811 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1382,6 +1382,7 @@ sources:
 - `tests/test_builder_multi_pass.py` — 0 class / 2 func
 - `tests/test_bulk_enrich_trigger_routing.py` — 1 class / 0 func
 - `tests/test_capability_intent.py` — 0 class / 1 func
+- `tests/test_check_design_pending.py` — 5 class / 4 func
 - `tests/test_check_model_escalation.py` — 0 class / 5 func
 - `tests/test_check_pending_review.py` — 1 class / 0 func
 - `tests/test_check_staged_design_review.py` — 5 class / 1 func

@@ -28,6 +28,9 @@ DESIGN_QUEUE_DIR = os.path.join(".af_review_queue", "pending", "design")
 MIN_BATCH_INTERVAL_SEC = 90
 FIRED_MARKER = os.path.join(".af_review_queue", ".design_review_fired.json")
 
+# 설계문서 라운드 캡 — 코드(5)보다 낮게, HOW 진동 조기 차단 (§4.1)
+MAX_DESIGN_ROUNDS = 3
+
 
 def _detect_workspace() -> str:
     try:
@@ -64,6 +67,24 @@ def _coerce_float(value) -> float:
     if not math.isfinite(result):
         return 0.0
     return result
+
+
+def _normalize_entry(v) -> dict:
+    """기존 float 포맷(fired_at만) 또는 신규 dict 포맷을 정규화한다."""
+    if isinstance(v, dict):
+        return {
+            "fired_at": _coerce_float(v.get("fired_at", 0)),
+            "round_count": max(0, int(_coerce_float(v.get("round_count", 0)))),
+            "last_verdict": str(v.get("last_verdict") or ""),
+            "capped_notified_at": _coerce_float(v.get("capped_notified_at", 0)),
+        }
+    # 기존 포맷: fired_at float만 저장됐던 구버전
+    return {
+        "fired_at": _coerce_float(v),
+        "round_count": 0,
+        "last_verdict": "",
+        "capped_notified_at": 0.0,
+    }
 
 
 def _save_fired(ws: str, data: dict) -> None:
@@ -125,19 +146,42 @@ def main() -> None:
     if not entries:
         return
 
-    # 발화 가능한 항목 필터: timestamp가 fired_at보다 크고 quiet period 경과
+    # 발화 가능한 항목 필터: 라운드 캡 체크 + timestamp + quiet period
     now = time.time()
-    candidates: list[tuple[float, str, str]] = []  # (timestamp, fname, file_path)
+    candidates: list[tuple[float, str, str, dict]] = []  # (timestamp, fname, file_path, entry)
+    dirty = False  # 캡 알림 기록용 — 후보 없어도 저장 필요할 수 있음
     for ts, fname, file_path, _ in entries:
         if ts <= 0:
             continue  # timestamp 누락/손상 — 안전을 위해 발화 안 함
-        last_fired_at = _coerce_float(fired.get(fname, 0))
+        entry = _normalize_entry(fired.get(fname, 0))
+
+        # 라운드 캡 체크 (INV-3): 캡 도달 시 자동 발화 중단
+        if entry["round_count"] >= MAX_DESIGN_ROUNDS:
+            if not entry["capped_notified_at"]:
+                print(
+                    f"[af-design-review-capped] {file_path}: "
+                    f"round_count={entry['round_count']} >= MAX_DESIGN_ROUNDS={MAX_DESIGN_ROUNDS}."
+                    f" {MAX_DESIGN_ROUNDS}라운드 검증 완료 — 추가 자동 발화 없음."
+                )
+                print(
+                    "[af-design-review-capped] BLOCK verdict가 남아 있으면 commit은 계속 차단됩니다."
+                    " 우회: AF_SKIP_REVIEW_GATE=1 git commit ..."
+                )
+                entry["capped_notified_at"] = now
+                fired[fname] = entry
+                dirty = True
+            continue
+
+        last_fired_at = entry["fired_at"]
         if last_fired_at and ts <= last_fired_at:
             continue  # 마지막 발화 이후 새 편집 없음
         elapsed = now - ts
         if elapsed < MIN_BATCH_INTERVAL_SEC:
             continue  # quiet period 미경과
-        candidates.append((ts, fname, file_path))
+        candidates.append((ts, fname, file_path, entry))
+
+    if dirty:
+        _save_fired(ws, fired)
 
     if not candidates:
         return
@@ -152,9 +196,14 @@ def main() -> None:
     print(f"[af-design-review-pending] {n}개 설계문서가 교차검증 대기 중입니다: {file_list}")
     print(f"[af-design-review-pending] af-cross-review 에이전트를 실행해주세요. (af-critic은 설계문서에 효과 없음 — 2026-05-01 정책)")
 
-    # 발화 기록 (모든 candidate에 대해 — 같은 턴에 한 번에 다 처리됨)
-    for _, fname, _ in candidates:
-        fired[fname] = now
+    # 발화 기록: round_count 증가 + dict 포맷으로 저장
+    for _, fname, _, entry in candidates:
+        fired[fname] = {
+            "fired_at": now,
+            "round_count": entry["round_count"] + 1,
+            "last_verdict": entry["last_verdict"],
+            "capped_notified_at": entry["capped_notified_at"],
+        }
     _save_fired(ws, fired)
 
 
