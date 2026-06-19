@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T14:56:42+09:00
-source_commit: 92f151dc
+generated_at: 2026-06-19T15:50:12+09:00
+source_commit: 7ced24b9
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1967,6 +1967,8 @@ _(no top-level symbols)_
 - `_should_include_model`
 - `_build_workspace_access_flags`
 - `compose_cli_prompt`
+- `_swap_flag_value`
+- `_apply_sandbox_mode`
 - `build_cli_command`
 - `_extract_text`
 - `_extract_codex_agent_message`
@@ -2274,6 +2276,12 @@ _(no top-level symbols)_
 
 **Classes:**
 - `RunPipeline`
+
+## `core/sandbox_config.py`
+
+**Functions:**
+- `sandbox_enabled`
+- `set_sandbox_enabled`
 
 ## `core/security_guard.py`
 
@@ -4277,6 +4285,17 @@ _(no top-level symbols)_
 - `_count_py_files`
 - `inspect_project`
 - `format_markdown`
+- `main`
+
+## `scripts/af_sandbox.py`
+
+**Functions:**
+- `_load_json`
+- `_save_json`
+- `_merge_claude_settings`
+- `_cmd_off`
+- `_cmd_on`
+- `_cmd_status`
 - `main`
 
 ## `scripts/af_symbols.py`
@@ -7901,6 +7920,22 @@ _(no top-level symbols)_
 - `test_both_versions_match_on_short_inputs`
 - `test_utils_truncates_at_60`
 - `test_ext_no_truncation`
+
+## `tests/test_sandbox_config.py`
+
+**Classes:**
+- `TestSandboxDefault`
+- `TestSandboxPrecedence`
+- `TestSandboxOffArgv`
+- `TestSandboxOnArgvUnchanged`
+- `TestDeployParity`
+- `TestAfSandboxOffWritesBoth`
+- `TestGeminiYoloPreserved`
+- `TestSetSandboxEnabled`
+
+**Functions:**
+- `_make_request`
+- `_cmd`
 
 ## `tests/test_session_bridge.py`
 

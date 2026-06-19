@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -1000,6 +1000,9 @@ def _build_arg_parser(ad_hoc_mode):
         doctor_mode.add_argument("--refresh", action="store_true", help="캐시 무시하고 실제 auth ping 수행")
         doctor_parser.add_argument("--json", dest="json_out", action="store_true", help="JSON 출력")
         doctor_parser.add_argument("--strict", action="store_true", help="warn도 exit 1로 처리")
+
+        sandbox_parser = subparsers.add_parser("sandbox", help="AF + provider sandbox on/off 토글")
+        sandbox_parser.add_argument("action", choices=["on", "off", "status"], help="on|off|status")
     return parser
 
 
@@ -1184,6 +1187,9 @@ if __name__ == "__main__":
                 *(["--json"] if args.json_out else []),
                 *(["--strict"] if args.strict else []),
             ]))
+        elif args.subcommand == "sandbox":
+            from scripts.af_sandbox import main as sandbox_main
+            sys.exit(sandbox_main([args.action]))
         else:
             parser.print_help()
             sys.exit(1)

@@ -70,8 +70,10 @@ def test_config_paths_ignores_engine_api_keys_when_disabled(monkeypatch, tmp_pat
         ),
     ],
 )
-def test_build_cli_command_uses_provider_specific_defaults(provider_id, expected_prefix, expected_items, prompt_in_command):
+def test_build_cli_command_uses_provider_specific_defaults(provider_id, expected_prefix, expected_items, prompt_in_command, monkeypatch):
     from core.providers.cli import CliChatRequest, build_cli_command
+
+    monkeypatch.setenv("AF_SANDBOX", "1")  # sandbox on — 기존 동작 유지
 
     cmd = build_cli_command(
         CliChatRequest(
@@ -104,6 +106,7 @@ def test_build_cli_command_uses_provider_specific_defaults(provider_id, expected
 def test_codex_cli_path_override_keeps_exec_subcommand(monkeypatch):
     from core.providers.cli import CliChatRequest, build_cli_command
 
+    monkeypatch.setenv("AF_SANDBOX", "1")  # sandbox on — 기존 동작 유지
     monkeypatch.setenv("AGENT_CODEX_CLI_COMMAND", r"C:\Tools\codex.cmd")
 
     cmd = build_cli_command(
@@ -973,14 +976,16 @@ class TestAllowFileEdit:
         assert "--permission-mode" not in cmd
         assert "bypassPermissions" not in cmd
 
-    def test_gemini_allow_file_edit_false_still_includes_headless_flags(self):
+    def test_gemini_allow_file_edit_false_still_includes_headless_flags(self, monkeypatch):
         # gemini_cli의 headless 실행 플래그는 allow_file_edit=False여도 유지 (hang 방지)
+        monkeypatch.setenv("AF_SANDBOX", "1")  # sandbox on — 기존 동작 유지
         cmd = self._build("gemini_cli", allow_file_edit=False)
         assert "--sandbox" in cmd
         assert "--approval-mode" in cmd
         assert "yolo" in cmd
 
-    def test_gemini_allow_file_edit_true_includes_headless_flags(self):
+    def test_gemini_allow_file_edit_true_includes_headless_flags(self, monkeypatch):
+        monkeypatch.setenv("AF_SANDBOX", "1")  # sandbox on — 기존 동작 유지
         cmd = self._build("gemini_cli", allow_file_edit=True)
         assert "--sandbox" in cmd
         assert "--approval-mode" in cmd

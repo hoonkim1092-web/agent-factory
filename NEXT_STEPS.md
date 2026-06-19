@@ -1,18 +1,15 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 세션 최우선 = `af sandbox on|off|status` 구현 (설계 PASS, 코드=Sonnet)
+### ✅ `af sandbox on|off|status` 구현 완료 (2026-06-19, Sonnet)
 
-> **설계**: `docs/2026-06-19-multi-provider-sandbox-toggle-design.md` (af-cross-review **PASS**, BLOCK 0 — 2026-06-19 Opus). 사용자 지시로 **다음 세션 구현**.
-> **계기**: Windows native에서 sandbox 미지원 → `CreateProcessWithLogonW failed: 1326/1909` → **검은 콘솔 창 수십 개**(안 사라지고 내용 안 보임). 2-갈래 출처: (a) Claude Code 세션 sandbox(`~/.claude/settings.json` + `defaultMode: auto`) (b) AF→provider subprocess sandbox 플래그(`cli.py`).
->
-> **구현 범위 (설계 확정 좌표)**:
-> 1. `core/sandbox_config.py` 신규 — `sandbox_enabled()`(env `AF_SANDBOX` > `~/.af/sandbox.json` > 플랫폼기본[Windows=off]) + `set_sandbox_enabled()`. `af.spec` hiddenimports 추가.
-> 2. `core/providers/cli.py` — `_apply_sandbox_mode(provider_id, parts)` 신규 + **`build_cli_command`의 최종 `return cmd`(`:702`) 직전** 1곳 배선(F1: 완성 argv라야 codex `default_command:97` + gemini `headless_edit_flags:93` 둘 다 캡처). codex `--sandbox workspace-write`→`danger-full-access`(무효 시 플래그 쌍 제거 폴백, `codex --help` gate). gemini `--sandbox`만 필터 + **`--approval-mode yolo` 보존**(F2/INV-S7: `:680` hang 방지) + headless no-hang 검증 gate(실패 시 gemini 제외).
-> 3. `agent_launcher.py` — `af sandbox <on|off|status>` dispatch. off=SSOT write + `~/.claude/settings.json`(+프로젝트) `sandbox.enabled:false` merge(기존 키 보존, **사용자 실행이라 auto-mode 비차단**). 재시작 안내.
-> 4. 테스트 INV-S1~S7 (`tests/test_sandbox_config.py` 신규 등). 3-Tier 풀.
->
-> **⚠️ 구현 전 gate 2개**: ① `codex --help`로 `--sandbox danger-full-access` 유효성 ② gemini `--approval-mode yolo`만으로 headless no-hang 확인.
-> **임시 회피(구현 전)**: 사용자가 `~/.claude/settings.json`에 `"sandbox":{"enabled":false,"allowUnsandboxedCommands":true,"failIfUnavailable":false}` 추가 + Claude Code 재시작 → 세션 콘솔 창 멈춤. (codex 창은 구현 후 해소)
+> **설계**: `docs/2026-06-19-multi-provider-sandbox-toggle-design.md` (af-cross-review PASS, BLOCK 0). **구현 완료**.
+> - `core/sandbox_config.py` 신규 — `sandbox_enabled()` SSOT(env > config > 플랫폼기본)
+> - `core/providers/cli.py` — `_apply_sandbox_mode` + `_swap_flag_value` + `build_cli_command` 배선
+> - `scripts/af_sandbox.py` 신규 — on/off/status dispatch
+> - `agent_launcher.py`/`af.py`/`af.spec` — sandbox 서브커맨드 등록
+> - `tests/test_sandbox_config.py` — 16케이스 INV-S1~S7 PASS
+> - 3-Tier: af-critic PASS / af-cross-review WARN(BLOCK 0, Advisory 3건) / af-test-runner PASS(57)
+> - **사용법**: `af sandbox off` → Claude Code 재시작 → 검은 콘솔 창 해소
 
 ## ▶ (병행 대기) Q-S3 경로 C 활성화 — 설계 완료·구현 대기 (커밋 `92f151dc`)
 

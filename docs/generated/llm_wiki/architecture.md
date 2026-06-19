@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T14:56:42+09:00
-source_commit: 92f151dc
+generated_at: 2026-06-19T15:50:12+09:00
+source_commit: 7ced24b9
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -58,6 +58,7 @@ sources:
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | Master_Blueprint.md §0 |
 | `scripts/enqueue_staged_review.py` | provider/OS 독립 pre-commit 큐잉 fallback. Claude hook 없이 Codex·IDE·shell에서 staged review 대상 `.py`가 커밋될 때 Git index 기준으로 review queue를 먼저 채움 | Master_Blueprint.md §0 |
 | `scripts/af_doctor.py` | AF 실행 환경 진단 도구 (`af doctor`). Python·git·provider·hook·pytest·dogfood runtime 7개 항목을 ok/warn/fail로 진단. --fast(설치만)·--refresh(auth ping)·--json·--strict 지원. `main()` → int 반환 | Master_Blueprint.md §0 |
+| `scripts/af_sandbox.py` | `af sandbox on\ | Master_Blueprint.md §0 |
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
 | `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python/C# 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | Master_Blueprint.md §0 |
 | `scripts/review_consensus.py` | finding-level 증거수집기 (S4+S5, LLM 미호출). `cr_findings.json`의 ACCEPT/ACCEPT★ finding마다 surrounding_code·callers·callees(AST 1-hop)·tests를 수집해 `cr_evidence.json` 생성. af-cross-review Step 6가 이 증거를 기반으로 합의 판정(ACCEPT/REJECT/UNVERIFIED). 프로바이더 중립(INV-2). | Master_Blueprint.md §0 |
@@ -102,7 +103,8 @@ sources:
 | `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **F15**: `runtime_workspace`로 `.checkpoint/`, `runtime/warnings/`, strategy ledger, orchestrator `runs/data/artifacts`를 사용자 workspace와 분리. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | Master_Blueprint.md §0 |
 | `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | Master_Blueprint.md §0 |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | Master_Blueprint.md §0 |
-| `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입 | Master_Blueprint.md §0 |
+| `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입. **sandbox 후처리**: `_apply_sandbox_mode()`가 `build_cli_command()` 최종 `return cmd` 직전에 완성 argv를 받아 `sandbox_enabled()` 값에 따라 codex는 `--sandbox danger-full-access`(off 시), gemini는 `--sandbox` 제거(off 시, `--approval-mode yolo` 보존 — INV-S7 hang 방지) | Master_Blueprint.md §0 |
+| `core/sandbox_config.py` | sandbox 활성 여부 SSOT. 우선순위: env `AF_SANDBOX` > `~/.af/sandbox.json` > 플랫폼 기본(Windows=False, 그 외=True). `set_sandbox_enabled()`는 `~/.af/sandbox.json` write-through. `core/providers/cli.py`의 `_apply_sandbox_mode()`가 이를 읽어 provider argv를 후처리. | Master_Blueprint.md §0 |
 | `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize | Master_Blueprint.md §0 |
 | `core/provider_detect.py` | 4-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. **RATE_LIMITED 상태 추가(2026-06-10)**: `mark_rate_limited()` + `detect_rate_limit_signal()` + `_apply_rate_limit_override()`로 usage limit 사후 캐시 학습 → fan_out 자동 제외 + 노티. CLI `--mark-rate-limited --until`. force_refresh 시에도 미래 until이면 RATE_LIMITED 유지. ThreadPool race condition 수정. | Master_Blueprint.md §0 |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | Master_Blueprint.md §0 |
@@ -409,7 +411,7 @@ sources:
 
 ### `core`
 
-152 modules · 220 classes · 847 functions
+153 modules · 220 classes · 849 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
 - `core/agent_runner.py` — 2 class / 2 func
@@ -518,6 +520,7 @@ sources:
 - `core/rubric_compiler.py` — 3 class / 0 func
 - `core/run_budget.py` — 1 class / 2 func
 - `core/runner.py` — 1 class / 0 func
+- `core/sandbox_config.py` — 0 class / 2 func
 - `core/security_guard.py` — 0 class / 4 func
 - `core/security_scanner.py` — 0 class / 1 func
 - `core/semantic_embedder.py` — 1 class / 0 func
@@ -666,10 +669,10 @@ sources:
 
 ### `core/providers`
 
-4 modules · 3 classes · 89 functions
+4 modules · 3 classes · 91 functions
 
 - `core/providers/__init__.py` — 0 class / 0 func
-- `core/providers/cli.py` — 2 class / 33 func
+- `core/providers/cli.py` — 2 class / 35 func
 - `core/providers/registry.py` — 0 class / 21 func
 - `core/providers/session_adapter.py` — 1 class / 35 func
 
@@ -1061,10 +1064,11 @@ sources:
 
 ### `scripts`
 
-55 modules · 8 classes · 469 functions
+56 modules · 8 classes · 476 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
+- `scripts/af_sandbox.py` — 0 class / 7 func
 - `scripts/af_symbols.py` — 0 class / 2 func
 - `scripts/agent_model_selector.py` — 0 class / 6 func
 - `scripts/blast_radius.py` — 0 class / 7 func
@@ -1353,7 +1357,7 @@ sources:
 
 ### `tests`
 
-214 modules · 376 classes · 1831 functions
+215 modules · 384 classes · 1833 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1510,6 +1514,7 @@ sources:
 - `tests/test_run_factory_cli.py` — 0 class / 4 func
 - `tests/test_runner_contracts.py` — 0 class / 10 func
 - `tests/test_safe_optional_id.py` — 0 class / 6 func
+- `tests/test_sandbox_config.py` — 8 class / 2 func
 - `tests/test_session_bridge.py` — 0 class / 7 func
 - `tests/test_setup_wizard_gate.py` — 0 class / 27 func
 - `tests/test_signatures.py` — 0 class / 1 func

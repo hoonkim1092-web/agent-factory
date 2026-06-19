@@ -667,6 +667,30 @@ def compose_cli_prompt(request: CliChatRequest) -> str:
     return _compose_prompt(request, spec, effective_system_prompt)
 
 
+def _swap_flag_value(parts: list[str], flag: str, new_value: str) -> list[str]:
+    """argv에서 flag 다음 값을 new_value로 교체한다."""
+    result = list(parts)
+    for i, p in enumerate(result):
+        if p == flag and i + 1 < len(result):
+            result[i + 1] = new_value
+            break
+    return result
+
+
+def _apply_sandbox_mode(provider_id: str, parts: list[str]) -> list[str]:
+    """sandbox off면 provider별 sandbox 격리 플래그를 무력화. 완성 argv 후처리."""
+    from core.sandbox_config import sandbox_enabled
+    if sandbox_enabled():
+        return parts
+    pid = (provider_id or "").lower()
+    if pid == "codex_cli":
+        return _swap_flag_value(parts, "--sandbox", "danger-full-access")
+    if pid == "gemini_cli":
+        # --approval-mode yolo는 hang 방지 불변식(INV-S7) — 절대 제거 금지
+        return [p for p in parts if p != "--sandbox"]
+    return parts
+
+
 def build_cli_command(request: CliChatRequest) -> list[str]:
     spec = get_cli_provider_spec(request.provider_id)
     cmd = _resolve_base_command(spec)
@@ -699,6 +723,7 @@ def build_cli_command(request: CliChatRequest) -> list[str]:
         cmd.append("-")
     else:
         cmd.append(prompt_text)
+    cmd = _apply_sandbox_mode(spec.provider_id, cmd)
     return cmd
 
 
