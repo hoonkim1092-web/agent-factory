@@ -22,7 +22,16 @@
 > - 3-Tier: af-critic WARN(수정) / af-cross-review WARN(BLOCK 0, Advisory 2건) / af-test-runner PASS(24+3469)
 > - Advisory 잔여: `synthesize_via_research` 내 general clarification questions의 output_field 매핑 무효 — 기능 영향 없음(path C가 메인 경로, Q-S4 대상)
 
-## ▶ 다음 — Q-S4 또는 Q-S5
+### ✅ (Q-S5) HTML 리포트 렌더러 완료 (2026-06-19, Sonnet)
+> - `core/qa_report.py` 신규 — `render_html(evidence_ledger, run_dir) -> str`
+> - 5섹션: [VERIFIED]/[FAILED]/[CANNOT_VERIFY]/[UNVERIFIED]/[확인 요망]
+> - INV-Q2: `provenance=research` 골 → verdict 섹션 + [확인 요망] 이중 표기
+> - 자기완결 HTML (외부 CSS/JS 없음), unknown verdict → UNVERIFIED fallback
+> - `build_evidence_ledger` additive: `provenance`(non-default만)/`expected_output`(값 있을 때만)
+> - 테스트 25건 신규 / 회귀 64건 PASS. 2-Tier: af-critic WARN→수정 / af-test-runner PASS(89)
+> - wiring deferred — Q-S4/Q-S6 또는 project_pipeline.py에서 연결 예정
+
+## ▶ 다음 — Q-S4
 
 ## ▶ (이전) Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 

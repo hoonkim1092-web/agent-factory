@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T19:26:40+09:00
-source_commit: e4f2dac0
+generated_at: 2026-06-19T20:52:50+09:00
+source_commit: 47e7c16a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -2043,6 +2043,19 @@ _(no top-level symbols)_
 - `_is_headless_session`
 - `_hook_output`
 - `handle_hook_event`
+
+## `core/qa_report.py`
+
+**Functions:**
+- `render_html`
+- `_goal_header`
+- `_field`
+- `_pre`
+- `_section_verified`
+- `_section_failed`
+- `_section_cannot_verify`
+- `_section_unverified`
+- `_section_confirm`
 
 ## `core/registry.py`
 
@@ -7447,6 +7460,21 @@ _(no top-level symbols)_
 **Functions:**
 - `_make_rs_question`
 - `_make_llm_question`
+
+## `tests/test_qa_report.py`
+
+**Classes:**
+- `TestRenderHtmlFileOutput`
+- `TestVerifiedSection`
+- `TestFailedSection`
+- `TestCannotVerifySection`
+- `TestUnverifiedSection`
+- `TestConfirmRequiredSection`
+- `TestBuildEvidenceLedgerProvenance`
+
+**Functions:**
+- `_ledger`
+- `_goal`
 
 ## `tests/test_quality_contract.py`
 

@@ -449,6 +449,10 @@ def build_evidence_ledger(contract: "GoalContract") -> dict[str, Any]:
                 entry["command_run"] = g.evidence.command_run
         if g.cannot_verify_reason:
             entry["cannot_verify_reason"] = g.cannot_verify_reason
+        if g.provenance != "default":
+            entry["provenance"] = g.provenance
+        if g.expected_output:
+            entry["expected_output"] = g.expected_output
         goal_entries.append(entry)
         if g.verdict == "CANNOT_VERIFY":
             cannot_verify.append(g.goal_id)

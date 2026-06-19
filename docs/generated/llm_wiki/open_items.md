@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T19:26:41+09:00
-source_commit: e4f2dac0
+generated_at: 2026-06-19T20:52:52+09:00
+source_commit: 47e7c16a
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -14,56 +14,56 @@ sources:
 > Source: NEXT_STEPS.md
 > 관련: [[index]] | [[review_patterns]] | [[source_refs]]
 
-- (L32) > **선행 조사 (구현 전 필수, §6.2)**: `research_engine.py`/`researcher.py`/`research_brief.py`의 실제 진입 함수 중 "goal 텍스트 → 골/기대출력/seam 후보"를 얻는 경로를 식별하고, 그 반환 구조에서 `output_field`별 값을 뽑는 **어댑터 함수**를 명세. ⚠️ 초안의 `rese
-- (L85) > - **실패 B(자기유발 진동)**: 설계문서 경로(`check_design_pending.py`)는 라운드캡·수렴가드 *부재*(코드리뷰는 `MAX_ROUNDS=5` 있음). 매 라운드 내 수정이 다음 BLOCK 유발. → §4 수렴가드+스코프게이트(설계 `MAX_DESIGN_ROUNDS=3`, HOW 모순은 advisory 강등).
-- (L108) **미결 산출물**: 설계문서 2건 Draft 완료 — `docs/2026-06-18-user-perspective-qa-pipeline-design.md`(af-cross-review BLOCK 3건 수동수정 완료, **재검증 미실시**) + `docs/2026-06-18-product-output-isolation-design.md`(af-cross-r
-- (L134) - **미채택(설계 결정)**: Stop hook 드레인 보류(pre-commit이 실패 케이스 `d1022ecd`를 정확히 차단하는 최소·자족 경로). 부수버그 `_is_watcher_alive` os.kill Windows WinError 87 / watcher codex CreateProcessWithLogonW:1909 단일vendor는 **미수정*
-- (L171) > **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
-- (L183) > - **잔여 advisory(선택)**: `af project wiki` `--out` 기본값을 외부 프로젝트엔 덜 침습적인 경로로 바꿀지(WARN, 의무 아님). **STEP 3(보류)**: dogfood ContextPack 주입은 기각 이력(메타-재귀).
-- (L185) > **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
-- (L194) > **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
-- (L197) > **▶▶ 다음 세션 미결 (3건 전부 소진/측정 — 2026-06-12)**:
-- (L202) > **▶ 다음 = product-value work-item 신규 선정** (미결 3건 소진). STEP4 side-effect benefit은 자연 dogfood/pre-commit run에서 기회 측정.
-- (L229) - **다음 = WI-B 또는 다른 product-value work-item.**
-- (L234) - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
-- (L240) - **다음 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱시간·DB·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 덮어쓰기 위험 → AF 루트 직접 실행 금지.
-- (L242) - **다음 = product-value work-item 신규 선정 또는 GitNexus Step 0 PoC.**
-- (L246) > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
-- (L247) > - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
-- (L282) - **B1 (복잡, 보류)**: 단순 patch task에 멀티에이전트 orchestrator 과분해 — RSE 설계 필요, 별도 세션
-- (L283) - **다음 = product-value work-item 신규 선정**
-- (L286) - **🎯 다음 세션 진입점 = code-review 문서 전문 mirror**:
-- (L290) - 다음 작업: product-value work-item 신규 선정. LLM Wiki 쪽은 Obsidian 탐색 기본 연결 완료.
-- (L296) >   - **🔬 격리 누수 원인 진단 (팩트 확정)**: worker dispatch는 **무죄** — runs/*/task.json 22개 전부 `workspace=worktree` 확인. dogfood_state worktree 경로 정상. **진짜 범인 = `core/control_plane_llm.py:122` `workspace=os.getcwd
-- (L299) - **🆕 신규 발견 (leak과 별개, 미수정) — 📌 TODO 등록**: **DEVELOP phase 비수렴** — Option 2가 dogfood DEVELOP을 전체 `ProjectPipeline.run()`에 위임하는데, trivial leaf 함수(`geometric_mean`)에도 designer/qa_engineer 등 멀티에이전트 프로젝트를
-- (L300) - **⚠️ 처방 제약 (사용자 지시 2026-06-03)**: **단순 캡/비활성화로 처리 금지.** `terminal_per_agent=False` + `max_cycles` 하드 캡 같은 단순 처방은 큰 task에서 정당한 멀티에이전트 작업까지 잘라버림. **지능형으로 바꿔야 함** — task 복잡도(leaf 함수 1개 vs 멀티모듈 프로젝트)를 인
-- (L304) - **🎯 다음 세션 진입점**: leak 검증 종료(PASS). ① product-value work-item 선정으로 전환 또는 ② DEVELOP 비수렴 이슈(위 신규 발견) 경량화 — 단 후자는 내부배관이므로 product 방향 확정 후 우선순위 판정.
-- (L305) > - **🔧 모델/Provider 라우팅 결함 4건 (2026-06-02 분석, 큐 등록 — 착수: product-value work-item 다음)**: 5턴 deliberation(Claude+Codex 교차)으로 코드 확정. **핵심 사실**: ① 단일 claude_cli 환경에선 `_should_include_model`(cli.py:647)이 `
-- (L306) > - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
-- (L309) > 마지막 업데이트: **2026-06-07 KST (Windows)** — **LLM Wiki Obsidian 연동 2단계 완료**. 완료: AST `symbols.md` 연결 + `Master_Blueprint.md` 전문 mirror + `docs/code_review/code-review.md` 전문 mirror(`docs/generated/llm_
-- (L311) > **다음 세션 최우선 진입점**: **dogfood detector 인프라 검증 완료 (2026-06-02) — 다음은 ① 실가치 work-item 선정 또는 ② 저우선 정리**. 북극성 epic("AF가 AF를 개발하는 완성 루프")의 `investigation → AI 프롬프트 → production 코드` 고리가 실제 run에서 닫힘이 직접 관측됨
-- (L318) >    - **R18 detector 추가 보류**: 후보 3종 전부 부적합 — `mutable_default_arg`(repo 0건), `broad_except`(의도적 best-effort 1050건, CLAUDE.md 명문화), `unused_import`(TYPE_CHECKING/`__all__` false-positive 97건). detecto
-- (L321) >    - **다음**: R18 재평가 (배선 실효성 확정 → R18 게이트 해제됨). 선택적: R15~R17을 change-relative(변경 함수 한정)로 좁힐지 설계 검토 — 단 whole-file 스캔도 "파일 수정 시 기존 복잡도 인지" 의도로는 정당, 우선순위 낮음.
-- (L339) 그 다음 아래 "🚧 진행 중 work-item" 섹션부터 읽으면 됨.
-- (L510) > **상태 (2026-06-02)**: 아래 A Phase 2~4 / B Research Router / §17 Step 1~20 항목은 **전부 완료**됐다. 미완료 항목이 아니라 완료 기록의 보존 로그다. 신규 진입은 상단 "다음 세션 최우선 진입점" 참조.
-- (L632) 3. **R1 복합 증명** — ⚠️ 2차 실험 완료 (2026-05-25). plan 생성 달성, BLOCKED(정확). 2개 신규 구조 버그 발견.
-- (L646) - **다음**: ~~R1 3차 복합 증명 실험~~ → 완료 (아래 참조)
-- (L650) - ❌ VERIFY BLOCKED — verification_requirements=[] (F-VERIFY-EMPTY) → 3 bugs found & fixed:
-- (L655) - **다음: R1 4차** — F-SCOPE + F-VERIFY 수정 후 end-to-end COMPLETE 검증
-- (L659) - ❌ VERIFY BLOCKED — 새 버그 발견:
-- (L662) - **다음: R1 5차** — `python agent_launcher.py dogfood run "core/utils.py에 median(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. tests/test_utils.py에 TestMedian 테스트 클래스 신규 작성." --non-inte
-- (L690) **보류 결정 (trace 1회 run 후 재결정)**:
-- (L731) - advisory 보류: scope 문자열 입력 시 문자 단위 순회 (af-cross-review Medium advisory)
-- (L759) - ❌ **머지 회수 불가**: 라운드에서 작성한 `product()` + `plan_step_count()` + 10건 테스트는 Windows PC `~/.af-dogfood/1779867851-3611529e/worktree/`의 `dogfood/1779867851-3611529e` 브랜치 commit `c4c5c98b`에만 존재. origin push
-- (L760) - dogfooding 검증용 dummy 함수라 production 가치 낮음 — 다음 라운드(R1 13차)에서 새 dummy로 동등 검증.
-- (L768) - WARN 보류 (advisory): thread-safety 이론, fixture teardown-only 패턴
-- (L792) **다음 진입점**:
-- (L793) - 다음 production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
-- (L829) **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
-- (L855) - ⚠️ dogfood auto-merge BLOCKED (CRLF 다중 `^M` 오염 scope_violations) → 수동 cherry-pick으로 처리
-- (L862) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations 동일 패턴) → 수동 cherry-pick으로 처리
-- (L879) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: docs/runtime_modes.md 등) → 수동 cherry-pick으로 처리
-- (L898) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
-- (L985) 1. 완료 작업 / 다음 진입점 갱신
+- (L41) > **선행 조사 (구현 전 필수, §6.2)**: `research_engine.py`/`researcher.py`/`research_brief.py`의 실제 진입 함수 중 "goal 텍스트 → 골/기대출력/seam 후보"를 얻는 경로를 식별하고, 그 반환 구조에서 `output_field`별 값을 뽑는 **어댑터 함수**를 명세. ⚠️ 초안의 `rese
+- (L94) > - **실패 B(자기유발 진동)**: 설계문서 경로(`check_design_pending.py`)는 라운드캡·수렴가드 *부재*(코드리뷰는 `MAX_ROUNDS=5` 있음). 매 라운드 내 수정이 다음 BLOCK 유발. → §4 수렴가드+스코프게이트(설계 `MAX_DESIGN_ROUNDS=3`, HOW 모순은 advisory 강등).
+- (L117) **미결 산출물**: 설계문서 2건 Draft 완료 — `docs/2026-06-18-user-perspective-qa-pipeline-design.md`(af-cross-review BLOCK 3건 수동수정 완료, **재검증 미실시**) + `docs/2026-06-18-product-output-isolation-design.md`(af-cross-r
+- (L143) - **미채택(설계 결정)**: Stop hook 드레인 보류(pre-commit이 실패 케이스 `d1022ecd`를 정확히 차단하는 최소·자족 경로). 부수버그 `_is_watcher_alive` os.kill Windows WinError 87 / watcher codex CreateProcessWithLogonW:1909 단일vendor는 **미수정*
+- (L180) > **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
+- (L192) > - **잔여 advisory(선택)**: `af project wiki` `--out` 기본값을 외부 프로젝트엔 덜 침습적인 경로로 바꿀지(WARN, 의무 아님). **STEP 3(보류)**: dogfood ContextPack 주입은 기각 이력(메타-재귀).
+- (L194) > **▶ 다음 = product-value work-item 신규 선정.** GitNexus Step 0 PoC(미실행) 또는 외부 부착 end-to-end 라인 또는 신규 발굴.
+- (L203) > **▶ STEP 4-rerun (선택, 다음)**: callers 있는 함수를 pre-commit 게이트로 측정(§5 채워진 상태). 자연 발화 run으로 대체 가능.
+- (L206) > **▶▶ 다음 세션 미결 (3건 전부 소진/측정 — 2026-06-12)**:
+- (L211) > **▶ 다음 = product-value work-item 신규 선정** (미결 3건 소진). STEP4 side-effect benefit은 자연 dogfood/pre-commit run에서 기회 측정.
+- (L238) - **다음 = WI-B 또는 다른 product-value work-item.**
+- (L243) - **STEP 3 (보류)**: dogfood ContextPack 주입 — 기각 이력(메타-재귀), STEP1/2 효과 확인 후 재평가.
+- (L249) - **다음 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱시간·DB·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 덮어쓰기 위험 → AF 루트 직접 실행 금지.
+- (L251) - **다음 = product-value work-item 신규 선정 또는 GitNexus Step 0 PoC.**
+- (L255) > - **다음은 product-value work-item** — 내부 파이프라인 배관(planner/premortem/dogfood/research_*) 추가 금지(메타-재귀 함정). 다음 작업은 "AF가 사용자에게 줄 실제 가치"에서 도출.
+- (L256) > - **밀린 3건(planner research_findings 본소비 / auto_apply_defaults FSA 배선 / cli_hook_bridge)은 보류** — 전부 내부 배관이고, 가치 판정은 제품 방향(Step 0) 결정 후에만 가능.
+- (L291) - **B1 (복잡, 보류)**: 단순 patch task에 멀티에이전트 orchestrator 과분해 — RSE 설계 필요, 별도 세션
+- (L292) - **다음 = product-value work-item 신규 선정**
+- (L295) - **🎯 다음 세션 진입점 = code-review 문서 전문 mirror**:
+- (L299) - 다음 작업: product-value work-item 신규 선정. LLM Wiki 쪽은 Obsidian 탐색 기본 연결 완료.
+- (L305) >   - **🔬 격리 누수 원인 진단 (팩트 확정)**: worker dispatch는 **무죄** — runs/*/task.json 22개 전부 `workspace=worktree` 확인. dogfood_state worktree 경로 정상. **진짜 범인 = `core/control_plane_llm.py:122` `workspace=os.getcwd
+- (L308) - **🆕 신규 발견 (leak과 별개, 미수정) — 📌 TODO 등록**: **DEVELOP phase 비수렴** — Option 2가 dogfood DEVELOP을 전체 `ProjectPipeline.run()`에 위임하는데, trivial leaf 함수(`geometric_mean`)에도 designer/qa_engineer 등 멀티에이전트 프로젝트를
+- (L309) - **⚠️ 처방 제약 (사용자 지시 2026-06-03)**: **단순 캡/비활성화로 처리 금지.** `terminal_per_agent=False` + `max_cycles` 하드 캡 같은 단순 처방은 큰 task에서 정당한 멀티에이전트 작업까지 잘라버림. **지능형으로 바꿔야 함** — task 복잡도(leaf 함수 1개 vs 멀티모듈 프로젝트)를 인
+- (L313) - **🎯 다음 세션 진입점**: leak 검증 종료(PASS). ① product-value work-item 선정으로 전환 또는 ② DEVELOP 비수렴 이슈(위 신규 발견) 경량화 — 단 후자는 내부배관이므로 product 방향 확정 후 우선순위 판정.
+- (L314) > - **🔧 모델/Provider 라우팅 결함 4건 (2026-06-02 분석, 큐 등록 — 착수: product-value work-item 다음)**: 5턴 deliberation(Claude+Codex 교차)으로 코드 확정. **핵심 사실**: ① 단일 claude_cli 환경에선 `_should_include_model`(cli.py:647)이 `
+- (L315) > - **브랜치 사실**: `2026-05-20-research-coverage-gate`가 origin/main 대비 **232 ahead / 3 behind** (dogfood stream 누적). 머지 결정 보류 — 사용자 판단.
+- (L318) > 마지막 업데이트: **2026-06-07 KST (Windows)** — **LLM Wiki Obsidian 연동 2단계 완료**. 완료: AST `symbols.md` 연결 + `Master_Blueprint.md` 전문 mirror + `docs/code_review/code-review.md` 전문 mirror(`docs/generated/llm_
+- (L320) > **다음 세션 최우선 진입점**: **dogfood detector 인프라 검증 완료 (2026-06-02) — 다음은 ① 실가치 work-item 선정 또는 ② 저우선 정리**. 북극성 epic("AF가 AF를 개발하는 완성 루프")의 `investigation → AI 프롬프트 → production 코드` 고리가 실제 run에서 닫힘이 직접 관측됨
+- (L327) >    - **R18 detector 추가 보류**: 후보 3종 전부 부적합 — `mutable_default_arg`(repo 0건), `broad_except`(의도적 best-effort 1050건, CLAUDE.md 명문화), `unused_import`(TYPE_CHECKING/`__all__` false-positive 97건). detecto
+- (L330) >    - **다음**: R18 재평가 (배선 실효성 확정 → R18 게이트 해제됨). 선택적: R15~R17을 change-relative(변경 함수 한정)로 좁힐지 설계 검토 — 단 whole-file 스캔도 "파일 수정 시 기존 복잡도 인지" 의도로는 정당, 우선순위 낮음.
+- (L348) 그 다음 아래 "🚧 진행 중 work-item" 섹션부터 읽으면 됨.
+- (L519) > **상태 (2026-06-02)**: 아래 A Phase 2~4 / B Research Router / §17 Step 1~20 항목은 **전부 완료**됐다. 미완료 항목이 아니라 완료 기록의 보존 로그다. 신규 진입은 상단 "다음 세션 최우선 진입점" 참조.
+- (L641) 3. **R1 복합 증명** — ⚠️ 2차 실험 완료 (2026-05-25). plan 생성 달성, BLOCKED(정확). 2개 신규 구조 버그 발견.
+- (L655) - **다음**: ~~R1 3차 복합 증명 실험~~ → 완료 (아래 참조)
+- (L659) - ❌ VERIFY BLOCKED — verification_requirements=[] (F-VERIFY-EMPTY) → 3 bugs found & fixed:
+- (L664) - **다음: R1 4차** — F-SCOPE + F-VERIFY 수정 후 end-to-end COMPLETE 검증
+- (L668) - ❌ VERIFY BLOCKED — 새 버그 발견:
+- (L671) - **다음: R1 5차** — `python agent_launcher.py dogfood run "core/utils.py에 median(values: list[int | float]) -> float 함수 추가. 빈 리스트이면 ValueError. tests/test_utils.py에 TestMedian 테스트 클래스 신규 작성." --non-inte
+- (L699) **보류 결정 (trace 1회 run 후 재결정)**:
+- (L740) - advisory 보류: scope 문자열 입력 시 문자 단위 순회 (af-cross-review Medium advisory)
+- (L768) - ❌ **머지 회수 불가**: 라운드에서 작성한 `product()` + `plan_step_count()` + 10건 테스트는 Windows PC `~/.af-dogfood/1779867851-3611529e/worktree/`의 `dogfood/1779867851-3611529e` 브랜치 commit `c4c5c98b`에만 존재. origin push
+- (L769) - dogfooding 검증용 dummy 함수라 production 가치 낮음 — 다음 라운드(R1 13차)에서 새 dummy로 동등 검증.
+- (L777) - WARN 보류 (advisory): thread-safety 이론, fixture teardown-only 패턴
+- (L801) **다음 진입점**:
+- (L802) - 다음 production work-item 선정 후 dogfood run 진입 (보류 dogfood run 없음)
+- (L838) **보류**: `cli_hook_bridge` 미커밋 — 현재 dirty 없음, 우선순위 낮음.
+- (L864) - ⚠️ dogfood auto-merge BLOCKED (CRLF 다중 `^M` 오염 scope_violations) → 수동 cherry-pick으로 처리
+- (L871) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations 동일 패턴) → 수동 cherry-pick으로 처리
+- (L888) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: docs/runtime_modes.md 등) → 수동 cherry-pick으로 처리
+- (L907) - ⚠️ dogfood auto-merge BLOCKED (CRLF 오염 scope_violations: data/memory/*.json, docs/*.md) → 수동 cherry-pick으로 처리
+- (L994) 1. 완료 작업 / 다음 진입점 갱신
 
 Source: `NEXT_STEPS.md` (51건 추출)
