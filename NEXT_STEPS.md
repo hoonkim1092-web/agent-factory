@@ -1,5 +1,24 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ▶▶ 다음 진입점 (2026-06-20) — dogfood 가짜성공/spin 수정
+
+> **사실 전부 동결**: 메모리 `project_dogfood_false_success_spin` (재분석 금지, 그 파일만 읽으면 됨).
+> **계기**: Q-S6 QA 파이프라인 dogfood 실증 run(`1781884669-a7502e9b`)이 stopped_max_cycles로 침묵사. 6분 갈려 죽었는데 goal_count 미생성. 파보니 死因이 Tier-3/리뷰가 아니라 **가짜 성공**이었음.
+
+**死因 사슬** (전부 run 아티팩트 증거):
+- Bug0 codex_cli 셸 Windows 깨짐(`batch file arguments are invalid`) = 방아쇠
+- **Bug1 가짜 성공** ★ `agent_runner.py:1226` `ok:true`가 "codex 응답함"이지 "작업함"이 아님. 에이전트가 "못 했다"고 해도 성공 집계
+- Bug2 산출물 검증 없음(goal_count 미생성인데 ok)
+- Bug3 무진전 fail-fast 없음 → 빈 사이클 100바퀴 → 침묵사
+
+**수정 우선순위**:
+1. **Bug1 가짜성공 탐지** (최우선): 파일변경 0 / 에이전트 자기보고 실패 / 기대 산출물 부재 → `ok:false`. 단 agent_runner/dynamic_orchestrator는 Tier-3 → 설계 1장 후 진행.
+2. Bug3 무진전 fail-fast ("N 사이클 보드 진전 0 → BLOCK", provider 실패도 포함)
+3. 작은 Tier-3 실행 흐름(build→존재가드→test→review→cross_review, 싼게이트가 비싼걸 가림+스코프 재리뷰+루프캡+수렴정의)
+
+**보류(死因 아님, 별개 트랙)**: Tier-3 파일단위 regex → AST proof-carrying(Phase1) / Floor2 주입 억제는 merge∈{never,manual} 조건부 / 과분해는 bootstrap_roles 프롬프트 규모 조건부화.
+**정정(red herring)**: gemini 키없음 死因 아님 / 일반 AF 풀경로는 파이프라인이 commit 안 해 프리커밋 3-tier 미발화.
+
 ### ✅ `af sandbox on|off|status` 구현 완료 (2026-06-19, Sonnet)
 
 > **설계**: `docs/2026-06-19-multi-provider-sandbox-toggle-design.md` (af-cross-review PASS, BLOCK 0). **구현 완료**.
