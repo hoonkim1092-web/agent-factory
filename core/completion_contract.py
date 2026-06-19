@@ -5,6 +5,7 @@
 각 골을 실행 증거(GoalEvidence)로 판정(GoalVerdict)한다.
 
 설계: docs/2026-06-17-af-completion-contract-goal-verification-design.md §4·§5·§6·§8
+     docs/2026-06-18-user-perspective-qa-pipeline-design.md §5 (Q-S1 확장)
 """
 from __future__ import annotations
 
@@ -21,6 +22,12 @@ from typing import Any, Literal
 # CANNOT_VERIFY — 환경 한계로 검증 불가 (실패 아님, is_done() done 허용)
 # UNVERIFIED    — 아직 검증 안 됨 / harness_type 미해결 (file-exists 자동통과 금지)
 GoalVerdict = Literal["VERIFIED", "FAILED", "CANNOT_VERIFY", "UNVERIFIED"]
+
+# 골/기대출력/seam의 출처 신뢰등급 (INV-Q2)
+# user     — 사용자가 직접 제공 (가장 신뢰)
+# research — LLM 리서치 합성 (중간, HTML 리포트에서 [확인 요망] 별도 표기)
+# default  — 정적 기본값 또는 합성 실패 (낮음, verdict=UNVERIFIED 권고)
+Provenance = Literal["user", "research", "default"]
 
 
 @dataclass
@@ -54,6 +61,10 @@ class GoalEntry:
     verdict: GoalVerdict = "UNVERIFIED"
     cannot_verify_reason: str = ""   # CANNOT_VERIFY일 때 이유
     command: str = ""           # 하니스 실행 명령 (cli: 셸 명령, library: python -c 코드, server: 기동 명령)
+    # Q-S1 additive fields (INV-Q2, §5.1)
+    scenario: list[str] = field(default_factory=list)   # 다단계 검증 시나리오 (각 step 명령/검사)
+    expected_output: str = ""                            # 기대출력/골든 (정답 기준)
+    provenance: Provenance = "default"                   # 출처 신뢰등급
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -64,6 +75,9 @@ class GoalEntry:
             "verdict": self.verdict,
             "cannot_verify_reason": self.cannot_verify_reason,
             "command": self.command,
+            "scenario": self.scenario,
+            "expected_output": self.expected_output,
+            "provenance": self.provenance,
         }
 
     @classmethod
@@ -77,6 +91,39 @@ class GoalEntry:
             verdict=data.get("verdict", "UNVERIFIED"),
             cannot_verify_reason=data.get("cannot_verify_reason", ""),
             command=data.get("command", ""),
+            scenario=data.get("scenario") or [],
+            expected_output=data.get("expected_output", ""),
+            provenance=data.get("provenance", "default"),
+        )
+
+
+@dataclass
+class TestManifest:
+    """프로젝트 레벨 테스트 환경 요구사항 (§5.2 Q-S1).
+
+    seam_requirements는 구현이 노출해야 할 입력주입/출력캡처 인터페이스 목록으로,
+    이 항목들이 deliverables로 승격돼 planner 태스크가 된다 (INV-Q3).
+    """
+    required_tools: list[str] = field(default_factory=list)    # MCP·외부 프로그램·패키지
+    required_env: list[str] = field(default_factory=list)      # env var·장치
+    seam_requirements: list[str] = field(default_factory=list) # 구현이 노출해야 할 seam
+    provenance: Provenance = "default"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "required_tools": self.required_tools,
+            "required_env": self.required_env,
+            "seam_requirements": self.seam_requirements,
+            "provenance": self.provenance,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "TestManifest":
+        return cls(
+            required_tools=data.get("required_tools") or [],
+            required_env=data.get("required_env") or [],
+            seam_requirements=data.get("seam_requirements") or [],
+            provenance=data.get("provenance", "default"),
         )
 
 
@@ -84,6 +131,7 @@ class GoalEntry:
 class GoalContract:
     task_id: str
     goals: list[GoalEntry] = field(default_factory=list)
+    manifest: TestManifest | None = None   # Q-S1: 프로젝트 레벨 테스트 환경 요구
 
     def is_done(self) -> bool:
         """INV-A: 모든 골이 VERIFIED 또는 CANNOT_VERIFY여야 done.
@@ -102,13 +150,16 @@ class GoalContract:
         return {
             "task_id": self.task_id,
             "goals": [g.to_dict() for g in self.goals],
+            "manifest": self.manifest.to_dict() if self.manifest else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "GoalContract":
+        m = data.get("manifest")
         return cls(
             task_id=data.get("task_id", ""),
             goals=[GoalEntry.from_dict(g) for g in (data.get("goals") or [])],
+            manifest=TestManifest.from_dict(m) if m else None,
         )
 
 

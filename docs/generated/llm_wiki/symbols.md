@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T12:02:51+09:00
-source_commit: 6ec0d1bb
+generated_at: 2026-06-19T12:42:10+09:00
+source_commit: b747f698
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -590,6 +590,7 @@ _(no top-level symbols)_
 **Classes:**
 - `GoalEvidence`
 - `GoalEntry`
+- `TestManifest`
 - `GoalContract`
 - `HarnessResult`
 - `ExecutionHarness`
@@ -5982,6 +5983,19 @@ _(no top-level symbols)_
 - `test_dogfood_state_round_trip_with_contract`
 - `test_dogfood_state_round_trip_none_contract`
 - `test_dogfood_state_legacy_dict_without_contract_key`
+- `test_goal_entry_q_s1_defaults`
+- `test_goal_entry_q_s1_round_trip`
+- `test_goal_entry_provenance_research`
+- `test_goal_entry_legacy_dict_missing_q_s1_fields`
+- `test_goal_entry_scenario_preserved_in_contract_round_trip`
+- `test_test_manifest_defaults`
+- `test_test_manifest_round_trip`
+- `test_test_manifest_legacy_dict_missing_fields`
+- `test_goal_contract_manifest_none_by_default`
+- `test_goal_contract_manifest_round_trip`
+- `test_goal_contract_manifest_none_round_trip`
+- `test_goal_contract_legacy_dict_missing_manifest`
+- `test_goal_contract_full_round_trip_with_manifest_and_q_s1`
 
 ## `tests/test_context_window_manager.py`
 

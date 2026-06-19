@@ -1,6 +1,16 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 = 리뷰 합의 게이트 자연 발화 검증 또는 신규 product work-item
+## ▶ 다음 = Q-S2 (QuestionRoute.RESEARCH_SYNTHESIZE enum + goal_clarification.yaml 4문항 + provenance 전파)
+
+### ✅ (Q-S1) GoalEntry 확장 + TestManifest 완료 (2026-06-19, Sonnet, 이 커밋)
+> - `core/completion_contract.py`: `Provenance` 타입(`user`/`research`/`default`) + `GoalEntry` 3개 additive 필드(`scenario`/`expected_output`/`provenance`) + `TestManifest` 신규(`required_tools`/`required_env`/`seam_requirements`/`provenance`) + `GoalContract.manifest: TestManifest|None`
+> - 전부 기본값 하위호환 + round-trip 보장. 레거시 직렬화(필드 부재)도 기본값 복원.
+> - 테스트 13건 신규 / 총 30건 PASS. 3-Tier: af-critic PASS / af-test-runner 252 PASS
+> - 설계: `docs/2026-06-18-user-perspective-qa-pipeline-design.md §5`
+
+---
+
+## ▶ (이전 다음) 리뷰 합의 게이트 자연 발화 검증 또는 신규 product work-item
 
 ### ✅ (S3~S6) 증거수집 합의기 완료 (2026-06-19, Sonnet, 커밋: `6ec0d1bb`)
 > - `scripts/review_consensus.py` 신규: finding-level 증거수집기(LLM 미호출). ACCEPT/ACCEPT★ finding마다 surrounding_code·callers(grep 1-hop)·callees(AST 1-hop, `_enclosing_function`+`_find_callees`)·tests 수집 → `cr_evidence.json` 생성
