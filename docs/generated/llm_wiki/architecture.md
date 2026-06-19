@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T20:52:50+09:00
-source_commit: 47e7c16a
+generated_at: 2026-06-19T23:45:05+09:00
+source_commit: 93f6c45f
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -37,7 +37,7 @@ sources:
 | `core/control/verdicts.py` | Stage 0 verdict/route/cause enum 단일 원천 | Master_Blueprint.md §0 |
 | `core/control/stage_artifacts.py` | Stage 0 아티팩트 dataclass | Master_Blueprint.md §0 |
 | `core/control/question_router.py` | Stage 0 순수 분류기 (파일 쓰기 없음) | Master_Blueprint.md §0 |
-| `core/control/stage_router.py` | Stage 0 오케스트레이터 | Master_Blueprint.md §0 |
+| `core/control/stage_router.py` | Stage 0 오케스트레이터. **Q-S4(2026-06-19)**: `_run_new_project()`이 `gc_result` 처리 후 `_qa_{output_field}` sentinel keys + `_qa_provenance`(JSON)를 files dict에 추가 → `work_item_generator.py`가 pop해 `project_brief`에 흡수(INV-Q3 경로 C). last_updated: 2026-06-19 | Master_Blueprint.md §0 |
 | `core/control/context_scanner.py` | LightContextScanner (LLM 0회) | Master_Blueprint.md §0 |
 | `core/escalation_evaluator.py` | P2 에스컬레이션 규칙 평가 | Master_Blueprint.md §0 |
 | `core/escalation_decision_report.py` | 에스컬레이션 결정 보고서 생성 (P2 신규) | Master_Blueprint.md §0 |
@@ -100,7 +100,7 @@ sources:
 | `core/model_router.py` | CLI 프로바이더 선택 | Master_Blueprint.md §0 |
 | `core/policy_runtime.py` | 정책 런타임 래퍼 | Master_Blueprint.md §0 |
 | `core/project_mailbox.py` | 파일 기반 에이전트 간 메시지함 | Master_Blueprint.md §0 |
-| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **F15**: `runtime_workspace`로 `.checkpoint/`, `runtime/warnings/`, strategy ledger, orchestrator `runs/data/artifacts`를 사용자 workspace와 분리. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장) | Master_Blueprint.md §0 |
+| `core/project_pipeline.py` | Phase1(문서)+Phase2(실행) 파이프라인. **F15**: `runtime_workspace`로 `.checkpoint/`, `runtime/warnings/`, strategy ledger, orchestrator `runs/data/artifacts`를 사용자 workspace와 분리. **P2 C1**: `ResearchGateBlocked` + `_verify_domain_spec()` + `_save_specs()` + `_coverage_blocked()`. **P2 C3+C4**: `_load_evidence`, `_save_adr()`, `_save_traceability()` (원자 write, Path 반환, planning_files 추가). **P3 D1**: `_save_specs()` → list 반환, spec content → `project_brief["domain_specs_summary"]` 주입(generate_work_items 호출 전), _spec_paths → planning_files 추가. **P3 D3**: `research_evidence.research_plan` → `project_brief` 주입 (domain 감지용, None-guard 포함). **P5**: `prepare_documents()` 내 `generate_work_items()` 직전 `ChangeImpactProfiler().profile()` 호출 → `project_brief["blast_radius"]` 주입 (LLM brief에 blast_radius 미포함 시 git-diff+board 휴리스틱으로 보완, 배포 동등성 보장). **Q-S4(2026-06-19)**: `prepare_documents()` GoalContract 생성 직후 `project_brief`의 QA 필드(`observable_goal`/`golden_example`/`test_seam`) → `GoalEntry`(QA-OBS/QA-GEX/QA-SEAM) 흡수. `golden_example`은 `expected_output` 설정(INV-Q2 연결). `qa_provenance` dict로 provenance 태깅. last_updated: 2026-06-19 | Master_Blueprint.md §0 |
 | `core/spec_generator.py` | **P2 C2**: 포커 5종 명세. **P2 C3**: `AdrGenerator.generate()` — evidence claims/sources 기반 ADR 생성, LLM 실패 시 fallback (fallback은 LLM 호출 후만 적용). **P2 C4**: `TraceabilityGenerator.generate()` — claims=[] 시 `""` 반환, 휴리스틱 claim↔spec↔task 매핑 MD 표. `_call_llm_raw()` 실패 시 `""` (sentinel 명확화). 저장 위치: ADR=`docs/decisions/<slug>-rule-baseline.md`, trace=`docs/research/<slug>-traceability.md` | Master_Blueprint.md §0 |
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | Master_Blueprint.md §0 |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입. **sandbox 후처리**: `_apply_sandbox_mode()`가 `build_cli_command()` 최종 `return cmd` 직전에 완성 argv를 받아 `sandbox_enabled()` 값에 따라 codex는 `--sandbox danger-full-access`(off 시), gemini는 `--sandbox` 제거(off 시, `--approval-mode yolo` 보존 — INV-S7 hang 방지) | Master_Blueprint.md §0 |
@@ -133,7 +133,7 @@ sources:
 | `core/skill_registry.py` | 스킬 메타데이터 중앙 저장소 | Master_Blueprint.md §0 |
 | `core/swarm_council.py` | 다중 역할 계획·승인 | Master_Blueprint.md §0 |
 | `core/document_policy.py` | 금지 토큰 스캔·입력 계약·Jaccard | Master_Blueprint.md §0 |
-| `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **Phase E (C-3stages 병렬화)**: `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id` doc_type별 격리. `_exec_stage2` (ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED)`). `_extract_section_outline` → tasks prev_spec_outline 전달. 텔레메트리 → `write_initial_record`. **v3.1 (2026-05-11)**: `_GRACE_SEC=5`. `_exec_stage1`(plan+EpisodeHints) / `_exec_stage3`(spec_outline+tasks) 신설. `_generate_and_refine` `deadline` + refine loop deadline guard (F1). `_extract_section_outline` mismatch→`""` (F9). `_exec_stage2` `deadline=` 전달. Stage3 진입 전 `time.sleep(_GRACE_SEC)` (R7). **B-1 (2026-05-21)**: `_inline(value, limit)` sanitizer(`\s+→" "`, `\n##` 분리 방지) + `_skill_gap_bullets(brief, limit)` list[dict] formatter + `_structured_evidence_block(brief)` — structured evidence 3필드(required_capabilities/verification_focus/skill_gap_hypotheses)를 fallback plan/spec/design `## Evidence` 내부 sub-bullet으로 보존. 새 `##` 헤더 신설 없음(`_extract_section_outline` count=12 회귀 방지). **B-1 후행 (2026-05-21)**: `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 명시 — required_capabilities=스킬조달신호, verification_focus=Evidence 하위 검증기준, skill_gap_hypotheses=reuse/enhance/forge계획신호, 새 ## 섹션 금지. | Master_Blueprint.md §0 |
+| `core/work_item_generator.py` | LLM 기반 work-item 생성 + chained refinement. **Phase E (C-3stages 병렬화)**: `TOTAL_BUDGET=600s`, `STAGE_BUDGET{1:90/2:400/3:110}`. `_build_full_run_id` doc_type별 격리. `_exec_stage2` (ThreadPoolExecutor×2 + `cf.wait(ALL_COMPLETED)`). `_extract_section_outline` → tasks prev_spec_outline 전달. 텔레메트리 → `write_initial_record`. **v3.1 (2026-05-11)**: `_GRACE_SEC=5`. `_exec_stage1`(plan+EpisodeHints) / `_exec_stage3`(spec_outline+tasks) 신설. `_generate_and_refine` `deadline` + refine loop deadline guard (F1). `_extract_section_outline` mismatch→`""` (F9). `_exec_stage2` `deadline=` 전달. Stage3 진입 전 `time.sleep(_GRACE_SEC)` (R7). **B-1 (2026-05-21)**: `_inline(value, limit)` sanitizer(`\s+→" "`, `\n##` 분리 방지) + `_skill_gap_bullets(brief, limit)` list[dict] formatter + `_structured_evidence_block(brief)` — structured evidence 3필드(required_capabilities/verification_focus/skill_gap_hypotheses)를 fallback plan/spec/design `## Evidence` 내부 sub-bullet으로 보존. 새 `##` 헤더 신설 없음(`_extract_section_outline` count=12 회귀 방지). **B-1 후행 (2026-05-21)**: `_generate_feature_plan`/`_generate_feature_spec`/`_generate_implementation_design` LLM 프롬프트 Rules에 structured evidence 명시 — required_capabilities=스킬조달신호, verification_focus=Evidence 하위 검증기준, skill_gap_hypotheses=reuse/enhance/forge계획신호, 새 ## 섹션 금지. **Q-S4(2026-06-19)**: `stage_router.run()` 후 `_qa_*` sentinel keys pop → `project_brief` in-place 업데이트(test_seam→deliverables 승격 INV-Q3 경로 C). last_updated: 2026-06-19 | Master_Blueprint.md §0 |
 | `core/cli_session_cleanup.py` | `.af_runtime/cli_sessions/` 하위 30일 초과 CLI 세션 파일 TTL 정리 (Phase A, v2 finding #2). **v3.1 R8**: 디렉토리 cleanup 시 dir mtime 대신 자식 파일 max mtime 사용 (POSIX dir mtime 의미 불일치 수정). | Master_Blueprint.md §0 |
 | `core/work_item_telemetry.py` | work-item 생성 텔레메트리 — T1 retry 횟수 atomic JSON 기록 (Phase A). **simplify**: `write_initial_record(workspace, slug, results)` 신규 (초기 dump, locked_file + atomic write). **v3.1 F7**: 경로 `workspace_runtime_dir(workspace) / "work_item_telemetry"` (컨벤션 통일). | Master_Blueprint.md §0 |
 | `core/requirement_llm.py` | LLM 요구사항 분석 + 마크다운 문서 생성. **Phase C**: `return_usage=False` 옵션, `execute_document_prompt` 응답에 `elapsed_sec`+`usage_tokens` 추가. **simplify**: `_make_usage(prompt_t, completion_t)` 헬퍼 추출 (3× 인라인 중복 제거). **v3.1 F2**: `_call_google/openai/anthropic_api`에 `timeout_sec: int = 120` 추가; google → ThreadPoolExecutor manual + `fut.result(timeout=)`; openai → `client.with_options(timeout=)`; anthropic → `urlopen(timeout=timeout_sec)`. `execute_document_prompt` 3개 API 호출에 `timeout_sec=` 전달. | Master_Blueprint.md §0 |
@@ -141,7 +141,7 @@ sources:
 | `core/control/supervisor.py` | 유지보수 감독 루프 | Master_Blueprint.md §0 |
 | `core/agent_reservation.py` | agent reservation | Master_Blueprint.md §0 |
 | `core/capability_intent.py` | capability intent | Master_Blueprint.md §0 |
-| `core/clarification.py` | clarification | Master_Blueprint.md §0 |
+| `core/clarification.py` | clarification. **Q-S4(2026-06-19)**: `merge_clarification()`에 `elif not category and q.get("output_field"):` 분기 추가 — YAML 질문(output_field 기반)의 답을 `enriched[output_field]`에 저장 + `test_seam` 이면 `deliverables`에도 승격(INV-Q3 경로 A/B). last_updated: 2026-06-19 | Master_Blueprint.md §0 |
 | `core/interview.py` | user-facing deep interview workflow | Master_Blueprint.md §0 |
 | `core/research_brief.py` | §17 Step 3 — interview artifact → ResearchBrief; evidence tagger | Master_Blueprint.md §0 |
 | `core/spec_compiler.py` | §17 Step 4 — interview + research → CompiledSpec | Master_Blueprint.md §0 |
@@ -1359,7 +1359,7 @@ sources:
 
 ### `tests`
 
-217 modules · 399 classes · 1837 functions
+218 modules · 404 classes · 1837 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1486,6 +1486,7 @@ sources:
 - `tests/test_provider_detect.py` — 0 class / 35 func
 - `tests/test_provider_instruction_sync.py` — 0 class / 25 func
 - `tests/test_q_s3_path_c.py` — 8 class / 2 func
+- `tests/test_q_s4.py` — 5 class / 0 func
 - `tests/test_qa_report.py` — 7 class / 2 func
 - `tests/test_quality_contract.py` — 2 class / 2 func
 - `tests/test_registry.py` — 0 class / 3 func

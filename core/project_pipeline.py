@@ -1028,6 +1028,31 @@ class ProjectPipeline:
         except Exception as _gc_err:
             _safe_print(f"[Pipeline] goal_contract generation skipped: {_gc_err}")
 
+        # Q-S4 §8: QA 필드 → GoalEntry 흡수 (INV-Q2/Q3 연결)
+        try:
+            from core.completion_contract import GoalEntry, GoalContract as _GC
+            _qa_prov_map: dict[str, str] = project_brief.get("qa_provenance") or {}
+            for _qf_id, _qf_key, _is_expected in [
+                ("QA-OBS", "observable_goal", False),
+                ("QA-GEX", "golden_example", True),
+                ("QA-SEAM", "test_seam", False),
+            ]:
+                _qf_val = str(project_brief.get(_qf_key) or "")
+                if not _qf_val:
+                    continue
+                _ge = GoalEntry(
+                    goal_id=_qf_id,
+                    description=f"[{_qf_key}] {_qf_val[:200]}",
+                    harness_type="none",
+                    expected_output=_qf_val if _is_expected else "",
+                    provenance=_qa_prov_map.get(_qf_key, "default"),
+                )
+                if _goal_contract is None:
+                    _goal_contract = _GC(task_id=slug)
+                _goal_contract.goals.append(_ge)
+        except Exception as _qa_err:
+            _safe_print(f"[Pipeline] QA goal entry absorption skipped: {_qa_err}")
+
         # -- Plan-Critique-Verify --
         try:
             from core.plan_verifier import PlanVerifier

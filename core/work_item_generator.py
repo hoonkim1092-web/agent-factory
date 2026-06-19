@@ -1191,6 +1191,24 @@ def generate_work_items(
             doc_root=doc_root,
             slug=slug,
         )
+        # INV-Q3: sentinel keys → project_brief QA 필드 흡수 + seam → deliverables 승격
+        _qa_seam = stage0_files.pop("_qa_test_seam", "")
+        _qa_obs = stage0_files.pop("_qa_observable_goal", "")
+        _qa_gex = stage0_files.pop("_qa_golden_example", "")
+        stage0_files.pop("_qa_manual_only", "")
+        _qa_prov_str = stage0_files.pop("_qa_provenance", "")
+        if _qa_seam:
+            project_brief.setdefault("deliverables", []).append(f"테스트 seam: {_qa_seam}")
+            project_brief["test_seam"] = _qa_seam
+        if _qa_obs:
+            project_brief["observable_goal"] = _qa_obs
+        if _qa_gex:
+            project_brief["golden_example"] = _qa_gex
+        if _qa_prov_str:
+            try:
+                project_brief["qa_provenance"] = json.loads(_qa_prov_str)
+            except Exception as _prov_err:
+                _LOGGER.warning("qa_provenance parse failed: %s [raw: %.80s]", _prov_err, _qa_prov_str)
         if stage0_files.get("paused_hitl"):
             # paused_hitl 분기: Stage 1~3 skip, file-path map 반환
             stage0_files["approval-gate.md"] = stage0_files.get(

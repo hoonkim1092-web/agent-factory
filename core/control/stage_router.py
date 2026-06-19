@@ -128,6 +128,16 @@ class StageRouter:
             goal_path = self._write_project_goal(work_dir, gc_result, blast_radius)
             files["project_goal"] = goal_path
             self._append_assumptions(work_dir, gc_result, "goal_clarification")
+            # INV-Q3 sentinel: work_item_generator가 project_brief에 QA값 흡수
+            _qa_field_names = ("observable_goal", "golden_example", "test_seam", "manual_only")
+            _qa_prov: dict[str, str] = {}
+            for _r in gc_result.results:
+                if _r.output_field in _qa_field_names:
+                    if _r.value:
+                        files[f"_qa_{_r.output_field}"] = str(_r.value)
+                    _qa_prov[_r.output_field] = getattr(_r, "provenance", "default")
+            if _qa_prov:
+                files["_qa_provenance"] = json.dumps(_qa_prov)
 
         if br_result:
             dr_path = self._write_domain_review(work_dir, br_result, blast_radius)

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T20:52:50+09:00
-source_commit: 47e7c16a
+generated_at: 2026-06-19T23:45:06+09:00
+source_commit: 93f6c45f
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -7460,6 +7460,15 @@ _(no top-level symbols)_
 **Functions:**
 - `_make_rs_question`
 - `_make_llm_question`
+
+## `tests/test_q_s4.py`
+
+**Classes:**
+- `TestMergeClarificationOutputField`
+- `TestStageRouterSentinelKeys`
+- `TestWorkItemGeneratorQaAbsorption`
+- `TestGoalContractFrozenBeforeExecute`
+- `TestPipelinePrepareDocumentsQaAbsorption`
 
 ## `tests/test_qa_report.py`
 

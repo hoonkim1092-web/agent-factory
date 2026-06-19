@@ -55,6 +55,7 @@ ArtifactName = Literal[
     "plan.json",
     "merge_report.json",
     "phase_trace.jsonl",
+    "goal_contract.json",
 ]
 
 # run_id must be alphanumeric + hyphens — no path separators or dots
@@ -1762,12 +1763,22 @@ def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     """Full DEVELOP path: delegate to ProjectPipeline inside isolation env."""
     worktree = state.worktree_workspace or state.source_workspace
     with _develop_isolation_env(worktree):
-        result = pipeline.run(
+        prepared = pipeline.prepare(
             task_input=state.task,
             workspace=worktree,
             runtime_workspace=state.runtime_workspace,
             route=state.route_decision or None,
         )
+        # INV-Q4: execute() 전에 GoalContract write-once 스냅샷 (구현 단계 수정 차단)
+        _snapshot_path = _artifact_path(state, "goal_contract.json")
+        if prepared.goal_contract is not None and not _snapshot_path.exists():
+            atomic_write_json(_snapshot_path, prepared.goal_contract.to_dict())
+        # 자동 승인 (pipeline.run() 내부 동작과 동일)
+        _gate = prepared.gate()
+        if not os.path.exists(_gate.gate_path):
+            _gate.initialize(prepared.work_item_slug, run_id=prepared.run_id)
+        _gate.approve(approver="auto", run_id=prepared.run_id)
+        result = pipeline.execute(prepared, runtime_workspace=state.runtime_workspace)
     changed: list[str] = list(result.get("changed_files") or [])
     if not changed:
         changed = _changed_files_fallback(state, worktree)

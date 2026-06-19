@@ -176,6 +176,12 @@ def merge_clarification(
             _append_to("constraints", f"성능: {selected}")
         elif category == "integration":
             _append_to("constraints", f"연동: {selected}")
+        elif not category and q.get("output_field"):
+            # YAML 질문 (output_field 기반) — INV-Q3: test_seam → deliverables 승격
+            _of = q["output_field"]
+            enriched[_of] = selected
+            if _of == "test_seam" and selected:
+                _append_to("deliverables", f"테스트 seam: {selected}")
 
     enriched["clarification_log"] = clarification_log
     return enriched

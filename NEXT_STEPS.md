@@ -31,7 +31,15 @@
 > - 테스트 25건 신규 / 회귀 64건 PASS. 2-Tier: af-critic WARN→수정 / af-test-runner PASS(89)
 > - wiring deferred — Q-S4/Q-S6 또는 project_pipeline.py에서 연결 예정
 
-## ▶ 다음 — Q-S4
+### ✅ (Q-S4) seam→deliverables 승격 + GoalContract 동결 완료 (2026-06-19, Sonnet)
+> - **INV-Q3 경로 A/B** (`core/clarification.py`): `merge_clarification()`에 `output_field` 기반 YAML 질문 흡수 — `enriched[output_field]=selected`, `test_seam`→deliverables 승격
+> - **INV-Q3 경로 C Step1** (`core/control/stage_router.py`): `_run_new_project()`이 `_qa_*` sentinel keys + `_qa_provenance`(JSON) 추가
+> - **INV-Q3 경로 C Step2** (`core/work_item_generator.py`): sentinel pop + `project_brief` in-place 업데이트, 파싱 실패 시 WARN 로그
+> - **§8 QA 필드 흡수** (`core/project_pipeline.py`): `prepare_documents()` GoalContract 생성 직후 `observable_goal`/`golden_example`/`test_seam` → GoalEntry(QA-OBS/QA-GEX/QA-SEAM)
+> - **INV-Q4** (`core/dogfood.py`): `_run_develop_full()` 분해 → `pipeline.prepare()` + write-once snapshot(`goal_contract.json`) + 자동승인 + `pipeline.execute()`
+> - 테스트 16건 신규 / 회귀 41건 PASS. 3-Tier: af-critic WARN(4)/BLOCK(0)→수정1건 / af-cross-review SKIP(Codex 세션 한도) / af-test-runner PASS(41)
+
+## ▶ 다음 — Q-S6 (AcceptanceGate 실행 + qa_report.py wiring) 또는 신규 work-item
 
 ## ▶ (이전) Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
