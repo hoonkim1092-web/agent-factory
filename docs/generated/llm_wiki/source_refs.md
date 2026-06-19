@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T03:11:28+09:00
-source_commit: a5295f1a
+generated_at: 2026-06-20T04:33:13+09:00
+source_commit: 07d3db31
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -9,7 +9,7 @@ sources:
 
 # Source References — 섹션 ↔ 원본 경로 매핑
 
-> source_commit: `a5295f1a`
+> source_commit: `07d3db31`
 > 관련: [[index]] | [[architecture]] | [[symbols]]
 
 ## Master_Blueprint.md
@@ -25,16 +25,16 @@ sources:
 | §1 아키텍처 개요 | `Master_Blueprint.md:247` / [[blueprint/1-아키텍처-개요]] |
 | §2 실행 흐름 | `Master_Blueprint.md:283` / [[blueprint/2-실행-흐름]] |
 | §3 핵심 서브시스템 | `Master_Blueprint.md:438` / [[blueprint/3-핵심-서브시스템]] |
-| §4 자가진화 루프 | `Master_Blueprint.md:1156` / [[blueprint/4-자가진화-루프]] |
-| §5 에이전트 간 통신 | `Master_Blueprint.md:1218` / [[blueprint/5-에이전트-간-통신]] |
-| §6 모델 라우팅 | `Master_Blueprint.md:1249` / [[blueprint/6-모델-라우팅]] |
-| §7 안전장치 | `Master_Blueprint.md:1285` / [[blueprint/7-안전장치]] |
-| §8 빌드 & 배포 | `Master_Blueprint.md:1434` / [[blueprint/8-빌드-배포]] |
-| §9 설정 레퍼런스 | `Master_Blueprint.md:1553` / [[blueprint/9-설정-레퍼런스]] |
-| §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1609` / [[blueprint/10-의존성-그래프-영향-매트릭스]] |
-| §11 알려진 제약·이슈 | `Master_Blueprint.md:1663` / [[blueprint/11-알려진-제약-이슈]] |
-| §12 변경 이력 | `Master_Blueprint.md:1695` / [[blueprint/12-변경-이력]] |
-| 유지보수 가이드 | `Master_Blueprint.md:2898` / [[blueprint/maintenance-guide]] |
+| §4 자가진화 루프 | `Master_Blueprint.md:1155` / [[blueprint/4-자가진화-루프]] |
+| §5 에이전트 간 통신 | `Master_Blueprint.md:1217` / [[blueprint/5-에이전트-간-통신]] |
+| §6 모델 라우팅 | `Master_Blueprint.md:1248` / [[blueprint/6-모델-라우팅]] |
+| §7 안전장치 | `Master_Blueprint.md:1284` / [[blueprint/7-안전장치]] |
+| §8 빌드 & 배포 | `Master_Blueprint.md:1433` / [[blueprint/8-빌드-배포]] |
+| §9 설정 레퍼런스 | `Master_Blueprint.md:1552` / [[blueprint/9-설정-레퍼런스]] |
+| §10 의존성 그래프 & 영향 매트릭스 | `Master_Blueprint.md:1608` / [[blueprint/10-의존성-그래프-영향-매트릭스]] |
+| §11 알려진 제약·이슈 | `Master_Blueprint.md:1662` / [[blueprint/11-알려진-제약-이슈]] |
+| §12 변경 이력 | `Master_Blueprint.md:1694` / [[blueprint/12-변경-이력]] |
+| 유지보수 가이드 | `Master_Blueprint.md:2899` / [[blueprint/maintenance-guide]] |
 | §3.1 ProjectPipeline | `Master_Blueprint.md:§3.1` |
 | §3.2 DynamicOrchestrator | `Master_Blueprint.md:§3.2` |
 | §3.3 AgentRunner | `Master_Blueprint.md:§3.3` |

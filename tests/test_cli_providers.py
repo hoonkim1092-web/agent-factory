@@ -990,3 +990,83 @@ class TestAllowFileEdit:
         assert "--sandbox" in cmd
         assert "--approval-mode" in cmd
         assert "yolo" in cmd
+
+
+# S1: shell_error 분류 및 ok 승격 차단 테스트
+class TestShellErrorClassification:
+    """S1 슬라이스 — _SHELL_FAILURE_MARKERS 및 제외 튜플 신규 분기 검증."""
+
+    def test_shell_error_classified_correctly(self, tmp_path):
+        """stderr에 shell_error 시그니처 + returncode=1 + text非공백 → ok is False, reason에 shell_error 포함."""
+        from core.providers.cli import CliChatRequest, execute_cli_chat
+
+        workspace = tmp_path / "proj"
+        workspace.mkdir(parents=True, exist_ok=True)
+
+        def cli_runner(*args, **kwargs):
+            return types.SimpleNamespace(
+                returncode=1,
+                stdout="some agent output",
+                stderr="error: batch file arguments are invalid, check your invocation",
+            )
+
+        result = execute_cli_chat(
+            CliChatRequest(
+                provider_id="codex_cli",
+                model="gpt-5",
+                system_prompt="system prompt",
+                task_input="execute task",
+                workspace=str(workspace),
+                run_id="run_shell_error",
+            ),
+            run_command=cli_runner,
+        )
+
+        from core.providers.cli import _classify_cli_issue
+        issue = _classify_cli_issue(
+            "some agent output",
+            "error: batch file arguments are invalid, check your invocation",
+        )
+        assert issue == "shell_error"
+        assert result["ok"] is False
+        assert "shell_error" in result["reason"]
+
+    def test_shell_error_no_false_promotion_regression(self, tmp_path):
+        """동일 조건에서 shell_error 시그니처 제거 → ok is True (기존 codex 승격 유지)."""
+        from core.providers.cli import CliChatRequest, execute_cli_chat
+
+        workspace = tmp_path / "proj"
+        workspace.mkdir(parents=True, exist_ok=True)
+
+        def cli_runner(*args, **kwargs):
+            return types.SimpleNamespace(
+                returncode=1,
+                stdout="some agent output",
+                stderr="normal stderr without shell failure marker",
+            )
+
+        result = execute_cli_chat(
+            CliChatRequest(
+                provider_id="codex_cli",
+                model="gpt-5",
+                system_prompt="system prompt",
+                task_input="execute task",
+                workspace=str(workspace),
+                run_id="run_no_shell_error",
+            ),
+            run_command=cli_runner,
+        )
+
+        assert result["ok"] is True
+
+    def test_existing_markers_unaffected(self):
+        """auth/permission/hook 기존 마커는 결과 불변."""
+        from core.providers.cli import _classify_cli_issue
+
+        assert _classify_cli_issue("", "not logged in") == "auth_required"
+        assert _classify_cli_issue("", "access is denied") == "permission_denied"
+        assert _classify_cli_issue("", "hook_runner.py] failed: exit 1") == "hook_failure"
+        # shell_error 시그니처만 shell_error 반환
+        assert _classify_cli_issue("", "batch file arguments are invalid") == "shell_error"
+        # 아무 마커 없으면 빈 문자열
+        assert _classify_cli_issue("", "") == ""

@@ -11,10 +11,16 @@
 - Bug2 산출물 검증 없음(goal_count 미생성인데 ok)
 - Bug3 무진전 fail-fast 없음 → 빈 사이클 100바퀴 → 침묵사
 
-**수정 우선순위**:
-1. **Bug1 가짜성공 탐지** (최우선): 파일변경 0 / 에이전트 자기보고 실패 / 기대 산출물 부재 → `ok:false`. 단 agent_runner/dynamic_orchestrator는 Tier-3 → 설계 1장 후 진행.
-2. Bug3 무진전 fail-fast ("N 사이클 보드 진전 0 → BLOCK", provider 실패도 포함)
-3. 작은 Tier-3 실행 흐름(build→존재가드→test→review→cross_review, 싼게이트가 비싼걸 가림+스코프 재리뷰+루프캡+수렴정의)
+**✅ 수정 설계 완료 (2026-06-20, Opus, af-cross-review PASS/BLOCK0)**: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md`. correctness 3슬라이스(disjoint 파일·병렬 구현 가능):
+- **S1 (cli.py)**: `batch file arguments are invalid` → `shell_error` 분류 → codex ok-승격 차단
+- **S2 (agent_runner.py:1226)**: 보수적 가짜성공 가드(`ok&&rc!=0&&파일변경0`→강등). `_workspace_mutation_signature` 신규
+- **S3 (dynamic_orchestrator.py)**: 무진전 fail-fast(`AGENT_HARD_NO_PROGRESS=20` + `all_infra||retry_exhausted`→`blocked_no_progress` BLOCK)
+- **▶ 다음 = Sonnet 병렬 구현** (S1·S3 먼저 → S2). 각 Tier-3 → 3-Tier 리뷰. 우선순위 3·5는 §6 별도 설계로 분리(baseline churn BLOCK루프 회피).
+
+**원 진단 우선순위(동결)**:
+1. **Bug1 가짜성공 탐지** → S2로 설계됨
+2. Bug3 무진전 fail-fast → S3로 설계됨
+3. 작은 Tier-3 실행 흐름(build→존재가드→test→review→cross_review) → §6.1 별도 설계 보류
 
 **보류(死因 아님, 별개 트랙)**: Tier-3 파일단위 regex → AST proof-carrying(Phase1) / Floor2 주입 억제는 merge∈{never,manual} 조건부 / 과분해는 bootstrap_roles 프롬프트 규모 조건부화.
 **정정(red herring)**: gemini 키없음 死因 아님 / 일반 AF 풀경로는 파이프라인이 commit 안 해 프리커밋 3-tier 미발화.

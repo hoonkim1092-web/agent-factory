@@ -1142,13 +1142,12 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(core): code update — dogfood.py, project_pipeline.py, qa_report.py, test_dogfood.py, test_qa_report_wiring.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dynamic_orchestrator.py, cli.py, 2026-06-20-dogfood-false-success-spin-fix-design.md (+2)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodState` |
-| `core/project_pipeline.py` | project pipeline | `ProjectPipeline` |
-| `core/qa_report.py` | QA 리포트 렌더러 — evidence_ledger → 자기완결 HTML 파일. | `render_html()` |
+| `core/dynamic_orchestrator.py` | dynamic orchestrator | `DynamicOrchestrator` |
+| `core/providers/cli.py` | cli | `execute_cli_chat()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1696,6 +1695,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dynamic_orchestrator.py, cli.py, 2026-06-20-dogfood-false-success-spin-fix-design.md (+2) |
+| 2026-06-20 | v1.2.34 | fix(dogfood): 가짜성공/spin 침묵사 수정 — S1: `core/providers/cli.py` `_SHELL_FAILURE_MARKERS=("batch file arguments are invalid",)` 신설 + `_classify_cli_issue`에 `shell_error` 분기 + ok-승격 제외 튜플 확장(INV-S1a/b: shell_error 없는 run·returncode==0 경로 불변). S3: `core/dynamic_orchestrator.py` `_hard_no_progress_cycles=env(AGENT_HARD_NO_PROGRESS,20)` 신설(stall_threshold:77 직후) + 루프 내 hard-stop(`all_infra OR retry_exhausted`→`_blocked_no_progress=True; break`) + 상태 결정 선두에 `blocked_no_progress` 분기(INV-S3a/b/c). 테스트 S1 3건 + S3 4건 신규. 3-Tier: af-critic PASS×2 / af-cross-review WARN(BLOCK 0, Advisory: 테스트 production 루프 우회 Medium) / af-test-runner PASS(3518). 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md`. — core/providers/cli.py, core/dynamic_orchestrator.py, tests/test_cli_providers.py, tests/test_dynamic_orchestrator_workspace_scope.py |
 | 2026-06-20 | v1.2.34 | chore(core): code update — dogfood.py, project_pipeline.py, qa_report.py, test_dogfood.py, test_qa_report_wiring.py |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+12) |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, INSTRUCTIONS.md, Master_Blueprint.md (+10) |

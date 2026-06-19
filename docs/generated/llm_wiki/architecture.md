@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T03:11:28+09:00
-source_commit: a5295f1a
+generated_at: 2026-06-20T04:33:13+09:00
+source_commit: 07d3db31
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1359,7 +1359,7 @@ sources:
 
 ### `tests`
 
-219 modules · 407 classes · 1838 functions
+219 modules · 408 classes · 1843 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1395,7 +1395,7 @@ sources:
 - `tests/test_check_model_escalation.py` — 0 class / 5 func
 - `tests/test_check_pending_review.py` — 1 class / 0 func
 - `tests/test_check_staged_design_review.py` — 9 class / 1 func
-- `tests/test_cli_providers.py` — 1 class / 31 func
+- `tests/test_cli_providers.py` — 2 class / 31 func
 - `tests/test_cli_session_adapter.py` — 0 class / 10 func
 - `tests/test_codebase_symbols.py` — 0 class / 22 func
 - `tests/test_coding_conventions.py` — 0 class / 7 func
@@ -1416,7 +1416,7 @@ sources:
 - `tests/test_dogfood_integration.py` — 0 class / 16 func
 - `tests/test_dogfood_isolation.py` — 0 class / 72 func
 - `tests/test_dogfood_realignment.py` — 1 class / 6 func
-- `tests/test_dynamic_orchestrator_workspace_scope.py` — 8 class / 11 func
+- `tests/test_dynamic_orchestrator_workspace_scope.py` — 8 class / 16 func
 - `tests/test_engine_auth_provider_priority.py` — 0 class / 11 func
 - `tests/test_enqueue_staged_review.py` — 0 class / 5 func
 - `tests/test_escalation_evaluator.py` — 0 class / 11 func

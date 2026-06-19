@@ -139,6 +139,10 @@ _HOOK_FAILURE_MARKERS = (
     "hook_bridge.py] failed",
 )
 
+_SHELL_FAILURE_MARKERS = (
+    "batch file arguments are invalid",
+)
+
 
 def get_cli_provider_spec(provider_id: str) -> CliProviderSpec:
     key = str(provider_id or "").strip().lower()
@@ -383,6 +387,8 @@ def _classify_cli_issue(stdout: str, stderr: str) -> str:
         return "auth_required"
     if any(marker in haystack for marker in _HOOK_FAILURE_MARKERS):
         return "hook_failure"
+    if any(marker in haystack for marker in _SHELL_FAILURE_MARKERS):
+        return "shell_error"
     return ""
 
 
@@ -927,7 +933,7 @@ def execute_cli_chat(
     issue = _classify_cli_issue(completed.stdout, completed.stderr)
     ok = completed.returncode == 0 and bool(text.strip())
     if not ok and request.provider_id == "codex_cli" and bool(text.strip()):
-        if issue not in ("auth_required", "permission_denied", "hook_failure"):
+        if issue not in ("auth_required", "permission_denied", "hook_failure", "shell_error"):
             ok = True
     mins, secs = divmod(elapsed, 60)
     if ok:

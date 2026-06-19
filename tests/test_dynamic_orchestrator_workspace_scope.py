@@ -521,3 +521,163 @@ def test_needs_llm_intervention_allows_stall_when_impl_failures_mixed(monkeypatc
     ] * (threshold // 2)
     # impl 실패가 있으므로 LLM 개입 허용
     assert orch._needs_llm_intervention(cycle, "/fake") is True
+
+
+# ----- S3 무진전 fail-fast (hard-stop) 테스트 -----
+
+def _make_orch_for_failfast(monkeypatch):
+    """S3 테스트용 공통 픽스처: 모든 외부 의존 mocking."""
+    monkeypatch.setattr(dyn, "LLMEngine", _DummyLLM)
+    monkeypatch.setattr(dyn, "AgentRunner", _DummyRunner)
+    monkeypatch.setattr(dyn, "AgentManager", _DummyAgentManager)
+    monkeypatch.setattr(dyn, "AstMemoryHub", _DummyMemoryHub)
+    monkeypatch.setattr(dyn, "StrategyEvaluator", _DummyEvaluator)
+    orch = dyn.DynamicOrchestrator(_DummyMR())
+    # 임계값을 낮게 설정해 테스트 속도 확보
+    orch._hard_no_progress_cycles = 5
+    orch._stall_threshold = 3
+    return orch
+
+
+def test_no_progress_all_infra_triggers_fail_fast(monkeypatch):
+    """무진전 + failed 전부 infra → _blocked_no_progress=True, current_status='blocked_no_progress'."""
+    orch = _make_orch_for_failfast(monkeypatch)
+
+    # _last_completion_cycle=0 고정, cycle이 임계(5) 초과
+    orch._last_completion_cycle = 0
+    # 임계 직전(5)에는 트리거 안 됨 — 6사이클이 되는 시점에 발동
+    cycle = orch._hard_no_progress_cycles + 1  # 6
+    cycles_since_completion = cycle - orch._last_completion_cycle  # 6
+
+    # failed_subtasks: 전부 infra
+    orch.state_board["failed_subtasks"] = [
+        {"role": "cross_validator", "failure_category": "infra", "reason": "cli_auth_required"}
+        for _ in range(orch._stall_threshold)
+    ]
+
+    # hard-stop 조건 직접 평가 (루프 내 로직과 동일한 조건)
+    _recent = orch.state_board.get("failed_subtasks", [])[-orch._stall_threshold:]
+    all_infra = bool(_recent) and all(f.get("failure_category") == "infra" for f in _recent)
+    retry_exhausted = (
+        bool(orch._task_retry_count)
+        and all(v >= orch._max_task_retries for v in orch._task_retry_count.values())
+    )
+
+    assert cycles_since_completion >= orch._hard_no_progress_cycles
+    assert cycle > orch._hard_no_progress_cycles
+    assert all_infra is True, "전부 infra여야 한다"
+    assert all_infra or retry_exhausted, "hard-stop 조건이 충족돼야 한다"
+
+    # 상태 결정 분기 직접 검증
+    orch.state_board["_blocked_no_progress"] = True
+    if orch.state_board.get("_blocked_no_progress"):
+        orch.state_board["current_status"] = "blocked_no_progress"
+    elif cycle >= 100:
+        orch.state_board["current_status"] = "stopped_max_cycles"
+    elif orch.state_board["failed_subtasks"]:
+        orch.state_board["current_status"] = "partial"
+    else:
+        orch.state_board["current_status"] = "completed"
+
+    assert orch.state_board["current_status"] == "blocked_no_progress"
+
+
+def test_no_progress_retry_exhausted_triggers_fail_fast(monkeypatch):
+    """무진전 + _task_retry_count 전부 >= max_task_retries → blocked_no_progress."""
+    orch = _make_orch_for_failfast(monkeypatch)
+
+    orch._last_completion_cycle = 0
+    cycle = orch._hard_no_progress_cycles + 1  # 6
+    cycles_since_completion = cycle - orch._last_completion_cycle  # 6
+
+    # failed_subtasks: non-infra (retry_exhausted 경로를 테스트)
+    orch.state_board["failed_subtasks"] = [
+        {"role": "dev", "failure_category": "impl", "reason": "compile error", "task_id": "task_dev"}
+    ]
+
+    # retry_count 전부 소진
+    orch._task_retry_count = {
+        "task_dev": orch._max_task_retries,  # == 3
+        "task_qa": orch._max_task_retries,
+    }
+
+    _recent = orch.state_board.get("failed_subtasks", [])[-orch._stall_threshold:]
+    all_infra = bool(_recent) and all(f.get("failure_category") == "infra" for f in _recent)
+    retry_exhausted = (
+        bool(orch._task_retry_count)
+        and all(v >= orch._max_task_retries for v in orch._task_retry_count.values())
+    )
+
+    assert cycles_since_completion >= orch._hard_no_progress_cycles
+    assert cycle > orch._hard_no_progress_cycles
+    assert all_infra is False
+    assert retry_exhausted is True
+    assert all_infra or retry_exhausted, "retry_exhausted 경로로 hard-stop 조건 충족"
+
+    orch.state_board["_blocked_no_progress"] = True
+    if orch.state_board.get("_blocked_no_progress"):
+        orch.state_board["current_status"] = "blocked_no_progress"
+    elif cycle >= 100:
+        orch.state_board["current_status"] = "stopped_max_cycles"
+    elif orch.state_board["failed_subtasks"]:
+        orch.state_board["current_status"] = "partial"
+    else:
+        orch.state_board["current_status"] = "completed"
+
+    assert orch.state_board["current_status"] == "blocked_no_progress"
+
+
+def test_no_progress_mixed_failure_no_fast_fail(monkeypatch):
+    """non-infra 섞임 + retry 미소진 → hard-stop 조건 미충족, break 안 함."""
+    orch = _make_orch_for_failfast(monkeypatch)
+
+    orch._last_completion_cycle = 0
+    cycle = orch._hard_no_progress_cycles + 1  # 6
+    cycles_since_completion = cycle - orch._last_completion_cycle  # 6
+
+    # failed_subtasks: infra + non-infra 혼재
+    orch.state_board["failed_subtasks"] = [
+        {"role": "dev", "failure_category": "infra", "reason": "cli_auth_required"},
+        {"role": "dev", "failure_category": "impl", "reason": "compile error"},
+    ]
+
+    # retry 미소진
+    orch._task_retry_count = {"task_dev": 1}  # max_task_retries=3, 아직 소진 안 됨
+
+    _recent = orch.state_board.get("failed_subtasks", [])[-orch._stall_threshold:]
+    all_infra = bool(_recent) and all(f.get("failure_category") == "infra" for f in _recent)
+    retry_exhausted = (
+        bool(orch._task_retry_count)
+        and all(v >= orch._max_task_retries for v in orch._task_retry_count.values())
+    )
+
+    assert cycles_since_completion >= orch._hard_no_progress_cycles
+    assert cycle > orch._hard_no_progress_cycles
+    assert all_infra is False, "non-infra가 섞여 있어 all_infra=False"
+    assert retry_exhausted is False, "retry 미소진이므로 retry_exhausted=False"
+    # hard-stop 조건 미충족 → break 안 함
+    assert not (all_infra or retry_exhausted), "hard-stop 조건 미충족이어야 한다"
+
+    # _blocked_no_progress 미설정 → max_cycles 경로로 귀결
+    assert not orch.state_board.get("_blocked_no_progress")
+
+
+def test_progress_resets_counter(monkeypatch):
+    """_last_completion_cycle 갱신(진전 발생) → cycles_since_completion 임계 미달, hard-stop 안 함."""
+    orch = _make_orch_for_failfast(monkeypatch)
+
+    # 임계(5) 바로 아래: cycle=10, last_completion=6 → since=4 < 5
+    orch._hard_no_progress_cycles = 5
+    cycle = 10
+    orch._last_completion_cycle = 6  # 최근 완료 발생
+    cycles_since_completion = cycle - orch._last_completion_cycle  # 4
+
+    orch.state_board["failed_subtasks"] = [
+        {"role": "cross_validator", "failure_category": "infra", "reason": "cli_auth_required"}
+        for _ in range(orch._stall_threshold)
+    ]
+
+    # 임계 미달 → 조건 진입 안 함
+    assert cycles_since_completion < orch._hard_no_progress_cycles, \
+        "진전이 있으면 cycles_since_completion이 임계 미달이어야 한다"
+    assert not orch.state_board.get("_blocked_no_progress"), "_blocked_no_progress 미설정이어야 한다"

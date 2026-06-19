@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T03:11:28+09:00
-source_commit: a5295f1a
+generated_at: 2026-06-20T04:33:13+09:00
+source_commit: 07d3db31
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -5900,6 +5900,7 @@ _(no top-level symbols)_
 
 **Classes:**
 - `TestAllowFileEdit`
+- `TestShellErrorClassification`
 
 **Functions:**
 - `test_config_paths_allows_cli_only_bootstrap_without_api_keys`
@@ -6500,6 +6501,11 @@ _(no top-level symbols)_
 - `test_role_scoped_todo_is_not_cross_assigned`
 - `test_needs_llm_intervention_blocks_stall_when_all_recent_failures_are_infra`
 - `test_needs_llm_intervention_allows_stall_when_impl_failures_mixed`
+- `_make_orch_for_failfast`
+- `test_no_progress_all_infra_triggers_fail_fast`
+- `test_no_progress_retry_exhausted_triggers_fail_fast`
+- `test_no_progress_mixed_failure_no_fast_fail`
+- `test_progress_resets_counter`
 
 ## `tests/test_engine_auth_provider_priority.py`
 

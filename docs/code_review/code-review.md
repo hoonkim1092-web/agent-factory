@@ -7460,3 +7460,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (6)**: `Master_Blueprint.md, core/dogfood.py, core/project_pipeline.py, core/qa_report.py, tests/test_dogfood.py, tests/test_qa_report_wiring.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-20 04:33 — `2026-06-04-right-sized-execution-slice1` (07d3db31)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `Master_Blueprint.md, NEXT_STEPS.md, core/dynamic_orchestrator.py, core/providers/cli.py, docs/2026-06-20-dogfood-false-success-spin-fix-design.md, tests/test_cli_providers.py, tests/test_dynamic_orchestrator_workspace_scope.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

@@ -74,6 +74,7 @@ class DynamicOrchestrator:
         self._max_task_retries = 3
         self._last_completion_cycle: int = 0
         self._stall_threshold: int = int(os.getenv("AGENT_STALL_THRESHOLD", "15"))  # 환경변수로 조절 가능
+        self._hard_no_progress_cycles = int(os.getenv("AGENT_HARD_NO_PROGRESS", "20"))
         self.memory_hub = AstMemoryHub()
         self.evaluator = StrategyEvaluator(model_name=engine_id)
         self._workspace: str | None = None
@@ -1125,6 +1126,24 @@ class DynamicOrchestrator:
             if cycles_since_completion >= self._stall_threshold and cycle > self._stall_threshold:
                 print_agent_msg("Lilith", f"No progress for {cycles_since_completion} cycles — stall detected", "")
 
+            # Hard-stop: 무진전이 _hard_no_progress_cycles 초과하면 fail-fast BLOCK
+            if (cycles_since_completion >= self._hard_no_progress_cycles
+                    and cycle > self._hard_no_progress_cycles):
+                _recent = self.state_board.get("failed_subtasks", [])[-self._stall_threshold:]
+                # infra 실패만 있거나 모든 retry가 소진된 경우 hard-stop
+                # (참고: infra 실패 태스크는 dispatch가 skip되어 _task_retry_count가 증가 안 할 수 있음 — all_infra 분기가 그 케이스를 커버)
+                all_infra = bool(_recent) and all(
+                    f.get("failure_category") == "infra" for f in _recent)
+                retry_exhausted = (
+                    bool(self._task_retry_count)
+                    and all(v >= self._max_task_retries
+                            for v in self._task_retry_count.values()))
+                if all_infra or retry_exhausted:
+                    print_agent_msg("Lilith",
+                        f"무진전 {cycles_since_completion}사이클 (infra={all_infra}, retry_exhausted={retry_exhausted}) — fail-fast BLOCK", "")
+                    self.state_board["_blocked_no_progress"] = True
+                    break
+
             # 1. idle 에이전트 확인 (동적 추가된 역할 포함)
             all_roles = list(dict.fromkeys(roles + self._manifest_roles))
             available_roles = [r for r in all_roles if self.state_board["agents_status"].get(r) == "idle"]
@@ -1210,7 +1229,9 @@ class DynamicOrchestrator:
             if not dispatched:
                 await asyncio.sleep(1)
 
-        if cycle >= max_cycles:
+        if self.state_board.get("_blocked_no_progress"):
+            self.state_board["current_status"] = "blocked_no_progress"
+        elif cycle >= max_cycles:
             self.state_board["current_status"] = "stopped_max_cycles"
         elif self.state_board["failed_subtasks"]:
             self.state_board["current_status"] = "partial"
