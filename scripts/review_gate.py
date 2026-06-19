@@ -39,7 +39,7 @@ _VERDICT_HEADER_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 # Phase 2 v7 §5.3: verdict fence — body 인용 collision 차단 (G7 해소).
-# 첫 쌍만 인식; 다중/중첩 fence 발견 시 둘째 쌍 이후는 무시.
+# 다중 fence 시 마지막 fence 우선 — S6 합의 재발행이 S5 fence를 대체할 수 있도록.
 _VERDICT_FENCE_RE = re.compile(
     r"<!--\s*final-verdict-start\s*-->(.*?)<!--\s*final-verdict-end\s*-->",
     re.DOTALL | re.IGNORECASE,
@@ -64,8 +64,10 @@ def _extract_verdict_from_content(content: str) -> str | None:
 
     두 정규식은 동일 start position 충돌 불가능(start-disjoint). 다른 start에서의
     동시 매칭은 last-position 알고리즘이 마지막 출현(통상 verdict 라인)을 선택.
+    다중 fence 시 마지막 fence 우선 — S6 합의 재발행이 S5 fence를 올바르게 대체.
     """
-    fence = _VERDICT_FENCE_RE.search(content)
+    fences = list(_VERDICT_FENCE_RE.finditer(content))
+    fence = fences[-1] if fences else None
     target = fence.group(1) if fence else content
     matches: list[tuple[int, str]] = []
     for m in _VERDICT_RE.finditer(target):

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T11:28:29+09:00
-source_commit: 5771abec
+generated_at: 2026-06-19T12:02:12+09:00
+source_commit: 432872a7
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4731,6 +4731,17 @@ _(no top-level symbols)_
 
 _(no top-level symbols)_
 
+## `scripts/review_consensus.py`
+
+**Functions:**
+- `_surrounding_code`
+- `_enclosing_function`
+- `_find_callees`
+- `_find_callers`
+- `_find_tests`
+- `collect_evidence`
+- `main`
+
 ## `scripts/review_gate.py`
 
 **Functions:**
@@ -7542,6 +7553,23 @@ _(no top-level symbols)_
 - `test_load_returns_none_when_missing`
 - `test_load_returns_raw_after_save`
 
+## `tests/test_review_consensus.py`
+
+**Classes:**
+- `TestConsensusSidecarAbsent`
+- `TestCollectEvidenceNoLlm`
+- `TestUnverifiedNoFileLine`
+- `TestNoProviderBranch`
+- `TestSurroundingCode`
+- `TestEnclosingFunction`
+- `TestFindCallees`
+- `TestFindCallers`
+- `TestMain`
+
+**Functions:**
+- `_make_py`
+- `_make_findings_json`
+
 ## `tests/test_review_gate.py`
 
 **Functions:**
@@ -7584,7 +7612,7 @@ _(no top-level symbols)_
 - `test_c3b_no_fence_symmetric_swap_position_wins`
 - `test_c4_no_fence_critic_format_compat`
 - `test_c5_no_fence_no_verdict_line_returns_none`
-- `test_c6_multiple_fences_first_pair_only`
+- `test_c6_multiple_fences_last_pair_wins`
 - `test_c7_no_fence_trailing_body_quote_known_limitation`
 - `test_t3_advisory_parser_uses_last_value`
 - `test_t3_advisory_parser_missing_is_unknown`

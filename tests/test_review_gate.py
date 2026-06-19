@@ -713,21 +713,22 @@ def test_c5_no_fence_no_verdict_line_returns_none():
     assert _extract_verdict_from_content(content) is None
 
 
-def test_c6_multiple_fences_first_pair_only():
-    """C6 (v4 신규): 본문에 fence 2쌍 — 첫 쌍 PASS + 둘째 쌍 BLOCK
-    → 첫 쌍만 인식 → verdict=pass (Missing #4 해소)."""
+def test_c6_multiple_fences_last_pair_wins():
+    """C6 (v5 갱신): 본문에 fence 2쌍 — 첫 쌍 PASS + 둘째 쌍 BLOCK
+    → 마지막 fence 우선 → verdict=block.
+    S6 합의 재발행이 S5 fence를 올바르게 대체하기 위해 last-fence 정책으로 변경."""
     content = (
         "<!-- final-verdict-start -->\n"
         "## Tier 3 판정: PASS\n"
-        "사유: 첫 쌍\n"
+        "사유: 첫 쌍 (S5 초기 verdict)\n"
         "<!-- final-verdict-end -->\n"
         "본문\n"
         "<!-- final-verdict-start -->\n"
         "## Tier 3 판정: BLOCK\n"
-        "사유: 둘째 쌍은 무시되어야 함\n"
+        "사유: 둘째 쌍 (S6 합의 재발행)\n"
         "<!-- final-verdict-end -->\n"
     )
-    assert _extract_verdict_from_content(content) == "pass"
+    assert _extract_verdict_from_content(content) == "block"
 
 
 def test_c7_no_fence_trailing_body_quote_known_limitation():

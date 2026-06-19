@@ -383,6 +383,46 @@ PASS 케이스 예시 (BLOCK·WARN 모두 없음):
 <!-- final-verdict-end -->
 ```
 
+**[S3] 구조화 finding 사이드카 저장** (verdict fence 직후 실행):
+
+finding 목록 확정 후, 아래를 실행한다. 실제 finding 데이터를 JSON 리터럴로 채워 넣는다.
+
+```bash
+python3 << 'PYEOF'
+import json, os
+findings = [
+  # 실제 finding 목록 채워 넣기 (예시):
+  # {"id": "F1", "label": "ACCEPT", "severity": "High", "title": "제목", "file": "core/x.py", "line": 5, "claim": "왜 결함인가 한 줄"},
+  # {"id": "F2", "label": "ACCEPT-ADV", "severity": "Medium", "title": "...", "file": None, "line": None, "claim": "..."},
+]
+os.makedirs('.af_review_queue', exist_ok=True)
+json.dump({"findings": findings}, open('.af_review_queue/cr_findings.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+print("cr_findings.json 저장:", len(findings), "건")
+PYEOF
+```
+
+- ACCEPT/ACCEPT★ finding만 file+line 필수.
+- REJECTED/ACCEPT-ADV/BONUS는 file=null, line=null.
+
+**[S6] 증거수집 합의 판정** (cr_findings.json 있을 때만):
+
+```bash
+if [ -f ".af_review_queue/cr_findings.json" ]; then
+  python scripts/review_consensus.py && echo "cr_evidence.json 준비" || echo "증거수집 실패 — SKIP"
+fi
+```
+
+cr_evidence.json 생성 시 각 ACCEPT/ACCEPT★ finding에 대해 surrounding_code/callers/callees/tests 증거를 읽고 ACCEPT(확증)/REJECT(반증)/UNVERIFIED(불충분) 판정 후 cr_consensus.json 저장 + 최종 verdict fence 재발행:
+
+```
+<!-- final-verdict-start -->
+## Tier 3 판정: <BLOCK|WARN|PASS> [consensus-gate]
+사유: 합의 ACCEPT N건 / REJECT M건 / UNVERIFIED K건
+<!-- final-verdict-end -->
+```
+
+UNVERIFIED는 BLOCK 기여 안 함 (INV-5).
+
 ---
 
 ## 입력 정책 (Phase 3)

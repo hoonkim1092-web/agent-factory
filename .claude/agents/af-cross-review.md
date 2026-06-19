@@ -491,6 +491,87 @@ PASS 케이스 예시 (BLOCK·WARN 모두 없음):
 <!-- final-verdict-end -->
 ```
 
+**[S3] 구조화 finding 사이드카 저장** (verdict fence 직후 실행):
+
+finding 목록 확정 후, Bash 도구로 아래를 실행한다. 에이전트가 실제 finding 데이터를 JSON 리터럴로 채워 넣는다.
+
+```bash
+python3 << 'PYEOF'
+import json, os
+findings = [
+  # 실제 finding 목록 채워 넣기 (예시):
+  # {"id": "F1", "label": "ACCEPT", "severity": "High", "title": "제목", "file": "core/x.py", "line": 5, "claim": "왜 결함인가 한 줄"},
+  # {"id": "F2", "label": "ACCEPT-ADV", "severity": "Medium", "title": "...", "file": None, "line": None, "claim": "..."},
+]
+os.makedirs('.af_review_queue', exist_ok=True)
+json.dump({"findings": findings}, open('.af_review_queue/cr_findings.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+print("cr_findings.json 저장:", len(findings), "건")
+PYEOF
+```
+
+- ACCEPT/ACCEPT★ finding만 file+line 필수 (증거 수집 대상).
+- REJECTED/ACCEPT-ADV/BONUS는 file=null, line=null.
+- finding이 없으면 빈 리스트 `[]`로 저장(Step 6 자동 SKIP).
+
+---
+
+### Step 6: 증거수집 합의 판정 (Consensus Gate — S4~S6)
+
+> INV-5: cr_findings.json 없거나 ACCEPT/ACCEPT★ finding 없으면 SKIP.
+> INV-6: 코드 리뷰 전용 — 설계문서 리뷰 시 Step 6 건너뜀.
+
+**6a. 증거 수집** (Python 코드, LLM 미사용):
+
+```bash
+if [ -f ".af_review_queue/cr_findings.json" ]; then
+  python scripts/review_consensus.py && echo "cr_evidence.json 준비" || echo "증거수집 실패 — Step 6 SKIP"
+fi
+```
+
+`cr_evidence.json`이 생성됐으면 Read 도구로 읽는다: `.af_review_queue/cr_evidence.json`
+
+**6b. finding별 합의 판정** (에이전트가 증거 기반으로 판정):
+
+각 evidence 항목(`skip_reason` 없는 ACCEPT/ACCEPT★)에 대해:
+1. `surrounding_code` — claim이 해당 코드에서 실제로 확인되는가?
+2. `callers` — 호출자 맥락이 결함을 확증 또는 반증하는가?
+3. `callees` — 피호출자가 결함 영향권에 있는가?
+4. `tests` — 관련 테스트가 결함을 이미 커버하는가?
+
+판정 규칙:
+- `ACCEPT` — 증거가 결함을 확증 (surrounding_code 또는 callers에서 직접 확인)
+- `REJECT` — 증거가 결함 부재를 보여줌 (claim이 실제 코드와 불일치)
+- `UNVERIFIED` — 증거 불충분 (찾을 수 없거나 판단 불가) → **BLOCK 기여 안 함** (INV-5)
+
+**6c. cr_consensus.json 저장 + 최종 verdict fence 재발행**:
+
+```bash
+python3 << 'PYEOF'
+import json, os
+judgments = [
+  # 실제 판정 결과 채워 넣기 (예시):
+  # {"id": "F1", "consensus": "ACCEPT", "reason": "surrounding_code에서 결함 확인"},
+  # {"id": "F2", "consensus": "REJECT", "reason": "코드와 claim 불일치"},
+]
+os.makedirs('.af_review_queue', exist_ok=True)
+json.dump({"judgments": judgments}, open('.af_review_queue/cr_consensus.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+PYEOF
+```
+
+집계 규칙 (Step 5 §4.4와 동일, 합의 ACCEPT만 집계):
+- 합의 ACCEPT 중 Critical/High ≥ 1 → **BLOCK**
+- 합의 ACCEPT 없고 ACCEPT-ADV Medium/Low 있음 → **WARN**
+- 합의 ACCEPT 없음 → **PASS** (기존 BLOCK이 REJECT/UNVERIFIED로 확인 불가 판정된 경우 포함)
+
+**최종 verdict fence 재발행** (이 fence가 Step 5 fence를 대체 — review_gate는 마지막 fence를 사용):
+
+```
+<!-- final-verdict-start -->
+## Tier 3 판정: <BLOCK|WARN|PASS> [consensus-gate]
+사유: 합의 ACCEPT <N>건 / REJECT <M>건 / UNVERIFIED <K>건 — <한 줄 요약>
+<!-- final-verdict-end -->
+```
+
 ---
 
 ## 입력 정책 (Phase 3)
