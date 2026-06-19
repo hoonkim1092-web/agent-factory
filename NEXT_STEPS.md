@@ -2,13 +2,14 @@
 
 ## ▶ 다음 = Q-S3 (research 실 API 사전 조사 + synthesize_via_research + 경로 A·B·C 3곳 배선)
 
-### ✅ (Q-S2) RESEARCH_SYNTHESIZE + 4문항 + provenance 완료 (2026-06-19, Sonnet, 이 커밋)
+### ✅ (Q-S2) RESEARCH_SYNTHESIZE + 4문항 + provenance 완료 (2026-06-19, Sonnet, `be884287`+`5fb3d8ad`)
 > - `core/control/verdicts.py`: `QuestionRoute.RESEARCH_SYNTHESIZE = "research_synthesize"` (INV-Q1)
 > - `core/control/question_router.py`: `route_batch()`에 RESEARCH_SYNTHESIZE 분기 추가 → `source="research_synthesize_pending"` (BLOCK/HITL 기여 안 함)
 > - `core/control/questions/goal_clarification.yaml`: `observable_goal`/`golden_example`/`test_seam`/`manual_only` 4문항 추가 (`default_route: research_synthesize`)
 > - `core/clarification.py`: `merge_clarification(provenance="default")` — log 엔트리에 `provenance` 태깅, 기존 호출 하위호환
+> - `agent_launcher.py`/`interview.py`: HITL 경로 `provenance="user"` 수정 (af-critic WARN-2 반영)
 > - 테스트 9건 신규(TestResearchSynthesizeRoute 4 + TestMergeClarificationProvenance 5) / 총 43 PASS
-> - 3-Tier: af-critic + af-cross-review + af-test-runner (커밋 후 실행)
+> - 3-Tier: af-critic WARN→수정 / af-cross-review PASS / af-test-runner 137 PASS
 
 ### ✅ (Q-S1) GoalEntry 확장 + TestManifest 완료 (2026-06-19, Sonnet, `bacafe3d`)
 > - `core/completion_contract.py`: `Provenance` 타입(`user`/`research`/`default`) + `GoalEntry` 3개 additive 필드(`scenario`/`expected_output`/`provenance`) + `TestManifest` 신규(`required_tools`/`required_env`/`seam_requirements`/`provenance`) + `GoalContract.manifest: TestManifest|None`
