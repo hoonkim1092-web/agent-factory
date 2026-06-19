@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T12:42:10+09:00
-source_commit: b747f698
+generated_at: 2026-06-19T12:48:16+09:00
+source_commit: bacafe3d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1353,7 +1353,7 @@ sources:
 
 ### `tests`
 
-214 modules · 374 classes · 1831 functions
+214 modules · 376 classes · 1831 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1534,7 +1534,7 @@ sources:
 - `tests/test_skill_self_evolution_hook_runid.py` — 1 class / 0 func
 - `tests/test_skill_spec_synthesizer.py` — 0 class / 1 func
 - `tests/test_spec_compiler.py` — 0 class / 28 func
-- `tests/test_stage0_question_router.py` — 11 class / 1 func
+- `tests/test_stage0_question_router.py` — 13 class / 1 func
 - `tests/test_stage4_7_knowledge_pipeline.py` — 7 class / 2 func
 - `tests/test_strategy_ledger.py` — 0 class / 28 func
 - `tests/test_summary_schema_repeat_count.py` — 0 class / 1 func

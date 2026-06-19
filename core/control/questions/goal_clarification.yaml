@@ -31,3 +31,32 @@ questions:
     required: false
     fallback: null
     default_route: llm_delegate
+
+  # Q-S2 추가: 테스트 명료화 질문 (INV-Q1: 스킵 → ResearchRouter 합성)
+  - id: observable_goal
+    text: "다 됐다는 걸 어떻게 눈으로 확인합니까? 관찰 가능한 형태로 알려주세요."
+    output_field: observable_goal
+    required: false
+    fallback: null
+    default_route: research_synthesize
+
+  - id: golden_example
+    text: "예시 입력 하나와, 그때 기대하는 출력을 알려주세요."
+    output_field: golden_example
+    required: false
+    fallback: null
+    default_route: research_synthesize
+
+  - id: test_seam
+    text: "특수 장비 없이 먹일 수 있는 입력이 있나요? (예: 라이브 마이크 대신 녹음 파일)"
+    output_field: test_seam
+    required: false
+    fallback: null
+    default_route: research_synthesize
+
+  - id: manual_only
+    text: "자동으로는 못 보고 직접 눈으로 확인해야 하는 부분은?"
+    output_field: manual_only
+    required: false
+    fallback: null
+    default_route: research_synthesize

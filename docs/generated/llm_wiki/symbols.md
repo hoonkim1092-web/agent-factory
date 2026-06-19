@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T12:42:10+09:00
-source_commit: b747f698
+generated_at: 2026-06-19T12:48:17+09:00
+source_commit: bacafe3d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -8203,6 +8203,8 @@ _(no top-level symbols)_
 - `TestLightContextScanner`
 - `TestStageRouterWorkKind`
 - `TestActiveYamlFiles`
+- `TestResearchSynthesizeRoute`
+- `TestMergeClarificationProvenance`
 
 **Functions:**
 - `_make_schema`

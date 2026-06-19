@@ -510,6 +510,14 @@ class TestActiveYamlFiles:
         assert "goal_summary" in ids
         assert "deployment_target" in ids
         assert len(sha) == 64  # sha256 hex
+        # Q-S2: 4개 신규 질문 포함 확인
+        assert "observable_goal" in ids
+        assert "golden_example" in ids
+        assert "test_seam" in ids
+        assert "manual_only" in ids
+        # Q-S2: default_route=research_synthesize 파싱 확인
+        rs_questions = [q for q in questions if q.default_route == QuestionRoute.RESEARCH_SYNTHESIZE]
+        assert len(rs_questions) == 4
 
     def test_brainstorming_yaml_loads(self):
         from pathlib import Path
@@ -538,3 +546,105 @@ class TestActiveYamlFiles:
                 for q in schema["questions"]:
                     assert q["id"] not in all_ids, f"collision: {q['id']}"
                     all_ids.add(q["id"])
+
+
+# ===========================================================================
+# Q-S2: QuestionRoute.RESEARCH_SYNTHESIZE + route_batch 분기 + provenance
+# ===========================================================================
+
+class TestResearchSynthesizeRoute:
+    """Q-S2: RESEARCH_SYNTHESIZE enum + route_batch 분기 검증."""
+
+    def test_research_synthesize_enum_exists(self):
+        assert QuestionRoute.RESEARCH_SYNTHESIZE.value == "research_synthesize"
+
+    def test_route_batch_research_synthesize_returns_pending(self):
+        router = QuestionRouter()
+        schema = _make_schema([
+            {
+                "id": "observable_goal",
+                "output_field": "observable_goal",
+                "default_route": "research_synthesize",
+                "text": "어떻게 확인합니까?",
+            }
+        ])
+        questions = parse_questions(schema)
+        result = router.route_batch(questions, schema, "hash", "isolated")
+        r = next(r for r in result.results if r.question_id == "observable_goal")
+        assert r.question_route == QuestionRoute.RESEARCH_SYNTHESIZE
+        assert r.source == "research_synthesize_pending"
+        assert r.question_id not in result.paused_hitl_ids
+        assert r.question_id not in [b.question_id for b in result.block_results]
+
+    def test_route_batch_research_synthesize_multiple(self):
+        """4개 RESEARCH_SYNTHESIZE 질문 전부 pending 결과 반환."""
+        router = QuestionRouter()
+        schema = _make_schema([
+            {"id": "observable_goal", "output_field": "observable_goal", "default_route": "research_synthesize"},
+            {"id": "golden_example", "output_field": "golden_example", "default_route": "research_synthesize"},
+            {"id": "test_seam", "output_field": "test_seam", "default_route": "research_synthesize"},
+            {"id": "manual_only", "output_field": "manual_only", "default_route": "research_synthesize"},
+        ])
+        questions = parse_questions(schema)
+        result = router.route_batch(questions, schema, "hash", "isolated")
+        rs_results = [r for r in result.results if r.question_route == QuestionRoute.RESEARCH_SYNTHESIZE]
+        assert len(rs_results) == 4
+        assert result.paused_hitl_ids == []
+        assert result.block_results == []
+
+    def test_route_batch_mixed_routes(self):
+        """LLM_DELEGATE + RESEARCH_SYNTHESIZE 혼합 시 각각 정상 처리."""
+        llm = _FakeLLM({"q_llm": "some answer"})
+        router = QuestionRouter(llm_caller=llm)
+        schema = _make_schema([
+            {"id": "q_llm", "output_field": "q_llm", "default_route": "llm_delegate"},
+            {"id": "q_rs", "output_field": "q_rs", "default_route": "research_synthesize"},
+        ])
+        questions = parse_questions(schema)
+        result = router.route_batch(questions, schema, "hash", "isolated")
+
+        llm_r = next(r for r in result.results if r.question_id == "q_llm")
+        rs_r = next(r for r in result.results if r.question_id == "q_rs")
+        assert llm_r.question_route == QuestionRoute.LLM_DELEGATE
+        assert llm_r.value == "some answer"
+        assert rs_r.question_route == QuestionRoute.RESEARCH_SYNTHESIZE
+
+
+class TestMergeClarificationProvenance:
+    """Q-S2: merge_clarification provenance 전파 검증."""
+
+    def test_default_provenance_in_log(self):
+        from core.clarification import merge_clarification
+        questions = [{"question": "Q?", "category": "scope"}]
+        result = merge_clarification({}, questions, ["answer"])
+        entry = result["clarification_log"][0]
+        assert entry["provenance"] == "default"
+
+    def test_user_provenance_in_log(self):
+        from core.clarification import merge_clarification
+        questions = [{"question": "Q?", "category": "scope"}]
+        result = merge_clarification({}, questions, ["answer"], provenance="user")
+        assert result["clarification_log"][0]["provenance"] == "user"
+
+    def test_research_provenance_in_log(self):
+        from core.clarification import merge_clarification
+        questions = [{"question": "Q?", "category": "scope"}, {"question": "R?", "category": "data"}]
+        result = merge_clarification({}, questions, ["ans1", "ans2"], provenance="research")
+        for entry in result["clarification_log"]:
+            assert entry["provenance"] == "research"
+
+    def test_provenance_backward_compat_no_param(self):
+        """기존 호출(provenance 없음)도 기본값 default로 동작."""
+        from core.clarification import merge_clarification
+        questions = [{"question": "Q?", "category": "scope"}]
+        result = merge_clarification({}, questions, ["answer"])
+        assert "provenance" in result["clarification_log"][0]
+        assert result["clarification_log"][0]["provenance"] == "default"
+
+    def test_auto_apply_defaults_still_works(self):
+        """auto_apply_defaults()가 merge_clarification 변경으로 깨지지 않음."""
+        from core.clarification import auto_apply_defaults
+        questions = [{"question": "Q?", "category": "scope", "default": "기본값"}]
+        result = auto_apply_defaults({}, questions)
+        assert result["clarification_log"][0]["answer"] == "기본값"
+        assert result["clarification_log"][0]["provenance"] == "default"

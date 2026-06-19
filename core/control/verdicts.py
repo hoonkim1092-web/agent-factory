@@ -7,6 +7,7 @@ class QuestionRoute(Enum):
     LLM_DELEGATE = "llm_delegate"
     HITL = "hitl"
     BLOCK = "block"
+    RESEARCH_SYNTHESIZE = "research_synthesize"  # 스킵 → ResearchRouter 합성 (INV-Q1)
 
 
 class DomainVerdict(Enum):

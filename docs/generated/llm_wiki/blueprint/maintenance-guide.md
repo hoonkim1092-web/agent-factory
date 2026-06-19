@@ -1,13 +1,13 @@
 ---
-generated_at: 2026-06-19T12:42:11+09:00
-source_commit: b747f698
+generated_at: 2026-06-19T12:48:17+09:00
+source_commit: bacafe3d
 sources:
   - "Master_Blueprint.md"
 ---
 
 # 유지보수 가이드
 
-> Source: `Master_Blueprint.md:2882`
+> Source: `Master_Blueprint.md:2886`
 > 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
 
 ````markdown

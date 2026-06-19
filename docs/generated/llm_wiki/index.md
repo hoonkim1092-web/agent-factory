@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-19T12:42:12+09:00
-source_commit: b747f698
+generated_at: 2026-06-19T12:48:18+09:00
+source_commit: bacafe3d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"

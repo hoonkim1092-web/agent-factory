@@ -1139,11 +1139,13 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-19; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+8)
+최근 자동 갱신 컨텍스트: chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+11)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/completion_contract.py` | Completion contract: goal-reached verification via an evidence ledger. | `GoalEntry`, `TestManifest`, `GoalContract` |
+| `core/clarification.py` | core/clarification.py ===================== Clarification 단계: Brief 분석 → 질문 생성 → 사용자 답변 → Brief 병합. | `merge_clarification()` |
+| `core/control/question_router.py` | Stage 0 QuestionRouter — 순수 분류기 (파일 쓰기·side effect 없음). | `QuestionRouter` |
+| `core/control/verdicts.py` | Stage 0 Question Router — verdict/route/cause enum 단일 원천. | `QuestionRoute` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1691,6 +1693,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+11) |
+| 2026-06-19 | v1.2.34 | feat(qa-pipeline Q-S2): `QuestionRoute.RESEARCH_SYNTHESIZE` enum 추가(`verdicts.py`) + `route_batch()` 분기(→ source="research_synthesize_pending", BLOCK/HITL 기여 안 함) + `goal_clarification.yaml` 4문항(`observable_goal`/`golden_example`/`test_seam`/`manual_only`, default_route: research_synthesize) + `merge_clarification(provenance="default")` — clarification_log 엔트리에 `provenance` 태깅(Q-S3 synthesize_via_research가 "research"로 호출 예정). 테스트 9건 신규(TestResearchSynthesizeRoute 4 + TestMergeClarificationProvenance 5) / 총 43 PASS. — core/control/verdicts.py, core/control/question_router.py, core/control/questions/goal_clarification.yaml, core/clarification.py, tests/test_stage0_question_router.py, Master_Blueprint.md |
 | 2026-06-19 | v1.2.34 | chore(.claude): code update — settings.json, settings.local.template.json, hooks.json, Master_Blueprint.md, NEXT_STEPS.md (+8) |
 | 2026-06-19 | v1.2.34 | feat(qa-pipeline Q-S1): `core/completion_contract.py` Q-S1 확장 — `Provenance` 타입(`user`/`research`/`default`, INV-Q2 출처 신뢰등급), `GoalEntry`에 `scenario`/`expected_output`/`provenance` additive 필드(기본값 하위호환), `TestManifest` 신규(`required_tools`/`required_env`/`seam_requirements`/`provenance`, INV-Q3 seam 구현요구), `GoalContract.manifest: TestManifest|None`. 전부 `to_dict`/`from_dict` round-trip 보장. 테스트 13건 신규(신규필드 기본값, round-trip, 레거시 직렬화 하위호환, 전체 통합). 총 30건 PASS. 설계: `docs/2026-06-18-user-perspective-qa-pipeline-design.md §5`. — core/completion_contract.py, tests/test_completion_contract.py, Master_Blueprint.md |
 | 2026-06-19 | v1.2.34 | feat(review-consensus-gate S3~S6): 증거수집 합의기 — `scripts/review_consensus.py` 신규(finding-level 증거수집, LLM 미호출): `collect_evidence()`가 ACCEPT/ACCEPT★ finding마다 surrounding_code·callers(grep 1-hop)·callees(AST 1-hop, `_find_callees`)·tests를 수집해 `cr_evidence.json` 생성. `af-cross-review.md`/`.toml`에 S3(finding 사이드카 `cr_findings.json` 저장 지시) + S6(Step 6: review_consensus.py 호출 → cr_evidence.json 읽기 → LLM 합의판정 ACCEPT/REJECT/UNVERIFIED → cr_consensus.json → verdict fence 재발행). UNVERIFIED는 BLOCK 기여 안 함(INV-5). 프로바이더 중립(INV-2). 테스트: `test_review_consensus.py` 26케이스 PASS(INV-1/2/5/7 + enclosing-func/callees/callers/surrounding). §0 신규 행 추가. — scripts/review_consensus.py, tests/test_review_consensus.py, .claude/agents/af-cross-review.md, .codex/agents/af-cross-review.toml, Master_Blueprint.md |

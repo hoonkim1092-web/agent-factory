@@ -131,8 +131,13 @@ def merge_clarification(
     project_brief: dict[str, Any],
     questions: list[dict[str, Any]],
     answers: list[str],
+    provenance: str = "default",
 ) -> dict[str, Any]:
-    """사용자 답변을 Brief에 병합하여 enriched_brief 반환."""
+    """사용자 답변을 Brief에 병합하여 enriched_brief 반환.
+
+    provenance: 출처 신뢰등급 (INV-Q2) — "user" | "research" | "default".
+    Q-S3 synthesize_via_research()가 "research"로 호출해 출처 태깅.
+    """
     enriched = dict(project_brief)
     clarification_log: list[dict] = []
 
@@ -145,6 +150,7 @@ def merge_clarification(
             "question": q.get("question", ""),
             "answer": selected,
             "category": q.get("category", "scope"),
+            "provenance": provenance,
         })
 
         def _append_to(field: str, value: str) -> None:

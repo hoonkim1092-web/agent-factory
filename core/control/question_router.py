@@ -244,6 +244,18 @@ class QuestionRouter:
                     )
                 )
 
+            elif q.default_route == QuestionRoute.RESEARCH_SYNTHESIZE:
+                # Q-S3에서 ResearchRouter로 합성 예정 (INV-Q1)
+                # 지금은 pending 표시만 — 실제 합성은 synthesize_via_research()가 담당
+                results.append(
+                    QuestionResult(
+                        question_id=q.id,
+                        output_field=q.output_field,
+                        question_route=QuestionRoute.RESEARCH_SYNTHESIZE,
+                        source="research_synthesize_pending",
+                    )
+                )
+
         return QuestionBatchResult(
             question_set_id=schema.get("question_set_id", ""),
             schema_version=schema.get("schema_version", 1),
