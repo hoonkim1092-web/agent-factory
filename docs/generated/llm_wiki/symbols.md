@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T23:16:53+09:00
-source_commit: 007d7c5e4
+generated_at: 2026-06-21T02:19:43+09:00
+source_commit: 94cf4fc1
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -14,80 +14,6 @@ sources:
 > 관련: [[index]] | [[architecture]] | [[source_refs]]
 
 # Codebase Symbols
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-creator/scripts/generate_openai_yaml.py`
-
-**Functions:**
-- `yaml_quote`
-- `format_display_name`
-- `generate_short_description`
-- `read_frontmatter_name`
-- `parse_interface_overrides`
-- `write_openai_yaml`
-- `main`
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-creator/scripts/init_skill.py`
-
-**Functions:**
-- `normalize_skill_name`
-- `title_case_skill_name`
-- `parse_resources`
-- `create_resource_dirs`
-- `init_skill`
-- `main`
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-creator/scripts/quick_validate.py`
-
-**Functions:**
-- `validate_skill`
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-installer/scripts/github_utils.py`
-
-**Functions:**
-- `github_request`
-- `github_api_contents_url`
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-installer/scripts/install-skill-from-github.py`
-
-**Classes:**
-- `Args`
-- `Source`
-- `InstallError`
-
-**Functions:**
-- `_codex_home`
-- `_tmp_root`
-- `_request`
-- `_parse_github_url`
-- `_download_repo_zip`
-- `_run_git`
-- `_safe_extract_zip`
-- `_validate_relative_path`
-- `_validate_skill_name`
-- `_git_sparse_checkout`
-- `_validate_skill`
-- `_copy_skill`
-- `_build_repo_url`
-- `_build_repo_ssh`
-- `_prepare_repo`
-- `_resolve_source`
-- `_default_dest`
-- `_parse_args`
-- `main`
-
-## `.tmp_smoke_projects/direct_env_with_auth/codex_home/skills/.system/skill-installer/scripts/list-skills.py`
-
-**Classes:**
-- `ListError`
-- `Args`
-
-**Functions:**
-- `_request`
-- `_codex_home`
-- `_installed_skills`
-- `_list_skills`
-- `_parse_args`
-- `main`
 
 ## `af.py`
 
@@ -2999,6 +2925,10 @@ _(no top-level symbols)_
 **Functions:**
 - `run_demo`
 
+## `drive_meeting_stt.py`
+
+_(no top-level symbols)_
+
 ## `end_db.py`
 
 **Functions:**
@@ -3853,6 +3783,191 @@ _(no top-level symbols)_
 - `test_report_validates_inputs`
 - `test_write_report_appends_newline_if_missing`
 
+## `projects/meeting_stt_app/app/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/audio/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/audio/capture.py`
+
+**Classes:**
+- `CaptureThread`
+
+## `projects/meeting_stt_app/app/audio/devices.py`
+
+**Classes:**
+- `Device`
+
+**Functions:**
+- `detect_compute_device`
+- `enumerate_devices`
+
+## `projects/meeting_stt_app/app/audio/mixer.py`
+
+**Classes:**
+- `AudioMixer`
+
+**Functions:**
+- `to_mono_float32`
+- `resample_to_16k`
+- `rms`
+
+## `projects/meeting_stt_app/app/config.py`
+
+**Classes:**
+- `AppSettings`
+
+**Functions:**
+- `_config_path`
+- `resolve_save_root`
+
+## `projects/meeting_stt_app/app/io/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/io/recorder.py`
+
+**Classes:**
+- `WavRecorder`
+
+## `projects/meeting_stt_app/app/io/session.py`
+
+**Classes:**
+- `RecordingSession`
+
+## `projects/meeting_stt_app/app/io/transcript_writer.py`
+
+**Classes:**
+- `TranscriptWriter`
+
+**Functions:**
+- `_fmt_ts`
+
+## `projects/meeting_stt_app/app/main.py`
+
+**Classes:**
+- `PipelineController`
+
+**Functions:**
+- `_now_iso`
+- `_new_session_id`
+- `main`
+
+## `projects/meeting_stt_app/app/qt_compat.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/stt/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/stt/transcriber.py`
+
+**Classes:**
+- `Transcriber`
+
+## `projects/meeting_stt_app/app/stt/types.py`
+
+**Classes:**
+- `TranscriptChunk`
+
+## `projects/meeting_stt_app/app/stt/worker.py`
+
+**Classes:**
+- `TranscribeWorker`
+
+## `projects/meeting_stt_app/app/ui/__init__.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/ui/main_window.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/app/ui/widgets.py`
+
+_(no top-level symbols)_
+
+## `projects/meeting_stt_app/build.py`
+
+**Functions:**
+- `run_selftest`
+- `run_pyinstaller`
+- `main`
+
+## `projects/meeting_stt_app/build_onedir.py`
+
+**Functions:**
+- `_parse_args`
+- `_ensure_pyinstaller_available`
+- `_build_command`
+- `main`
+
+## `projects/meeting_stt_app/meeting_stt.py`
+
+**Functions:**
+- `_check_devices`
+- `main`
+
+## `projects/meeting_stt_app/scripts/synthetic_audio_headless_selftest.py`
+
+**Classes:**
+- `AudioSpec`
+- `ValidationResult`
+
+**Functions:**
+- `parse_args`
+- `validate_spec`
+- `synthesize_samples`
+- `write_wav`
+- `read_wav_samples`
+- `rms`
+- `estimate_frequency`
+- `validate_wav`
+- `write_report`
+- `main`
+
+## `projects/meeting_stt_app/tests/selftest_pipeline.py`
+
+**Classes:**
+- `FakeTranscriber`
+
+**Functions:**
+- `_sine`
+- `_check`
+- `test_imports`
+- `test_resolve_save_root`
+- `test_mixer_chunk`
+- `test_pipeline_e2e`
+- `test_real_whisper_optional`
+- `main`
+
+## `projects/meeting_stt_app/tests/test_audio_mixer.py`
+
+**Functions:**
+- `_block`
+- `_sine`
+- `test_to_mono_float32_int16_정규화`
+- `test_to_mono_float32_다채널_평균`
+- `test_resample_to_16k_shape_rate`
+- `test_rms_값`
+- `test_믹싱_번갈아_push_정렬`
+- `test_믹싱_bulk_push_정렬`
+- `test_믹싱_부분_겹침`
+- `test_합성_사인파_이중스트림_헤드리스`
+- `test_max_chunk_sec_컷`
+- `test_vad_무음_tail_컷`
+- `test_flush_잔여_반환`
+- `test_단일_소스_마이크_단독`
+- `test_단일_소스_loopback_단독`
+- `test_2소스_파트너_영구부재_holdoff_통과`
+- `test_capture_device_none_무동작`
+- `test_level_changed_시그널`
+- `_run_all`
+
 ## `projects/minesweeper-baseline/minesweeper.py`
 
 **Classes:**
@@ -4287,6 +4402,21 @@ _(no top-level symbols)_
 - `build`
 - `main`
 
+## `scripts/build_resume_docx.py`
+
+**Functions:**
+- `_make_rpr`
+- `_make_run`
+- `make_p`
+- `make_empty_p`
+- `insert_after`
+- `insert_sequence`
+- `make_image_p`
+- `build_stock_analyzer_content`
+- `replace_stock_analyzer`
+- `build_af_content`
+- `main`
+
 ## `scripts/build_review_bundle.py`
 
 **Functions:**
@@ -4338,6 +4468,7 @@ _(no top-level symbols)_
 ## `scripts/check_staged_design_review.py`
 
 **Functions:**
+- `_safe_print`
 - `_extract_block_sections`
 - `_map_doc_to_queue_fname`
 - `_record_verdicts_to_fired_marker`
@@ -4461,6 +4592,15 @@ _(no top-level symbols)_
 ## `scripts/gemini_session_bridge.py`
 
 _(no top-level symbols)_
+
+## `scripts/gen_resume_diagrams.py`
+
+**Functions:**
+- `rbox`
+- `arrow`
+- `make_architecture`
+- `make_workflow`
+- `make_pipeline`
 
 ## `scripts/generate_agents_md.py`
 
@@ -5325,169 +5465,10 @@ _(no top-level symbols)_
 - `_run`
 - `main`
 
-## `syncCompyne/memory_store.py`
-
-**Classes:**
-- `MemoryEntry`
-
-**Functions:**
-- `ensure_db`
-- `_get_project_id`
-- `add_entry`
-- `_period_start_end`
-- `pick_latest_session_day`
-- `read_entries_for_day`
-
-## `syncCompyne/project_log_cli.py`
-
-**Functions:**
-- `now_date`
-- `now_time`
-- `section_header`
-- `ensure_log_file`
-- `ensure_today_section`
-- `add_timeline_entry`
-- `find_section`
-- `cmd_save`
-- `cmd_read`
-- `build_parser`
-- `main`
-
-## `syncCompyne/workspace_context_cli.py`
-
-**Classes:**
-- `TimelineEntry`
-- `SessionBlock`
-
-**Functions:**
-- `parse_day`
-- `now_day`
-- `now_hhmm`
-- `section_header`
-- `resolve_project_path`
-- `log_path`
-- `resolve_db_path`
-- `ensure_log_file`
-- `parse_sessions`
-- `ensure_day_section`
-- `append_timeline`
-- `discover_projects`
-- `in_period`
-- `pick_latest_session`
-- `timeline_before_or_equal`
-- `render_session`
-- `render_memory_timeline`
-- `cmd_list_projects`
-- `cmd_save`
-- `cmd_read`
-- `_run_git`
-- `cmd_auto`
-- `cmd_migrate_log`
-- `build_parser`
-- `main`
-
 ## `test_fallback.py`
 
 **Functions:**
 - `divide_numbers`
-
-## `test_output/agents/architect-agent/tools/ast_grep.py`
-
-**Functions:**
-- `run_ast_grep`
-
-## `test_output/agents/architect-agent/tools/core_module.py`
-
-**Functions:**
-- `setup_logging`
-- `cmd_initialize`
-- `cmd_analyze`
-- `cmd_terminate`
-- `main`
-
-## `test_output/agents/architect-agent/tools/cortex.py`
-
-**Classes:**
-- `CortexClient`
-
-**Functions:**
-- `propose`
-- `apply`
-- `test`
-
-## `test_output/agents/architect-agent/tools/lsp_hover.py`
-
-**Functions:**
-- `lsp_goto_definition`
-
-## `test_output/agents/architect-agent/tools/mcp_client.py`
-
-**Functions:**
-- `call_mcp_tool`
-
-## `test_output/agents/architect-agent/tools/mcp_exa_search.py`
-
-**Functions:**
-- `exa_search`
-
-## `test_output/agents/architect-agent/tools/memory_pruner.py`
-
-**Functions:**
-- `prune_text`
-
-## `test_output/agents/architect-agent/tools/retrofit_cortex.py`
-
-**Functions:**
-- `retrofit_agents`
-
-## `test_output/agents/logicdev-agent/tools/ast_grep.py`
-
-**Functions:**
-- `run_ast_grep`
-
-## `test_output/agents/logicdev-agent/tools/core_module.py`
-
-**Functions:**
-- `setup_logging`
-- `cmd_initialize`
-- `cmd_analyze`
-- `cmd_terminate`
-- `main`
-
-## `test_output/agents/logicdev-agent/tools/cortex.py`
-
-**Classes:**
-- `CortexClient`
-
-**Functions:**
-- `propose`
-- `apply`
-- `test`
-
-## `test_output/agents/logicdev-agent/tools/lsp_hover.py`
-
-**Functions:**
-- `lsp_goto_definition`
-
-## `test_output/agents/logicdev-agent/tools/mcp_client.py`
-
-**Functions:**
-- `call_mcp_tool`
-
-## `test_output/agents/logicdev-agent/tools/mcp_exa_search.py`
-
-**Functions:**
-- `exa_search`
-
-## `test_output/agents/logicdev-agent/tools/memory_pruner.py`
-
-**Functions:**
-- `prune_text`
-
-## `test_output/agents/logicdev-agent/tools/retrofit_cortex.py`
-
-**Functions:**
-- `retrofit_agents`
 
 ## `tests/check_models.py`
 
@@ -8770,6 +8751,11 @@ _(no top-level symbols)_
 
 **Functions:**
 - `verify_audit_log`
+
+## `tmp_measure_wiring.py`
+
+**Functions:**
+- `_spy`
 
 ## `utils/audit_logger.py`
 

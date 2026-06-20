@@ -1,6 +1,31 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 진입점 — QA 파이프라인 product work-item 신규 선정 (우선순위5 완료)
+## ▶▶ 다음 진입점 — Review BLOCK Learning Phase 1 구현 (2026-06-21)
+
+> **설계**: `docs/2026-06-20-review-block-learning-evolution-design.md` (af-cross-review ACCEPT-ADV 반영 완료, 커밋 `ef49c1cc`, PASS 확정)
+> **모델**: Sonnet (구현 단계)
+
+### Phase 1 목표 (capture-only, 최소 범위)
+
+반복 BLOCK 패턴을 지속 레저로 쌓는 capture 훅만 구현. 진화 제안·자동 수정 없음.
+
+**구현 범위**:
+1. **데이터 저장소**: `data/review-block-patterns.jsonl` (학습 데이터)
+2. **capture 훅**: `scripts/review_gate.py` 내 BLOCK finding JSONL append + pattern_key 정규화
+   - 정규화 키 7개: `hiddenimport`, `production_caller_wiring`, `blueprint_update`, `absolute_path`, `fixture_only`, `pre_commit_bypass`, `provider_instruction_drift`
+   - 미매칭: `unknown:<sha256_8char>` (집계 제외, v1 Scope 명시)
+3. **read-only CLI**: `af evolution list` — 패턴별 occurrence 출력 (재발 ≥2 강조)
+
+**완료 기준**:
+- BLOCK finding → JSONL append 단위 테스트 통과
+- `af evolution list` 출력 확인
+- `.py` 변경 → 3-Tier (af-critic → af-cross-review → af-test-runner)
+
+**Phase 2 이후**: 집계→재발 감지(≥3)→EVP 제안은 데이터 충분 시 별도 설계. P4(novel pattern clustering) 명시적 out-of-scope.
+
+---
+
+## ▶ (이전) QA 파이프라인 product work-item 신규 선정 (우선순위5 완료)
 
 > 우선순위5 규모인지 분해(B안) 구현·검증 완료(2026-06-20). 다음은 신규 product-value work-item 선정 또는 보류 트랙.
 
