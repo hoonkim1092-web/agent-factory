@@ -16,7 +16,8 @@
 - **S2 (agent_runner.py:1226)**: 보수적 가짜성공 가드(`ok&&rc!=0&&파일변경0`→강등). `_workspace_mutation_signature` 신규
 - **S3 (dynamic_orchestrator.py)**: 무진전 fail-fast(`AGENT_HARD_NO_PROGRESS=20` + `all_infra||retry_exhausted`→`blocked_no_progress` BLOCK)
 - **✅ S1+S3 구현 완료** (2026-06-20, Sonnet, 커밋 `32f77a60`). 3-Tier PASS. 회귀 없음.
-- **▶ 다음 = S2 구현** (agent_runner.py:1226 — `ok&&rc!=0&&파일변경0`→강등, `_workspace_mutation_signature` 신규). 또는 우선순위 3·5 별도 설계.
+- **✅ S2 구현 완료** (2026-06-20, Opus). `agent_runner.py` CLI 루프에 가짜성공 가드 + `_workspace_mutation_signature()=(파일수, st_mtime_ns 총합)` 신설. **af-cross-review BLOCK 2건 흡수**: F1(max→sum false-negative — 미래 mtime 형제 파일이 더 오래된 파일 수정을 가림) + F2(`ws_sig_before` 단일 스냅샷 multi-provider 오염 + PROJECT_ROOT walk 2.85초 비용). 수정: provider별 스냅샷 + bounded-workspace gate(`target_workspace!=PROJECT_ROOT`). `produced_changes` dead field 제거(소비처 없음). 테스트 13건. 3-Tier: af-critic WARN / af-cross-review BLOCK(R1)→PASS(R2) / af-test-runner PASS(61).
+- **▶ 다음 = 우선순위 3·5 별도 설계** (S1~S3 correctness 슬라이스 전부 닫힘). baseline 실코드 동결 완료: `docs/2026-06-20-priority-3-5-baseline-capture.md` (§6.1 right_sized_router / §6.2 bootstrap_roles 정확한 라인 인용). 두 설계는 **각각 전용 dated 문서로 분리**(아키텍처 변경이라 합치면 baseline churn → cross-review BLOCK 진동).
 
 **원 진단 우선순위(동결)**:
 1. **Bug1 가짜성공 탐지** → S2로 설계됨

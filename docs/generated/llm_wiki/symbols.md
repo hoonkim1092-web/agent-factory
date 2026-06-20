@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T08:21:36+09:00
-source_commit: 32f77a60
+generated_at: 2026-06-20T09:14:24+09:00
+source_commit: 2b859103
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -466,6 +466,7 @@ _(no top-level symbols)_
 **Functions:**
 - `_safe_print`
 - `_run_async_safe`
+- `_workspace_mutation_signature`
 
 ## `core/agent_specializer.py`
 
@@ -5631,6 +5632,15 @@ _(no top-level symbols)_
 - `TestPendingEscalation`
 - `TestResolveModelId`
 - `TestLogRouting`
+
+## `tests/test_agent_runner_false_success.py`
+
+**Classes:**
+- `TestWorkspaceMutationSignature`
+- `TestFalseSuccessGuardDecision`
+
+**Functions:**
+- `_should_demote`
 
 ## `tests/test_agent_runner_force_provider.py`
 

@@ -112,6 +112,38 @@ def _run_async_safe(coro):
     return _aio.run(coro)
 
 
+# 가짜성공 가드(S2)용 워크스페이스 변경 시그니처
+_WS_SIG_EXCLUDE_DIRS = frozenset(
+    {".git", "node_modules", "__pycache__", ".af-dogfood", ".venv", "venv"}
+)
+
+
+def _workspace_mutation_signature(path: str) -> tuple[int, int]:
+    """워크스페이스 변경 시그니처: (파일수, mtime_ns 총합).
+
+    가짜성공 가드(S2)용 — CLI run 전후로 비교해 산출물 변경 여부를 판정한다.
+    max가 아닌 '총합'을 쓰는 이유: 미래 mtime 파일이 있어도 더 오래된 파일의
+    수정을 놓치지 않기 위함(add/modify/delete가 전부 튜플을 바꾼다). st_mtime_ns는
+    Python int라 부동소수 오차가 없다.
+    VCS/빌드 디렉터리(_WS_SIG_EXCLUDE_DIRS)는 노이즈라 제외. 경로 부재 → (0, 0).
+    """
+    file_count = 0
+    total_mtime_ns = 0
+    try:
+        for root, dirs, files in os.walk(path):
+            dirs[:] = [d for d in dirs if d not in _WS_SIG_EXCLUDE_DIRS]
+            for fname in files:
+                try:
+                    st = os.stat(os.path.join(root, fname))
+                except OSError:
+                    continue
+                file_count += 1
+                total_mtime_ns += st.st_mtime_ns
+    except OSError:
+        return (0, 0)
+    return (file_count, total_mtime_ns)
+
+
 # 4) Agent / Requirements
 # =============================================================================
 class AgentRunner:
@@ -1212,8 +1244,16 @@ class AgentRunner:
             "anthropic": get_configured_engine_api_key("anthropic"),
         }
         if cli_providers:
+            # 가짜성공 가드(S2)는 bounded workspace에서만 작동.
+            # workspace 미전달 시 target_workspace==PROJECT_ROOT(전체 레포)라
+            # walk 비용이 크고 가드 대상(dogfood/project worktree)도 아니므로 skip.
+            guard_workspace = target_workspace if target_workspace != PROJECT_ROOT else ""
             for provider_id in cli_providers:
                 cli_model = self._resolve_cli_model(provider_id, model_name)
+                # provider별 스냅샷: 직전 provider의 부분쓰기가 다음 판정을 오염시키지 않도록.
+                ws_sig_before = (
+                    _workspace_mutation_signature(guard_workspace) if guard_workspace else None
+                )
                 cli_result = self._run_with_cli_provider(
                     provider_id,
                     cli_model,
@@ -1224,6 +1264,25 @@ class AgentRunner:
                     auto_approve=auto_approve,
                 )
                 if cli_result.get("ok"):
+                    # S2 가짜성공 가드: 비정상 종료 + 산출물 변경 0 → ok 강등.
+                    # returncode==0 성공·변경을 만든 run은 불변(INV-S2a/b).
+                    rc = cli_result.get("returncode")
+                    if (
+                        guard_workspace
+                        and rc is not None
+                        and rc != 0
+                        and _workspace_mutation_signature(guard_workspace) == ws_sig_before
+                    ):
+                        cli_failures.append({
+                            **cli_result,
+                            "ok": False,
+                            "reason": f"{provider_id}_false_success_no_output",
+                        })
+                        _append_trace(
+                            "error",
+                            {"stage": provider_id, "message": "false_success_no_output"},
+                        )
+                        continue
                     cli_text = str(cli_result.get("text", "") or "").strip()
                     if cli_text:
                         print(f"{cli_text}")

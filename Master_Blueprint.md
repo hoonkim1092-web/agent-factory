@@ -45,7 +45,7 @@
 | 파일 | 역할 | 주요 클래스/함수 |
 |------|------|----------------|
 | `core/string_utils.py` | 문자열 유틸리티 | `truncate(s, max_len, suffix)` |
-| `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | `AgentRunner`, `run()` |
+| `core/agent_runner.py:1-1617` | 에이전트 CLI 실행 | `AgentRunner`, `run()`, `_workspace_mutation_signature()` |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | `AgentSpecializer.specialize()` |
 | `core/agent_worker.py` | PyInstaller worker 진입점. stdout/stderr `errors=replace`로 Windows/macOS 콘솔 인코딩 차이로 인한 worker 조기 종료를 방지. | `main()` |
 | `core/approval_gate.py` | 실행 승인 게이트 | `ApprovalGate`, `read_block_decision()` (P2), Domain Gate `_read_domain_review_verdict()` + `_read_block_cause()` (P5), `initialize(status, execution_open)` (v4), DomainVerdict 매트릭스 `_HIGH_BLAST_RADIUS` (P5) |
@@ -553,9 +553,11 @@ else:                         → "completed"
 ---
 
 ### §3.3 AgentRunner (`core/agent_runner.py`)
-<!-- last_updated: 2026-06-05 (WI-2: force_provider 우선 처리) -->
+<!-- last_updated: 2026-06-20 (S2: 가짜성공 가드) -->
 
 **클래스:** `AgentRunner`
+
+**가짜성공 가드 (S2, 2026-06-20):** CLI provider 루프에서 `cli_result["ok"]`만 믿던 지점에 보수적 가드 추가. `provider별 ws_sig_before` 스냅샷(`_workspace_mutation_signature()` = `(파일수, st_mtime_ns 총합)`) 후, **비정상 종료(`returncode != 0`) AND 산출물 변경 0** 이면 ok→False 강등(`reason="<provider>_false_success_no_output"`, `cli_failures` 적재 후 `continue`). `returncode==0` 성공·변경을 만든 run은 불변(INV-S2a/b). bounded workspace에서만 작동 — `workspace` 미전달(=`PROJECT_ROOT` 전체 레포)이면 walk 비용 회피로 skip. dogfood 가짜성공 침묵사(`stopped_max_cycles`) 死因 수정. 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md §3`.
 
 **Provider 선택 우선순위 (`run()` 내부):**
 1. `agent["force_provider"]` 설정 시: `detect_available_cli_providers()`로 가용 확인 → 가용이면 해당 단일 provider 사용, **미가용이면 `{"ok": False, "reason": "force_provider '...' unavailable"}` 조기 반환** (silent fallback 금지).
@@ -1142,12 +1144,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dynamic_orchestrator.py, cli.py, 2026-06-20-dogfood-false-success-spin-fix-design.md (+2)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, 2026-06-20-priority-3-5-baseline-capture.md, test_agent_runner_false_success.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/dynamic_orchestrator.py` | dynamic orchestrator | `DynamicOrchestrator` |
-| `core/providers/cli.py` | cli | `execute_cli_chat()` |
+| `core/agent_runner.py` | agent runner | `AgentRunner` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1695,6 +1696,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, 2026-06-20-priority-3-5-baseline-capture.md, test_agent_runner_false_success.py |
+| 2026-06-20 | v1.2.34 | fix(dogfood S2): 가짜성공 가드 — `core/agent_runner.py` CLI provider 루프(`cli_result["ok"]` 맹신 지점)에 보수적 가드. 모듈 헬퍼 `_workspace_mutation_signature()=(파일수, st_mtime_ns 총합)` + `_WS_SIG_EXCLUDE_DIRS`(.git/node_modules/__pycache__/.af-dogfood/.venv/venv) 신설. provider별 `ws_sig_before` 스냅샷 후 `returncode!=0 AND 산출물 변경 0`이면 ok→False 강등(`reason="<provider>_false_success_no_output"`, cli_failures 적재 후 continue). `returncode==0`·변경有 run 불변(INV-S2a/b). bounded workspace에서만 작동(`PROJECT_ROOT` 전체 레포 walk 회피). 테스트 13건 신규. 3-Tier: af-critic WARN(BLOCK 0) / af-cross-review BLOCK(R1: F1 max→sum false-neg, F2 multi-provider baseline 오염)→PASS(R2 실증 확인) / af-test-runner PASS(61). §0·§3.3 갱신. 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md §3`. — core/agent_runner.py, tests/test_agent_runner_false_success.py, Master_Blueprint.md, NEXT_STEPS.md, docs/2026-06-20-priority-3-5-baseline-capture.md |
 | 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dynamic_orchestrator.py, cli.py, 2026-06-20-dogfood-false-success-spin-fix-design.md (+2) |
 | 2026-06-20 | v1.2.34 | fix(dogfood): 가짜성공/spin 침묵사 수정 — S1: `core/providers/cli.py` `_SHELL_FAILURE_MARKERS=("batch file arguments are invalid",)` 신설 + `_classify_cli_issue`에 `shell_error` 분기 + ok-승격 제외 튜플 확장(INV-S1a/b: shell_error 없는 run·returncode==0 경로 불변). S3: `core/dynamic_orchestrator.py` `_hard_no_progress_cycles=env(AGENT_HARD_NO_PROGRESS,20)` 신설(stall_threshold:77 직후) + 루프 내 hard-stop(`all_infra OR retry_exhausted`→`_blocked_no_progress=True; break`) + 상태 결정 선두에 `blocked_no_progress` 분기(INV-S3a/b/c). 테스트 S1 3건 + S3 4건 신규. 3-Tier: af-critic PASS×2 / af-cross-review WARN(BLOCK 0, Advisory: 테스트 production 루프 우회 Medium) / af-test-runner PASS(3518). 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md`. — core/providers/cli.py, core/dynamic_orchestrator.py, tests/test_cli_providers.py, tests/test_dynamic_orchestrator_workspace_scope.py |
 | 2026-06-20 | v1.2.34 | chore(core): code update — dogfood.py, project_pipeline.py, qa_report.py, test_dogfood.py, test_qa_report_wiring.py |

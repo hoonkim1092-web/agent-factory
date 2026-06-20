@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T08:21:36+09:00
-source_commit: 32f77a60
+generated_at: 2026-06-20T09:14:23+09:00
+source_commit: 2b859103
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -30,7 +30,7 @@ sources:
 | 파일 | 역할 | Source |
 |------|------|--------|
 | `core/string_utils.py` | 문자열 유틸리티 | Master_Blueprint.md §0 |
-| `core/agent_runner.py:1-1411` | 에이전트 CLI 실행 | Master_Blueprint.md §0 |
+| `core/agent_runner.py:1-1617` | 에이전트 CLI 실행 | Master_Blueprint.md §0 |
 | `core/agent_specializer.py` | 태스크 전용 에이전트 커스터마이즈 | Master_Blueprint.md §0 |
 | `core/agent_worker.py` | PyInstaller worker 진입점. stdout/stderr `errors=replace`로 Windows/macOS 콘솔 인코딩 차이로 인한 worker 조기 종료를 방지. | Master_Blueprint.md §0 |
 | `core/approval_gate.py` | 실행 승인 게이트 | Master_Blueprint.md §0 |
@@ -412,10 +412,10 @@ sources:
 
 ### `core`
 
-154 modules · 220 classes · 860 functions
+154 modules · 220 classes · 861 functions
 
 - `core/agent_reservation.py` — 2 class / 0 func
-- `core/agent_runner.py` — 2 class / 2 func
+- `core/agent_runner.py` — 2 class / 3 func
 - `core/agent_specializer.py` — 1 class / 0 func
 - `core/agent_worker.py` — 0 class / 2 func
 - `core/approval_gate.py` — 1 class / 7 func
@@ -1359,7 +1359,7 @@ sources:
 
 ### `tests`
 
-219 modules · 408 classes · 1843 functions
+220 modules · 410 classes · 1844 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1372,6 +1372,7 @@ sources:
 - `tests/test_af_symbols.py` — 4 class / 1 func
 - `tests/test_agent_launcher_cli_dispatch.py` — 7 class / 0 func
 - `tests/test_agent_model_selector.py` — 4 class / 0 func
+- `tests/test_agent_runner_false_success.py` — 2 class / 1 func
 - `tests/test_agent_runner_force_provider.py` — 1 class / 1 func
 - `tests/test_agent_specializer.py` — 1 class / 2 func
 - `tests/test_agent_worker.py` — 0 class / 5 func
