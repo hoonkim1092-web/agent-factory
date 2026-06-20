@@ -6,6 +6,10 @@ This document captures the design position for connecting repeated 3-Tier review
 
 The goal is not to automatically rewrite skills or common instructions whenever a review fails. The goal is to learn from repeated BLOCK findings, identify when the process itself is causing repeated mistakes, and produce controlled evolution proposals.
 
+### v1 Scope
+
+The first implementation detects only the known pattern families enumerated in Step 2 (hiddenimport, production caller wiring, Blueprint, absolute path, fixture-only, pre-commit, provider instruction). Findings that do not match a known family are recorded as `unknown:<hash>` but are **not** aggregated toward the recurrence threshold: free-text finding titles vary by provider and edit site, so two genuinely related novel findings would receive different keys and never reach the same `pattern_key`. Detecting novel recurring patterns (clustering `unknown` findings by similarity) is therefore explicitly out of scope for v1 and deferred until enough captured data exists to justify it. The Purpose above ("learn from repeated mistakes") is the long-term target; v1 only re-detects the already-known families.
+
 ## Position
 
 AF should learn from repeated 3-Tier BLOCK patterns.
@@ -366,6 +370,15 @@ verification plan
 ```
 
 ### Step 5: Human Approval
+
+When a proposal is generated it must be surfaced, or the approval step becomes unreachable and the proposal is a silent dead-letter. At minimum:
+
+```text
+- record the proposal path (docs/evolution-proposals/EVP-*.md) in NEXT_STEPS.md
+- expose a read-only listing command (e.g. `af evolution list`) that prints open EVP proposals
+```
+
+A proposal written to disk but never surfaced breaks the control loop this design depends on. Notification is part of the Human Approval contract, not an optional add-on.
 
 Do not automatically modify:
 
