@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T09:14:23+09:00
-source_commit: 2b859103
+generated_at: 2026-06-20T10:45:46+09:00
+source_commit: 539bfe62
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1359,7 +1359,7 @@ sources:
 
 ### `tests`
 
-220 modules · 410 classes · 1844 functions
+220 modules · 411 classes · 1844 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1396,7 +1396,7 @@ sources:
 - `tests/test_check_model_escalation.py` — 0 class / 5 func
 - `tests/test_check_pending_review.py` — 1 class / 0 func
 - `tests/test_check_staged_design_review.py` — 9 class / 1 func
-- `tests/test_cli_providers.py` — 2 class / 31 func
+- `tests/test_cli_providers.py` — 3 class / 31 func
 - `tests/test_cli_session_adapter.py` — 0 class / 10 func
 - `tests/test_codebase_symbols.py` — 0 class / 22 func
 - `tests/test_coding_conventions.py` — 0 class / 7 func

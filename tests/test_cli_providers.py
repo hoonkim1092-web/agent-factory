@@ -1070,3 +1070,95 @@ class TestShellErrorClassification:
         assert _classify_cli_issue("", "batch file arguments are invalid") == "shell_error"
         # 아무 마커 없으면 빈 문자열
         assert _classify_cli_issue("", "") == ""
+
+
+# 멀티OS/멀티프로바이더 — 가짜성공 승격 차단 불변식(SSOT) 검증
+class TestFalseSuccessPromotionMultiOS:
+    """승격 차단을 _classify_cli_issue 반환(SSOT)에 묶은 뒤의 OS/프로바이더 커버리지.
+
+    핵심 불변식: codex_cli가 returncode!=0 + 텍스트를 내도, _classify_cli_issue가
+    비공백 issue를 반환하면(어느 OS/프로바이더 시그니처든) ok로 승격되지 않는다.
+    """
+
+    @staticmethod
+    def _split_runner(exec_rc, exec_stdout, exec_stderr):
+        """preflight(auth status)는 깨끗이 통과시키고 본 exec만 페이로드를 반환하는 mock.
+
+        머신에 codex 설치 여부와 무관하게 promotion 분기를 결정적으로 타게 한다
+        (status 명령은 rc=0·무마커 → preflight 비치명적 통과 → 본 exec 도달)."""
+        def runner(cmd, **kwargs):
+            joined = " ".join(str(c) for c in cmd)
+            if "status" in joined:  # codex auth_status_command=("login", "status")
+                return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+            return types.SimpleNamespace(
+                returncode=exec_rc, stdout=exec_stdout, stderr=exec_stderr
+            )
+        return runner
+
+    def _run_codex(self, tmp_path, exec_rc, exec_stdout, exec_stderr):
+        from core.providers.cli import CliChatRequest, execute_cli_chat
+
+        workspace = tmp_path / "proj"
+        workspace.mkdir(parents=True, exist_ok=True)
+        return execute_cli_chat(
+            CliChatRequest(
+                provider_id="codex_cli",
+                model="gpt-5",
+                system_prompt="system prompt",
+                task_input="execute task",
+                workspace=str(workspace),
+                run_id="run_multios",
+            ),
+            run_command=self._split_runner(exec_rc, exec_stdout, exec_stderr),
+        )
+
+    def test_posix_sandbox_denial_classified_permission_denied(self):
+        """macOS seatbelt / Linux landlock 샌드박스 거부 시그니처 → permission_denied."""
+        from core.providers.cli import _classify_cli_issue
+
+        # POSIX 샌드박스 거부는 .cmd 셔임 에러와 달리 권한 마커로 흡수된다.
+        assert _classify_cli_issue("", "operation not permitted (os error 1)") == "permission_denied"
+
+    @pytest.mark.parametrize(
+        "exec_stderr",
+        [
+            "operation not permitted",  # POSIX 샌드박스 거부 (macOS/Linux)
+            "batch file arguments are invalid",  # Windows .cmd 셔임 깨짐
+            "hook_runner.py] failed: exit 1",  # hook 실패 (OS 무관)
+            "not logged in",  # auth 실패 (OS 무관)
+        ],
+    )
+    def test_any_classified_issue_blocks_false_success(self, tmp_path, exec_stderr):
+        """SSOT 불변식: 비공백 issue를 내는 어떤 OS/프로바이더 시그니처든 ok 승격 차단."""
+        result = self._run_codex(tmp_path, 1, "some agent output", exec_stderr)
+        assert result["ok"] is False
+
+    def test_empty_issue_still_promotes_codex(self, tmp_path):
+        """대조군: 인프라 시그니처 없는 codex rc=1+text는 기존대로 승격(회귀 방지)."""
+        result = self._run_codex(tmp_path, 1, "some agent output", "ordinary stderr noise")
+        assert result["ok"] is True
+
+    def test_non_codex_provider_not_promoted_on_failure(self, tmp_path):
+        """멀티프로바이더: rc!=0 승격은 codex 전용. gemini_cli rc=1+text는 ok=False."""
+        from core.providers.cli import CliChatRequest, execute_cli_chat
+
+        workspace = tmp_path / "proj"
+        workspace.mkdir(parents=True, exist_ok=True)
+
+        def runner(cmd, **kwargs):
+            return types.SimpleNamespace(
+                returncode=1, stdout="some agent output", stderr="ordinary stderr noise"
+            )
+
+        result = execute_cli_chat(
+            CliChatRequest(
+                provider_id="gemini_cli",
+                model="gemini-2.5-pro",
+                system_prompt="system prompt",
+                task_input="execute task",
+                workspace=str(workspace),
+                run_id="run_gemini",
+            ),
+            run_command=runner,
+        )
+        assert result["ok"] is False

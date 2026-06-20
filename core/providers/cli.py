@@ -139,6 +139,13 @@ _HOOK_FAILURE_MARKERS = (
     "hook_bridge.py] failed",
 )
 
+# 셸/런처 셔임 실행 실패 — 에이전트 콘텐츠 실패가 아니라 인프라 실패라 ok 승격을 막아야 한다.
+# Windows 전용 시그니처: npm CLI는 `codex.cmd` 셔임으로 해석되고(_resolve_base_command),
+# cmd.exe가 인자를 못 넘기면 이 문구가 stderr에 찍힌다. POSIX엔 .cmd 셔임이 없어 이 실패
+# 자체가 발생하지 않는다 — macOS seatbelt / Linux landlock 샌드박스 거부는 "operation not
+# permitted"/"permission denied"로 _PERMISSION_DENIED_MARKERS가 흡수하고, 그 외 미분류
+# 비정상 종료는 agent_runner S2(_workspace_mutation_signature)가 OS 무관하게 잡는다.
+# 보수적: 실증된 시그니처만 등재한다(광범위 매칭은 정상 agent 텍스트 오탐 위험).
 _SHELL_FAILURE_MARKERS = (
     "batch file arguments are invalid",
 )
@@ -933,7 +940,11 @@ def execute_cli_chat(
     issue = _classify_cli_issue(completed.stdout, completed.stderr)
     ok = completed.returncode == 0 and bool(text.strip())
     if not ok and request.provider_id == "codex_cli" and bool(text.strip()):
-        if issue not in ("auth_required", "permission_denied", "hook_failure", "shell_error"):
+        # 비공백 issue(auth/permission/shell/hook 등 인프라 실패)는 ok 승격을 막는다.
+        # 제외 카테고리를 재나열하지 않고 _classify_cli_issue의 반환을 SSOT로 사용 —
+        # 새 OS/프로바이더별 마커(Windows 셔임·POSIX 샌드박스 등)를 어느 튜플에 추가해도
+        # 이 줄을 고칠 필요 없이 자동으로 가짜성공 승격이 차단된다.
+        if not issue:
             ok = True
     mins, secs = divmod(elapsed, 60)
     if ok:

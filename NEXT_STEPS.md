@@ -17,6 +17,7 @@
 - **S3 (dynamic_orchestrator.py)**: 무진전 fail-fast(`AGENT_HARD_NO_PROGRESS=20` + `all_infra||retry_exhausted`→`blocked_no_progress` BLOCK)
 - **✅ S1+S3 구현 완료** (2026-06-20, Sonnet, 커밋 `32f77a60`). 3-Tier PASS. 회귀 없음.
 - **✅ S2 구현 완료** (2026-06-20, Opus). `agent_runner.py` CLI 루프에 가짜성공 가드 + `_workspace_mutation_signature()=(파일수, st_mtime_ns 총합)` 신설. **af-cross-review BLOCK 2건 흡수**: F1(max→sum false-negative — 미래 mtime 형제 파일이 더 오래된 파일 수정을 가림) + F2(`ws_sig_before` 단일 스냅샷 multi-provider 오염 + PROJECT_ROOT walk 2.85초 비용). 수정: provider별 스냅샷 + bounded-workspace gate(`target_workspace!=PROJECT_ROOT`). `produced_changes` dead field 제거(소비처 없음). 테스트 13건. 3-Tier: af-critic WARN / af-cross-review BLOCK(R1)→PASS(R2) / af-test-runner PASS(61).
+- **✅ S1 멀티OS/멀티프로바이더 경화 완료** (2026-06-20, Opus). `cli.py` 가짜성공 승격 차단 분기의 제외 카테고리 4-튜플 재나열을 `if not issue:`로 교체(SSOT) — 어느 OS/프로바이더 마커든 자동 차단. **핵심 진단**: POSIX는 이미 보호됨(seatbelt/landlock 샌드박스 거부→`operation not permitted`→permission_denied), Windows `.cmd` 셔임은 POSIX에 부존재(물리적), S2/S3는 이미 OS/프로바이더 중립. 추측 마커 미추가(오탐 회피). 테스트 7건 신규(`TestFalseSuccessPromotionMultiOS`). af-critic PASS(경로 전수 추적, 동작 동일 확증) / af-test-runner PASS(64). Blueprint §12 갱신.
 - **▶ 다음 = 우선순위 3·5 별도 설계** (S1~S3 correctness 슬라이스 전부 닫힘). baseline 실코드 동결 완료: `docs/2026-06-20-priority-3-5-baseline-capture.md` (§6.1 right_sized_router / §6.2 bootstrap_roles 정확한 라인 인용). 두 설계는 **각각 전용 dated 문서로 분리**(아키텍처 변경이라 합치면 baseline churn → cross-review BLOCK 진동).
 
 **원 진단 우선순위(동결)**:

@@ -1144,11 +1144,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, 2026-06-20-priority-3-5-baseline-capture.md, test_agent_runner_false_success.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cli_providers.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/agent_runner.py` | agent runner | `AgentRunner` |
+| `core/providers/cli.py` | cli | `execute_cli_chat()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1696,6 +1696,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cli_providers.py |
+| 2026-06-20 | v1.2.34 | fix(S1 multi-OS): 가짜성공 승격 차단을 SSOT로 굳힘 — `core/providers/cli.py` `execute_cli_chat`의 codex ok-승격 분기에서 제외 카테고리 4-튜플 재나열(`"auth_required","permission_denied","hook_failure","shell_error"`)을 `if not issue:`로 교체. `_classify_cli_issue` 반환을 단일 진실원으로 사용 → 어느 OS/프로바이더 마커(Windows `.cmd` 셔임·POSIX seatbelt/landlock 샌드박스 등)를 어떤 튜플에 추가해도 promotion 차단에 자동 참여(중복 목록 유지보수 누락 시 OS별 가짜성공 부활 방지, CLAUDE.md SSOT 규칙). 오늘 시점 동작 동일(비공백 issue는 정확히 그 4개뿐). `_SHELL_FAILURE_MARKERS`에 OS 커버리지 주석 추가(Windows 셔임 전용·POSIX는 permission_denied/agent_runner S2가 흡수). 추측 마커 미추가(오탐 회피). 테스트 7건 신규(`TestFalseSuccessPromotionMultiOS`: POSIX 샌드박스 분류 + 4-카테고리 parametrize 승격차단 + 대조군 승격유지 + gemini 멀티프로바이더). af-test-runner PASS(64). — core/providers/cli.py, tests/test_cli_providers.py, Master_Blueprint.md, NEXT_STEPS.md |
 | 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, 2026-06-20-priority-3-5-baseline-capture.md, test_agent_runner_false_success.py |
 | 2026-06-20 | v1.2.34 | fix(dogfood S2): 가짜성공 가드 — `core/agent_runner.py` CLI provider 루프(`cli_result["ok"]` 맹신 지점)에 보수적 가드. 모듈 헬퍼 `_workspace_mutation_signature()=(파일수, st_mtime_ns 총합)` + `_WS_SIG_EXCLUDE_DIRS`(.git/node_modules/__pycache__/.af-dogfood/.venv/venv) 신설. provider별 `ws_sig_before` 스냅샷 후 `returncode!=0 AND 산출물 변경 0`이면 ok→False 강등(`reason="<provider>_false_success_no_output"`, cli_failures 적재 후 continue). `returncode==0`·변경有 run 불변(INV-S2a/b). bounded workspace에서만 작동(`PROJECT_ROOT` 전체 레포 walk 회피). 테스트 13건 신규. 3-Tier: af-critic WARN(BLOCK 0) / af-cross-review BLOCK(R1: F1 max→sum false-neg, F2 multi-provider baseline 오염)→PASS(R2 실증 확인) / af-test-runner PASS(61). §0·§3.3 갱신. 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md §3`. — core/agent_runner.py, tests/test_agent_runner_false_success.py, Master_Blueprint.md, NEXT_STEPS.md, docs/2026-06-20-priority-3-5-baseline-capture.md |
 | 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, dynamic_orchestrator.py, cli.py, 2026-06-20-dogfood-false-success-spin-fix-design.md (+2) |
