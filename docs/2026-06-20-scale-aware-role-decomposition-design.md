@@ -2,8 +2,9 @@
 
 - 날짜: 2026-06-20
 - 작성: Opus 4.8 (설계), 구현=Sonnet
-- 상태: Draft — **B안 채택 (2026-06-20)**. 구현은 **다음 세션**(Sonnet).
-- ⚠️ **B안 재작성 필요 (§3)**: 형제 우선순위3(gear) **폐기**됨. 규모 신호를 **`route["gear"]`가 아니라 `route["required_stages"]`에서 직접 유도**한다. §3.3 어댑터: `gear=="small_full"` → `STAGE_RESEARCH ∉ stages AND STAGE_DESIGN ∉ stages`(둘 다 부재면 small → `decomposition_strength="minimal"`, 아니면 standard). §2(프롬프트 분기)·§4(QA/merge_mode 완화)·§7(fallback)은 **유지**. cross-review 결과: 본 문서 R1 = WARN(Medium advisory 2건, BLOCK 0).
+- 상태: **구현 완료 (2026-06-20)** — B안 채택. §3 required_stages 직접 유도로 재작성 완료. 구현 = `core/bootstrap_roles.py`(D1+D3+`_build_policy_rules` 파라미터화) + `core/dogfood.py:1774`(D2). 테스트 `tests/test_scale_aware_decomposition.py` 27건 + policy 7건 PASS.
+- **cross-review BLOCK 2건 흡수 (2026-06-20, R1)**: F1(`_build_policy_rules()`가 minimal 경로에서 policy의 "At least 2 roles"를 주입 → `_MINIMAL_SCALE_RULES`와 충돌) + F2(policy.yaml QA MANDATORY constraint가 `qa_relaxed` 경로에서도 LLM에 도달). 둘 다 `_build_policy_rules(decomposition_strength, qa_relaxed)` 파라미터화로 source 필터링(§2.3·§4.3). standard 기본값 바이트 동일. F3(`_merge_mode` LLM 프롬프트 노출)=ACCEPT-ADV Medium, advisory 보류(무해 문자열, 배선 채널 단순성 우선).
+- B안 핵심: 규모 신호를 폐기된 `route["gear"]`가 아니라 **`route["required_stages"]`에서 직접 유도**(research·design 둘 다 부재 → `minimal`, 아니면 `standard`). §2(프롬프트 분기)·§4(QA/merge_mode 완화)·§7(fallback) 유지.
 - 부모 설계: `docs/2026-06-20-dogfood-false-success-spin-fix-design.md` §6.2 (우선순위 5 — Bug 4 뿌리)
 - 흡수 출처: `docs/2026-06-20-rse-small-full-execution-gear-design.md` (우선순위3, SUPERSEDED) — gear 소비를 required_stages 직접 판단으로 대체.
 - 진단 동결 출처: 메모리 `project_dogfood_false_success_spin`, 부모 설계 §0 死因 사슬 [Bug 4] 과분해
@@ -63,13 +64,13 @@
   TypeError 폴백 `:913` `raw = self.planner.plan(task_input, project_brief)`. **이것이 plan()의 유일 production 호출.**
 - `core/project_pipeline.py:848` `project_brief["route"] = route or {}` — **route dict가 prepare 단계에서 project_brief에 보존됨**. 이미 존재하는 seam. (`route`는 `:706` `prepare(..., route: dict|None=None)` 파라미터로 진입.)
 
-### 1.3 규모 신호의 현재 출처 (형제 gear 계약과의 접점)
+### 1.3 규모 신호의 현재 출처 (required_stages — 이미 존재하는 seam)
 
 - dogfood full 경로는 `route=state.route_decision`을 pipeline에 전달(`core/dogfood.py:1774`), `state.route_decision = route.to_dict()`(`core/dogfood.py:1747`)는 router `classify()` 산출물이다.
-- 따라서 **형제 설계가 RouteDecision(→`route.to_dict()`)에 `gear` 필드를 심으면, 그 값은 `project_brief["route"]`(`:848`)에 자동으로 흘러 들어와 `plan()`에서 `project_brief["route"].get("gear")`로 읽을 수 있다.** 새 배선 0줄로 신호가 도달한다.
+- `route.to_dict()`는 **`required_stages` 리스트를 이미 포함**(`core/right_sized_router.py:75`/`:151`)한다. 그 값은 `project_brief["route"]`(`:848`)에 자동으로 흘러 들어와 `plan()`에서 `project_brief["route"].get("required_stages")`로 읽힌다 — **새 배선 0줄**(B안).
 - `merge_mode`는 `DogfoodState`(`core/dogfood.py:158`)에 있고 **현재 route/project_brief로 흐르지 않는다** → D2를 위해 명시 배선 필요(§4).
 
-> ⚠️ `right_sized_router.py`의 라인·필드명은 **인용·단정 금지**. 본 설계는 "route dict에 `gear` 키가 존재할 수 있다"는 **인터페이스 가정**으로만 기술한다 (§3).
+> B안은 `right_sized_router.py`를 **무인용·무수정**(YAGNI)한다. 규모 신호는 `required_stages`(`STAGE_RESEARCH`/`STAGE_DESIGN` 멤버십)에서 직접 유도하므로 별도 gear 필드 의존이 없다 (§3).
 
 ---
 
@@ -115,7 +116,9 @@ def plan(
 
 > **단순성(Karpathy 원칙 2)**: minimal 프롬프트는 director 프롬프트의 **별도 사본이 아니라**, 공통 스키마 블록(`:404-448`) + 공통 Evidence Grounding(`:468-471`)을 헬퍼로 묶고 정체성/분해지침/QA지침 **3개 슬롯만 분기**한다. 코드 중복 최소화.
 
-- **INV-D1c**: standard 경로의 최종 프롬프트 문자열은 리팩토링 전후 **바이트 동일**해야 한다 (회귀 테스트로 고정 — §2.4). 이것이 하위호환의 핵심 검증.
+> **F1 흡수 (cross-review)**: `Rules:` 섹션의 `_build_policy_rules()`가 policy.yaml(`roles.min=2`, max 없음) 기반으로 `"At least 2 roles. No upper limit…"`를 항상 주입했다 → minimal의 "exactly 1 role / At most 2 roles"와 정면 충돌. 수정: `_build_policy_rules(decomposition_strength, qa_relaxed)` 파라미터화 — `minimal`이면 역할 수 규칙(min/max) 라인 생략(폴백 "2 to 5 roles only"도 동일). `_MINIMAL_SCALE_RULES`가 단일 역할-수 권위가 됨. 기본값(standard)은 바이트 동일.
+
+- **INV-D1c**: standard 경로의 최종 프롬프트 문자열은 리팩토링 전후 **바이트 동일**해야 한다 (회귀 테스트로 고정 — §2.4 + `_build_policy_rules()` 기본값 무변경 회귀). 이것이 하위호환의 핵심 검증.
 
 ### 2.4 테스트 (신규)
 
@@ -126,57 +129,55 @@ def plan(
 
 ---
 
-## 3. 규모 신호 입력 계약 (형제 gear와의 공유 seam) — 전용 섹션
+## 3. 규모 신호 입력 계약 (B안 — required_stages 직접 유도) — 전용 섹션
 
-본 설계는 형제(우선순위 3)가 정의할 gear 분류의 **소비자**다. 형제가 어떤 필드명을 확정할지 **단정하지 않고**, 인터페이스 요구사항으로만 기술한다.
+**B안 (2026-06-20 채택)**: 형제 우선순위 3(gear)이 **폐기**됐다. 규모 신호를 별도 gear 필드가 아니라 **이미 존재하는 `route["required_stages"]`에서 직접 유도**한다. gear seam을 소비하지 않으므로 `right_sized_router.py`는 무변경(YAGNI — 규모 신호 소비자가 plan() 1개뿐).
 
-### 3.1 인터페이스 요구사항
+### 3.1 규모 유도 규칙
 
-1. 형제 설계는 RouteDecision에 **3분 기어**(light / small-full / full)를 named 계약으로 노출한다. 그 직렬화(`route.to_dict()`)에 기어를 식별하는 **단일 문자열 키**가 존재한다고 가정한다. 본 설계는 이를 **`route["gear"]`**로 참조한다 (형제 확정 키명과 다르면 §3.3 어댑터 1줄만 수정).
-2. **gear → decomposition_strength 매핑** (본 설계가 소유):
+`required_stages`는 router `classify()`가 산출하고 `route.to_dict()` → `state.route_decision`에 보존된다(`core/right_sized_router.py:75`/`:151`). plan()은 이 리스트만 보고 규모를 판정한다:
 
-   | 형제 gear | decomposition_strength | 근거 |
-   |-----------|------------------------|------|
-   | `small_full` | `"minimal"` | 작은 full 변경 → 최소 분해 |
-   | `full` | `"standard"` | 기존 동작 유지 |
-   | `light` | (plan() 미도달) | light는 ProjectPipeline을 안 타므로(`core/dogfood.py:1801` light 경로) plan() 호출 자체가 없음 — 매핑 불필요 |
-   | 키 부재/미지값 | `"standard"` | fail-safe (형제 미배포 시 기존 동작) |
+| required_stages 조건 | decomposition_strength | 근거 |
+|----------------------|------------------------|------|
+| `STAGE_RESEARCH ∉ stages` **AND** `STAGE_DESIGN ∉ stages` | `"minimal"` | research·design 둘 다 불필요 = 작은 surgical 변경 |
+| research 또는 design 중 하나라도 존재 | `"standard"` | 큰 변경 → 기존 최대 분해 유지 |
+| `required_stages` 부재/빈 리스트 | `"standard"` | 하위호환(`_stage_enabled` 부재=전체실행=full) |
 
-3. **light는 plan()에 도달하지 않는다**: light DEVELOP는 `_run_develop_light`(`core/dogfood.py:1801`)로 ProjectPipeline을 우회한다. 따라서 plan()이 보는 gear는 사실상 `{small-full, full}` 2종 + 부재뿐이다. 이 사실이 매핑을 단순하게 만든다.
+- `STAGE_RESEARCH="research"` / `STAGE_DESIGN="design"`은 `right_sized_router.py:20-21` SSOT에서 import.
 
-### 3.2 신호가 plan()에 도달하는 경로 (배선)
+### 3.2 Tier3 회귀 방지 (분해축 ≠ 리뷰축) — 워처 R1 High 흡수
 
-기존 seam을 재사용한다 — **새 파이프라인 파라미터 0개**:
+**Tier3 파일(고위험 blast_radius)은 규모가 작아도 항상 `standard` 분해다.** 이유: `right_sized_router.py:218` **Floor 2**가 Tier3 변경에 `(STAGE_DESIGN, STAGE_REVIEW, STAGE_CROSS_REVIEW)`를 강제로 union → `STAGE_DESIGN ∈ required_stages` → §3.1 규칙상 standard. 즉 **분해 축소(규모)는 리뷰 축소(Tier)와 독립**이며, Tier3 contract 변경은 minimal로 떨어지지 않는다. 이 동작을 테스트로 고정(`required_stages`에 design 포함 시 standard)해 두 정책 혼선을 회귀 차단한다.
+
+### 3.3 신호가 plan()에 도달하는 경로 (배선) — 새 파이프라인 파라미터 0개
 
 ```
-형제: classify() → RouteDecision.gear
+router: classify() → RouteDecision.required_stages
         ↓ route.to_dict()  (core/dogfood.py:1747)
-state.route_decision["gear"]
+state.route_decision["required_stages"]
         ↓ prepare(route=...)  (core/dogfood.py:1774, project_pipeline.py:706)
-project_brief["route"]["gear"]  (project_pipeline.py:848)
+project_brief["route"]["required_stages"]  (project_pipeline.py:848)
         ↓ _gen_role_plan()  (project_pipeline.py:909-914)
-plan() 내부에서 project_brief["route"].get("gear") 읽음
+plan() 내부에서 project_brief["route"].get("required_stages") 읽고 §3.1 유도
 ```
 
-### 3.3 plan() 내부 매핑 (어댑터, 1곳)
+### 3.4 plan() 내부 유도 (어댑터, 1곳)
 
-`plan()` 본문 진입부에서 `decomposition_strength` 파라미터가 **명시 전달되지 않은 경우에만** project_brief의 route에서 유도:
+`plan()` 진입부에서 `decomposition_strength`가 **기본값(`"standard"`)일 때만** route에서 유도:
 
 ```python
-# decomposition_strength가 호출자에서 명시되면 그것을 우선.
-# 아니면 project_brief["route"]["gear"]에서 유도 (형제 gear 계약 소비).
 if decomposition_strength == "standard":   # 미명시 기본값
-    gear = str((project_brief.get("route") or {}).get("gear") or "").strip()
-    if gear == "small_full":   # 형제 우선순위 3 확정 리터럴 (GEAR_SMALL_FULL)
-        decomposition_strength = "minimal"
-    # full / 부재 / light / 미지 → standard 유지 (fail-safe)
+    stages = (project_brief.get("route") or {}).get("required_stages")
+    if isinstance(stages, list) and stages:
+        stage_set = {str(s).strip() for s in stages}
+        if STAGE_RESEARCH not in stage_set and STAGE_DESIGN not in stage_set:
+            decomposition_strength = "minimal"
+    # research/design 존재 · 부재 · 빈 리스트 → standard 유지 (fail-safe)
 ```
 
-- **INV-D3a (배선 단일화)**: gear→strength 매핑은 **이 한 곳에만** 존재. 형제 우선순위 3 설계가 키 `"gear"` / 값 `"small_full"`(`GEAR_SMALL_FULL`)로 확정 → 본 리터럴은 그에 정렬됨(통합 정렬 완료).
-- **INV-D3b (이중 입력 우선순위)**: 호출자가 `decomposition_strength="minimal"`을 명시하면 route 유도를 건너뛴다 (테스트·직접 호출자 우선). route 유도는 production 기본 경로 전용.
-- **INV-D3c (형제 미배포 안전)**: 형제 gear 미배포(키 부재) → 항상 `"standard"` → 기존 동작 100% 보존. 두 설계는 **독립 머지 가능**.
-
-> **가정 정렬 결과 (CLAUDE.md 원칙 1)**: 형제 우선순위 3 설계가 **키 `"gear"` / 값 `"small_full"`**(`GEAR_SMALL_FULL`, `right_sized_router` SSOT)로 확정했고, 본 §3.3 어댑터 리터럴은 그에 정렬됐다. 두 설계가 동일 seam(`project_brief["route"]["gear"]`)에 합의한 상태 — 머지 시 추가 통합 작업 없음. (형제가 추후 라벨을 바꾸면 §3.3의 단일 리터럴만 재정렬.)
+- **INV-D3a (유도 단일화)**: required_stages→strength 유도는 **이 한 곳에만** 존재.
+- **INV-D3b (이중 입력 우선순위)**: 호출자가 `decomposition_strength="minimal"`을 명시하면 route 유도를 건너뛴다(테스트·직접 호출자 우선). route 유도는 production 기본 경로 전용.
+- **INV-D3c (안전 기본값)**: required_stages 부재/빈 → `"standard"` → 기존 동작 100% 보존. gear 미배포 의존 없음(B안은 router 무변경이라 형제 머지 순서 무관 자체가 비해당).
 
 ---
 
@@ -218,7 +219,11 @@ if not qa_relaxed:
     self._ensure_qa_role(normalized_payload)
 ```
 
-추가로 **minimal+relaxed 경로의 프롬프트**(§2.3)에서 QA 필수 문구(`:473-474` 등가물)를 **생략**한다 (프롬프트와 후처리 양쪽 정합). standard 경로 프롬프트는 QA 문구 유지.
+추가로 **minimal+relaxed 경로의 프롬프트**(§2.3)에서 QA 필수 문구를 **양쪽 다** 생략한다 (프롬프트와 후처리 정합):
+1. 하드코딩 `_QA_MANDATE`(`:473-474` 등가물) — `qa_block=""`으로 생략.
+2. **F2 흡수 (cross-review)**: policy.yaml `constraints`의 `"MANDATORY: Always include a qa_engineer role…"` — `_build_policy_rules()`가 무조건 주입하던 것을 `qa_relaxed`일 때 `"qa_engineer"` 포함 constraint를 필터링. 이게 없으면 LLM은 후처리 skip에도 불구하고 여전히 QA를 강제받아 relaxation이 반쪽이 됨.
+
+standard 경로 프롬프트는 두 QA 문구 모두 유지.
 
 - **INV-D2b**: `auto_policy`(기본)에서는 minimal이어도 QA 강제 유지 — 부모 §6.2 제약 충족.
 - **INV-D2c**: standard(full)에서는 merge_mode 무관하게 QA 강제 유지 — 큰 변경은 항상 QA.
@@ -246,18 +251,18 @@ if not qa_relaxed:
 |---------|------|------|------|
 | D1 | `core/bootstrap_roles.py` | 없음 | 시그니처 확장 + 프롬프트 슬롯 분기 + standard 골든 회귀 |
 | D2 | `core/bootstrap_roles.py` (`:513` 조건부) + `core/dogfood.py` (`:1774` merge_mode 주입) | D1 선행 | qa_relaxed 게이팅 |
-| D3 | `core/bootstrap_roles.py` (§3.3 어댑터) | D1 선행 | gear→strength 매핑 |
+| D3 | `core/bootstrap_roles.py` (§3.4 어댑터) | D1 선행 | required_stages→strength 유도 |
 
 - D1을 먼저 닫고(시그니처+프롬프트), D2·D3는 같은 파일이라 순차. dogfood 변경은 D2 1곳(`:1774` 인근)뿐.
-- **배포 동등성 (메모리 `pipeline_deploy_parity`)**: 픽스처-only 미허용. production caller `project_pipeline.py:911`까지 신호 도달을 grep로 검증 — gear는 `project_brief["route"]`(`:848`) 경유, merge_mode는 `core/dogfood.py:1774` 주입 경유. 둘 다 end-to-end 연결 확인 의무.
-- **형제 독립성**: 형제 gear 미배포 시에도 D1~D3는 standard 기본값으로 무해(INV-D3c). 두 PR은 머지 순서 무관, §3.3 리터럴만 통합 시점에 정렬.
+- **배포 동등성 (메모리 `pipeline_deploy_parity`)**: 픽스처-only 미허용. production caller `project_pipeline.py:911`까지 신호 도달을 grep로 검증 — required_stages는 `project_brief["route"]`(`:848`) 경유, merge_mode는 `core/dogfood.py:1774` 주입 경유. 둘 다 end-to-end 연결 확인 의무.
+- **router 무변경**: B안은 `right_sized_router.py`를 건드리지 않는다(YAGNI). required_stages 부재 시 D1~D3는 standard 기본값으로 무해(INV-D3c).
 - 3-Tier(전부 Tier-3 파일 — core/): af-critic → af-cross-review → af-test-runner.
 
 ---
 
 ## 6. 핵심 설계 질문 답변 (요구된 5문)
 
-1. **규모 신호가 plan()에 어떻게 도달?** — `plan()`에 `decomposition_strength="standard"` 파라미터 additive 추가(§2.2). production에서는 명시 전달 대신 **기존 `project_brief["route"]` seam**(`:848`)에 형제가 심은 `gear`를 §3.3 어댑터가 읽어 유도. 하위호환은 기본값 `"standard"` = 바이트 동일 프롬프트로 보장(INV-D1a/c).
+1. **규모 신호가 plan()에 어떻게 도달?** — `plan()`에 `decomposition_strength="standard"` 파라미터 additive 추가(§2.2). production에서는 명시 전달 대신 **기존 `project_brief["route"]["required_stages"]` seam**(`:848`)을 §3.4 어댑터가 읽어 유도(research·design 둘 다 부재→minimal). 하위호환은 기본값 `"standard"` = 바이트 동일 프롬프트로 보장(INV-D1a/c).
 2. **minimal이 director와 다른 점?** — 정체성("senior engineer scoping a SMALL change") + 분해지침("FEWEST roles/modules, 단일 파일→1역할 1모듈") + 역할 ≤2 + (relaxed 시) QA 문구 생략(§2.3). 스키마·Evidence 규칙은 공유.
 3. **_ensure_qa_role 완화?** — `:513` 호출을 `decomposition_strength=="minimal" AND merge_mode∈{never,manual}` 교집합에서만 skip(§4.3). `auto_policy`는 QA 강제 유지(부모 §6.2 제약, INV-D2b).
 4. **모듈0금지·qa필수 조건부화?** — 모듈0 금지는 **모든 규모에서 유지**(빈 분해 방지, §4.4). qa필수는 minimal+relaxed에서만 프롬프트·후처리 양쪽 완화(§4.3).
@@ -276,13 +281,15 @@ if not qa_relaxed:
 
 - **INV-F1**: `plan()` 시그니처 확장 후에도 `_llm_available=False` 경로는 기존 fallback dict를 바이트 동일하게 반환.
 
+> **cross-review R2 F-NEW-1 (Medium ADV) 보류 근거**: `_fallback_roles`는 `qa_relaxed`에도 항상 `qa_engineer`를 포함(`:185-186`)한다 → LLM 실패/미가용 시 minimal+never여도 QA가 남는다. cross-review가 "정책 불일치"로 지적했으나, 이는 **INV-F1의 의도적 결정**이다: fallback은 LLM이 죽은 비상 경로이고 모듈도 안 만들므로, QA 1역할을 남기는 것이 "검증 없는 빈 분해"보다 안전하다(fail-safe 보수). af-critic R1도 "설계 의도 부합"으로 확인. 규모 인지를 fallback에 침투시키면 추측성 복잡도(원칙 2). **변경하지 않음** — advisory이며 정상 LLM 경로엔 영향 없음.
+
 ---
 
 ## 8. 불변식 요약
 
 - **INV-D1a/b/c**: standard 기본값=기존 동작 무파손, 미지값→standard fail-safe, standard 프롬프트 바이트 동일(골든).
 - **INV-D2a/b/c/d**: merge_mode 부재→auto_policy→QA강제, auto_policy minimal도 QA강제, full은 항상 QA, `_ensure_qa_role` 함수 본체 무변.
-- **INV-D3a/b/c**: gear→strength 매핑 단일 지점, 명시 호출자 우선, 형제 미배포 시 standard로 독립 안전.
+- **INV-D3a/b/c**: required_stages→strength 유도 단일 지점, 명시 호출자 우선(minimal), required_stages 부재 시 standard로 안전.
 - **INV-F1**: fallback 경로 무변(규모 인지 미적용).
-- **공통**: 배포 동등성 — gear는 `project_brief["route"]`(`project_pipeline.py:848`) seam, merge_mode는 `core/dogfood.py:1774` 주입으로 production caller `project_pipeline.py:911`까지 end-to-end 도달(픽스처-only 미허용).
-- **형제 경계**: `right_sized_router.py` 무인용·무수정. gear 계약은 §3 인터페이스 요구사항으로만 소비.
+- **공통**: 배포 동등성 — required_stages는 `project_brief["route"]`(`project_pipeline.py:848`) seam, merge_mode는 `core/dogfood.py:1774` 주입으로 production caller `project_pipeline.py:911`까지 end-to-end 도달(픽스처-only 미허용).
+- **router 경계**: `right_sized_router.py` 무인용·무수정(B안 YAGNI). 규모 신호는 `required_stages` 멤버십(`STAGE_RESEARCH`/`STAGE_DESIGN`)에서만 유도.

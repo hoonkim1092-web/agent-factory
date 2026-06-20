@@ -1,6 +1,23 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 진입점 (2026-06-21) — 우선순위5 규모인지 분해 (B안) 구현
+## ▶▶ 다음 진입점 — QA 파이프라인 product work-item 신규 선정 (우선순위5 완료)
+
+> 우선순위5 규모인지 분해(B안) 구현·검증 완료(2026-06-20). 다음은 신규 product-value work-item 선정 또는 보류 트랙.
+
+### ✅ 우선순위5 규모인지 분해 (B안) 구현 완료 (2026-06-20)
+
+> **설계**: `docs/2026-06-20-scale-aware-role-decomposition-design.md`(B안, §3 required_stages 직접 유도 재작성 완료). 메모리: `project_priority5_scale_aware_decomposition_B`.
+>
+> - **D1+D3** (`core/bootstrap_roles.py`): `plan()`에 `decomposition_strength="standard"` additive 파라미터. `route["required_stages"]`에서 규모 유도(`research`·`design` 둘 다 부재→`minimal`, 아니면 `standard`). 프롬프트 슬롯 3개 분기(identity/scale_block/qa_block), standard 바이트 동일(INV-D1c). Tier3는 Floor2가 design 강제→항상 standard(분해축≠리뷰축, 워처 High 흡수). 모듈0 금지 모든 규모 유지(§4.4).
+> - **D2** (`core/dogfood.py:1772`): `_run_develop_full`에서 `route_with_meta={**route_decision,"_merge_mode":state.merge_mode}` 주입 → `prepare(route=...)` → `project_pipeline.py:848` seam → `plan()` 도달(배포 동등성 grep 검증). `_ensure_qa_role` skip은 `minimal AND merge_mode∈{never,manual}` 교집합만(auto_policy는 QA 강제 유지).
+> - **cross-review BLOCK 2건 흡수(R1→R2)**: F1(`_build_policy_rules()` minimal에서 "At least 2 roles" 주입 충돌) + F2(policy.yaml QA MANDATORY constraint가 qa_relaxed에도 LLM 도달) → `_build_policy_rules(decomposition_strength, qa_relaxed)` 파라미터화로 source 필터링. standard 기본값 바이트 동일.
+> - **3-Tier**: af-critic PASS / af-cross-review R1 BLOCK(F1·F2)→R2 WARN(해소, BLOCK 0; F-NEW-1 fallback QA는 INV-F1 의도대로 보류) / af-test-runner PASS(64).
+> - **테스트**: `tests/test_scale_aware_decomposition.py` 27건 신규(+policy 인접). 사전존재 dogfood 7건(MagicMock 직렬화)은 base에서도 실패 — 무관.
+> - **보류(Part 4)**: Tier3-small → minimal 분해는 분해축≠리뷰축 분리 필요(현 B안은 Tier3=standard). gear 승격은 2번째 소비자 생기면(우선순위3 doc 재활용).
+
+---
+
+## (이력) 진입점 (2026-06-21) — 우선순위5 규모인지 분해 (B안) 구현 [완료]
 
 > **사실·결정 전부 동결**: 메모리 `project_priority5_scale_aware_decomposition_B`. 설계 = `docs/2026-06-20-scale-aware-role-decomposition-design.md`(B안 표기됨). **재분석 금지.**
 > **모델**: 구현이라 **Sonnet** (메모리 `feedback_model_per_phase`).

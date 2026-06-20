@@ -7490,3 +7490,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (4)**: `Master_Blueprint.md, NEXT_STEPS.md, core/providers/cli.py, tests/test_cli_providers.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-20 23:16 — `2026-06-04-right-sized-execution-slice1` (007d7c5e4)
+
+**Context**: Claude Code edit session
+
+**Changed (6)**: `Master_Blueprint.md, NEXT_STEPS.md, core/bootstrap_roles.py, core/dogfood.py, docs/2026-06-20-scale-aware-role-decomposition-design.md, tests/test_scale_aware_decomposition.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

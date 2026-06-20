@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T22:33:57+09:00
-source_commit: 5846fe897
+generated_at: 2026-06-20T23:16:53+09:00
+source_commit: 007d7c5e4
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -8039,6 +8039,21 @@ _(no top-level symbols)_
 **Functions:**
 - `_make_request`
 - `_cmd`
+
+## `tests/test_scale_aware_decomposition.py`
+
+**Classes:**
+- `_CaptureLLM`
+- `TestDecompositionPrompt`
+- `TestQARelaxation`
+- `TestPolicyRulesScaleAware`
+- `TestFallbackAndBackwardCompat`
+
+**Functions:**
+- `_make_director`
+- `_prompt_for`
+- `_plan_with`
+- `_has_qa`
 
 ## `tests/test_session_bridge.py`
 

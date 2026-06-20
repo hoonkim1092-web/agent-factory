@@ -77,7 +77,7 @@
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | `inspect_project()`, `format_markdown()`, `_recommend_next_steps()`, `main()` |
 | `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python/C# 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | `build_symbols_index()`, `main()` |
 | `scripts/review_consensus.py` | finding-level 증거수집기 (S4+S5, LLM 미호출). `cr_findings.json`의 ACCEPT/ACCEPT★ finding마다 surrounding_code·callers·callees(AST 1-hop)·tests를 수집해 `cr_evidence.json` 생성. af-cross-review Step 6가 이 증거를 기반으로 합의 판정(ACCEPT/REJECT/UNVERIFIED). 프로바이더 중립(INV-2). | `collect_evidence()`, `_find_callers()`, `_find_callees()`, `_find_tests()`, `_surrounding_code()`, `_enclosing_function()`, `main()` |
-| `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | `ProjectPlanningDirector` |
+| `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트. **규모 인지 분해(B안, 2026-06-20)**: `plan()`에 `decomposition_strength` additive 파라미터 — `route["required_stages"]`에 `research`·`design` 둘 다 부재 시 `minimal`(역할/모듈 최소화 프롬프트), 아니면 `standard`(기존 director 프롬프트, 바이트 동일). Tier3는 Floor2가 design 강제→항상 standard. `_ensure_qa_role` skip은 `minimal AND merge_mode∈{never,manual}` 교집합만(auto_policy는 QA 강제 유지). merge_mode는 `dogfood.py:1774` `route["_merge_mode"]` 주입으로 도달. last_updated: 2026-06-20 | `ProjectPlanningDirector`, `plan()`, `_ensure_qa_role()`, `_fallback_roles()` |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | `SandboxedBuilder` |
 | `core/config_paths.py` | 경로 상수 중앙화 | `PROJECT_ROOT`, `POLICIES_PATH`, `CANDIDATES_DIR` |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | `ControlPlaneLLM` |
@@ -1144,11 +1144,12 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cli_providers.py
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, bootstrap_roles.py, dogfood.py, 2026-06-20-scale-aware-role-decomposition-design.md (+1)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/providers/cli.py` | cli | `execute_cli_chat()` |
+| `core/bootstrap_roles.py` | bootstrap roles | `ProjectPlanningDirector` |
+| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1696,6 +1697,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, bootstrap_roles.py, dogfood.py, 2026-06-20-scale-aware-role-decomposition-design.md (+1) |
+| 2026-06-20 | v1.2.34 | feat(우선순위5 B안): 규모 인지 역할 분해 — `core/bootstrap_roles.py` `plan()`에 `decomposition_strength="standard"` additive 파라미터(D1). `route["required_stages"]`에서 규모 직접 유도(research·design 둘 다 부재→`minimal`, 아니면 `standard`; gear 키 미사용 — 형제 우선순위3 폐기 후 B안). minimal 프롬프트 슬롯 3개 분기(정체성/Scale Constraint/QA mandate), standard는 바이트 동일 보존(INV-D1c). 모듈0 금지는 모든 규모 유지(§4.4). `_ensure_qa_role` 호출을 `minimal AND merge_mode∈{never,manual}` 교집합에서만 skip(D2, INV-D2a/b/c; auto_policy는 QA 강제 유지). Tier3는 Floor2가 design 강제→항상 standard(분해축≠리뷰축 회귀 방지). merge_mode 배선: `core/dogfood.py:1774` `route["_merge_mode"]=state.merge_mode` 주입→`project_pipeline.py:848` seam→`plan()` 도달(배포 동등성). `_fallback_roles` 무변(INV-F1). 테스트 `tests/test_scale_aware_decomposition.py` 21건 신규. 설계: `docs/2026-06-20-scale-aware-role-decomposition-design.md`(B안). — core/bootstrap_roles.py, core/dogfood.py, tests/test_scale_aware_decomposition.py, Master_Blueprint.md, NEXT_STEPS.md |
 | 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cli_providers.py |
 | 2026-06-20 | v1.2.34 | fix(S1 multi-OS): 가짜성공 승격 차단을 SSOT로 굳힘 — `core/providers/cli.py` `execute_cli_chat`의 codex ok-승격 분기에서 제외 카테고리 4-튜플 재나열(`"auth_required","permission_denied","hook_failure","shell_error"`)을 `if not issue:`로 교체. `_classify_cli_issue` 반환을 단일 진실원으로 사용 → 어느 OS/프로바이더 마커(Windows `.cmd` 셔임·POSIX seatbelt/landlock 샌드박스 등)를 어떤 튜플에 추가해도 promotion 차단에 자동 참여(중복 목록 유지보수 누락 시 OS별 가짜성공 부활 방지, CLAUDE.md SSOT 규칙). 오늘 시점 동작 동일(비공백 issue는 정확히 그 4개뿐). `_SHELL_FAILURE_MARKERS`에 OS 커버리지 주석 추가(Windows 셔임 전용·POSIX는 permission_denied/agent_runner S2가 흡수). 추측 마커 미추가(오탐 회피). 테스트 7건 신규(`TestFalseSuccessPromotionMultiOS`: POSIX 샌드박스 분류 + 4-카테고리 parametrize 승격차단 + 대조군 승격유지 + gemini 멀티프로바이더). af-test-runner PASS(64). — core/providers/cli.py, tests/test_cli_providers.py, Master_Blueprint.md, NEXT_STEPS.md |
 | 2026-06-20 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, agent_runner.py, 2026-06-20-priority-3-5-baseline-capture.md, test_agent_runner_false_success.py |

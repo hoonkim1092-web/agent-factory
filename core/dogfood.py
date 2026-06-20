@@ -1766,12 +1766,19 @@ def _light_allowed(route: Any, scope: list[str], state: DogfoodState) -> bool:
 def _run_develop_full(state: DogfoodState, pipeline: Any) -> dict[str, Any]:
     """Full DEVELOP path: delegate to ProjectPipeline inside isolation env."""
     worktree = state.worktree_workspace or state.source_workspace
+    # 규모 인지 분해 D2(2026-06-20): merge_mode를 route 내부 메타 키로 주입해
+    # plan()의 QA 완화 게이트에 도달시킨다(router 산출물 키와 네임스페이스 분리).
+    route_with_meta = (
+        {**state.route_decision, "_merge_mode": state.merge_mode}
+        if state.route_decision
+        else None
+    )
     with _develop_isolation_env(worktree):
         prepared = pipeline.prepare(
             task_input=state.task,
             workspace=worktree,
             runtime_workspace=state.runtime_workspace,
-            route=state.route_decision or None,
+            route=route_with_meta,
         )
         # INV-Q4: execute() 전에 GoalContract write-once 스냅샷 (구현 단계 수정 차단)
         _snapshot_path = _artifact_path(state, "goal_contract.json")

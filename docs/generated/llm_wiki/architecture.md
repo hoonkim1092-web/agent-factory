@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-20T22:33:57+09:00
-source_commit: 5846fe897
+generated_at: 2026-06-20T23:16:53+09:00
+source_commit: 007d7c5e4
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -62,7 +62,7 @@ sources:
 | `scripts/af_project_inspect.py` | `af project inspect` — Python 프로젝트 컨텍스트 팩 생성. LLM/네트워크 없음, deterministic. doctor 재사용(run_checks fast)하되 표시에서 cwd-git 항목(`_DOCTOR_CWD_GIT_CHECKS`) 제외 — doctor 섹션은 "AF 실행 환경"만, 대상 git은 `_git_info(root)`가 담당. risks schema `{kind,severity,message,source}` + `recommended_next_steps`(p0~p2 착수 안내). 테스트 감지는 루트 indicator(pyproject는 pytest 섹션 있을 때만) → 없으면 하위 `test_*.py`/`*_test.py` 재귀(`_find_nested_test_file`). entrypoint 후보에서 test 파일 제외. Markdown+JSON 출력. `--json`/`--out DIR` 지원 | Master_Blueprint.md §0 |
 | `scripts/af_symbols.py` | `af symbols <경로>` — 외부 Python/C# 프로젝트의 코드 심볼 인덱스를 `<경로>/.af_index/symbols.md`에 생성. LLM/네트워크 없음, deterministic. 새 AST 로직 없이 `codebase_symbols.build()` 재사용(mkdir 전 content 계산 → self-indexing 방지). 상대경로는 `af.py` `_forward_args()`가 호출 cwd 기준 절대경로로 변환 | Master_Blueprint.md §0 |
 | `scripts/review_consensus.py` | finding-level 증거수집기 (S4+S5, LLM 미호출). `cr_findings.json`의 ACCEPT/ACCEPT★ finding마다 surrounding_code·callers·callees(AST 1-hop)·tests를 수집해 `cr_evidence.json` 생성. af-cross-review Step 6가 이 증거를 기반으로 합의 판정(ACCEPT/REJECT/UNVERIFIED). 프로바이더 중립(INV-2). | Master_Blueprint.md §0 |
-| `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트 | Master_Blueprint.md §0 |
+| `core/bootstrap_roles.py` | 프로젝트 계획 부트스트랩 에이전트. **규모 인지 분해(B안, 2026-06-20)**: `plan()`에 `decomposition_strength` additive 파라미터 — `route["required_stages"]`에 `research`·`design` 둘 다 부재 시 `minimal`(역할/모듈 최소화 프롬프트), 아니면 `standard`(기존 director 프롬프트, 바이트 동일). Tier3는 Floor2가 design 강제→항상 standard. `_ensure_qa_role` skip은 `minimal AND merge_mode∈{never,manual}` 교집합만(auto_policy는 QA 강제 유지). merge_mode는 `dogfood.py:1774` `route["_merge_mode"]` 주입으로 도달. last_updated: 2026-06-20 | Master_Blueprint.md §0 |
 | `core/builder.py` | 스킬 코드 생성 샌드박스 | Master_Blueprint.md §0 |
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | Master_Blueprint.md §0 |
@@ -1340,7 +1340,7 @@ sources:
 
 ### `tests`
 
-220 modules · 411 classes · 1844 functions
+221 modules · 416 classes · 1848 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1503,6 +1503,7 @@ sources:
 - `tests/test_runner_contracts.py` — 0 class / 10 func
 - `tests/test_safe_optional_id.py` — 0 class / 6 func
 - `tests/test_sandbox_config.py` — 8 class / 2 func
+- `tests/test_scale_aware_decomposition.py` — 5 class / 4 func
 - `tests/test_session_bridge.py` — 0 class / 7 func
 - `tests/test_setup_wizard_gate.py` — 0 class / 27 func
 - `tests/test_signatures.py` — 0 class / 1 func

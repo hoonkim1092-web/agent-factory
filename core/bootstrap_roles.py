@@ -4,9 +4,34 @@ import os
 from core.agent_runner import ModelRouter
 from core.engine_auth import check_llm_available
 from core.llm_engine import LLMEngine
+from core.right_sized_router import STAGE_DESIGN, STAGE_RESEARCH
 from core.utils import now_iso, safe_id, safe_json_load, safe_optional_id
 
 _POLICY_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "policy.yaml")
+
+# ── 규모 인지 역할 분해 (B안, 2026-06-20) ──
+# 규모 신호는 route["required_stages"]에서 직접 유도한다(gear 키 미사용).
+DECOMPOSITION_STANDARD = "standard"
+DECOMPOSITION_MINIMAL = "minimal"
+_VALID_DECOMPOSITION = (DECOMPOSITION_MINIMAL, DECOMPOSITION_STANDARD)
+# QA 완화 가능 merge_mode (사람이 머지 게이트). auto_policy는 QA 강제 유지.
+_QA_RELAXED_MERGE_MODES = ("never", "manual")
+_DEFAULT_MERGE_MODE = "auto_policy"
+# dogfood→pipeline 국소 메타 키(router 산출물과 네임스페이스 분리).
+_MERGE_MODE_META_KEY = "_merge_mode"
+
+# minimal 경로 전용 분해 제약(standard 프롬프트엔 미주입 → 바이트 동일 보존).
+_MINIMAL_SCALE_RULES = """
+
+Scale Constraint (this is a SMALL, surgical change):
+- Prefer the FEWEST roles and modules. A single-function or single-file change SHOULD yield exactly 1 role and 1 module. Do NOT invent organizational structure that the task does not require.
+- At most 2 roles unless the task genuinely spans separate subsystems."""
+
+# QA 필수 문구(standard·minimal-non-relaxed 공통). qa_relaxed 시 생략.
+_QA_MANDATE = """
+
+MANDATORY: You MUST always include a "qa_engineer" role. QA is non-negotiable.
+The qa_engineer must own at least one module with verify-phase tasks."""
 
 
 def _load_task_decomposition_policy() -> dict:
@@ -20,33 +45,46 @@ def _load_task_decomposition_policy() -> dict:
         return {}
 
 
-def _build_policy_rules() -> str:
-    """정책 파일에서 프롬프트 규칙 문자열을 생성한다."""
+def _build_policy_rules(
+    decomposition_strength: str = DECOMPOSITION_STANDARD,
+    qa_relaxed: bool = False,
+) -> str:
+    """정책 파일에서 프롬프트 규칙 문자열을 생성한다.
+
+    decomposition_strength == "minimal"이면 역할 수 규칙(min/max)을 생략한다 —
+    _MINIMAL_SCALE_RULES(역할 최소화)와의 정면 충돌 방지(cross-review F1).
+    qa_relaxed이면 QA 강제 constraint를 생략한다 — _QA_MANDATE 생략·_ensure_qa_role
+    skip과 프롬프트 정합(cross-review F2).
+    기본값(standard/False)은 기존 동작과 바이트 동일(독립 호출자·테스트 무영향).
+    """
+    minimal = decomposition_strength == DECOMPOSITION_MINIMAL
     policy = _load_task_decomposition_policy()
     if not policy:
-        # 폴백: 기본 규칙
-        return (
-            "- 2 to 5 roles only.\n"
-            "- Prefer practical implementation roles.\n"
-            "- required_skills, role ids, module ids, task ids, owner_role must be English snake_case.\n"
-            "- planning_steps should usually be 3 to 5 items.\n"
-            "- Split work into modules that can be implemented independently.\n"
-            "- Every module should have small tasks, not one giant task.\n"
-            "- Use explicit dependencies only when needed.\n"
-            "- Include at least one verify task overall.\n"
-            "- Keep objectives and summaries concrete."
-        )
+        # 폴백: 기본 규칙 (policy.yaml 부재 시)
+        lines = []
+        if not minimal:
+            lines.append("- 2 to 5 roles only.")
+        lines.append("- Prefer practical implementation roles.")
+        lines.append("- required_skills, role ids, module ids, task ids, owner_role must be English snake_case.")
+        lines.append("- planning_steps should usually be 3 to 5 items.")
+        lines.append("- Split work into modules that can be implemented independently.")
+        lines.append("- Every module should have small tasks, not one giant task.")
+        lines.append("- Use explicit dependencies only when needed.")
+        if not qa_relaxed:
+            lines.append("- Include at least one verify task overall.")
+        lines.append("- Keep objectives and summaries concrete.")
+        return "\n".join(lines)
     lines = []
     roles = policy.get("roles") or {}
-    if roles:
+    if roles and not minimal:
         min_r = roles.get("min", 2)
         max_r = roles.get("max")
         if max_r:
             lines.append(f"- {min_r} to {max_r} roles only.")
         else:
             lines.append(f"- At least {min_r} roles. No upper limit — create as many specialized roles as the project requires.")
-        if roles.get("prefer"):
-            lines.append(f"- Prefer {roles['prefer'].replace('_', ' ')} roles — each role should own exactly one responsibility.")
+    if roles and roles.get("prefer"):
+        lines.append(f"- Prefer {roles['prefer'].replace('_', ' ')} roles — each role should own exactly one responsibility.")
     steps = policy.get("planning_steps") or {}
     if steps:
         min_s = steps.get("min", 3)
@@ -73,6 +111,9 @@ def _build_policy_rules() -> str:
     elif max_t:
         lines.append(f"- Each module must have at most {max_t} tasks.")
     for constraint in (policy.get("constraints") or []):
+        # qa_relaxed: QA 강제 constraint 생략(프롬프트·후처리 정합, cross-review F2)
+        if qa_relaxed and "qa_engineer" in str(constraint).lower():
+            continue
         lines.append(f"- {constraint}")
     return "\n".join(lines)
 
@@ -395,9 +436,50 @@ class ProjectPlanningDirector:
                 "QA Engineer: 핵심 플로우와 회귀 시나리오를 검증한다."
             )
 
-    def plan(self, task_input: str, project_brief: dict, memory_context: dict | None = None) -> dict:
+    def plan(
+        self,
+        task_input: str,
+        project_brief: dict,
+        memory_context: dict | None = None,
+        decomposition_strength: str = DECOMPOSITION_STANDARD,
+    ) -> dict:
+        # INV-D1b: 미지값 → standard fail-safe(안전한 최대 분해).
+        if decomposition_strength not in _VALID_DECOMPOSITION:
+            decomposition_strength = DECOMPOSITION_STANDARD
+
+        _route = project_brief.get("route") if isinstance(project_brief, dict) else None
+        _route = _route if isinstance(_route, dict) else {}
+
+        # B안: 호출자 미명시(기본 standard) 시 required_stages에서 규모 유도.
+        # research·design 둘 다 부재 → 작은 변경 → minimal. (INV-D3b: minimal 명시는 유도 생략)
+        # Tier3 파일은 Floor2(right_sized_router)가 design을 강제하므로 STAGE_DESIGN ∈ stages →
+        # 규모가 작아도 항상 standard(분해축 ≠ 리뷰축, 회귀 방지).
+        if decomposition_strength == DECOMPOSITION_STANDARD:
+            _stages = _route.get("required_stages")
+            if isinstance(_stages, list) and _stages:
+                _stage_set = {str(s).strip() for s in _stages}
+                if STAGE_RESEARCH not in _stage_set and STAGE_DESIGN not in _stage_set:
+                    decomposition_strength = DECOMPOSITION_MINIMAL
+
+        # D2: QA 완화 = minimal AND merge_mode∈{never,manual} 교집합 (INV-D2a/b/c).
+        # merge_mode 부재 → auto_policy 간주 → QA 강제 유지(부모 §6.2 제약).
+        _merge_mode = str(_route.get(_MERGE_MODE_META_KEY) or _DEFAULT_MERGE_MODE).strip()
+        qa_relaxed = (
+            decomposition_strength == DECOMPOSITION_MINIMAL
+            and _merge_mode in _QA_RELAXED_MERGE_MODES
+        )
+
+        # 프롬프트 슬롯 분기(standard = 바이트 동일, INV-D1c).
+        if decomposition_strength == DECOMPOSITION_MINIMAL:
+            identity = "You are a senior engineer scoping a SMALL, surgical change."
+            scale_block = _MINIMAL_SCALE_RULES
+        else:
+            identity = "You are a project planning director."
+            scale_block = ""
+        qa_block = "" if qa_relaxed else _QA_MANDATE
+
         prompt = f"""
-You are a project planning director.
+{identity}
 User task: {task_input}
 Research brief(JSON): {json.dumps(project_brief, ensure_ascii=False)}
 
@@ -448,7 +530,7 @@ Return JSON only:
 }}
 
 Rules:
-{_build_policy_rules()}
+{_build_policy_rules(decomposition_strength, qa_relaxed)}
 
 Module Design Rules:
 - module.name MUST be a technical component name in Korean or English.
@@ -468,11 +550,7 @@ Module Design Rules:
 Evidence Grounding Rules:
 - If the research brief contains evidence_summary, local_references, web_references, or notebook_summary, derive modules, deliverables, acceptance criteria, and task slices from that evidence.
 - Prefer concrete module names, file or interface oriented tasks, and observable acceptance criteria over generic placeholders.
-- When the brief references existing documents or flows, preserve them as implementation constraints or verification targets.
-
-MANDATORY: You MUST always include a "qa_engineer" role. QA is non-negotiable.
-The qa_engineer must own at least one module with verify-phase tasks.
-""".strip()
+- When the brief references existing documents or flows, preserve them as implementation constraints or verification targets.{scale_block}{qa_block}""".strip()
 
         # ── Memory Plane 과거 교훈 주입 ──
         if memory_context and memory_context.get("recall_count", 0) > 0:
@@ -510,7 +588,8 @@ The qa_engineer must own at least one module with verify-phase tasks.
                 "modules": self._normalize_modules(payload),
                 "todo_items": [str(x).strip() for x in (payload.get("todo_items") or []) if str(x).strip()],
             }
-            self._ensure_qa_role(normalized_payload)
+            if not qa_relaxed:
+                self._ensure_qa_role(normalized_payload)
             return normalized_payload
         except Exception:
             return self._fallback_roles(task_input, project_brief)
