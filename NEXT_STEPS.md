@@ -1,6 +1,35 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 진입점 (2026-06-20) — dogfood 가짜성공/spin 수정
+## ▶▶ 다음 진입점 (2026-06-21) — 우선순위5 규모인지 분해 (B안) 구현
+
+> **사실·결정 전부 동결**: 메모리 `project_priority5_scale_aware_decomposition_B`. 설계 = `docs/2026-06-20-scale-aware-role-decomposition-design.md`(B안 표기됨). **재분석 금지.**
+> **모델**: 구현이라 **Sonnet** (메모리 `feedback_model_per_phase`).
+
+**결정 (2026-06-20, Opus 세션)**: 우선순위 3·5 중 **우선순위 3(RSE small-full gear) 폐기, 우선순위 5만 B안으로 구현.**
+
+**폐기 경위 (R1→R2 cross-review)**:
+- 우선순위3 설계(`...rse-small-full-execution-gear-design.md`) R1 BLOCK(F1 is_small_full review-less 허용)→수정→R2 PASS. 단 **R2가 더 근본 결함 표면화**: `project_pipeline`이 **design·plan 단계를 `_stage_enabled`로 게이팅하지 않음**(research:749·review/cross:1142만, `grep design project_pipeline.py`=0건). → small-full "research·design·plan 생략" 중 design·plan 무효 = **small-full ≡ full−research**.
+- gear의 유일 실효 가치 = 우선순위5 분해 축소 입력. 그런데 우선순위5는 **이미 `project_brief["route"]["required_stages"]`를 받음** → gear 없이 직접 규모 판단 가능. 소비자 1개 = YAGNI → **라우터 무변경(B안)**.
+
+**다음 세션 할 일 (우선순위5 = `core/bootstrap_roles.py` + `core/project_pipeline.py`, 둘 다 Tier-3)**:
+1. **§3 재작성(B안 핵심)**: plan()의 규모 신호를 `route["required_stages"]`에서 유도 — `STAGE_RESEARCH ∉ stages AND STAGE_DESIGN ∉ stages` → `decomposition_strength="minimal"`, 아니면 `"standard"`. (gear 키 의존 삭제, 문서 본문 §3의 gear 잔존 전부 제거 — 워처 R1 High 지적: top은 B안인데 body는 gear라 불일치)
+   - **Tier3 명시(워처 High 흡수)**: Tier3 파일은 `right_sized_router.py:218` Floor2가 `design`을 강제 → `STAGE_DESIGN ∈ stages` → **규모가 작아도 항상 `standard`**(Tier3 contract 변경은 full 분해). 이 동작을 §3 본문에 명시 + 테스트로 고정(`required_stages`에 design 있으면 standard). 분해정책과 review-floor정책 혼선 회귀 방지.
+2. **§2 D1**: `plan()`에 `decomposition_strength="standard"` additive 파라미터 + minimal 프롬프트 분기(정체성/분해지침/역할≤2). standard 골든=바이트동일(INV-D1a/c).
+3. **§4 D2**: `_ensure_qa_role`(`:513`) 호출을 `minimal AND merge_mode∈{never,manual}` 교집합에서만 skip. merge_mode 배선(`dogfood.py:1774` 인근 `route["_merge_mode"]` 주입). auto_policy→QA강제(부모 §6.2).
+4. **§4.4**: 모듈0 금지는 모든 규모 유지(빈 분해 방지).
+5. **§7**: `_fallback_roles`는 규모 인지 미적용(이미 모듈0·QA미강제, 과분해 진원 아님).
+6. **배포 동등성**: production caller `project_pipeline.py:911`까지 신호 도달 grep. 픽스처-only 미허용.
+7. **3-Tier**: af-critic → af-cross-review → af-test-runner.
+
+**Part 4 미결(B안에도 해당, 별개 추적)**: Tier3-small(고위험·소규모) → minimal 분해 최적화는 **분해축(규모) ≠ 리뷰축(blast Tier) 분리**가 필요해 보류. 현재 B안은 required_stages에 design 있으면(Floor2가 Tier3에 design 강제) standard 분해 → Tier3 contract 변경은 full 분해. 정직한 최소 범위.
+
+**미구현 산출물 2건 (커밋만, 미구현)**:
+- `docs/2026-06-20-rse-small-full-execution-gear-design.md` — **SUPERSEDED/폐기** (R1/R2 finding·진단 기록 보존, 향후 gear 2번째 소비자 생기면 재활용)
+- `docs/2026-06-20-scale-aware-role-decomposition-design.md` — Draft, **B안 표기 완료**, 다음 세션 구현 대상
+
+---
+
+## (이력) 진입점 (2026-06-20) — dogfood 가짜성공/spin 수정
 
 > **사실 전부 동결**: 메모리 `project_dogfood_false_success_spin` (재분석 금지, 그 파일만 읽으면 됨).
 > **계기**: Q-S6 QA 파이프라인 dogfood 실증 run(`1781884669-a7502e9b`)이 stopped_max_cycles로 침묵사. 6분 갈려 죽었는데 goal_count 미생성. 파보니 死因이 Tier-3/리뷰가 아니라 **가짜 성공**이었음.
