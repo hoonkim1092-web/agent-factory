@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-21T02:19:43+09:00
-source_commit: 94cf4fc1
+generated_at: 2026-06-21T02:46:44+09:00
+source_commit: d95646e8
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4287,6 +4287,14 @@ _(no top-level symbols)_
 - `_exit_code`
 - `main`
 
+## `scripts/af_evolution.py`
+
+**Functions:**
+- `_detect_workspace`
+- `_load_patterns`
+- `list_patterns`
+- `main`
+
 ## `scripts/af_project_inspect.py`
 
 **Functions:**
@@ -4783,6 +4791,9 @@ _(no top-level symbols)_
 ## `scripts/review_gate.py`
 
 **Functions:**
+- `_normalize_pattern_key`
+- `_append_block_pattern`
+- `capture_block_finding`
 - `_extract_verdict_from_content`
 - `_extract_t3_required_from_content`
 - `_deterministic_t3_skip_candidate`
@@ -5789,6 +5800,27 @@ _(no top-level symbols)_
 - `test_search_dir`
 - `test_detect_lang_python`
 - `test_detect_lang_unknown_falls_back`
+
+## `tests/test_block_learning.py`
+
+**Functions:**
+- `ws`
+- `_read_patterns`
+- `test_normalize_known_patterns`
+- `test_normalize_unknown_returns_hash`
+- `test_normalize_unknown_deterministic`
+- `test_normalize_unknown_different_texts_different_hash`
+- `test_capture_creates_jsonl`
+- `test_capture_appends_multiple`
+- `test_capture_creates_data_dir`
+- `test_capture_record_fields`
+- `test_capture_excerpt_truncated`
+- `test_capture_unknown_pattern_stored`
+- `test_list_patterns_empty_ws`
+- `test_list_patterns_no_file`
+- `test_list_patterns_counts`
+- `test_list_patterns_excludes_unknown`
+- `test_list_patterns_mixed_unknown_excluded`
 
 ## `tests/test_blueprint_updater.py`
 

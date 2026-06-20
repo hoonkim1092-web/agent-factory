@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -1017,6 +1017,11 @@ def _build_arg_parser(ad_hoc_mode):
 
         sandbox_parser = subparsers.add_parser("sandbox", help="AF + provider sandbox on/off 토글")
         sandbox_parser.add_argument("action", choices=["on", "off", "status"], help="on|off|status")
+
+        evolution_parser = subparsers.add_parser("evolution", help="BLOCK 학습 패턴 관리")
+        evolution_sub = evolution_parser.add_subparsers(dest="evolution_cmd", required=True)
+        evo_list = evolution_sub.add_parser("list", help="반복 BLOCK 패턴 목록 출력")
+        evo_list.add_argument("--workspace", "-w", default=None, help="워크스페이스 경로 (기본: git root)")
     return parser
 
 
@@ -1204,6 +1209,12 @@ if __name__ == "__main__":
         elif args.subcommand == "sandbox":
             from scripts.af_sandbox import main as sandbox_main
             sys.exit(sandbox_main([args.action]))
+        elif args.subcommand == "evolution":
+            from scripts.af_evolution import main as evolution_main
+            evo_argv = [args.evolution_cmd]
+            if args.evolution_cmd == "list" and getattr(args, "workspace", None):
+                evo_argv += ["--workspace", args.workspace]
+            sys.exit(evolution_main(evo_argv))
         else:
             parser.print_help()
             sys.exit(1)

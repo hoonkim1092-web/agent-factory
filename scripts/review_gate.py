@@ -9,6 +9,7 @@ Review-gate: 3-tier 교차검증 완료 여부를 판정하고 git commit을 차
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -28,6 +29,69 @@ _PENDING_FILE = "pending_agent_review.json"
 _LOCK_FILE = "pending_agent_review.json.lock"
 _LOG_FILE = "hook_events.log"
 _MAX_ROUNDS = 5  # check_pending_review.MAX_ROUNDS와 동기화 유지
+
+# ── Phase 1: BLOCK Learning — pattern capture ─────────────────────────────────
+# BLOCK finding을 pattern_key로 정규화하는 규칙 (v1 Scope: 7개 known family)
+_BLOCK_PATTERN_RULES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"hidden.?import|af\.spec", re.IGNORECASE), "hiddenimport"),
+    (re.compile(r"production.{0,30}caller|caller.{0,30}wiring|배선", re.IGNORECASE), "production_caller_wiring"),
+    (re.compile(r"master_blueprint|blueprint", re.IGNORECASE), "blueprint_update"),
+    (re.compile(r"hardcoded.{0,20}path|absolute.{0,20}path|절대경로", re.IGNORECASE), "absolute_path"),
+    (re.compile(r"fixture.{0,20}only|픽스처", re.IGNORECASE), "fixture_only"),
+    (re.compile(r"pre.?commit|AF_SKIP_REVIEW_GATE", re.IGNORECASE), "pre_commit_bypass"),
+    (re.compile(r"provider.{0,20}instruction|INSTRUCTIONS\.md|CLAUDE\.md|AGENTS\.md|GEMINI\.md|instruction.{0,30}drift", re.IGNORECASE), "provider_instruction_drift"),
+]
+_BLOCK_PATTERNS_RELPATH = os.path.join("data", "review-block-patterns.jsonl")
+
+
+def _normalize_pattern_key(text: str) -> str:
+    """BLOCK finding 텍스트를 안정적인 pattern_key로 정규화한다.
+
+    알려진 7개 family에 매칭되면 해당 키를 반환.
+    미매칭 시 unknown:<sha256_8char> — v1 집계 제외 대상.
+    """
+    for pattern, key in _BLOCK_PATTERN_RULES:
+        if pattern.search(text):
+            return key
+    h = hashlib.sha256(text.strip().encode("utf-8", errors="replace")).hexdigest()[:8]
+    return f"unknown:{h}"
+
+
+def _append_block_pattern(workspace: str, record: dict) -> None:
+    """BLOCK 패턴 레코드를 data/review-block-patterns.jsonl에 append한다."""
+    path = os.path.join(workspace, _BLOCK_PATTERNS_RELPATH)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def capture_block_finding(
+    workspace: str,
+    agent: str,
+    finding_text: str,
+    source_report: str = "",
+) -> None:
+    """BLOCK finding을 구조화 레코드로 캡처해 JSONL에 저장한다 (Phase 1: capture-only).
+
+    pattern_key 정규화, 변경 파일 목록 자동 수집, JSONL append.
+    오류 시 stderr 경고만 — review flow 미영향.
+    """
+    try:
+        state = _load_state(workspace)
+        changed_files = list(state.get("files") or []) if state else []
+        pattern_key = _normalize_pattern_key(finding_text)
+        record = {
+            "pattern_key": pattern_key,
+            "severity": "high",
+            "review_agent": agent,
+            "source_report": source_report,
+            "changed_files": changed_files,
+            "finding_excerpt": finding_text[:500],
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        _append_block_pattern(workspace, record)
+    except Exception as exc:
+        print(f"[review_gate] capture_block_finding 실패: {exc}", file=sys.stderr)
 
 # verdict 파싱: 구조화 헤더("Verdict: BLOCK" / "판정: WARN" / "### BLOCK")만 인식
 _VERDICT_RE = re.compile(

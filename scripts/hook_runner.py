@@ -414,6 +414,15 @@ def _post_agent_record(payload: dict) -> int:
     except Exception as exc:
         _log_hook_event("post_agent_record", subagent_type, 1, error=str(exc))
 
+    # Phase 1 BLOCK Learning: BLOCK/FAIL verdict 시 finding을 JSONL에 캡처 (best-effort)
+    # "fail"은 review_gate에서 "block"과 동등 처리(gate 차단) — 캡처도 동일하게 적용
+    if verdict in ("block", "fail"):
+        try:
+            from scripts.review_gate import capture_block_finding  # type: ignore[import]
+            capture_block_finding(workspace, subagent_type, content)
+        except Exception as exc:
+            _log_hook_event("block_capture", subagent_type, 1, error=str(exc))
+
     # P4.5b: model escalation detection (best-effort)
     try:
         from scripts.agent_model_selector import (  # type: ignore[import]

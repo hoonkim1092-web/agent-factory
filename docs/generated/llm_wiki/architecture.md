@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-21T02:19:43+09:00
-source_commit: 94cf4fc1
+generated_at: 2026-06-21T02:46:43+09:00
+source_commit: d95646e8
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -52,7 +52,8 @@ sources:
 | `scripts/build_llm_wiki.py` | LLM Wiki/Obsidian용 무-LLM 결정적 knowledge view 생성기. Blueprint+code-review+NEXT_STEPS+Python/C# AST symbols → docs/generated/llm_wiki/ 41페이지. 섹션 파일명은 Obsidian 탐색기에서 읽히도록 제목 기반 slug 사용. **외부 프로젝트 지원**: AF 문서 3종 부재 시 해당 페이지 skip + AST 디렉터리/모듈 navigation(`_build_codebase_tree`)만으로 full-wiki 생성(`af project wiki <path>`). | Master_Blueprint.md §0 |
 | `scripts/agent_model_selector.py` | P4.5b runtime model escalation helper | Master_Blueprint.md §0 |
 | `scripts/check_model_escalation.py` | UserPromptSubmit hook — pending escalation 오케스트레이터 알림 (one-shot) | Master_Blueprint.md §0 |
-| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}` | Master_Blueprint.md §0 |
+| `scripts/review_gate.py` | 3-Tier review gate 단일 판정 지점. `.py` 커밋 전 tier 완료·stale·new-files·verdict-block 검사. T3 skip은 cosmetic classifier(+af-critic `t3_required: no`) 또는 Phase 4 telemetry 보수적 AND-게이트일 때만 허용, 위험군은 ALWAYS-Tier-3 강제. **Phase 1 BLOCK Learning**: BLOCK/FAIL finding을 7개 known family(`hiddenimport`/`production_caller_wiring`/`blueprint_update`/`absolute_path`/`fixture_only`/`pre_commit_bypass`/`provider_instruction_drift`)로 정규화해 `data/review-block-patterns.jsonl`에 capture. CLI: `--check`, `--record`, `--clear`, `--debug`, `--t3-required {yes,no,unknown}`. last_updated: 2026-06-21 | Master_Blueprint.md §0 |
+| `scripts/af_evolution.py` | `af evolution list` CLI — `data/review-block-patterns.jsonl`에서 패턴별 발생 횟수를 집계하고 재발(≥2) 패턴을 강조 출력. `unknown:*`는 집계 제외(v1 Scope). last_updated: 2026-06-21 | Master_Blueprint.md §0 |
 | `scripts/t3_classifier.py` | deterministic Tier-3 classifier. hard-guard/risk-token/non-python/semantic Python 변경은 T3 요구, docstring/comment 수준 cosmetic Python 변경만 T3 skip 후보. classifier version 단일 원천 | Master_Blueprint.md §0 |
 | `scripts/review_metrics_logger.py` | Phase 3.5 리뷰 메트릭 수집 + Phase 4 telemetry skip 판정. T3-only 기여도 리포트 + 보수적 AND-게이트 skip 결정(SSOT 임계 4개) | Master_Blueprint.md §0 |
 | `scripts/enqueue_agent_review.py` | PostToolUse edit hook 큐잉. review 대상 `.py` 누적, blast_tier max-merge, T3 classifier + telemetry skip 결정을 `.af_review_queue/pending_agent_review.json`에 atomic write, 발효 시 skip_audit 기록 | Master_Blueprint.md §0 |
@@ -1066,9 +1067,10 @@ sources:
 
 ### `scripts`
 
-56 modules · 8 classes · 477 functions
+57 modules · 8 classes · 484 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
+- `scripts/af_evolution.py` — 0 class / 4 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
 - `scripts/af_sandbox.py` — 0 class / 7 func
 - `scripts/af_symbols.py` — 0 class / 2 func
@@ -1111,7 +1113,7 @@ sources:
 - `scripts/refresh_lotto_seed.py` — 0 class / 3 func
 - `scripts/replace_react_loop.py` — 0 class / 0 func
 - `scripts/review_consensus.py` — 0 class / 7 func
-- `scripts/review_gate.py` — 0 class / 24 func
+- `scripts/review_gate.py` — 0 class / 27 func
 - `scripts/review_metrics_logger.py` — 0 class / 13 func
 - `scripts/review_metrics_report.py` — 0 class / 2 func
 - `scripts/run.py` — 0 class / 2 func
@@ -1359,7 +1361,7 @@ sources:
 
 ### `tests`
 
-221 modules · 416 classes · 1848 functions
+222 modules · 416 classes · 1865 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1384,6 +1386,7 @@ sources:
 - `tests/test_approval_gate_runtime_workspace.py` — 0 class / 4 func
 - `tests/test_architect_agent.py` — 8 class / 2 func
 - `tests/test_ast_engine_smoke.py` — 0 class / 8 func
+- `tests/test_block_learning.py` — 0 class / 17 func
 - `tests/test_blueprint_updater.py` — 0 class / 6 func
 - `tests/test_bootstrap_policy_rules.py` — 0 class / 8 func
 - `tests/test_build_llm_wiki.py` — 3 class / 0 func

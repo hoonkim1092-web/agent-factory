@@ -112,6 +112,7 @@ a = Analysis(
         'scripts.af_doctor',
         'scripts.af_project_inspect',
         'scripts.af_sandbox',
+        'scripts.af_evolution',
         'core.sandbox_config',
         'scripts.codebase_symbols',
         'scripts.af_symbols',
