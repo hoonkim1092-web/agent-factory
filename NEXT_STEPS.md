@@ -1,5 +1,13 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ✅ Windows 호환성 테스트 버그 3건 수정 완료 (2026-06-22, Sonnet, `bf8ea506`)
+
+> - **Bug 1** (`test_stage0_question_router.py`): `read_text(encoding='utf-8')` 명시 — cp949 기본값으로 한글 UTF-8 파일 읽기 실패 방어
+> - **Bug 2** (`test_warning_stats_cli.py`): `chmod(0o000)` 잠금 검증을 `sys.platform != "win32"` 조건분기 — Windows POSIX 파일권한 무효
+> - **Bug 3** (`scripts/test_gap_analyzer.py`): `_find_production_callers` Python rglob 폴백 추가 — Windows grep 미존재/타임아웃 시 wiring WARN 누락 해소
+>
+> 다음 = 신규 product work-item 발굴 또는 Review BLOCK Learning Phase 2 (자연 데이터 ≥3회 재발 대기)
+
 ## ✅ A: `cli.py` cp949 robustness fix 완료 (Sonnet, 2026-06-21, 3-Tier PASS)
 
 > **▶ A 작업 (구현=Sonnet)**: `core/providers/cli.py:291-301` runner() 호출에 **`errors=` 누락** (현재 `encoding="utf-8"`만). 같은 파일 git 호출들(L620/622/635/644)은 `errors="replace"` 사용 — **chat 실행 공통 경로만 빠짐**.
