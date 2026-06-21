@@ -9,6 +9,18 @@
 > - **맥락 (2026-06-21 멀티프로바이더 실측)**: claude/codex 라우팅 분류 정상(단순 0.72~0.82 / 복잡 0.35 분리, 일관성 확인). **gemini는 인증 안 됨**(환경 문제, 사용자 몫). A는 gemini 살리기가 아니라 **어느 provider든 cp949 출력에 graceful 처리**하는 robustness 보강. gemini 분류 능력 검증은 인증 후 별도.
 > - 메모리: `project_cli_cp949_robustness_fix`.
 
+## ▶▶ 다음 세션 최우선 — CoT 프롬프트 변동성 해결 (빈-scope 라우터)
+
+> **결정 동결 (2026-06-21, Opus 세션)**: 이 변경의 **올바른 자리 = 코드 안 프롬프트 함수** (`right_sized_router.py:234 _build_empty_scope_prompt` + `:293 _build_prompt`). **지침(INSTRUCTIONS.md) 아님, 스킬 아님.**
+> - **스킬 검토 → 기각 (재론 금지)**: 이 프롬프트는 `_get_router_llm().generate_json(prompt)` 경로 — AF가 LLM에 1회 질의하고 **엄격한 JSON 계약**(`isolation/required_stages/review_depth/confidence/reason`)을 받는 **기계 대 기계 control-plane 호출**. 스킬은 에이전트가 *작업할 때* 읽는 느슨한 마크다운 guidance라 레이어가 다름. `control_plane_llm.py`에 `skill` 참조 **0건** = 이 경로엔 스킬 로딩 장치 자체가 없음. 스킬화하면 로딩·sync·registry 신설 = 과설계. 멀티프로바이더 parity는 이미 코드(f-string)라 자동 충족(스킬 불필요). 변동성을 *줄이려는* 목적인데 스킬은 더 느슨 → 목적 역행.
+> - **확정 해법 (실측 근거는 아래 §🔬)**: `_build_empty_scope_prompt`+`_build_prompt`를 **CoT화**("규칙 단계별 추론 후 JSON") + `_EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD` **0.85→0.80~0.82**. 세트로 적용. 변경 규모 작음(함수 2개 + 상수 1개).
+>
+> **정식 채택 전 잔여 검증 2건 (구현 진입 전 선행)**:
+> 1. **task 종류 다양화** — 현재 실측은 단순(README)/복잡(인증) 각 1종만. 작은 함수 추가·중간 규모·대규모 리팩토링 등 추가 측정해 군집 분리(간격 0.37)가 유지되는지 확인.
+> 2. **멀티프로바이더** — codex/gemini의 군집 위치 측정(현재 claude_cli 단독). 프로바이더별로 임계가 달라야 하면 그것도 설계에 반영.
+>
+> **순서**: 검증 2건(실측) → 설계문서(Opus) → 교차검증 → 코드+테스트(Sonnet). 실측은 `_build_empty_scope_prompt` monkeypatch로 코드 미변경 측정(이전 방식 재사용).
+
 ## ▶ (이어서) Phase 2 설계(데이터 대기) 또는 신규 product work-item (2026-06-21)
 
 > **직전 완료**: Review BLOCK Learning Phase 1 — `capture_block_finding()` + `af evolution list` CLI (2026-06-21, Sonnet, 3-Tier PASS)
