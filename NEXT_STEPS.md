@@ -10,6 +10,8 @@
 > Phase 2 범위: 재발 감지(≥3) + EVP(Evolution Proposal) 제안. P4(novel pattern clustering) 명시적 out-of-scope.
 >
 > **✅ 배선 단선 게이트 = 이미 완료 (메모리 stale 정정, 2026-06-21)**: `5a16df39`(2026-06-12)로 구현·테스트·배선 완료. `scripts/test_gap_analyzer.py` 6개 심볼 + `analyze_diff()` WARN-only 배선 + `tests/test_wiring_parity.py` 11케이스 PASS. 잔여=선택적 advisory 2건(file-level false-negative 정밀화 / dead-parameter BLOCK 승격은 N≥10 실측 선행). **재구현 불필요.**
+>
+> **✅ Router 자연어 실측 완료 (§10 게이트, 2026-06-21, Opus)**: 빈-scope 자연어 문서화 throw 6회(`classify(task, ws, changed_files=[])` 직접). **메커니즘 정상**(LLM 실호출 claude_cli, `source=llm`, `scope_uncertain` marker 100%, 0.85 임계 적용). **핵심 결함(research 자동 오염) 구조적 해소 실증** — 이전 "빈-scope→무조건 full→research 강제"가 사라지고 LLM이 task별 판단(일부 `['implement']`만). **단 light 진입 0/6** — 빈-scope LLM 추론 변동성이 큼(동일 task conf 0.55~0.82, research 포함 들쭉날쭉). **0.85 임계가 그 변동성 방어선으로 정당 작동**(임계 낮추면 위험 task 누출). **§10 판정**: "여전히 full"이나 **Phase1 코드 결함 아님** → Phase3/4 보류 정당(completion contract 대형 리팩토링 불필요). 진짜 병목=라우터가 아니라 **scope 추출 품질**(파일 경로 없이 task 텍스트만으로 일관 분류 불가). 자연어 light UX 마지막 1마일은 별도 트랙. 메모리: `project_router_research_decoupling`.
 
 ---
 
