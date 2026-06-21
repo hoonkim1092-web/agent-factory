@@ -5,6 +5,7 @@ watcher BLOCK 판정이 커밋 전 surface 되는지(d1022ecd 재발 방지) 검
 """
 from __future__ import annotations
 
+import io
 import os
 import sys
 
@@ -189,6 +190,31 @@ class TestMain:
     def test_no_staged_returns_0(self, tmp_path, monkeypatch):
         ws = str(tmp_path)
         monkeypatch.setattr(mod, "_staged_files", lambda w: [])
+        assert mod.main(["--workspace", ws]) == 0
+
+    def test_block_message_does_not_crash_on_cp949_stdout(self, tmp_path, monkeypatch):
+        ws = str(tmp_path)
+        src = "docs/2026-06-17-foo-design.md"
+        _write_review(ws, "2026-06-18-015950-foo-design-design-review.md", src, "BLOCK")
+        monkeypatch.setattr(mod, "_staged_files", lambda w: [src])
+        buffer = io.BytesIO()
+        stdout = io.TextIOWrapper(buffer, encoding="cp949", errors="strict")
+        monkeypatch.setattr(sys, "stdout", stdout)
+
+        assert mod.main(["--workspace", ws]) == 1
+
+    def test_error_message_does_not_crash_on_cp949_stderr(self, tmp_path, monkeypatch):
+        ws = str(tmp_path)
+        monkeypatch.setattr(mod, "_staged_files", lambda w: ["docs/2026-06-17-foo-design.md"])
+        monkeypatch.setattr(
+            mod,
+            "find_blocked",
+            lambda ws, s: (_ for _ in ()).throw(RuntimeError("boom 🛑")),
+        )
+        buffer = io.BytesIO()
+        stderr = io.TextIOWrapper(buffer, encoding="cp949", errors="strict")
+        monkeypatch.setattr(sys, "stderr", stderr)
+
         assert mod.main(["--workspace", ws]) == 0
 
 

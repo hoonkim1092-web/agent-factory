@@ -19,10 +19,18 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 import os
 import re
 import subprocess
 import sys
+
+# Windows cp949 터미널에서 유니코드 이모지 출력 실패 방지.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[attr-defined]
+except Exception:
+    pass
 
 # docs/reviews/{ts}-{stem}-design-review.md  (ts = YYYY-MM-DD-HHMMSS, 정렬 가능)
 _DESIGN_REVIEW_SUFFIX = "-design-review.md"
@@ -36,6 +44,25 @@ _VERDICT_RE = re.compile(r"^#+\s*Verdict:\s*\*{0,2}([A-Za-z_]+)", re.MULTILINE)
 
 _BLOCK = "BLOCK"
 _BLOCK_SECTION_RE = re.compile(r"§\d+(?:\.\d+)*")
+
+
+def _safe_print(*args: object, **kwargs: object) -> None:
+    """Print without crashing on terminals that cannot encode Unicode glyphs."""
+    try:
+        builtins.print(*args, **kwargs)
+        return
+    except UnicodeEncodeError:
+        pass
+
+    file = kwargs.get("file") or sys.stdout
+    sep = str(kwargs.get("sep", " "))
+    end = str(kwargs.get("end", "\n"))
+    text = sep.join(str(arg) for arg in args) + end
+    encoding = getattr(file, "encoding", None) or "utf-8"
+    safe = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+    file.write(safe)  # type: ignore[attr-defined]
+    if kwargs.get("flush"):
+        file.flush()  # type: ignore[attr-defined]
 
 
 def _extract_block_sections(text: str) -> list[str]:
@@ -88,7 +115,7 @@ def _record_verdicts_to_fired_marker(
         cdp = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cdp)  # type: ignore[union-attr]
     except Exception as _e:
-        print(f"[check-staged-design-review] verdict 기록 스킵(로드 실패, 커밋 비차단): {_e}", file=sys.stderr)
+        _safe_print(f"[check-staged-design-review] verdict 기록 스킵(로드 실패, 커밋 비차단): {_e}", file=sys.stderr)
         return
 
     try:
@@ -136,7 +163,7 @@ def _reset_verdict_in_fired_marker(workspace: str, doc_norms: "list[str]") -> No
         cdp = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cdp)  # type: ignore[union-attr]
     except Exception as _e:
-        print(f"[check-staged-design-review] verdict 초기화 스킵(로드 실패): {_e}", file=sys.stderr)
+        _safe_print(f"[check-staged-design-review] verdict 초기화 스킵(로드 실패): {_e}", file=sys.stderr)
         return
 
     try:
@@ -310,7 +337,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         # 게이트 자체 오작동으로 정상 커밋을 막지 않는다 (surface 는 보조 안전망).
         # 단, 오작동을 silent 로 묻지 않고 stderr 로 가시화한다(import/파싱 버그 조기 발견).
-        print(f"[check-staged-design-review] 게이트 비활성(예외, 커밋 비차단): {exc}", file=sys.stderr)
+        _safe_print(f"[check-staged-design-review] 게이트 비활성(예외, 커밋 비차단): {exc}", file=sys.stderr)
         return 0
 
     if not blocked and not unreviewed:
@@ -320,48 +347,48 @@ def main(argv: list[str] | None = None) -> int:
 
     if blocked:
         exit_code = 1
-        print("")
-        print("🛑 [pre-commit] 설계리뷰 BLOCK 미해결 — 자동 리뷰가 차단 판정한 설계문서가 staged 상태입니다:")
+        _safe_print("")
+        _safe_print("🛑 [pre-commit] 설계리뷰 BLOCK 미해결 — 자동 리뷰가 차단 판정한 설계문서가 staged 상태입니다:")
         for doc, review in blocked:
-            print(f"   • {doc}")
-            print(f"     ↳ 리뷰: {review}")
-        print("")
-        print("   조치:")
-        print("     - 리뷰 BLOCK findings 반영 후 재커밋 (watcher 새 리뷰가 최신 PASS/WARN 이면 BLOCK 을 덮음)")
-        print("     - 즉시 재검토: python scripts/design_review_watcher.py . --sync <문서경로>")
-        print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
-        print("")
+            _safe_print(f"   • {doc}")
+            _safe_print(f"     ↳ 리뷰: {review}")
+        _safe_print("")
+        _safe_print("   조치:")
+        _safe_print("     - 리뷰 BLOCK findings 반영 후 재커밋 (watcher 새 리뷰가 최신 PASS/WARN 이면 BLOCK 을 덮음)")
+        _safe_print("     - 즉시 재검토: python scripts/design_review_watcher.py . --sync <문서경로>")
+        _safe_print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+        _safe_print("")
 
     if unreviewed:
         status = _external_provider_status(workspace)
         if status == "skip":
             # 프로바이더 미설치/rate-limited → 커밋 허용, 노티만
-            print("")
-            print("ℹ️  [pre-commit] 설계리뷰 없음 — 외부 프로바이더 미설치/rate-limited, 스킵합니다:")
+            _safe_print("")
+            _safe_print("ℹ️  [pre-commit] 설계리뷰 없음 — 외부 프로바이더 미설치/rate-limited, 스킵합니다:")
             for doc in unreviewed:
-                print(f"   • {doc}")
-            print("")
+                _safe_print(f"   • {doc}")
+            _safe_print("")
         elif status == "auth_expired":
             exit_code = 1
-            print("")
-            print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 인증 만료, 재인증 후 watcher 재실행:")
+            _safe_print("")
+            _safe_print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 인증 만료, 재인증 후 watcher 재실행:")
             for doc in unreviewed:
-                print(f"   • {doc}")
-            print("")
-            print("   조치: codex/gemini 재인증 후 python scripts/design_review_watcher.py . --sync <문서경로>")
-            print("   우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
-            print("")
+                _safe_print(f"   • {doc}")
+            _safe_print("")
+            _safe_print("   조치: codex/gemini 재인증 후 python scripts/design_review_watcher.py . --sync <문서경로>")
+            _safe_print("   우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+            _safe_print("")
         else:  # "available" — watcher 미실행/죽음
             exit_code = 1
-            print("")
-            print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 가용하나 리뷰 미산출 (watcher 미실행 의심):")
+            _safe_print("")
+            _safe_print("🛑 [pre-commit] 설계리뷰 없음 — 프로바이더 가용하나 리뷰 미산출 (watcher 미실행 의심):")
             for doc in unreviewed:
-                print(f"   • {doc}")
-            print("")
-            print("   조치:")
-            print("     - 수동 실행: python scripts/design_review_watcher.py . --sync <문서경로>")
-            print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
-            print("")
+                _safe_print(f"   • {doc}")
+            _safe_print("")
+            _safe_print("   조치:")
+            _safe_print("     - 수동 실행: python scripts/design_review_watcher.py . --sync <문서경로>")
+            _safe_print("     - 우회: AF_SKIP_REVIEW_GATE=1 git commit ...")
+            _safe_print("")
 
     # verdict fired marker 기록 — oscillation_detected 갱신 (S2)
     # try/except 래핑: 기록 실패가 커밋을 막지 않도록
