@@ -1,6 +1,6 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 세션 최우선 — A: `cli.py` cp949 robustness fix (Sonnet, 2026-06-21 미완)
+## ✅ A: `cli.py` cp949 robustness fix 완료 (Sonnet, 2026-06-21, 3-Tier PASS)
 
 > **▶ A 작업 (구현=Sonnet)**: `core/providers/cli.py:291-301` runner() 호출에 **`errors=` 누락** (현재 `encoding="utf-8"`만). 같은 파일 git 호출들(L620/622/635/644)은 `errors="replace"` 사용 — **chat 실행 공통 경로만 빠짐**.
 > - **증상**: provider가 cp949 출력(Windows 콘솔 인코딩, 예: gemini 인증 에러 한글) → subprocess stdout utf-8 strict 디코딩 `UnicodeDecodeError: 0xb8` → `_readerthread` 죽음 → CLI failed → fallback(full).

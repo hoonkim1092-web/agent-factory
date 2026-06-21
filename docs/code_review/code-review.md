@@ -7510,3 +7510,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (10)**: `Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, scripts/af_evolution.py, scripts/check_staged_design_review.py, scripts/hook_runner.py, scripts/review_gate.py, tests/test_block_learning.py, tests/test_check_staged_design_review.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-21 18:15 — `2026-06-04-right-sized-execution-slice1` (9a2a4be2)
+
+**Context**: Claude Code edit session
+
+**Changed (4)**: `Master_Blueprint.md, NEXT_STEPS.md, core/providers/cli.py, tests/test_cp949_robustness.py`
+
+_Review skipped (--no-llm or LLM unavailable)_

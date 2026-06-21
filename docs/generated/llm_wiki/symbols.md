@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-21T17:25:01+09:00
-source_commit: 8bf2d147
+generated_at: 2026-06-21T18:15:24+09:00
+source_commit: 9a2a4be2
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -6116,6 +6116,14 @@ _(no top-level symbols)_
 **Functions:**
 - `_make_agent`
 - `_plan`
+
+## `tests/test_cp949_robustness.py`
+
+**Functions:**
+- `test_run_command_passes_errors_replace_to_runner`
+- `test_run_command_tolerates_cp949_output`
+- `test_run_command_normal_utf8_unaffected`
+- `test_run_command_valid_utf8_bytes_decoded_correctly`
 
 ## `tests/test_critic_skill_router.py`
 

@@ -1143,14 +1143,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-20; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-21; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, bootstrap_roles.py, dogfood.py, 2026-06-20-scale-aware-role-decomposition-design.md (+1)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cp949_robustness.py
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/bootstrap_roles.py` | bootstrap roles | `ProjectPlanningDirector` |
-| `core/dogfood.py` | Dogfood state machine: orchestrate the deep-interview pipeline. | `DogfoodPhase`, `GitWorktreeError`, `TriadContractError`, `save_state()`, `load_state()`, `create_run()` |
+| `core/providers/cli.py` | cli | `CliChatRequest`, `CliProviderSpec`, `get_cli_provider_spec()`, `compose_cli_prompt()`, `build_cli_command()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1698,6 +1697,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-21 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, cli.py, test_cp949_robustness.py |
+| 2026-06-21 | v1.2.34 | fix(cli cp949): `core/providers/cli.py` `_run_command` runner 호출에 `errors="replace"` 추가 — gemini 등 Windows cp949 인코딩 오류 메시지 출력 시 `UnicodeDecodeError: 0xb8` → `_readerthread` 사망 → CLI failed 회귀 방어. git 호출(L620/622/635/644) 선례와 동일 패턴. `tests/test_cp949_robustness.py` 4케이스 신규(runner kwargs 검증·cp949 graceful 처리·ASCII 회귀·UTF-8 바이트 직접). 3-Tier PASS. — core/providers/cli.py, tests/test_cp949_robustness.py, Master_Blueprint.md |
 | 2026-06-21 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, af_evolution.py (+5) |
 | 2026-06-21 | v1.2.34 | feat(evolution-phase1): Review BLOCK Learning Phase 1 — capture-only. `scripts/review_gate.py`에 `capture_block_finding()` + `_normalize_pattern_key()` 추가 (7개 known family 정규화, unknown은 sha256_8char). `scripts/hook_runner.py`에서 `verdict in ("block","fail")` 시 best-effort JSONL append 호출. `scripts/af_evolution.py` 신규 — `af evolution list` CLI (패턴별 occurrence, 재발 ≥2 강조, unknown:* 집계 제외). `agent_launcher.py`에 `evolution` 서브커맨드 dispatch + `_KNOWN_SUBCOMMANDS` 추가. `af.spec` hiddenimports `scripts.af_evolution` 추가. `tests/test_block_learning.py` 29건 신규. §0 빠른 참조 갱신. 3-Tier PASS (af-critic WARN 1건 수정: SSOT import / af-cross-review WARN 1건 수정: fail parity). — scripts/review_gate.py, scripts/hook_runner.py, scripts/af_evolution.py, agent_launcher.py, af.spec, tests/test_block_learning.py, Master_Blueprint.md |
 | 2026-06-21 | v1.2.34 | fix(design-review-gate): Windows cp949 콘솔에서 `scripts/check_staged_design_review.py` BLOCK 안내 출력이 이모지/기호 인코딩 실패로 `UnicodeEncodeError` traceback을 내던 문제 수정. stdout/stderr UTF-8 backslashreplace 재설정 + `_safe_print()` fallback 도입, 모든 pre-commit 안내 출력 경로에 적용. cp949 strict stdout/stderr 회귀 테스트 추가. — scripts/check_staged_design_review.py, tests/test_check_staged_design_review.py, Master_Blueprint.md |
