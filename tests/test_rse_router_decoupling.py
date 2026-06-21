@@ -51,7 +51,7 @@ _LOW_CONF_RESPONSE = {
     "isolation": "source",
     "required_stages": ["plan", "implement", "test"],
     "review_depth": "none",
-    "confidence": 0.7,  # < 0.85 threshold
+    "confidence": 0.7,  # < 0.82 threshold
     "reason": "uncertain",
 }
 
@@ -79,7 +79,7 @@ class TestEmptyScopeLLMPath:
         assert stub.call_count >= 1
 
     def test_empty_scope_high_conf_light(self, monkeypatch, tmp_path):
-        """conf ≥ 0.85 + light stages → is_light()=True + marker attached."""
+        """conf ≥ 0.82 + light stages → is_light()=True + marker attached."""
         monkeypatch.setattr(rsr, "_router_llm", _stub(_LIGHT_RESPONSE))
         decision = classify("add geometric_mean", str(tmp_path), changed_files=[])
         assert decision.source == "llm"
@@ -87,10 +87,10 @@ class TestEmptyScopeLLMPath:
         assert ROUTE_MARKER_SCOPE_UNCERTAIN in decision.markers
 
     def test_empty_scope_low_conf_not_light(self, monkeypatch, tmp_path):
-        """conf < 0.85 → is_light()=False (full pipeline). LLM judgment preserved."""
+        """conf < 0.82 → is_light()=False (full pipeline). LLM judgment preserved."""
         monkeypatch.setattr(rsr, "_router_llm", _stub(_LOW_CONF_RESPONSE))
         decision = classify("add something", str(tmp_path), changed_files=[])
-        # LLM was called → source="llm", but below 0.85 threshold
+        # LLM was called → source="llm", but below 0.82 threshold
         assert decision.source == "llm"
         assert decision.is_light() is False
         # marker still attached (audit trail preserved)
@@ -145,8 +145,8 @@ class TestEmptyScopeLLMPath:
         # 0.75 >= 0.7 → light (no marker)
         assert d.is_light() is True
 
-    def test_is_light_with_marker_uses_085_threshold(self, tmp_path):
-        """Decisions WITH SCOPE_UNCERTAIN marker use 0.85 threshold."""
+    def test_is_light_with_marker_uses_082_threshold(self, tmp_path):
+        """Decisions WITH SCOPE_UNCERTAIN marker use 0.82 threshold."""
         d = RouteDecision(
             isolation="source",
             required_stages=["plan", "implement", "test"],
@@ -155,7 +155,33 @@ class TestEmptyScopeLLMPath:
             reason="ok",
             markers=[ROUTE_MARKER_SCOPE_UNCERTAIN],
         )
-        # 0.75 < 0.85 → NOT light (marker raises threshold)
+        # 0.75 < 0.82 → NOT light (marker raises threshold)
+        assert d.is_light() is False
+
+    def test_is_light_with_marker_boundary_above(self, tmp_path):
+        """SCOPE_UNCERTAIN marker + conf=0.83 (≥0.82) → is_light()=True (0.82 boundary)."""
+        d = RouteDecision(
+            isolation="source",
+            required_stages=["plan", "implement", "test"],
+            review_depth="none",
+            confidence=0.83,
+            reason="ok",
+            markers=[ROUTE_MARKER_SCOPE_UNCERTAIN],
+        )
+        # 0.83 >= 0.82 → light
+        assert d.is_light() is True
+
+    def test_is_light_with_marker_boundary_below(self, tmp_path):
+        """SCOPE_UNCERTAIN marker + conf=0.81 (<0.82) → is_light()=False (0.82 boundary)."""
+        d = RouteDecision(
+            isolation="source",
+            required_stages=["plan", "implement", "test"],
+            review_depth="none",
+            confidence=0.81,
+            reason="ok",
+            markers=[ROUTE_MARKER_SCOPE_UNCERTAIN],
+        )
+        # 0.81 < 0.82 → NOT light
         assert d.is_light() is False
 
     def test_is_light_with_marker_high_conf(self, tmp_path):

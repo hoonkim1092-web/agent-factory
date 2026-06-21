@@ -191,7 +191,7 @@ def test_r_fb_noscope(monkeypatch, tmp_path):
     decision = classify("add geometric_mean", str(tmp_path), changed_files=[])
     # source="llm" proves LLM was called (not immediate fallback)
     assert decision.source == "llm"
-    # high-conf (0.9 ≥ 0.85) + light stages → is_light()=True
+    # high-conf (0.9 ≥ 0.82) + light stages → is_light()=True
     assert decision.is_light() is True
     # uncertainty marker attached
     from core.right_sized_router import ROUTE_MARKER_SCOPE_UNCERTAIN

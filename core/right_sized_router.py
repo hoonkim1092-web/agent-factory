@@ -33,7 +33,7 @@ STAGE_VOCAB: tuple[str, ...] = (
 LIGHT_STAGES: frozenset[str] = frozenset({STAGE_PLAN, STAGE_IMPLEMENT, STAGE_TEST})
 
 _LIGHT_CONFIDENCE_THRESHOLD: float = 0.7
-_EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD: float = 0.85
+_EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD: float = 0.82
 ROUTE_MARKER_SCOPE_UNCERTAIN: Final[str] = "scope_uncertain"
 
 
@@ -55,7 +55,7 @@ class RouteDecision:
     def is_light(self) -> bool:
         """floor 적용 후 호출 — 네이티브 light 경로 적격 여부.
 
-        SCOPE_UNCERTAIN marker가 있으면 0.85 임계 적용(empty-scope 추론은 불확실).
+        SCOPE_UNCERTAIN marker가 있으면 0.82 임계 적용(empty-scope 추론은 불확실).
         marker 없는 결정은 0.7 그대로 → scope 있는 경로 완전 무변(INV-1).
         """
         threshold = (
@@ -232,7 +232,7 @@ def _apply_safety_floors(
 # ---------------------------------------------------------------------------
 
 def _build_empty_scope_prompt(task: str) -> str:
-    """scope 미확정 task용 분류 프롬프트. 파일 목록 없이 task 의미만으로 추론."""
+    """scope 미확정 task용 분류 프롬프트. 파일 목록 없이 task 의미만으로 추론. CoT 구조."""
     stage_list = ", ".join(STAGE_VOCAB)
     light_list = ", ".join(sorted(LIGHT_STAGES))
     return f"""You are a task-complexity classifier for the Agent Factory codebase.
@@ -243,25 +243,51 @@ def _build_empty_scope_prompt(task: str) -> str:
 ## Intended scope files
 (미확정) — the task did not specify explicit file paths. Infer complexity from the task description alone.
 
-## Output (JSON only, no explanation outside JSON)
-Return a JSON object with exactly these keys:
-  isolation       : one of {list(ISOLATION_LEVELS)}
-  required_stages : subset of [{stage_list}] in execution order
-  review_depth    : one of ["none", "standard", "deep"]
-  confidence      : float 0.0–1.0 (your certainty)
-  reason          : brief explanation (1–2 sentences)
+## Step-by-step reasoning (follow these steps before outputting JSON)
 
-## Rules
-- Pure leaf implementation (add a single function, no API/contract changes):
-    required_stages should be [{light_list}] only.
-- If design, review, or cross-review is genuinely needed, include them.
-- If the scope is unclear or the task involves multiple files/systems, set confidence < 0.5.
+Step 1 — Leaf check:
+  Is this a PURE LEAF implementation? Criteria: adds/changes a single function with NO API
+  or contract changes, affects at most 1–2 files, no design decisions needed.
+  Answer: YES or NO
+
+Step 2 — Stage necessity:
+  Which stages are GENUINELY needed?
+  - research: only if external knowledge or API discovery is needed
+  - design: only if architecture or interface decisions must be made first
+  - plan: almost always needed before implementation
+  - implement: needed if any code changes
+  - test: needed if any code changes
+  - review: needed if non-trivial logic or potential regressions
+  - cross_review: needed if cross-cutting concerns or system boundaries
+
+Step 3 — Scope uncertainty:
+  Without explicit file paths, how certain are you?
+  If the task is vague or covers multiple systems, confidence MUST be < 0.5.
+
+Step 4 — Decision:
+  Pure-leaf (YES in Step 1) + clear description → confidence ≥ 0.82.
+  Ambiguous or multi-system → confidence < 0.60.
+
+## Output (JSON block only — no text before or after)
+```json
+{{
+  "isolation": "<one of {list(ISOLATION_LEVELS)}>",
+  "required_stages": ["<subset of [{stage_list}] in execution order>"],
+  "review_depth": "<none | standard | deep>",
+  "confidence": <float 0.0-1.0>,
+  "reason": "<1-2 sentences summarizing your conclusion>"
+}}
+```
+
+## Additional rules
+- Pure leaf (YES in Step 1): required_stages = [{light_list}] only.
+- Multi-system or design-heavy: include design/review/cross_review as needed.
 - Tier hint is unavailable — rely on task semantics only.
 """
 
 
 def _classify_empty_scope(task: str, workspace: str) -> RouteDecision:
-    """scope 미확정 task를 LLM으로 분류. 보수적 — 높은 임계(0.85) + marker.
+    """scope 미확정 task를 LLM으로 분류. 보수적 — 높은 임계(0.82) + marker.
 
     Precondition: changed_files is empty — caller (classify()) guarantees this.
 
@@ -283,7 +309,7 @@ def _classify_empty_scope(task: str, workspace: str) -> RouteDecision:
     if decision is None:
         return _fallback_decision(f"empty-scope invalid LLM response: {raw!r}")
 
-    # marker만 부착하고 반환. light 자격(0.85 + light-stages)은 is_light()가 marker를
+    # marker만 부착하고 반환. light 자격(0.82 + light-stages)은 is_light()가 marker를
     # 보고 단일 판정(외부리뷰 #5). conf 낮은 결정도 marker 단 채 반환 → is_light()=False
     # → full. _fallback_decision으로 덮지 않아 LLM 실판단이 state.route_decision에 보존.
     decision.markers = [ROUTE_MARKER_SCOPE_UNCERTAIN]
@@ -303,17 +329,44 @@ def _build_prompt(task: str, changed_files: list[str], tier_hint: dict[str, int]
 ## Intended scope files (derived from task, not guaranteed exhaustive)
 {files_section}
 
-## Output (JSON only, no explanation outside JSON)
-Return a JSON object with exactly these keys:
-  isolation       : one of {list(ISOLATION_LEVELS)}
-  required_stages : subset of [{stage_list}] in execution order
-  review_depth    : one of ["none", "standard", "deep"]
-  confidence      : float 0.0–1.0 (your certainty)
-  reason          : brief explanation (1–2 sentences)
+## Step-by-step reasoning (follow these steps before outputting JSON)
 
-## Rules
-- Pure leaf implementation (add a single function, no API/contract changes):
-    required_stages should be [{light_list}] only.
+Step 1 — Leaf check:
+  Is this a PURE LEAF implementation? Criteria: adds/changes a single function with NO API
+  or contract changes, no design decisions needed.
+  Answer: YES or NO
+
+Step 2 — Stage necessity:
+  Which stages are GENUINELY needed?
+  - research: only if external knowledge or API discovery is needed
+  - design: only if architecture or interface decisions must be made first
+  - plan: almost always needed before implementation
+  - implement: needed if any code changes
+  - test: needed if any code changes
+  - review: needed if Tier-2+ files or non-trivial logic
+  - cross_review: needed if Tier-3 files or cross-cutting concerns
+
+Step 3 — Confidence:
+  How certain are you given the scope files?
+  If uncertain or multi-system, set confidence < 0.5.
+
+Step 4 — Decision:
+  Pure-leaf (YES in Step 1) + clear scope → confidence ≥ 0.70.
+  Ambiguous or multi-system → confidence < 0.50.
+
+## Output (JSON block only — no text before or after)
+```json
+{{
+  "isolation": "<one of {list(ISOLATION_LEVELS)}>",
+  "required_stages": ["<subset of [{stage_list}] in execution order>"],
+  "review_depth": "<none | standard | deep>",
+  "confidence": <float 0.0-1.0>,
+  "reason": "<1-2 sentences summarizing your conclusion>"
+}}
+```
+
+## Additional rules
+- Pure leaf (YES in Step 1): required_stages = [{light_list}] only.
 - If design, review, or cross-review is genuinely needed, include them.
 - If uncertain, set confidence < 0.5 (forces full pipeline).
 - Tier hint is advisory only — safety floors enforce hard limits independently.
