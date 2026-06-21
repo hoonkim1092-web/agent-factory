@@ -1,11 +1,15 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 진입점 — Phase 2 설계 또는 신규 product work-item (2026-06-21)
+## ▶▶ 다음 진입점 — Phase 2 설계(데이터 대기) 또는 신규 product work-item (2026-06-21)
 
 > **직전 완료**: Review BLOCK Learning Phase 1 — `capture_block_finding()` + `af evolution list` CLI (2026-06-21, Sonnet, 3-Tier PASS)
 >
-> **Phase 2 진입 조건**: `data/review-block-patterns.jsonl`에 충분한 데이터(≥3회 재발 패턴 존재) 확인 후 별도 설계.  
+> **✅ Phase 1 발화 검증 완료 (2026-06-21, Opus)**: 임시 격리 디렉터리에서 production 경로 end-to-end 실증 — A) `capture_block_finding` 직접 호출 + 7 known family 정규화 + unknown fallback 정확 / B) `_post_agent_record`(production hook 진입점, `_detect_workspace` monkeypatch)가 BLOCK/FAIL verdict 시 capture 트리거·PASS 무시 / C) `list_patterns` 집계(재발 감지 + unknown 제외) / D) `agent_launcher.py evolution list` CLI dispatch + 재발 강조. **A/B/C/D 전부 PASS, 실제 레포 `data/` 미오염.** 기능 작동 실증 — 남은 건 자연 발화 데이터 축적뿐.
+>
+> **Phase 2 진입 조건 (여전히 미충족)**: `data/review-block-patterns.jsonl`은 **아직 미생성** — Phase 1 커밋 이후 자연 BLOCK 발화 0회. 실 데이터(≥3회 재발 패턴)가 쌓여야 Phase 2 설계 의미. 검증은 임시 디렉터리에서만 했으므로 실 데이터는 0.
 > Phase 2 범위: 재발 감지(≥3) + EVP(Evolution Proposal) 제안. P4(novel pattern clustering) 명시적 out-of-scope.
+>
+> **✅ 배선 단선 게이트 = 이미 완료 (메모리 stale 정정, 2026-06-21)**: `5a16df39`(2026-06-12)로 구현·테스트·배선 완료. `scripts/test_gap_analyzer.py` 6개 심볼 + `analyze_diff()` WARN-only 배선 + `tests/test_wiring_parity.py` 11케이스 PASS. 잔여=선택적 advisory 2건(file-level false-negative 정밀화 / dead-parameter BLOCK 승격은 N≥10 실측 선행). **재구현 불필요.**
 
 ---
 
