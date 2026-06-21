@@ -9,7 +9,12 @@
 > - **맥락 (2026-06-21 멀티프로바이더 실측)**: claude/codex 라우팅 분류 정상(단순 0.72~0.82 / 복잡 0.35 분리, 일관성 확인). **gemini는 인증 안 됨**(환경 문제, 사용자 몫). A는 gemini 살리기가 아니라 **어느 provider든 cp949 출력에 graceful 처리**하는 robustness 보강. gemini 분류 능력 검증은 인증 후 별도.
 > - 메모리: `project_cli_cp949_robustness_fix`.
 
-## ▶▶ 다음 — CoT 프롬프트 설계문서 (Opus) → 교차검증 → 구현(Sonnet)
+## ✅ CoT 프롬프트 + 임계 0.82 구현 완료 (2026-06-22, Sonnet, `3c7226c3`)
+
+> 검증 2건 → 설계문서 → af-cross-review PASS → 구현 → 3-Tier PASS 전체 완주.
+> 다음 작업 = 새 product work-item 발굴 또는 Phase 2 설계(자연 데이터 대기).
+
+## (이력) 다음 — CoT 프롬프트 설계문서 (Opus) → 교차검증 → 구현(Sonnet)
 
 > **결정 동결 (2026-06-21, Opus 세션)**: 이 변경의 **올바른 자리 = 코드 안 프롬프트 함수** (`right_sized_router.py:234 _build_empty_scope_prompt` + `:293 _build_prompt`). **지침(INSTRUCTIONS.md) 아님, 스킬 아님.**
 > - **스킬 검토 → 기각 (재론 금지)**: 이 프롬프트는 `_get_router_llm().generate_json(prompt)` 경로 — AF가 LLM에 1회 질의하고 **엄격한 JSON 계약**(`isolation/required_stages/review_depth/confidence/reason`)을 받는 **기계 대 기계 control-plane 호출**. 스킬은 에이전트가 *작업할 때* 읽는 느슨한 마크다운 guidance라 레이어가 다름. `control_plane_llm.py`에 `skill` 참조 **0건** = 이 경로엔 스킬 로딩 장치 자체가 없음. 스킬화하면 로딩·sync·registry 신설 = 과설계. 멀티프로바이더 parity는 이미 코드(f-string)라 자동 충족(스킬 불필요). 변동성을 *줄이려는* 목적인데 스킬은 더 느슨 → 목적 역행.
