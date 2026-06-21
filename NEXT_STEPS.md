@@ -1,6 +1,15 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶▶ 다음 진입점 — Phase 2 설계(데이터 대기) 또는 신규 product work-item (2026-06-21)
+## ▶▶ 다음 세션 최우선 — A: `cli.py` cp949 robustness fix (Sonnet, 2026-06-21 미완)
+
+> **▶ A 작업 (구현=Sonnet)**: `core/providers/cli.py:291-301` runner() 호출에 **`errors=` 누락** (현재 `encoding="utf-8"`만). 같은 파일 git 호출들(L620/622/635/644)은 `errors="replace"` 사용 — **chat 실행 공통 경로만 빠짐**.
+> - **증상**: provider가 cp949 출력(Windows 콘솔 인코딩, 예: gemini 인증 에러 한글) → subprocess stdout utf-8 strict 디코딩 `UnicodeDecodeError: 0xb8` → `_readerthread` 죽음 → CLI failed → fallback(full).
+> - **fix**: `errors="replace"` 추가 (git 선례와 동일).
+> - **절차**: 재현테스트 먼저(cp949 바이트 내는 가짜 프로세스로 현재 죽음 재현 → fix 후 graceful 확인) → 3-Tier(critic→cross→test-runner) → Blueprint §11/§12.
+> - **맥락 (2026-06-21 멀티프로바이더 실측)**: claude/codex 라우팅 분류 정상(단순 0.72~0.82 / 복잡 0.35 분리, 일관성 확인). **gemini는 인증 안 됨**(환경 문제, 사용자 몫). A는 gemini 살리기가 아니라 **어느 provider든 cp949 출력에 graceful 처리**하는 robustness 보강. gemini 분류 능력 검증은 인증 후 별도.
+> - 메모리: `project_cli_cp949_robustness_fix`.
+
+## ▶ (이어서) Phase 2 설계(데이터 대기) 또는 신규 product work-item (2026-06-21)
 
 > **직전 완료**: Review BLOCK Learning Phase 1 — `capture_block_finding()` + `af evolution list` CLI (2026-06-21, Sonnet, 3-Tier PASS)
 >
