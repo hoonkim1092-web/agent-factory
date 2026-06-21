@@ -925,6 +925,8 @@ def main(argv: list[str] | None = None):
                 enable_build=bool(args.build),
                 execution_mode=execution_mode,
                 pipeline_mode=args.pipeline,
+                workspace=project_root,
+                runtime_workspace=FACTORY_DIR,
             )
     except KeyboardInterrupt:
         print("\nExecution interrupted by user.")

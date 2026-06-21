@@ -26,6 +26,7 @@ from agent_launcher import (
     _detect_mode,
     _build_arg_parser,
     _maybe_isolate_project_root_for_self_run,
+    _resolve_ad_hoc_workspace,
 )  # noqa: E402
 
 
@@ -61,6 +62,12 @@ class TestBuildArgParserAdHoc:
         args = parser.parse_args(["--mode", "fsa", "task body"])
         assert args.task == ["task body"]
         assert args.mode == "fsa"
+
+    def test_parses_workspace_option(self, tmp_path):
+        parser = _build_arg_parser(ad_hoc_mode=True)
+        args = parser.parse_args(["--workspace", str(tmp_path), "task body"])
+        assert args.workspace == str(tmp_path)
+        assert args.task == ["task body"]
 
     def test_empty_task_allowed(self):
         # nargs="*" → task=[] 허용 (runtime이 interactive prompt로 보낸다)
@@ -176,6 +183,24 @@ class TestEnvFlagConvention:
         from core.file_io import _env_flag
         monkeypatch.delenv("AF_DISABLE_REGISTRY_WRITE", raising=False)
         assert _env_flag("AF_DISABLE_REGISTRY_WRITE") is False
+
+
+class TestAdHocWorkspaceResolution:
+    def test_explicit_workspace_wins(self, tmp_path):
+        out = _resolve_ad_hoc_workspace(str(tmp_path / "target"))
+        assert out == str((tmp_path / "target").resolve())
+
+    def test_uses_forwarded_caller_cwd(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("AF_CALLER_CWD", str(tmp_path))
+        assert _resolve_ad_hoc_workspace(None) == str(tmp_path.resolve())
+
+    def test_non_tty_project_root_falls_back_without_prompt(self, monkeypatch):
+        import agent_launcher as al
+
+        monkeypatch.delenv("AF_CALLER_CWD", raising=False)
+        monkeypatch.setattr(al.sys.stdin, "isatty", lambda: False)
+        monkeypatch.setattr(al.os, "getcwd", lambda: al.PROJECT_ROOT)
+        assert _resolve_ad_hoc_workspace(None) == os.path.abspath(al.PROJECT_ROOT)
 
 
 class TestPromptMissionTemplateImport:

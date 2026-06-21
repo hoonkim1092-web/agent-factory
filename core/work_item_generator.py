@@ -1153,8 +1153,12 @@ def generate_work_items(
     # target_path가 있으면 프로젝트 디렉토리에 문서를 생성하고,
     # 없으면 기존처럼 workspace(agent-factory 내부)에 생성한다.
     target_path = _clean(project_brief.get("target_path") or "")
-    if target_path and os.path.isabs(target_path):
-        doc_root = os.path.abspath(target_path)
+    if target_path:
+        doc_root = (
+            os.path.abspath(target_path)
+            if os.path.isabs(target_path)
+            else os.path.abspath(os.path.join(workspace, target_path))
+        )
     else:
         doc_root = os.path.abspath(workspace)
     work_dir = os.path.join(doc_root, WORK_ITEMS_DIR_REL, slug)

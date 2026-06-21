@@ -126,11 +126,14 @@ class TestForwardArgs:
         assert out == ["symbols", "--help"]
 
     def test_non_symbols_subcommand_untouched(self, tmp_path: Path) -> None:
-        # project inspect는 기존 패턴 — 이번 work-item 범위 밖, 건드리지 않는다
         assert _forward_args(["project", "inspect", "."], cwd=tmp_path) == [
-            "project", "inspect", ".",
+            "project", "inspect", str(tmp_path.resolve()),
         ]
         assert _forward_args(["doctor", "--fast"], cwd=tmp_path) == ["doctor", "--fast"]
+
+    def test_project_symbols_path_resolved(self, tmp_path: Path) -> None:
+        out = _forward_args(["project", "symbols", "src"], cwd=tmp_path)
+        assert out == ["project", "symbols", str((tmp_path / "src").resolve())]
 
     def test_symbols_without_path_untouched(self, tmp_path: Path) -> None:
         out = _forward_args(["symbols"], cwd=tmp_path)

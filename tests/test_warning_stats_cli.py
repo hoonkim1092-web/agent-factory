@@ -255,21 +255,22 @@ def test_cli_export_out_atomic(tmp_path, capsys):
     tmp_files = [f for f in os.listdir(parent) if f.endswith(f".tmp.{os.getpid()}")]
     assert tmp_files == []
 
-    # 권한 없는 디렉토리 → nonzero exit
-    locked_dir = tmp_path / "locked"
-    locked_dir.mkdir()
-    locked_dir.chmod(0o000)
-    locked_out = str(locked_dir / "out.csv")
-    try:
-        code_fail, _, err_fail = _run_cli(
-            ["warning-export", "--workspace", str(tmp_path),
-             "--format", "csv", "--out", locked_out],
-            capsys,
-        )
-        assert code_fail != 0
-        assert "write failed" in err_fail
-    finally:
-        locked_dir.chmod(0o755)
+    # 권한 없는 디렉토리 → nonzero exit (POSIX only: chmod(0o000) does not lock on Windows)
+    if sys.platform != "win32":
+        locked_dir = tmp_path / "locked"
+        locked_dir.mkdir()
+        locked_dir.chmod(0o000)
+        locked_out = str(locked_dir / "out.csv")
+        try:
+            code_fail, _, err_fail = _run_cli(
+                ["warning-export", "--workspace", str(tmp_path),
+                 "--format", "csv", "--out", locked_out],
+                capsys,
+            )
+            assert code_fail != 0
+            assert "write failed" in err_fail
+        finally:
+            locked_dir.chmod(0o755)
 
 
 # ---------------------------------------------------------------------------

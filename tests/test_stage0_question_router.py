@@ -392,7 +392,7 @@ class TestApprovalGateInitializeSignature:
         ws = str(tmp_path)
         gate = ApprovalGate(ws, "test-slug")
         gate.initialize(run_id="r1")
-        content = (tmp_path / "docs" / "work-items" / "test-slug" / "approval-gate.md").read_text()
+        content = (tmp_path / "docs" / "work-items" / "test-slug" / "approval-gate.md").read_text(encoding="utf-8")
         assert "review_pending" in content
         assert "execution_open: false" in content.lower() or "false" in content
 
@@ -401,7 +401,7 @@ class TestApprovalGateInitializeSignature:
         ws = str(tmp_path)
         gate = ApprovalGate(ws, "test-slug")
         gate.initialize(run_id="r1", status="paused_hitl", execution_open=False)
-        content = (tmp_path / "docs" / "work-items" / "test-slug" / "approval-gate.md").read_text()
+        content = (tmp_path / "docs" / "work-items" / "test-slug" / "approval-gate.md").read_text(encoding="utf-8")
         assert "paused_hitl" in content
 
 

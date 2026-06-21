@@ -844,6 +844,7 @@ class ProjectPipeline:
         )
         if not isinstance(project_brief, dict):
             project_brief = {"goal": task_input[:200]}
+        project_brief["target_path"] = target_workspace
         project_brief["requested_role"] = requested_role
         project_brief["route"] = route or {}
         project_brief["generated_at"] = now_iso()
@@ -1000,7 +1001,13 @@ class ProjectPipeline:
                 pass
 
         _raw_target = str(project_brief.get("target_path") or "").strip()
-        doc_root = os.path.abspath(_raw_target) if (_raw_target and os.path.isabs(_raw_target)) else target_workspace
+        doc_root = (
+            os.path.abspath(_raw_target)
+            if (_raw_target and os.path.isabs(_raw_target))
+            else os.path.abspath(os.path.join(target_workspace, _raw_target))
+            if _raw_target
+            else target_workspace
+        )
         work_item_files = generate_work_items(
             workspace=target_workspace,
             slug=slug,

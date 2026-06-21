@@ -215,6 +215,21 @@ def test_inv_research_run(monkeypatch, tmp_path):
     assert collect_mock.called, "route=None → collect_project_evidence must be called"
 
 
+def test_prepare_brief_sets_target_path_to_workspace(monkeypatch, tmp_path):
+    """Production caller workspace is preserved as the work-item doc root."""
+    pipeline, research = _minimal_pipeline(tmp_path)
+    research.collect_project_evidence = MagicMock(return_value={})
+
+    mock_guard = _make_passthrough_guard()
+
+    with patch("core.project_pipeline.build_bootstrap_agent", return_value={"id": "t", "name": "t"}), \
+         patch("core.pipeline_quality.PipelineStageGuard", return_value=mock_guard):
+
+        result = pipeline.prepare_brief("add func", str(tmp_path), route={"required_stages": []})
+
+    assert result.project_brief["target_path"] == str(tmp_path.resolve())
+
+
 # ------ helper: PreparedBrief factory -------
 
 def _prepared_brief(tmp_path, route):
@@ -282,6 +297,20 @@ def _run_prepare_documents_with_mocks(pipeline, prepared, tmp_path, *, drs_mock)
         result = pipeline.prepare_documents(prepared)
 
     return result
+
+
+def test_prepare_documents_resolves_relative_target_path_against_workspace(tmp_path):
+    """Relative target_path is resolved from the target workspace, not AF cwd."""
+    pipeline, _ = _minimal_pipeline(tmp_path)
+    prepared = _prepared_brief(tmp_path, route={"required_stages": ["plan"]})
+    prepared.project_brief["target_path"] = "artifact-root"
+    drs_mock = MagicMock()
+
+    result = _run_prepare_documents_with_mocks(
+        pipeline, prepared, tmp_path, drs_mock=drs_mock
+    )
+
+    assert result.doc_root == str((tmp_path / "artifact-root").resolve())
 
 
 # ------ inv-REVIEW-SKIP -------

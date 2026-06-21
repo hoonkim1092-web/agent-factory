@@ -1146,12 +1146,11 @@ run_factory_cli.main()
 ### §3.12 자동 Core 변경 요약
 <!-- last_updated: 2026-06-22; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, agent_launcher.py, project_pipeline.py (+13)
+최근 자동 갱신 컨텍스트: chore(af): code update — af.py, agent_launcher.py, project_pipeline.py, work_item_generator.py, run_factory_cli.py (+8)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
 | `core/project_pipeline.py` | project pipeline | `ProjectPipeline` |
-| `core/right_sized_router.py` | core/right_sized_router.py — AF Right-Sized Execution 라우터 (슬라이스 1). | `RouteDecision` |
 | `core/work_item_generator.py` | Generate work-item markdown documents from planning artifacts. | `generate_work_items()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
@@ -1700,6 +1699,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-22 | v1.2.34 | chore(af): code update — af.py, agent_launcher.py, project_pipeline.py, work_item_generator.py, run_factory_cli.py (+8) |
 | 2026-06-22 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, agent_launcher.py, project_pipeline.py (+13) |
 | 2026-06-21 | v1.2.34 | fix(target-workspace): `af` forwarding이 호출자 CWD를 `AF_CALLER_CWD`로 전달하고, ad-hoc 실행에 `--workspace/-w` 및 AF 루트 TTY 폴더 입력을 추가. `run_factory_cli.py --project`는 사용자 프로젝트를 `workspace`, AF 루트를 `runtime_workspace`로 전달. `ProjectPipeline.prepare_brief()`/`prepare_documents()`와 `generate_work_items()`가 `target_path`를 대상 workspace 기준으로 해석해 work-item 산출물이 agent-factory 하위가 아닌 선택/지정 폴더 아래 생성되도록 수정. 대상 테스트 15건 PASS. — af.py, agent_launcher.py, run_factory_cli.py, core/project_pipeline.py, core/work_item_generator.py, tests/test_af_symbols.py, tests/test_agent_launcher_cli_dispatch.py, tests/test_run_factory_cli.py, tests/test_rse_slice2.py, tests/test_q_s3_path_c.py, Master_Blueprint.md |
 | 2026-06-21 | v1.2.34 | feat(router-cot): `_build_empty_scope_prompt()`·`_build_prompt()` CoT화(Step 1~4 단계별 추론 후 JSON) + `_EMPTY_SCOPE_LIGHT_CONFIDENCE_THRESHOLD` 0.85→0.82. 실측 근거: claude_cli simple research 오염 제거(ORIG 0/3→CoT 3/3 light), complex stdev 62% 감소(0.043→0.016), codex_cli 단일 임계 0.82로 커버(codex margin 0.04). 2건 검증 완료: task 다양화 5종·멀티프로바이더(codex). §3.13 갱신. 3-Tier 완주. — core/right_sized_router.py, tests/test_rse_router_decoupling.py, tests/test_right_sized_router.py, Master_Blueprint.md |

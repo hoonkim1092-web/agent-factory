@@ -932,6 +932,28 @@ def _detect_mode(argv):
     return "ad_hoc"
 
 
+def _resolve_ad_hoc_workspace(explicit_workspace: str | None = None) -> str:
+    """Resolve the user project workspace for ad-hoc task runs."""
+    if explicit_workspace:
+        return os.path.abspath(os.path.expanduser(explicit_workspace))
+
+    caller_cwd = os.environ.get("AF_CALLER_CWD", "").strip()
+    workspace = os.path.abspath(os.path.expanduser(caller_cwd or os.getcwd()))
+    if os.path.abspath(workspace) != os.path.abspath(PROJECT_ROOT):
+        return workspace
+
+    if not sys.stdin.isatty():
+        return workspace
+
+    try:
+        raw = input("  결과물을 생성할 프로젝트 폴더 경로를 입력하세요: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        raw = ""
+    if not raw:
+        return workspace
+    return os.path.abspath(os.path.expanduser(raw))
+
+
 def _build_arg_parser(ad_hoc_mode):
     """Build argparse parser for either subcommand or ad-hoc task mode."""
     import argparse
@@ -942,6 +964,7 @@ def _build_arg_parser(ad_hoc_mode):
         parser.add_argument("--fsa", action="store_true", help="Shortcut for --mode fsa")
         parser.add_argument("--role", default="General", help="Agent role")
         parser.add_argument("--build", action="store_true", help="Enable skill building")
+        parser.add_argument("--workspace", "-w", default=None, help="결과물을 생성할 프로젝트 폴더")
     else:
         subparsers = parser.add_subparsers(dest="subcommand", required=True)
         sync_todo_parser = subparsers.add_parser("project", help="프로젝트 관리 명령")
@@ -1235,12 +1258,12 @@ if __name__ == "__main__":
         from core.template_input import prompt_mission_template
         task_input = prompt_mission_template("Agent Factory")
 
+    target_workspace = _resolve_ad_hoc_workspace(getattr(args, "workspace", None))
     AgentFactory().run(
         task_input=task_input,
         role_spec=args.role,
         enable_build=args.build,
         execution_mode=execution_mode,
-        workspace=os.getcwd(),
+        workspace=target_workspace,
         runtime_workspace=PROJECT_ROOT,
     )
-

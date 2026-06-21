@@ -1,6 +1,7 @@
 """Q-S3 경로 C 활성화 테스트 — INV-Q6/Q7/Q8 (설계 §6.3, §11)."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -396,6 +397,47 @@ class TestGenerateWorkItemsPassesQuestionRouter:
         qr = called_with["question_router"]
         from core.control.question_router import QuestionRouter
         assert isinstance(qr, QuestionRouter)
+
+    def test_relative_target_path_resolves_under_workspace(self, tmp_path):
+        """relative target_path should not resolve under the AF process cwd."""
+        import core.work_item_generator as wig
+
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        brief = {"goal": "test goal", "target_path": "selected-project"}
+
+        class FakeStageRouter:
+            def __init__(self, workspace, run_ledger):
+                pass
+
+            def run(self, **kwargs):
+                return {
+                    "paused_hitl": "1",
+                    "approval_gate": str(Path(kwargs["work_dir"]) / "approval-gate.md"),
+                }
+
+        class FakeRunLedger:
+            def __init__(self, workspace):
+                pass
+
+        with (
+            patch.object(wig, "_LOGGER"),
+            patch("core.control.stage_router.StageRouter", FakeStageRouter),
+            patch("core.control.run_ledger.RunLedger", FakeRunLedger),
+        ):
+            files = wig.generate_work_items(
+                workspace=str(workspace),
+                slug="test-slug",
+                project_brief=brief,
+                role_plan={},
+                task_board={},
+                run_id="run1",
+                work_kind="new_project",
+                blast_radius="single_file",
+            )
+
+        expected_root = workspace / "selected-project" / "docs" / "work-items" / "test-slug"
+        assert files["approval-gate.md"] == str(expected_root / "approval-gate.md")
 
 
 # ---------------------------------------------------------------------------

@@ -69,6 +69,8 @@ def test_run_factory_cli_sets_provider_and_projects_root(monkeypatch, tmp_path):
                 "enable_build": False,
                 "execution_mode": "approval",
                 "pipeline_mode": "auto",
+                "workspace": expected_root,
+                "runtime_workspace": cli.FACTORY_DIR,
             },
         )
     ]

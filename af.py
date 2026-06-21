@@ -10,13 +10,14 @@ Usage:
 
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from repo_shortcuts import resolve_repo_path
 
 # agent_launcher.py 서브커맨드로 라우팅할 af 명령 목록
-_LAUNCHER_SUBCOMMANDS = {"doctor", "project", "symbols", "sandbox"}
+_LAUNCHER_SUBCOMMANDS = {"doctor", "project", "symbols", "sandbox", "dogfood", "evolution"}
 
 
 def _forward_args(argv_rest: list[str], cwd: Path) -> list[str]:
@@ -34,6 +35,13 @@ def _forward_args(argv_rest: list[str], cwd: Path) -> list[str]:
         and not forwarded[1].startswith("-")
     ):
         forwarded[1] = str((cwd / forwarded[1]).resolve())
+    if (
+        len(forwarded) >= 3
+        and forwarded[0] == "project"
+        and forwarded[1] in {"inspect", "symbols", "wiki"}
+        and not forwarded[2].startswith("-")
+    ):
+        forwarded[2] = str((cwd / forwarded[2]).resolve())
     return forwarded
 
 
@@ -51,9 +59,12 @@ def main() -> None:
     # agent_launcher.py 서브커맨드 → sys.executable로 명시 위임
     if sys.argv[1] in _LAUNCHER_SUBCOMMANDS:
         forwarded = _forward_args(sys.argv[1:], Path.cwd())
+        env = os.environ.copy()
+        env["AF_CALLER_CWD"] = str(Path.cwd().resolve())
         result = subprocess.run(
             [sys.executable, str(Path(target) / "agent_launcher.py")] + forwarded,
             cwd=str(target),
+            env=env,
         )
         sys.exit(result.returncode)
 

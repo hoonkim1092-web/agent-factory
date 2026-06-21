@@ -362,24 +362,39 @@ def _find_production_callers(workspace: str, sym: str) -> list[str]:
     ]
     ws_path = Path(workspace)
     for d in search_dirs:
+        found: list[str] = []
         try:
             r = subprocess.run(
                 ["grep", "-rl", "--include=*.py", pattern, d],
                 capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=5,
             )
-            for line in r.stdout.splitlines():
-                f = line.strip()
-                if not f or f in callers:
-                    continue
-                try:
-                    rel = _norm(str(Path(f).relative_to(ws_path)))
-                except ValueError:
-                    rel = _norm(f)
-                if not _is_test_file(rel):
-                    callers.append(f)
+            if r.returncode in (0, 1):  # 0=matches found, 1=no matches (not an error)
+                found = [line.strip() for line in r.stdout.splitlines() if line.strip()]
         except Exception:
             pass
+
+        if not found:
+            # Python fallback: grep may be unavailable (Windows) or timed out
+            try:
+                for p in Path(d).rglob("*.py"):
+                    try:
+                        if pattern in p.read_text(encoding="utf-8", errors="replace"):
+                            found.append(str(p))
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        for f in found:
+            if f in callers:
+                continue
+            try:
+                rel = _norm(str(Path(f).relative_to(ws_path)))
+            except ValueError:
+                rel = _norm(f)
+            if not _is_test_file(rel):
+                callers.append(f)
 
     # Root-level *.py (non-test), not inside any subdirectory
     try:
