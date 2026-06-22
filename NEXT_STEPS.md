@@ -1,5 +1,17 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ✅ 세션 완료 (2026-06-22, Opus) — 재부팅 복구 + `/output` 비개발자 폴더 지정 명령
+
+> **재부팅 복구**: 끊긴 작업은 단 1건 — `INSTRUCTIONS.md`(SSOT)에 CoT 원칙 "단계별로 생각을 먼저한다" 추가 후 provider sync 직전 중단. sync 완료 + 커밋(`fff0ce2b`). 미푸시 커밋·진행 중 dogfood run·백그라운드 task 전부 없음(유실 0).
+>
+> **`/output` 슬래시 명령 신규** (`570b3258`): AF 대화형 세션에서 `/output <경로>`로 결과 저장 폴더를 한 줄로 변경, `/output`으로 현재 위치 확인. `core/interactive_chat.py` `handle_command` + `set_output_dir()`(따옴표 제거·`makedirs(exist_ok)`·`expanduser`, 경로는 원본 user_input에서 추출=멀티OS 케이스 보존). `self.workspace` 변경은 매 턴 `_run_single_turn:216`/`_run_project_turn:227`가 read해 runner/factory.run explicit workspace(INV-O5)로 전달=다음 턴 즉시 반영(배포 동등성). AF 상위 레이어라 claude/codex/gemini 공통. `PDCAInteractiveChat` 상속 자동 획득.
+>
+> **배너에 현재 출력 폴더 표시** (`482f72c3`): `_print_banner`에 "결과 저장: <경로> (/output 으로 변경)" 줄. 비개발자가 시작 즉시 저장 위치 확인.
+>
+> 테스트 `tests/test_interactive_chat_output_cmd.py` 10건 PASS. Blueprint §0/§12 갱신. review-gate 통과.
+>
+> **다음 작업 (이전과 동일)**: ① 새 product work-item 발굴(메인) ② Review BLOCK Learning Phase 2 = 데이터 대기(`data/review-block-patterns.jsonl` 현재 1줄·unknown만, known ≥3 재발 미충족) ③ doc 부채 = 설계문서 2건(`docs/2026-06-18-product-output-isolation-design.md` in-place 개정 노트 / `2026-06-18-user-perspective-qa-pipeline-design.md` Draft→Superseded).
+
 ## ✅ 3건 수정 완료 (2026-06-22, Opus) — output-isolation 회귀 해소 + auth 안내 + 주석 정정
 
 > **상태**: Fix 1·2·3 전부 구현·3-Tier 통과. 회귀 해소돼 **커밋 가능**. 전 Tier: af-critic WARN(advisory only) / af-cross-review BLOCK 2→**R2 PASS** / af-test-runner PASS(151).
