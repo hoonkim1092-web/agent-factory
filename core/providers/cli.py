@@ -140,10 +140,11 @@ _HOOK_FAILURE_MARKERS = (
 )
 
 # 셸/런처 셔임 실행 실패 — 에이전트 콘텐츠 실패가 아니라 인프라 실패라 ok 승격을 막아야 한다.
-# Windows 전용 시그니처: npm CLI는 `codex.cmd` 셔임으로 해석되고(_resolve_base_command),
-# cmd.exe가 인자를 못 넘기면 이 문구가 stderr에 찍힌다. POSIX엔 .cmd 셔임이 없어 이 실패
-# 자체가 발생하지 않는다 — macOS seatbelt / Linux landlock 샌드박스 거부는 "operation not
-# permitted"/"permission denied"로 _PERMISSION_DENIED_MARKERS가 흡수하고, 그 외 미분류
+# Windows 전용 시그니처: codex(Rust)가 자율탐색 중 **내부에서** 셸 자식 프로세스를 spawn할 때
+# Windows에서 실패하면 이 문구가 stderr에 찍힌다(codex 내부 Io(Error), AF가 넘긴 인자 문제 아님).
+# AF→codex.cmd 실행 자체는 정상 — `codex.cmd --version`/`exec --help` rc=0으로 재현 확인.
+# POSIX엔 이 .cmd 내부-spawn 실패 자체가 없다 — macOS seatbelt / Linux landlock 샌드박스 거부는
+# "operation not permitted"/"permission denied"로 _PERMISSION_DENIED_MARKERS가 흡수하고, 그 외 미분류
 # 비정상 종료는 agent_runner S2(_workspace_mutation_signature)가 OS 무관하게 잡는다.
 # 보수적: 실증된 시그니처만 등재한다(광범위 매칭은 정상 agent 텍스트 오탐 위험).
 _SHELL_FAILURE_MARKERS = (

@@ -181,6 +181,7 @@ from core.hooks.event_bus import HookEventBus, IntentGateHook, TodoContinuationE
 # =============================================================================
 # config.schema is loaded at top
 from core.config_paths import *
+from core.output_paths import resolve_product_output_dir, _norm
 
 # [Modularized] 프로젝트 초기화 — core/project_init.py 로 추출
 from core.project_init import ensure_project_files
@@ -932,26 +933,28 @@ def _detect_mode(argv):
     return "ad_hoc"
 
 
-def _resolve_ad_hoc_workspace(explicit_workspace: str | None = None) -> str:
-    """Resolve the user project workspace for ad-hoc task runs."""
-    if explicit_workspace:
-        return os.path.abspath(os.path.expanduser(explicit_workspace))
+def _resolve_ad_hoc_workspace(task_input: str, explicit_workspace: str | None = None) -> str:
+    """Resolve the user project workspace for ad-hoc task runs.
 
-    caller_cwd = os.environ.get("AF_CALLER_CWD", "").strip()
-    workspace = os.path.abspath(os.path.expanduser(caller_cwd or os.getcwd()))
-    if os.path.abspath(workspace) != os.path.abspath(PROJECT_ROOT):
-        return workspace
+    출력 격리(output isolation, docs/2026-06-18-product-output-isolation-design.md):
+      - explicit_workspace(--workspace/-w) 지정 시 그대로 (최우선)
+      - AF 소스 repo 안에서 실행 시 projects/<slug> 로 graceful 리다이렉트 (오염 격리)
+      - 그 외(배포 사용자/기존 프로젝트): caller_cwd 그대로 in-place
 
-    if not sys.stdin.isatty():
-        return workspace
-
-    try:
-        raw = input("  결과물을 생성할 프로젝트 폴더 경로를 입력하세요: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        raw = ""
-    if not raw:
-        return workspace
-    return os.path.abspath(os.path.expanduser(raw))
+    caller_cwd는 af.exe 런처가 전달하는 AF_CALLER_CWD를 우선 사용한다
+    (런처 프로세스 cwd와 사용자 cwd가 다를 수 있음).
+    """
+    caller_cwd = os.environ.get("AF_CALLER_CWD", "").strip() or os.getcwd()
+    workspace = resolve_product_output_dir(task_input, caller_cwd, explicit_workspace)
+    # AF 레포 안에서 실행해 projects/ 하위로 리다이렉트된 경우만 사용자에게 1줄 안내
+    # (조용한 리다이렉트로 산출물 위치를 놓치지 않도록).
+    if not explicit_workspace and _norm(workspace) != _norm(caller_cwd):
+        print(
+            "\n[output-isolation] AF 소스 레포 안에서 실행 — 산출물을 격리 위치로 보냅니다:\n"
+            f"  {workspace}\n",
+            file=sys.stderr,
+        )
+    return workspace
 
 
 def _build_arg_parser(ad_hoc_mode):
@@ -1258,7 +1261,7 @@ if __name__ == "__main__":
         from core.template_input import prompt_mission_template
         task_input = prompt_mission_template("Agent Factory")
 
-    target_workspace = _resolve_ad_hoc_workspace(getattr(args, "workspace", None))
+    target_workspace = _resolve_ad_hoc_workspace(task_input, getattr(args, "workspace", None))
     AgentFactory().run(
         task_input=task_input,
         role_spec=args.role,

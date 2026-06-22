@@ -186,21 +186,46 @@ class TestEnvFlagConvention:
 
 
 class TestAdHocWorkspaceResolution:
+    """출력 격리(output isolation) 계약 — docs/2026-06-18-product-output-isolation-design.md.
+
+    INV-O2: cwd가 AF repo(BASE_DIR) 하위면 projects/<slug> 로 graceful 리다이렉트
+    INV-O3: 그 외 일반 폴더는 caller_cwd 그대로 in-place
+    INV-O5: explicit_workspace(--workspace/-w) 지정 시 최우선
+    """
+
     def test_explicit_workspace_wins(self, tmp_path):
-        out = _resolve_ad_hoc_workspace(str(tmp_path / "target"))
-        assert out == str((tmp_path / "target").resolve())
+        out = _resolve_ad_hoc_workspace("my task", str(tmp_path / "target"))
+        assert out == os.path.abspath(str(tmp_path / "target"))
 
-    def test_uses_forwarded_caller_cwd(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("AF_CALLER_CWD", str(tmp_path))
-        assert _resolve_ad_hoc_workspace(None) == str(tmp_path.resolve())
-
-    def test_non_tty_project_root_falls_back_without_prompt(self, monkeypatch):
+    def test_forwards_caller_cwd_and_task_input(self, monkeypatch, tmp_path):
+        # 래퍼 책임만 검증: AF_CALLER_CWD를 cwd로, task_input을 위임.
+        # (resolve 로직 자체는 test_output_paths.py에서 base_dir 주입으로 검증)
         import agent_launcher as al
 
+        captured = {}
+
+        def fake_resolve(task_input, cwd, explicit_out, **kw):
+            captured.update(task_input=task_input, cwd=cwd, explicit_out=explicit_out)
+            return cwd  # in-place — 래퍼가 안내 출력 없이 그대로 반환
+
+        # al.resolve_product_output_dir 패치는 현 `from ... import` 바인딩에 의존.
+        # import 방식을 `import core.output_paths`로 바꾸면 패치 경로도 갱신 필요.
+        monkeypatch.setattr(al, "resolve_product_output_dir", fake_resolve)
+        monkeypatch.setenv("AF_CALLER_CWD", str(tmp_path))
+        _resolve_ad_hoc_workspace("Todo App", None)
+        assert captured["cwd"] == str(tmp_path)
+        assert captured["task_input"] == "Todo App"
+        assert captured["explicit_out"] is None
+
+    def test_inside_af_repo_redirects_to_projects(self, monkeypatch):
+        import agent_launcher as al
+        from core.config_paths import BASE_DIR
+
+        # cwd가 AF 소스 repo 루트 → projects/<slug> 로 격리 (에러 없이 리다이렉트)
         monkeypatch.delenv("AF_CALLER_CWD", raising=False)
-        monkeypatch.setattr(al.sys.stdin, "isatty", lambda: False)
-        monkeypatch.setattr(al.os, "getcwd", lambda: al.PROJECT_ROOT)
-        assert _resolve_ad_hoc_workspace(None) == os.path.abspath(al.PROJECT_ROOT)
+        monkeypatch.setattr(al.os, "getcwd", lambda: BASE_DIR)
+        out = _resolve_ad_hoc_workspace("Todo App", None)
+        assert al._norm(out) == al._norm(os.path.join(BASE_DIR, "projects", "todo_app"))
 
 
 class TestPromptMissionTemplateImport:

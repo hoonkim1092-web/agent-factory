@@ -261,6 +261,7 @@ class DocumentReviewSession:
             ReviewReport with critic/cross/judge results
         """
         from core.review_runner import (
+            build_auth_expired_notice,
             detect_blocked_providers,
             detect_providers,
             run_aggregation,
@@ -270,12 +271,13 @@ class DocumentReviewSession:
             select_review_pair,
         )
 
-        # G5: AUTH_EXPIRED provider 있으면 즉시 BLOCK (부분 만료 포함)
+        # G5: AUTH_EXPIRED provider 있으면 즉시 BLOCK (부분 만료 포함).
+        # 메시지에 1회 재인증 안내 + graceful skip(AF_SKIP_PROVIDER) 탈출구를 포함해
+        # 사용자가 스킵을 선택하면 다음 라운드부터 probe 자체가 생략되어 재시도 낭비가 끊긴다.
         blocked = detect_blocked_providers()
         if blocked:
             return self._empty_report(
-                round_num, "BLOCK",
-                f"인증 만료 provider: {', '.join(blocked)} — `<cli> login` 후 재시도",
+                round_num, "BLOCK", build_auth_expired_notice(blocked),
             )
 
         providers = detect_providers()

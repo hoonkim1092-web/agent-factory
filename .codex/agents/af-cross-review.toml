@@ -51,12 +51,16 @@ echo "fan_out: $FAN_OUT   blocked: $BLOCKED"
 ```
 ## 교차 검증 BLOCK — 프로바이더 인증 만료
 
-다음 프로바이더의 인증이 만료되었습니다:
+다음 프로바이더의 인증이 만료되었습니다 (1회 안내):
   - codex_cli: codex login
   - gemini_cli: gemini auth login
 
-재로그인 후 다시 시도하거나, 해당 세션만 우회:
-  AF_SKIP_PROVIDER=<provider_id> git commit ...
+재로그인 후 다시 시도하거나, 해당 세션만 건너뛰어 재시도 낭비를 차단(환경변수 설정):
+  (canonical id를 콤마로 결합 — 예: blocked=codex_cli,gemini_cli)
+  - bash/zsh:    AF_SKIP_PROVIDER=codex_cli,gemini_cli git commit ...
+  - PowerShell:  $env:AF_SKIP_PROVIDER='codex_cli,gemini_cli'; git commit ...
+  - cmd:         set AF_SKIP_PROVIDER=codex_cli,gemini_cli && git commit ...
+  → 한 번 설정하면 다음 라운드부터 해당 provider는 probe 자체를 생략합니다.
 
 <!-- final-verdict-start -->
 ## Tier 3 판정: BLOCK

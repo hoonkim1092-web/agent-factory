@@ -36,6 +36,42 @@ _PROVIDER_ID_MAP = {
     "gemini": "gemini_cli",
 }
 
+# AUTH_EXPIRED provider 1회 재인증 안내 + graceful skip 탈출구 (SSOT).
+# provider 키는 detect_blocked_providers()가 반환하는 짧은 키(claude/codex/gemini).
+SKIP_PROVIDER_ENV = "AF_SKIP_PROVIDER"
+REAUTH_COMMANDS: dict[str, str] = {
+    "claude": "claude login",
+    "codex": "codex login",
+    "gemini": "gemini auth login",
+}
+
+
+def build_auth_expired_notice(blocked: list[str]) -> str:
+    """AUTH_EXPIRED provider에 대한 1회 재인증 안내 메시지 구성.
+
+    각 만료 provider의 정확한 재인증 명령과, 재시도 토큰/시간 낭비를 끊는
+    graceful skip 탈출구(AF_SKIP_PROVIDER=<canonical_ids>)를 함께 안내한다.
+    canonical id는 AF_SKIP_PROVIDER가 받는 정규 식별자(_PROVIDER_ID_MAP, SSOT).
+    blocked가 비어 있으면 빈 문자열.
+    """
+    if not blocked:
+        return ""
+    reauth_lines = "\n".join(
+        f"  - {p}: {REAUTH_COMMANDS.get(p, f'{p} login')}" for p in blocked
+    )
+    canonical_ids = ",".join(_PROVIDER_ID_MAP.get(p, f"{p}_cli") for p in blocked)
+    # 멀티 OS: 인라인 `VAR=val cmd`는 POSIX 전용이라 Windows에서 미작동(cross-review F2).
+    # 셸별 환경변수 설정 구문을 모두 제시한다(`{SKIP_PROVIDER_ENV}={ids}` 값 형태는 유지).
+    return (
+        f"인증 만료 provider: {', '.join(blocked)}\n"
+        f"재인증 후 재시도:\n{reauth_lines}\n"
+        f"또는 이번 세션만 해당 provider를 건너뛰려면(재시도 차단) 환경변수 설정:\n"
+        f"  {SKIP_PROVIDER_ENV}={canonical_ids}\n"
+        f"  - bash/zsh:    export {SKIP_PROVIDER_ENV}={canonical_ids}\n"
+        f"  - PowerShell:  $env:{SKIP_PROVIDER_ENV}='{canonical_ids}'\n"
+        f"  - cmd:         set {SKIP_PROVIDER_ENV}={canonical_ids}"
+    )
+
 
 # ── 프로바이더 탐지 ──────────────────────────────────────────────────────────
 

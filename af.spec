@@ -104,6 +104,7 @@ a = Analysis(
         'core.dogfood',
         'core.completion_contract',
         'core.qa_report',
+        'core.output_paths',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

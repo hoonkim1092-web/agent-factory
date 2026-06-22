@@ -1,5 +1,45 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ✅ 3건 수정 완료 (2026-06-22, Opus) — output-isolation 회귀 해소 + auth 안내 + 주석 정정
+
+> **상태**: Fix 1·2·3 전부 구현·3-Tier 통과. 회귀 해소돼 **커밋 가능**. 전 Tier: af-critic WARN(advisory only) / af-cross-review BLOCK 2→**R2 PASS** / af-test-runner PASS(151).
+
+### Fix 1 — output-isolation 회귀 수정 (완료)
+> INV-O1(`<cwd>/<slug>/` 무조건 하위폴더) + fail-closed 가드(`OutputGuardError`)가 "기존 프로젝트 in-place 수정/분석"을 깨던 회귀 해소.
+> - `resolve_product_output_dir`: ① `--workspace` 최우선 ② cwd가 AF repo(base_dir) 하위 **AND projects/ 밖**이면 `<base_dir>/projects/<slug>` graceful 리다이렉트(에러 X) ③ 그 외(일반 폴더·projects/ 하위)는 **cwd in-place**.
+> - **cross-review F1 반영**: projects/ 하위는 격리 sink라 in-place 허용(가드 목적=core/scripts/tests 소스 오염 방지뿐). `OutputGuardError` 제거. `_resolve_ad_hoc_workspace`는 리다이렉트 시 1줄 stderr 안내.
+
+### Fix 2 — cli.py 주석 정정 (완료)
+> `_SHELL_FAILURE_MARKERS` 주석: "cmd.exe가 AF→codex 인자 못 넘김"(오귀속) → "codex(Rust) 내부 셸 spawn Windows 실패(Io(Error))". 코드/마커 불변.
+
+### Fix 3 — auth-expired 1회 안내 + skip 탈출구 노출 (완료)
+> 원천 결함 = 스킵 메커니즘(`AF_SKIP_PROVIDER`) 부재가 아니라 BLOCK 메시지가 탈출구를 안 알려준 것.
+> - `core/review_runner.py` `build_auth_expired_notice` + `REAUTH_COMMANDS`/`SKIP_PROVIDER_ENV`(canonical id는 기존 `_PROVIDER_ID_MAP` 재사용). `review_report.py` BLOCK 메시지에 재인증 명령 + skip 탈출구 노출. agent `.md`/`.toml` 동일.
+> - **cross-review F2 반영**: skip 안내를 bash/zsh·PowerShell(`$env:`)·cmd(`set`) 3종 멀티OS 구문으로.
+> - **`_run_provider`는 `execute_cli_chat` SSOT 위임 불변**(INV-8 rate-limit 마킹 유지).
+> - ⚠️ **백그라운드 worktree 에이전트 사고 기록**: Fix 3 위임 에이전트가 보고 없이 `_run_provider`를 subprocess 직접호출로 통째 재작성(INV-8 깸) + agent `.md`/`.toml`을 stale 버전으로 덮어써 LLM Wiki 청킹·review_bundle·MCP fallback·Consensus Gate를 대량 삭제. 메인이 전수 비교로 적발 → 의도된 추가(notice)만 HEAD에 수술적 재적용. **교훈: 위임 산출물은 diff stat만 믿지 말고 git diff 전수 검수 필수.** [[feedback_parallel_agent_shared_worktree_collision]]
+
+### codex Windows 결함 + 멀티OS 함의 (기록)
+> "batch file arguments are invalid" = codex(Rust) **내부 shell spawn** Windows 실패(`Io(Error)` 시그니처). AF→codex 실행은 정상. **Mac/Linux는 미발생**(`.cmd` 셔임 없음, 네이티브 spawn) → codex 자율탐색 정상. POSIX 고유 실패는 seatbelt/landlock 샌드박스 거부(permission_denied, 별도 마커). **task1 측정 confound**: Windows의 "Extension Log 0"은 "§5 덕분"과 "Windows라 탐색 불가" 혼입 → 깨끗한 §5 benefit은 Mac/Linux에서 재측정해야 분리.
+
+### 잔여 (doc 부채)
+> 두 설계문서(`docs/2026-06-18-product-output-isolation-design.md`, `docs/2026-06-18-user-perspective-qa-pipeline-design.md`) Draft 상태 — output-isolation 설계는 in-place 복원으로 개정됐으므로 §본문에 개정 노트 필요. [[feedback_analysis_doc_baseline_must_be_real_code]]
+
+## (이전) output-isolation O-S1+O-S2 구현 (2026-06-22, Opus) — ✅ 회귀 수정 완료
+
+> **병렬 작업(task 1+3)**: output-isolation 구현(task3) + 그 cross-review 자연발화를 STEP4 측정(task1)으로 활용.
+>
+> **task 3 (output-isolation)** — ad-hoc "~만들어줘" 산출물이 `os.getcwd()` 직하로 AF 소스 오염하던 것 보강:
+> - `core/output_paths.py` 신규 — `resolve_product_output_dir`/`OutputGuardError`/`_is_within`(normcase+realpath)/`_MAX_SLUG_LEN=40`
+> - `agent_launcher.py` `_resolve_ad_hoc_workspace(task_input, explicit)` 위임 래퍼(옛 비-tty PROJECT_ROOT 오염 fallback 제거) + 호출부 OutputGuardError→exit(1) + `AF_CALLER_CWD` 우선순위 보존
+> - 설계 `--out` 신규는 기존 `--workspace`/`-w`와 중복이라 미채택(재사용). af.spec hiddenimport. 테스트 16+3.
+> - **자동 설계리뷰 BLOCK 5건 전부 해소**(watcher 자동발화 실증, `docs/reviews/2026-06-22-135156-...`): #1~4=구현이 권고와 이미 일치, #5=slug cap 추가
+> - **3-Tier**: af-critic WARN(2반영)/af-cross-review WARN[codex-cli,no-mcp](1반영: --out→--workspace 메시지)/af-test-runner PASS(50). BLOCK 0.
+>
+> **task 1 (STEP4 측정)**: [§5 Direct Callers 7/7 채움 + codex 활성] **동시조건 첫 성립**(이전 3회 매번 한 변수 어긋남). af-cross-review **Extension Log 0**(§5 1차근거, 자율탐색 안 함)=STEP2 메커니즘 깨끗이 입증. codex=CLI fallback(no-MCP, single-vendor 아님). 10.1분/81.9k. 단 codex MCP 다라운드 분리는 Windows shell 버그로 미측정. 메모리 `project_af_gate_efficiency_debate` 4차 기록.
+>
+> **잔여**: 두 설계문서 Draft→Superseded 표기(doc 부채) + 커밋(사용자 지시 대기, staged=내 6파일만).
+
 ## ✅ Windows 호환성 테스트 버그 3건 수정 완료 (2026-06-22, Sonnet, `bf8ea506`)
 
 > - **Bug 1** (`test_stage0_question_router.py`): `read_text(encoding='utf-8')` 명시 — cp949 기본값으로 한글 UTF-8 파일 읽기 실패 방어
