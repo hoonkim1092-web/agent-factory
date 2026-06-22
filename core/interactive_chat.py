@@ -54,6 +54,7 @@ def _print_banner(project_id: str, role: str, provider: str, pipeline_mode: str)
     print(f"  {_c('/history', '90')} 로 대화 기록 보기")
     print(f"  {_c('/pipeline', '90')} to view/change pipeline mode")
     print(f"  {_c('/stats', '90')} 로 컨텍스트 통계")
+    print(f"  {_c('/output', '90')} 로 결과 저장 폴더 보기/변경 (예: /output ~/내작업)")
     print(_c("-" * 60, "36"))
     print()
 
@@ -159,6 +160,26 @@ class InteractiveChat:
             return False, "pipeline mode must be one of: auto, single, project"
         self.pipeline_mode = normalized
         return True, f"pipeline mode set to {self.pipeline_mode}"
+
+    def set_output_dir(self, value: str) -> tuple[bool, str]:
+        """`/output <경로>` — 이후 모든 작업 산출물이 저장될 폴더를 바꾼다.
+
+        self.workspace 는 매 턴 _run_single_turn/_run_project_turn 에서
+        runner.run / factory.run 으로 그대로 전달되므로, 변경은 다음 턴부터 반영된다.
+        비개발자가 따옴표로 감싸 붙여넣어도 되도록 양끝 따옴표를 벗기고,
+        없는 폴더는 만들어 준다(멀티OS — os.path + expanduser 만 사용).
+        """
+        raw = str(value or "").strip().strip('"').strip("'").strip()
+        if not raw:
+            return False, "사용법: /output <폴더 경로>"
+        path = os.path.abspath(os.path.expanduser(raw))
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError as exc:
+            return False, f"폴더를 만들 수 없습니다: {exc}"
+        self.workspace = path
+        self.project_id = safe_id(os.path.basename(path))
+        return True, f"출력 폴더 설정됨 → {path}"
 
     def _get_factory(self):
         if self._factory is None:
@@ -277,6 +298,15 @@ class InteractiveChat:
                 print(_c(f"  pipeline mode: {self.pipeline_mode}", "36"))
             else:
                 ok, msg = self.set_pipeline_mode(parts[1])
+                print(_c(f"  {msg}", "36" if ok else "31"))
+            return True
+        if cmd == "/output" or cmd.startswith("/output "):
+            # 경로는 소문자화된 cmd 가 아니라 원본 user_input 에서 떼야 멀티OS 케이스가 보존된다.
+            parts = user_input.split(maxsplit=1)
+            if len(parts) == 1:
+                print(_c(f"  출력 폴더: {self.workspace}", "36"))
+            else:
+                ok, msg = self.set_output_dir(parts[1])
                 print(_c(f"  {msg}", "36" if ok else "31"))
             return True
         return False
