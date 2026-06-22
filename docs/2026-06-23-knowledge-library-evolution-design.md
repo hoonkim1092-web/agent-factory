@@ -1,0 +1,319 @@
+# 자가진화 지식 도서관 (Knowledge Library) 설계
+
+- **Status**: Draft
+- **작성일**: 2026-06-23
+- **모델**: Opus 4.8 (설계)
+- **한 줄 요약**: 단일 사용자가 여러 PC를 오가며 작업한 맥락(결정·기각·패턴·개념)을 **git 안 마크다운 vault**로 증류·연결·유지하고, Obsidian으로 시각화한다. raw가 아니라 증류본이 흐르며, 코드와 같은 git 히스토리로 묶여 PC 간 드리프트를 원천 제거한다.
+
+---
+
+## §0 이 문서가 동결하는 결정
+
+이 설계는 2026-06-23 대화에서 단계적으로 좁혀진 결정의 산물이다. 재론 금지 항목:
+
+| # | 결정 | 근거 (이 문서 내 위치) |
+|---|------|----------------------|
+| D1 | **단일 사용자·다중 PC** 문제다 (multi-writer 팀 아님) | §1, §3.1 — 동시쓰기 머지·로그인·권한엔진은 비범위(§6) |
+| D2 | **저장소 = git** (새 DB·SaaS 신설 금지) | §3.2 — 코드와 같은 히스토리 = 드리프트 소멸 + commit핀 공짜 |
+| D3 | **raw 트랜스크립트 미동기화** — 증류본 + 포인터만 | §3.3 — 189MB, 평문 노출, 노이즈. opt-in 아카이브는 비범위(§6) |
+| D4 | **식별·접근제어는 seam만** (enforcement 코드 금지) | §3.4 — `author` frontmatter + `restricted/` 폴더. 실행은 git/GitHub이 나중에 공짜 제공 |
+| D5 | **NEXT_STEPS.md는 다이어트, 퇴역 아님** | §3.5 — 정밀 원장(commit/line/INV)은 손실압축 불가 |
+| D6 | **증류·점검·생성은 provider-neutral** (코드 레벨) | §3.6 — `control_plane_llm` SSOT. Claude/Codex/Gemini 동일 |
+
+---
+
+## §1 문제 정의 & 북극성
+
+### 1.1 북극성
+> 작업하면서 쌓인 맥락이 **자동으로 증류되어**, 서로 **연결되고**, **정직하게 유지되며**, **Obsidian 그래프로 보이는** 개인 지식 도서관. 어느 PC에서 어느 프로바이더(Claude/Codex/Gemini)로 재개해도 맥락이 이어진다.
+
+### 1.2 해결할 실제 통증 (관측된 것만)
+- **P1 — PC 전환 드리프트**: 지식(`memory/`, Supabase)이 코드(git)와 **따로 동기화**되어 시점이 어긋남 → "이 메모가 틀린 건가, 이 PC가 아직 안 받은 건가" 구분 불가. (관측: `project_model_routing_facts` 메모리가 실제 stale 정정당함, 2026-06-11)
+- **P2 — 맥락 단절(프로바이더)**: Claude 세션 종료 후 Codex/Gemini로 재개 시 맥락 처음부터. (트랜스크립트는 PC-local, §2.4)
+- **P3 — 자동 증류가 멍청함**: 현 `session_bridge`는 260자 truncate(§2.3) → 정밀 참조·"왜"가 잘려 맥락 유지 부실.
+- **P4 — 지식과 코드가 한 화면에 안 보임**: 코드 wiki와 `memory/`가 **다른 폴더** → Obsidian이 하나의 그래프로 못 그림(§2.1·2.2).
+
+### 1.3 비통증 (만들지 않을 것)
+- 팀 협업(동시 편집·권한). 사용자는 혼자다(D1).
+- raw 대화 영구 보관(D3). raw는 아무도 안 읽는다(컨텍스트에 안 올라감).
+- "철학적 모순 탐지" 같은 비접지 기능 — 코드 레포에서 ground truth는 코드다(§3.7).
+
+---
+
+## §2 Baseline — 실제 코드 현황 (file:line, 검증됨 2026-06-23)
+
+> 이 절은 추측 baseline 금지 규칙(`feedback_analysis_doc_baseline_must_be_real_code`)에 따라 전수 실측한 사실만 기록한다. 교차검증은 이 절을 1차 대조한다.
+
+### 2.1 코드 지식 wiki — **이미 존재, Obsidian 호환**
+- `docs/generated/llm_wiki/` = **41 파일**, **전부 `[[wikilink]]`** 사용. `blueprint/`·`code_review/`·`architecture.md`·`symbols.md`·`open_items.md` 등.
+- 생성기 `scripts/build_llm_wiki.py` (633줄): **순수 regex/AST 파서, LLM 호출 0**. 입력 = `Master_Blueprint.md` + `docs/code_review/code-review.md` + `NEXT_STEPS.md`(`:31-33`) + AST 심볼. frontmatter에 `source_commit` 박음(`:60-64`).
+- **⚠️ `build()`는 out_dir의 stale 파일을 `unlink()` 삭제**(`:590,:601`). → 내구성 지식을 같은 out_dir에 두면 지워짐 → 레이아웃 분리 필수(INV-K7).
+- 진입점: pre-commit 자동 + user-facing `af project wiki --path <dir>`(`agent_launcher.py:1088`, 임의 workspace = 이미 product 표면).
+
+### 2.2 결정/학습 지식 — **존재하나 분리됨**
+- `memory/` (실위치 `~/.claude/projects/<enc>/memory/`) = **112 파일**, **42개가 `[[wikilink]]`**. 사실상 "왜/결정" 지식층.
+- 동기화: `scripts/sync_claude_memory.py` → Supabase `claude_memory` 테이블, **평문 저장**(`:10`). 저장 키 = **`project_id`**(레포 경로 인코딩, `:70 _path_to_claude_key`, `:15 PRIMARY KEY`). **last-write 덮어쓰기**(`on_conflict=project_id` upsert, `:251` → 진짜 머지 없음 → 다중작성자 부적합, 단일 사용자엔 충분). (`global_user_key`는 sync가 아니라 **session_bridge 레코드 필드**, §2.3.)
+- 문제: 코드 wiki(§2.1)와 **다른 폴더** → Obsidian이 둘을 한 그래프로 못 봄(P4).
+
+### 2.3 트랜스크립트 → memory 브리지 — **멀티프로바이더, 그러나 기계적**
+- `scripts/session_bridge.py` (565줄): `PROVIDERS`(`:213`) = codex(`rollout-*.jsonl`)·claude(`*.jsonl`)·gemini(`*.jsonl`). 이미 3-프로바이더.
+- `write_memory_entries`(`:387`): **증류 아님 — truncate**. `summary=truncate(text,260)`, `details.text=truncate(text,4000)`(`:419`), `details`에 `session_file`(`:421`)·`session_line`(`:422`)은 있으나 `max_write=240`(`:445`). **commit/branch 필드 없음**(P1 근본 원인), **originating_pc/hostname 필드 없음**(D3 포인터 3요소 중 `pc` 미존재 → STAGE 2가 신규 추가).
+- 배선: `core/providers/session_adapter.py:22 from scripts.session_bridge import run_bridge`, `:14 resume_brief`. CLI 세션 수명주기에 연결.
+
+### 2.4 세션 수명주기 훅 — **훅 등록됨, 단 증류 발화점은 한정적**
+- `.claude/settings.local.json`: `SessionStart`·`Stop`·`PreCompact` → `hook_runner.py cli_hook_bridge --provider --workspace --run-id --repo-root` 등록. 배포 템플릿(`settings.local.template.json`)도 동일 → 임의 workspace 작동.
+- **⚠️ 그러나 `run_bridge`(증류 소스 경로)는 `Stop`에서 안 돎.** `core/providers/session_adapter.py:690`: `if event_name in {"PreCompact","PreCompress","SessionEnd"} and transcript_path: run_bridge(...)`. → **증류 배선점 = SessionEnd/PreCompact (이미 존재)**, Stop 아님. STAGE 2는 신규 Stop 분기가 아니라 **이 기존 발화점을 증류로 교체/보강**한다.
+- `core/continuity/resume_brief.py` → `resume_brief.md` 생성(SessionStart 재개 브리핑, 이번 세션 시작 시 출력된 그것).
+
+### 2.5 야간 파이프라인 — **POSIX 전용 (Windows 미작동)**
+- `scripts/nightly_tick.py:24`: `if win32: raise ImportError` (fcntl/flock/launchd). → 사용자 Windows에선 안 돎. 지식 점검은 **이 경로에 의존하면 안 됨**(순수 Python 크로스OS 필요).
+
+### 2.6 대용량 정책 — **git에서 이미 탈출한 선례**
+- `.gitignore`: `dist/` 제외. 주석(`:33-36`): 91MB zip이 GitHub 100MB 한계로 push 실패 → Release로 이전. → **189MB 트랜스크립트 git 커밋은 학습된 정책 위반**(D3 근거).
+
+### 2.7 Provider-neutral LLM SSOT — **존재**
+- `core/control_plane_llm.py`: `ControlPlaneLLM`(`:39`), `generate()`(`:147`)/`generate_json()`(`:161`). → 증류기가 여기에 배선되면 자동 멀티프로바이더(INV-K4).
+
+### 2.8 문서 규모
+- `CLAUDE.md` 219줄(500줄 룰 통과 — 비이슈). `NEXT_STEPS.md` **1219줄**(다이어트 대상, D5).
+
+---
+
+## §3 핵심 설계 결정 (rationale)
+
+### 3.1 (D1) 단일 사용자·다중 PC
+동시 작성자가 없으므로 충돌 머지·식별엔진·접근엔진 불필요. 남는 문제는 "내 지식이 PC를 따라오기"(P1·P2) 하나.
+
+### 3.2 (D2) 저장소 = git — 드리프트 소멸 + commit핀 공짜
+지식 vault를 git 안에 두면 **지식 .md와 코드가 같은 히스토리**가 된다.
+- `git pull` 한 번에 코드+지식이 **같은 커밋으로 원자적 도착** → P1(STALE vs SKEW 드리프트) **구조적 소멸**.
+- 각 노트의 git 커밋이 곧 "언제 쓰였나" → **commit핀 공짜**(별도 STEP 0 불필요).
+- 트레이드오프: Supabase는 커밋 없이 저장(저친화)이지만 코드와 따로 놀아 드리프트 유발. git은 커밋 필요하나 원자성 확보. 사용자는 이미 git push 규율 보유 → 순이득.
+- **layering**: `memory/`(Supabase)는 **빠른 개인 스크래치**로 유지, keep할 가치가 생기면 vault로 **승격**(§5 STAGE 5).
+
+### 3.3 (D3) raw 미동기화 — 증류본 + 포인터
+- raw 189MB·평문 노출·노이즈(§2.6, §2.2). 게다가 **raw는 맥락 통로에 없음**(새 세션이 3MB JSON을 못 읽음 → 맥락은 항상 큐레이션 층으로 이어짐).
+- 대신: 증류본 + `{originating_pc, session_file, line}` 포인터. 1% "원문 봐야겠다" 순간에만 그 PC에서 회수.
+
+### 3.4 (D4) 식별·접근제어 = seam만
+- **식별**: 노트 frontmatter `author`/`source_machine`/`created_commit`. git author가 이미 공짜 제공, frontmatter는 Obsidian 조회용 보강. (~1필드)
+- **접근제어**: `knowledge/restricted/` **폴더 컨벤션만**. enforcement 코드 0줄. 팀 전환 시 GitHub CODEOWNERS·브랜치보호로 **상속**(신규 빌드 없음).
+- 근거: enforcement를 지금 짜면 0명을 막는 죽은 코드(Simplicity First 위반). seam은 마이그레이션 없이 문만 열어둠.
+
+### 3.5 (D5) NEXT_STEPS 다이어트
+NEXT_STEPS는 `bf8ea506`·`agent_runner.py:1226`·`INV-O1` 같은 **고정밀 참조**의 원장. 손실압축(LLM/기계 증류 둘 다 lossy, `open_items.md` 상단 경고가 증거) 대체 불가. → 완료 이력은 vault로 이관, **활성 작업 + 정밀 참조만** 잔류.
+
+### 3.6 (D6) provider-neutral
+증류·점검·생성 로직을 코드(Python + `control_plane_llm`)에 두면 어느 프로바이더가 돌려도 같은 코드. 산문 지침은 `INSTRUCTIONS.md` SSOT→sync.
+
+### 3.7 Dream Sequence의 접지
+"모순 탐지"는 코드 레포에선 **검증 가능한 명제로 한정**한다: "노트가 named한 `file:line`/심볼/커밋이 현재 코드에 실존하나". 비접지 "철학적 모순"은 노이즈 생성기 → 비범위.
+
+---
+
+## §4 아키텍처
+
+### 4.1 데이터 평면
+```
+RAW (수집, PC-local, 미동기화)
+  ~/.{claude,codex,gemini}/sessions/*.jsonl   ← session_bridge가 읽음 (§2.3)
+        │  SessionEnd/PreCompact 증류 (run_bridge 기존 발화점, §2.4) — originating PC, 떠나기 전
+        ▼
+SCRATCH (빠른 개인, Supabase)
+  memory/*.md   ← 현행 유지 (저친화 메모)
+        │  승격 (keep 가치 생기면, STAGE 5)
+        ▼
+VAULT (내구성, git-tracked, Obsidian root) ★ 신규 통합
+  docs/wiki/
+    code/        ← build_llm_wiki --out (generated, 재생성, §2.1)
+    knowledge/   ← 내구성: decisions/ concepts/ patterns/ sessions/ restricted/
+    MOC.md       ← Map of Content (지도)
+        │  git pull
+        ▼
+  모든 PC에 코드+지식 원자적 도착 → Obsidian 그래프 시각화
+```
+
+### 4.2 vault 레이아웃 결정 (INV-K7 강제)
+- Obsidian root = **`docs/wiki/`** (신규, git-tracked).
+- `docs/wiki/code/` = `build_llm_wiki`가 `--out`으로 생성(generated). **`build()`가 stale unlink 하므로**(§2.1) 이 하위만 건드림.
+- `docs/wiki/knowledge/` = 내구성. **build_llm_wiki는 절대 안 건드림**(INV-K7). 손/증류가 작성.
+- 둘이 형제 폴더라 Obsidian이 한 그래프로 봄. `[[code/symbols]] ↔ [[knowledge/decisions/...]]` 교차링크.
+- 크로스OS: **symlink 금지**(Windows 취약) — 실제 폴더만.
+- (현 `docs/generated/llm_wiki/`는 STAGE 0에서 `docs/wiki/code/`로 이행하거나, `--out` 재지정으로 흡수. §5 STAGE 0에서 확정.)
+
+---
+
+## §5 단계별 구현 (메타프롬프트)
+
+> 각 STAGE는 구현자(LLM/사람)에게 그대로 넘길 수 있는 메타프롬프트다. 형식: **목표 / 입력(baseline) / 제약 / 산출물 / 검증 / 의존**. MVP = STAGE 0~2. 순서는 "먼저 보이게(0) → 스키마(1) → 증류(2) → 점검(3) → 연결(4) → 다이어트(5)".
+
+### STAGE 0 — Vault 통합 (먼저 보이게)
+```
+[목표] memory/ 지식 + 코드 wiki를 하나의 git-tracked Obsidian vault(docs/wiki/)로
+       합쳐, 진화 기능 0줄 추가 없이 "내 도서관"을 Obsidian 그래프로 보이게 한다.
+[입력] §2.1 build_llm_wiki(out 재지정 가능, :525 build(workspace,out_dir)),
+       §2.2 memory/ 112파일(이미 wikilink), §4.2 레이아웃.
+[제약] · build_llm_wiki --out=docs/wiki/code 로 코드wiki 이행 (knowledge/와 형제)
+       · knowledge/ 하위는 build가 절대 안 건드림 (INV-K7) — out_dir != knowledge
+       · memory→knowledge 는 '렌더/복사'이지 memory 원본 삭제 아님 (스크래치 유지, D2)
+       · symlink 금지(크로스OS). 절대경로 하드코딩 금지.
+[산출물] · docs/wiki/{code/, knowledge/, MOC.md} 생성
+         · memory/*.md → knowledge/ 로 분류 렌더(decisions/concepts/patterns/sessions)
+         · MOC.md: code↔knowledge 진입 링크 지도
+[검증] · Obsidian으로 docs/wiki/ 열면 code+knowledge가 한 그래프에 뜬다(수동 확인 1회)
+       · build_llm_wiki 재실행 후 knowledge/ 파일 무손실(INV-K7 테스트)
+       · af project wiki --path 가 docs/wiki/code 에 생성(배포 동등성)
+[의존] 없음 (substrate 존재). 이 STAGE만으로 독립 가치.
+```
+
+### STAGE 1 — 지식 노트 스키마 + 식별/접근 seam (SSOT)
+```
+[목표] 내구성 지식 노트의 단일 타입(frontmatter 계약)을 정의하고, 식별·접근
+       확장 seam을 데이터 모델에 심는다 (enforcement 코드는 안 짠다).
+[입력] §3.4 seam 결정, §2.7 git author, 타입 SSOT 규칙(CLAUDE.md).
+[제약] · 타입은 한 파일에서만 선언 (예: core/knowledge/note.py KnowledgeNote)
+       · frontmatter 필수: id, type(decision|concept|pattern|session),
+         author, source_machine, created_commit, links[], created_at
+       · created_commit 은 git rev-parse 로 자동 주입 (build_llm_wiki :52 _short_commit 재사용)
+       · restricted/ 는 폴더 컨벤션일 뿐 — 읽기/쓰기 제한 코드 금지(INV-K6)
+[산출물] · KnowledgeNote 데이터클래스 + to_md/from_md(frontmatter 직렬화)
+         · 노트 작성 헬퍼(author/source_machine/created_commit 자동 스탬프)
+[검증] · round-trip(to_md→from_md) 단위테스트
+       · created_commit 이 현재 HEAD와 일치(주입 테스트)
+       · restricted/ 에 enforcement 코드 0건(grep 검증)
+[의존] STAGE 0 (vault 존재).
+```
+
+### STAGE 2 — 증류기 (truncate → LLM 증류, provider-neutral)
+```
+[목표] session_bridge의 260자 truncate(§2.3)를, 세션 종료 시점에 raw에서
+       '결정·기각·패턴·정밀참조'를 추출하는 LLM 증류로 대체/보강한다.
+[입력] §2.3 write_memory_entries, §2.7 control_plane_llm(generate_json),
+       §2.4 run_bridge 발화점=SessionEnd/PreCompact(session_adapter.py:690, Stop 아님),
+       §3.3 포인터, §2.3 details에 session_file/line 있으나 pc 없음.
+[제약] · LLM 호출은 control_plane_llm SSOT 경유 (INV-K4 멀티프로바이더)
+       · 정밀참조(commit/file:line/INV명)는 '요약 금지, verbatim 발췌'(INV-K5)
+       · 산출 = KnowledgeNote(STAGE1) + raw 포인터{originating_pc,session_file,line}
+       · originating PC의 세션 종료 시 실행 (떠난 뒤엔 raw 없음, D3, INV-K9)
+         = session_adapter.py:690 기존 SessionEnd/PreCompact 경로 교체/보강.
+         신규 Stop 분기 불필요(§2.4 정정).
+       · raw 본문을 git/Supabase에 쓰지 않는다(INV-K2). 포인터만.
+       · secret/token 필터 (평문 vault 보호)
+[산출물] · core/knowledge/distill.py: raw rows → KnowledgeNote (LLM 1패스)
+         · session_adapter.py:690 SessionEnd/PreCompact 경로의 run_bridge를 증류로
+           교체/보강 (배포 동등성: production caller까지, 픽스처-only 금지)
+         · session_bridge 레코드 details에 originating_pc(socket.gethostname()) 필드 추가
+           (D3 포인터 3요소 완성, F3)
+[검증] · ★성공기준: 과거 실제 세션 1건 증류 결과가 그날 손으로 쓴
+         NEXT_STEPS 항목만큼 풍부한가 (commit·결함번호 보존율 비교, 실측)
+       · 멀티프로바이더: claude/codex 두 경로 동일 코드로 산출(스냅샷 테스트)
+       · secret 필터 단위테스트(가짜 토큰 주입→마스킹)
+[의존] STAGE 1 (스키마).
+```
+
+### STAGE 3 — Staleness 점검기 (af knowledge doctor, 크로스OS)
+```
+[목표] 지식 노트가 named한 file:line/심볼/커밋이 현재 코드에 실존하는지 검증,
+       STALE(코드 바뀜)와 SKEW(이 PC 미pull)를 구분해 리포트한다.
+[입력] STAGE1 created_commit, §2.5(nightly_tick POSIX전용 — 의존 금지),
+       §3.7 접지 원칙, scripts/blast_radius.py(심볼 추출 참고).
+[제약] · 순수 Python 크로스OS (fcntl/flock/launchd 금지 — nightly_tick 경로 안 씀)
+       · STALE vs SKEW 판정: created_commit 이 현재 git 히스토리에 있나?
+         없음→SKEW(이 PC 미pull, 오보 차단) / 있음→git diff 로 file:line 변동 판정→STALE
+       · 비접지 '의미 모순' 탐지 금지(노이즈) — 검증가능 명제만
+       · advisory(리포트)만. 자동 삭제/수정 금지
+[산출물] · scripts/af_knowledge_doctor.py + agent_launcher `af knowledge doctor` dispatch
+         · af.spec hiddenimport
+[검증] · STALE/SKEW 분기 단위테스트(가짜 노트 commit 조작)
+       · 깨진 file:line 노트 주입→STALE 리포트, 미pull 커밋→SKEW 리포트
+       · Windows에서 import·실행(크로스OS 회귀)
+[의존] STAGE 1 (created_commit 필요).
+```
+
+### STAGE 4 — 지능형 연결 (auto-wikilink)
+```
+[목표] knowledge 노트 ↔ code wiki(symbols) 사이 연결을 자동 발견해 그래프를 키운다.
+[입력] §2.1 symbols.md(AST), STAGE1 links[], 기존 wikilink 컨벤션.
+[제약] · 심볼/파일명 매칭 기반(결정론). LLM은 보조(애매 케이스만)
+       · 양방향 [[wikilink]] 삽입, 기존 수동 링크 보존(덮어쓰기 금지)
+       · 오탐 링크 < 노탐 (보수적)
+[산출물] · core/knowledge/link.py: 노트 본문의 file/symbol 언급→[[code/...]] 링크
+[검증] · 알려진 노트→코드 링크 정확도 스냅샷
+       · 기존 수동 wikilink 무손실
+[의존] STAGE 0·1·(2).
+```
+
+### STAGE 5 — NEXT_STEPS 다이어트 + 승격 게이트
+```
+[목표] 완료 이력을 vault/sessions 로 이관하고 NEXT_STEPS는 활성+정밀참조만 남긴다.
+       memory(scratch)→vault(durable) 승격 기준을 정의한다.
+[입력] §2.8 NEXT_STEPS 1219줄, §3.2 layering, build_llm_wiki(:33 NEXT_STEPS 입력).
+[제약] · 정밀참조(commit/line/INV)는 이관해도 verbatim 보존(D5, INV-K5)
+       · 승격은 명시적 행위(자동 전량 이관 금지 — scratch 오염 방지)
+       · NEXT_STEPS 퇴역 아님 — 원장 역할 유지
+[산출물] · 완료 항목→sessions/ 아카이브 절차 + 승격 헬퍼
+         · build_llm_wiki open_items 입력 경로 정합 확인
+[검증] · 이관 후 NEXT_STEPS 정밀참조 grep 보존율 100%
+       · 다이어트 후 줄수 감소 + 활성 항목 누락 0
+[의존] STAGE 0~3.
+```
+
+---
+
+## §6 비범위 (명시적 제외)
+- **팀 enforcement**: 동시쓰기 머지·로그인·권한엔진·역할로직. (git/GitHub이 팀 전환 시 제공, D4)
+- **raw 트랜스크립트 동기화/영구보관**: 기본 경로 아님. opt-in·DB전용·보관제한 아카이브는 **별도 설계**(D3).
+- **크로스OS 야간 cron**: Stop-hook 증류로 충분(D3, §5 STAGE2). 스케줄러 신설은 후속 트랙(nightly_tick POSIX 한계는 본 설계가 우회).
+- **비접지 의미 모순 탐지**(§3.7).
+- **Obsidian Sync/유료 SaaS**: git이 동기화(D2).
+
+---
+
+## §7 불변식 (INV)
+- **INV-K1**: 지식 vault는 git-tracked, 코드와 같은 히스토리 (PC 간 원자성).
+- **INV-K2**: raw 트랜스크립트는 git/공유DB에 안 들어감 — 증류본 + 포인터만.
+- **INV-K3**: 모든 내구성 노트는 frontmatter에 author/source_machine/created_commit.
+- **INV-K4**: 증류·생성·점검의 LLM 호출은 `control_plane_llm` SSOT 경유 (provider-neutral).
+- **INV-K5**: 증류는 정밀참조(commit/file:line/INV명)를 요약하지 않고 verbatim 발췌.
+- **INV-K6**: 접근제어 enforcement 코드 금지 — `restricted/` 폴더 seam만.
+- **INV-K7**: `build_llm_wiki`는 `code/`만 write, `knowledge/`는 절대 안 건드림 (stale unlink로부터 보호).
+- **INV-K8**: NEXT_STEPS.md는 정밀 원장으로 유지 (퇴역 아님, 다이어트).
+- **INV-K9**: 증류는 originating PC의 세션 종료 시점에 실행 (raw 휘발 전) — `session_adapter.py:690`의 기존 SessionEnd/PreCompact `run_bridge` 발화점(Stop 아님, §2.4).
+
+---
+
+## §8 멀티OS·멀티프로바이더 정합 (CLAUDE.md 구현규칙)
+- **멀티OS**: 지식 경로는 순수 Python + pathlib. fcntl/flock/launchd(nightly_tick) **의존 금지**. symlink 금지. 절대경로 하드코딩 금지. doctor·distill은 Windows에서 import·실행 회귀 테스트.
+- **멀티프로바이더**: 수집은 session_bridge PROVIDERS(이미 3종). 증류 LLM은 control_plane_llm SSOT. vault는 마크다운이라 프로바이더 무관. 산문 지침은 INSTRUCTIONS.md→sync.
+
+---
+
+## §9 검증 기준 (Goal-Driven)
+| STAGE | 강한 성공 기준 |
+|-------|--------------|
+| 0 | Obsidian에서 docs/wiki/ 1폴더로 code+knowledge 그래프 표시 + build 후 knowledge 무손실 |
+| 1 | KnowledgeNote round-trip + created_commit=HEAD + restricted enforcement 0건 |
+| 2 | **과거 세션 증류본이 그날 손작성 NEXT_STEPS 정밀참조를 보존**(실측 비교) + 멀티프로바이더 동일산출 + secret 마스킹 |
+| 3 | STALE/SKEW 분기 정확 + Windows 실행 + advisory-only |
+| 4 | 자동링크 정확도 + 수동링크 무손실 |
+| 5 | 정밀참조 grep 보존 100% + 활성항목 누락 0 |
+
+---
+
+## §10 위험 & 완화
+| 위험 | 완화 |
+|------|------|
+| build_llm_wiki stale unlink가 knowledge 삭제 | INV-K7 + out_dir 물리 분리(§4.2) + 무손실 테스트 |
+| 증류 손실로 맥락 끊김 | §9 STAGE2 성공기준=NEXT_STEPS 동등 풍부도. 미달 시 손작성 유지(fallback) |
+| 평문 vault에 secret 유출 | STAGE2 secret 필터 + restricted/ seam |
+| 메타-재귀 과게이트(토큰 과소비) | dev-tooling/product 경계 명시. 작은 STAGE는 표적검증, core/만 풀 3-Tier |
+| 커밋 폭주(세션마다 vault 커밋) | 승격 게이트(STAGE5)로 전량 자동커밋 회피. 배치/수동 푸시 |
+| Supabase scratch와 git vault 이중관리 혼선 | layering 명확화(§3.2): scratch=휘발 메모, vault=내구. 승격만 단방향 |
+
+---
+
+## §11 변경 이력
+| 날짜 | 변경 |
+|------|------|
+| 2026-06-23 | 초안. 2026-06-23 대화 결정(D1~D6) + baseline 실측(§2) 동결. Status=Draft. |
+| 2026-06-23 | af-cross-review R1 BLOCK 흡수: F1(High, Stop hook 자기모순)→§2.4·STAGE2·INV-K9 정정(증류 발화점=SessionEnd/PreCompact, session_adapter.py:690, Stop 아님). F2(§2.2 global_user_key 귀속오류→project_id 정정). F3(originating_pc 필드 미존재→STAGE2 산출물 명시). |
