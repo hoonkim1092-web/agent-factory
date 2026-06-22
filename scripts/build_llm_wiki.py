@@ -1,12 +1,12 @@
 """LLM Wiki Phase 0 — 결정적(무-LLM) knowledge view 생성기.
 
 원본 문서(Master_Blueprint.md / docs/code_review/code-review.md / NEXT_STEPS.md)를
-read-only로 파싱해 docs/generated/llm_wiki/ 에 5개 Markdown 파일을 생성한다.
+read-only로 파싱해 docs/wiki/code/ 에 Markdown 파일을 생성한다. (STAGE 0: docs/generated/llm_wiki/ → docs/wiki/code/ 이행)
 
 원본 문서는 수정하지 않는다. 생성물은 원본에서 파생된 view이며 원본을 대체하지 않는다.
 
 Usage:
-    python scripts/build_llm_wiki.py [--workspace .] [--out docs/generated/llm_wiki]
+    python scripts/build_llm_wiki.py [--workspace .] [--out docs/wiki/code]
 """
 
 import argparse
@@ -27,7 +27,7 @@ except ModuleNotFoundError:
 # ---------------------------------------------------------------------------
 # 경로 상수 (POSIX 슬래시 리터럴 — OS 무관 frontmatter 안정성)
 # ---------------------------------------------------------------------------
-_DEFAULT_OUT = "docs/generated/llm_wiki"
+_DEFAULT_OUT = "docs/wiki/code"
 _BLUEPRINT = "Master_Blueprint.md"
 _CODE_REVIEW = "docs/code_review/code-review.md"
 _NEXT_STEPS = "NEXT_STEPS.md"

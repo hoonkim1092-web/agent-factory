@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-22 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-23 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1700,6 +1700,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-23 | v1.2.34 | chore(.githooks): code update — pre-commit, AGENTS.md, CLAUDE.md, GEMINI.md, INSTRUCTIONS.md (+161) |
 | 2026-06-22 | v1.2.34 | chore(af): code update — af.py, agent_launcher.py, project_pipeline.py, work_item_generator.py, run_factory_cli.py (+8) |
 | 2026-06-22 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, agent_launcher.py, project_pipeline.py (+13) |
 | 2026-06-21 | v1.2.34 | fix(target-workspace): `af` forwarding이 호출자 CWD를 `AF_CALLER_CWD`로 전달하고, ad-hoc 실행에 `--workspace/-w` 및 AF 루트 TTY 폴더 입력을 추가. `run_factory_cli.py --project`는 사용자 프로젝트를 `workspace`, AF 루트를 `runtime_workspace`로 전달. `ProjectPipeline.prepare_brief()`/`prepare_documents()`와 `generate_work_items()`가 `target_path`를 대상 workspace 기준으로 해석해 work-item 산출물이 agent-factory 하위가 아닌 선택/지정 폴더 아래 생성되도록 수정. 대상 테스트 15건 PASS. — af.py, agent_launcher.py, run_factory_cli.py, core/project_pipeline.py, core/work_item_generator.py, tests/test_af_symbols.py, tests/test_agent_launcher_cli_dispatch.py, tests/test_run_factory_cli.py, tests/test_rse_slice2.py, tests/test_q_s3_path_c.py, Master_Blueprint.md |

@@ -23,4 +23,5 @@ def test_precommit_regenerates_llm_wiki_for_python_symbol_changes():
 
     assert "WIKI_TRIGGER=" in hook
     assert "\\.py$" in hook
-    assert "git add docs/generated/llm_wiki/" in hook
+    assert "git add docs/wiki/code/" in hook
+    assert "git add docs/wiki/" in hook

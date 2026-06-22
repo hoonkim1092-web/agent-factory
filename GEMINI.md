@@ -119,11 +119,12 @@
 | 배포(버전 bump) | §8 빌드, §12 이력 |
 | 의존성 변경 | §10 Blast Radius 테이블 |
 
-### LLM Wiki 청킹 활용 규칙 (2026-06-11 추가)
-- **Blueprint 탐색 시 `docs/generated/llm_wiki/blueprint/N-*.md` 청킹 섹션만 read** — `Master_Blueprint.md` 원본 통째 read 금지
+### LLM Wiki 청킹 활용 규칙 (2026-06-11 추가, 2026-06-23 경로 이행)
+- **Blueprint 탐색 시 `docs/wiki/code/blueprint/N-*.md` 청킹 섹션만 read** — `Master_Blueprint.md` 원본 통째 read 금지
 - **`symbols.md`는 grep 전용** — 통째 read 금지 (8204줄)
-- **code-review 탐색 시 `docs/generated/llm_wiki/code_review/` 청킹 섹션만 read** — `docs/code_review/code-review.md` 원본 통째 read 금지 (7302줄 → 청킹 28줄, 260배 절감)
-- 재생성: `python scripts/build_llm_wiki.py` — pre-commit에서 소스 파일 변경 시 자동 갱신
+- **code-review 탐색 시 `docs/wiki/code/code_review/` 청킹 섹션만 read** — `docs/code_review/code-review.md` 원본 통째 read 금지 (7302줄 → 청킹 28줄, 260배 절감)
+- 재생성: `python scripts/build_llm_wiki.py` (code wiki) / `python scripts/build_knowledge_wiki.py` (knowledge vault) — pre-commit에서 소스 파일 변경 시 자동 갱신
+- Obsidian vault root: `docs/wiki/` (code/ + knowledge/ 한 그래프)
 
 ### 버전 및 빌드
 - 버전 파일: `version.py` (`__version__`)

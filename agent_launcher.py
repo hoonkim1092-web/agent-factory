@@ -984,7 +984,7 @@ def _build_arg_parser(ad_hoc_mode):
         symbols_parser.add_argument("--out", metavar="DIR", default=None, help="symbols.md 저장 디렉터리 (미지정 시 stdout)")
         wiki_parser = sync_todo_sub.add_parser("wiki", help="Python 프로젝트 full-wiki(LLM Wiki) 생성")
         wiki_parser.add_argument("path", nargs="?", default=".", help="대상 경로 (기본: 현재 디렉터리)")
-        wiki_parser.add_argument("--out", metavar="DIR", default=None, help="wiki 저장 디렉터리 (workspace 상대, 기본: docs/generated/llm_wiki)")
+        wiki_parser.add_argument("--out", metavar="DIR", default=None, help="code wiki 저장 디렉터리 (workspace 상대, 기본: docs/wiki/code)")
 
         dogfood_parser = subparsers.add_parser("dogfood", help="Dogfood 파이프라인 실행")
         dogfood_sub = dogfood_parser.add_subparsers(dest="dogfood_cmd", required=True)
@@ -1088,6 +1088,7 @@ if __name__ == "__main__":
         elif args.subcommand == "project" and getattr(args, "project_cmd", None) == "wiki":
             from pathlib import Path as _Path
             from scripts.build_llm_wiki import build as _wiki_build, _DEFAULT_OUT as _wiki_default_out
+            from scripts.build_knowledge_wiki import build as _knowledge_build
             _wiki_root = _Path(getattr(args, "path", "."))
             if not _wiki_root.exists() or not _wiki_root.is_dir():
                 print(f"[af project wiki] 디렉터리가 아님: {_wiki_root}", file=sys.stderr)
@@ -1097,6 +1098,10 @@ if __name__ == "__main__":
             for _p in sorted(_wiki_pages):
                 print(f"[af project wiki] wrote: {_p}", file=sys.stderr)
             print(f"[af project wiki] {len(_wiki_pages)} pages → {_wiki_root / _wiki_out}", file=sys.stderr)
+            _k_pages = _knowledge_build(workspace=str(_wiki_root))
+            for _p in sorted(_k_pages):
+                print(f"[af project wiki] wrote: {_p}", file=sys.stderr)
+            print(f"[af project wiki] knowledge+MOC {len(_k_pages)} files → {_wiki_root / 'docs/wiki'}", file=sys.stderr)
             sys.exit(0)
         elif args.subcommand == "project" and getattr(args, "project_cmd", None) == "sync-todo":
             from core.project_task_board import sync_todo_from_board, load_project_board, board_todo_items
