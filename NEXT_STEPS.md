@@ -10,7 +10,7 @@
 >
 > 테스트 `tests/test_interactive_chat_output_cmd.py` 10건 PASS. Blueprint §0/§12 갱신. review-gate 통과.
 >
-> **다음 작업 (이전과 동일)**: ① 새 product work-item 발굴(메인) ② Review BLOCK Learning Phase 2 = 데이터 대기(`data/review-block-patterns.jsonl` 현재 1줄·unknown만, known ≥3 재발 미충족) ③ doc 부채 = 설계문서 2건(`docs/2026-06-18-product-output-isolation-design.md` in-place 개정 노트 / `2026-06-18-user-perspective-qa-pipeline-design.md` Draft→Superseded).
+> **다음 작업**: ① 새 product work-item 발굴(메인) ② Review BLOCK Learning Phase 2 = 데이터 대기(`data/review-block-patterns.jsonl` 현재 1줄·unknown만, known ≥3 재발 미충족). ~~③ doc 부채~~ ✅ **해소(2026-06-22)**: 설계문서 2건 모두 상태=Superseded + §0 개정/완료 노트 추가(output-isolation=in-place 복원 / QA 파이프라인=Q-S1~S6 완료).
 
 ## ✅ 3건 수정 완료 (2026-06-22, Opus) — output-isolation 회귀 해소 + auth 안내 + 주석 정정
 
@@ -34,8 +34,8 @@
 ### codex Windows 결함 + 멀티OS 함의 (기록)
 > "batch file arguments are invalid" = codex(Rust) **내부 shell spawn** Windows 실패(`Io(Error)` 시그니처). AF→codex 실행은 정상. **Mac/Linux는 미발생**(`.cmd` 셔임 없음, 네이티브 spawn) → codex 자율탐색 정상. POSIX 고유 실패는 seatbelt/landlock 샌드박스 거부(permission_denied, 별도 마커). **task1 측정 confound**: Windows의 "Extension Log 0"은 "§5 덕분"과 "Windows라 탐색 불가" 혼입 → 깨끗한 §5 benefit은 Mac/Linux에서 재측정해야 분리.
 
-### 잔여 (doc 부채)
-> 두 설계문서(`docs/2026-06-18-product-output-isolation-design.md`, `docs/2026-06-18-user-perspective-qa-pipeline-design.md`) Draft 상태 — output-isolation 설계는 in-place 복원으로 개정됐으므로 §본문에 개정 노트 필요. [[feedback_analysis_doc_baseline_must_be_real_code]]
+### ✅ 잔여 (doc 부채) — 해소 (2026-06-22)
+> 두 설계문서(`docs/2026-06-18-product-output-isolation-design.md`, `docs/2026-06-18-user-perspective-qa-pipeline-design.md`) 모두 상태 `Draft`→`Superseded` + §0 노트 추가 완료. output-isolation=in-place 복원 개정 노트(본문보다 우선 명시), QA 파이프라인=Q-S1~S6 구현 완료 표. [[feedback_analysis_doc_baseline_must_be_real_code]]
 
 ## (이전) output-isolation O-S1+O-S2 구현 (2026-06-22, Opus) — ✅ 회귀 수정 완료
 
@@ -50,7 +50,7 @@
 >
 > **task 1 (STEP4 측정)**: [§5 Direct Callers 7/7 채움 + codex 활성] **동시조건 첫 성립**(이전 3회 매번 한 변수 어긋남). af-cross-review **Extension Log 0**(§5 1차근거, 자율탐색 안 함)=STEP2 메커니즘 깨끗이 입증. codex=CLI fallback(no-MCP, single-vendor 아님). 10.1분/81.9k. 단 codex MCP 다라운드 분리는 Windows shell 버그로 미측정. 메모리 `project_af_gate_efficiency_debate` 4차 기록.
 >
-> **잔여**: 두 설계문서 Draft→Superseded 표기(doc 부채) + 커밋(사용자 지시 대기, staged=내 6파일만).
+> **잔여**: ~~두 설계문서 Draft→Superseded 표기(doc 부채)~~ ✅ 해소(2026-06-22, 위 참조).
 
 ## ✅ Windows 호환성 테스트 버그 3건 수정 완료 (2026-06-22, Sonnet, `bf8ea506`)
 

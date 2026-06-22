@@ -1,9 +1,26 @@
 # AF 제품 출력 격리 — ad-hoc 새 제품 생성 경로 (`os.getcwd()` 오염 보강)
 
 **날짜**: 2026-06-18
-**상태**: Draft
+**상태**: Superseded — 2026-06-22 in-place 복원으로 개정 (아래 §0 개정 노트 참조)
 **작성자**: Claude Opus 4.8
 **연관 설계**: `docs/2026-06-18-user-perspective-qa-pipeline-design.md` (QA 파이프라인 — 이 격리의 **소비자**: 리포트·seam 산출물이 여기서 정해진 위치에 떨어짐)
+
+---
+
+## §0 개정 노트 (2026-06-22, 구현 시 방향 전환 — 본문보다 우선)
+
+> ⚠️ **본문(§1~)은 "무조건 격리 + fail-closed 차단" 초기 설계다. 실제 구현은 아래대로 정반대로 개정됐다.** 본문을 그대로 재구현하지 말 것.
+
+**왜 바뀌었나**: 본문의 INV-O1(`<cwd>/<slug>/` **무조건** 하위폴더) + fail-closed 가드(`OutputGuardError`)가 *"기존 프로젝트를 그 자리에서 수정·분석"* 이라는 정상 동작을 깨는 회귀를 냈다. AF는 ad-hoc 경로에서 사용자 cwd의 기존 프로젝트를 in-place로 다뤄야 한다.
+
+**개정된 실제 동작** (`core/output_paths.py:resolve_product_output_dir`):
+1. `--workspace`/`-w` explicit 지정 → 최우선 (INV-O5). 설계의 신규 `--out`은 **미채택**(기존 `--workspace`와 중복이라 재사용).
+2. cwd가 AF 소스 repo(`BASE_DIR`) 하위 **AND** `projects/` 밖 → `<BASE_DIR>/projects/<slug>`로 **graceful 리다이렉트**(INV-O2, 에러 아님 — AF 소스 오염만 격리). `OutputGuardError`(fail-closed) **제거**.
+3. 그 외(배포 사용자 일반 폴더·`projects/` 하위) → **cwd in-place** (INV-O3, 기존 프로젝트 수정·분석 의도 보존).
+
+**후속 UX (2026-06-22)**: 대화형 세션에서 비개발자가 저장 폴더를 쉽게 지정하도록 `/output <경로>` 슬래시 명령 추가(`core/interactive_chat.py`, 커밋 `570b3258`) + 시작 배너에 현재 폴더 표시(`482f72c3`).
+
+**근거**: NEXT_STEPS.md "3건 수정 완료" Fix 1 + Master_Blueprint.md §12(2026-06-22 output-isolation 행). 구현·테스트(16+3)·3-Tier 완료.
 
 ---
 

@@ -1,9 +1,26 @@
 # 사용자 시점 자동 QA 파이프라인 — intake 테스트 명료화 + 리서치 폴백 설계
 
 **날짜**: 2026-06-18
-**상태**: Draft
+**상태**: Superseded — 2026-06-19~20 Q-S1~S6 전부 구현 완료 (아래 §0 구현 완료 노트 참조)
 **작성자**: Claude Opus 4.8
 **연관 설계**: `docs/2026-06-17-af-completion-contract-goal-verification-design.md` (완료계약 — 이 설계의 **다운스트림 소비자**)
+
+---
+
+## §0 구현 완료 노트 (2026-06-22 표기)
+
+> 본 설계의 구현 슬라이스 Q-S1~Q-S6이 **전부 완료**됐다. 본문은 설계 시점 기록으로 보존하되, 최신 동작은 코드와 Blueprint를 따른다.
+
+| 슬라이스 | 상태 | 커밋/근거 |
+|---|---|---|
+| Q-S1 GoalEntry 확장 + TestManifest | ✅ | `bacafe3d` |
+| Q-S2 RESEARCH_SYNTHESIZE + 4문항 + provenance | ✅ | `be884287`+`5fb3d8ad` |
+| Q-S3 경로 C 활성화 (research 합성) | ✅ | `e4f2dac0` |
+| Q-S4 seam→deliverables 승격 + GoalContract 동결 | ✅ | (2026-06-19) |
+| Q-S5 HTML 리포트 렌더러 (`core/qa_report.py`) | ✅ | (2026-06-19) |
+| Q-S6 `render_html()` wiring | ✅ | `ee119a1b` |
+
+**구현 중 변경**: cross-review 5라운드 BLOCK 후 일부 advisory 보류 → 그 계기로 `docs/2026-06-19-review-consensus-evidence-gate-design.md`(리뷰 합의 게이트) 파생. 상세 이력은 NEXT_STEPS.md Q-S1~S6 항목 참조.
 
 ---
 
