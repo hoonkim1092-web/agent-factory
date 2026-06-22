@@ -1,5 +1,16 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ✅ STAGE 0 완료 (2026-06-23, Sonnet) — Knowledge Vault Builder (`docs/wiki/`)
+
+> **커밋**: `2108d34a` — memory/*.md를 분류·복사해 Obsidian이 code wiki와 단일 그래프로 볼 수 있는 docs/wiki/ vault 구축.
+>
+> - `scripts/build_knowledge_wiki.py` (신규): memory/*.md → `docs/wiki/knowledge/{sessions/patterns/concepts}` 분류 복사 + `MOC.md` 생성
+> - `scripts/build_llm_wiki.py`: `_DEFAULT_OUT` → `docs/wiki/code` (구 `docs/generated/llm_wiki/` 41파일 rename)
+> - pre-commit hook: wiki 섹션 무조건 `git add` (untracked first-run 대응)
+> - 테스트 22건(INV-K5/INV-K7/MOC/분류) + 기존 3683건 회귀 없음. 3-Tier 완주.
+>
+> **다음**: STAGE 1 (`core/knowledge/note.py`) — KnowledgeNote 스키마 + frontmatter 계약 정의. 또는 새 product work-item 발굴.
+
 ## ✅ 세션 완료 (2026-06-22, Opus) — 재부팅 복구 + `/output` 비개발자 폴더 지정 명령
 
 > **재부팅 복구**: 끊긴 작업은 단 1건 — `INSTRUCTIONS.md`(SSOT)에 CoT 원칙 "단계별로 생각을 먼저한다" 추가 후 provider sync 직전 중단. sync 완료 + 커밋(`fff0ce2b`). 미푸시 커밋·진행 중 dogfood run·백그라운드 task 전부 없음(유실 0).

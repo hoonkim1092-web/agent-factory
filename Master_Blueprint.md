@@ -1700,6 +1700,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-23 | v1.2.34 | feat(wiki): STAGE 0 — Knowledge Vault + Code Wiki 통합. memory/*.md → docs/wiki/knowledge/{sessions/patterns/concepts} 분류 복사 + MOC.md. docs/generated/llm_wiki → docs/wiki/code rename(41파일). build_knowledge_wiki.py 신규, pre-commit wiki 섹션 무조건 add. INV-K7(knowledge↔code 물리분리) / D2(원본 보존) / D6(LLM 호출 없음). tests 22건. — scripts/build_knowledge_wiki.py, scripts/build_llm_wiki.py, .githooks/pre-commit, agent_launcher.py, af.spec, INSTRUCTIONS.md, tests/test_knowledge_wiki_stage0.py, tests/test_llm_wiki_precommit.py |
 | 2026-06-23 | v1.2.34 | chore(.githooks): code update — pre-commit, AGENTS.md, CLAUDE.md, GEMINI.md, INSTRUCTIONS.md (+161) |
 | 2026-06-22 | v1.2.34 | chore(af): code update — af.py, agent_launcher.py, project_pipeline.py, work_item_generator.py, run_factory_cli.py (+8) |
 | 2026-06-22 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.py, agent_launcher.py, project_pipeline.py (+13) |

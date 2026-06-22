@@ -1,13 +1,13 @@
 ---
-generated_at: 2026-06-23T07:20:45+09:00
-source_commit: 06c2aa7d
+generated_at: 2026-06-23T07:21:57+09:00
+source_commit: 2108d34a
 sources:
   - "Master_Blueprint.md"
 ---
 
 # 유지보수 가이드
 
-> Source: `Master_Blueprint.md:2926`
+> Source: `Master_Blueprint.md:2927`
 > 관련: [[blueprint/index]] | [[index]] | [[source_refs]]
 
 ````markdown
