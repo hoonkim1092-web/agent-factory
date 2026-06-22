@@ -39,7 +39,7 @@ def _c(text: str, code: str) -> str:
     return f"\033[{code}m{text}\033[0m"
 
 
-def _print_banner(project_id: str, role: str, provider: str, pipeline_mode: str):
+def _print_banner(project_id: str, role: str, provider: str, pipeline_mode: str, workspace: str = ""):
     print()
     print(_c("=" * 60, "36"))
     print(_c("  Agent Factory — Interactive Chat", "1;36"))
@@ -48,6 +48,7 @@ def _print_banner(project_id: str, role: str, provider: str, pipeline_mode: str)
     print(f"  역할     : {_c(role, '33')}")
     print(f"  엔진     : {_c(provider, '33')}")
     print(f"  pipeline : {_c(pipeline_mode, '33')}")
+    print(f"  결과 저장: {_c(workspace, '33')}  ({_c('/output', '90')} 으로 변경)")
     print()
     print(f"  {_c('exit', '90')} 또는 {_c('Ctrl+C', '90')} 로 종료")
     print(f"  {_c('/clear', '90')} 로 대화 초기화")
@@ -147,7 +148,7 @@ class InteractiveChat:
         self._visualizer.register_agent(agent_name)
 
         role = self.agent.get("role", "") or self.agent.get("name", "") or "Agent"
-        _print_banner(self.project_id, role, self._provider_id, self.pipeline_mode)
+        _print_banner(self.project_id, role, self._provider_id, self.pipeline_mode, self.workspace)
 
     def _normalize_pipeline_mode(self, value: str) -> str:
         mode = str(value or "auto").strip().lower()

@@ -91,3 +91,14 @@ def test_handle_command_output_preserves_path_case(tmp_path):
 def test_handle_command_unknown_returns_false(tmp_path):
     chat = _make_chat(str(tmp_path))
     assert chat.handle_command("/nope") is False
+
+
+def test_banner_shows_output_folder(tmp_path, capsys):
+    from core.interactive_chat import _print_banner
+
+    ws = str(tmp_path / "내작업폴더")
+    _print_banner("proj", "tester", "claude_cli", "auto", ws)
+    out = capsys.readouterr().out
+    assert ws in out
+    assert "결과 저장" in out
+    assert "/output" in out
