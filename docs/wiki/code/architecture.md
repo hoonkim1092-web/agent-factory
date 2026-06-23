@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-23T17:53:02+09:00
-source_commit: 6e03a744
+generated_at: 2026-06-23T18:25:51+09:00
+source_commit: 4f4560ed
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -68,7 +68,7 @@ sources:
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
 | `core/output_paths.py` | ad-hoc 새 제품/수정 출력 격리 (O-S1, 2026-06-22; in-place 복원 개정) — 일반 폴더는 cwd 그대로 in-place(INV-O3, 기존 프로젝트 수정·분석 보존), AF 소스 repo 안 실행 시에만 `<base_dir>/projects/<slug>` 로 graceful 리다이렉트(INV-O2, 에러 없이 오염 격리). `_is_within`(normcase+realpath, Windows 케이스 비민감)로 BASE_DIR 하위 판정. explicit override(`--workspace`)는 최우선(INV-O5). dogfood worktree 모델은 미적용(INV-O4). 설계: `docs/2026-06-18-product-output-isolation-design.md`. | Master_Blueprint.md §0 |
 | `core/knowledge/note.py` | 자가진화 지식 도서관 STAGE 1 (2026-06-23) — 내구성 지식 노트 단일 타입(frontmatter 계약 SSOT). `to_md`/`from_md` round-trip(json.dumps 스칼라/links 인코딩=콜론·따옴표 안전, JSON⊂YAML Obsidian 호환). `new_note()` 작성 헬퍼=author/source_machine(`socket.gethostname()`)/created_commit(`git rev-parse --short`)/created_at/id 자동 스탬프. id 네임스페이스 `{type}/{machine}-{micro시각}-{rand}-{slug}.md`(마이크로초+6자 rand 무충돌 INV-K11, Windows 안전 §12.9). `scope`(기본 project, D12 seam)/`visibility`(기본 private, D11 seam)는 데이터 seam일 뿐 enforcement 코드 0건(INV-K6). 설계: `docs/2026-06-23-knowledge-library-evolution-design.md`. | Master_Blueprint.md §0 |
-| `core/knowledge/distill.py` | 지식 도서관 STAGE 2 (2026-06-23) — 세션 raw events → 증류 KnowledgeNote (provider-neutral). `mask_secrets`(sk-/ghp_/xox/AKIA/Bearer/PEM/라벨=값 → [REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·순서·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4 멀티프로바이더, 지연 싱글턴 `_get_distill_llm`) → 본문 렌더(출력도 마스킹) → `new_note`. raw 포인터 `{originating_pc, session_file, line}`(§3.3). LLM 의존성 주입(테스트). LLM 실패해도 정밀참조+포인터로 노트 생성. **배선(session_adapter:690)은 S2-3 별도.** 설계 §5 STAGE2. | Master_Blueprint.md §0 |
+| `core/knowledge/distill.py` | 지식 도서관 STAGE 2 (2026-06-23) — 세션 raw events → 증류 KnowledgeNote (provider-neutral). `mask_secrets`(sk-/ghp_/xox/AKIA/Bearer/PEM/라벨=값 → [REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·순서·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4 멀티프로바이더, 지연 싱글턴 `_get_distill_llm`) → 본문 렌더(출력도 마스킹) → `new_note`. raw 포인터 `{originating_pc, session_file, line}`(§3.3). LLM 의존성 주입(테스트). LLM 실패해도 정밀참조+포인터로 노트 생성. **S2-3 배선 완료(2026-06-23)**: `session_adapter._distill_to_vault`가 두 발화점(`:583` codex finalize·`:691` claude/gemini hook SessionEnd/PreCompact)에서 호출, vault=`repo_root/docs/wiki/knowledge`(INV-K1). 설계 §5 STAGE2. | Master_Blueprint.md §0 |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | Master_Blueprint.md §0 |
 | `core/cross_verification.py:1-758` | 멀티 CLI 교차검증 | Master_Blueprint.md §0 |
 | `core/dashboard.py` | 실행 이력 모니터링 | Master_Blueprint.md §0 |
@@ -109,7 +109,7 @@ sources:
 | `core/project_task_board.py` | 태스크 보드 상태 관리 + `.todo.md` 동기화 훅 | Master_Blueprint.md §0 |
 | `core/providers/cli.py` | CLI 프로바이더 실행 + 진행 표시. **F10**: `_collect_git_context()` — git HEAD/branch/log/status 수집 후 `_compose_prompt()`의 `[Git State]` 섹션으로 gemini/claude/codex_cli 3개 provider에 자동 주입. **sandbox 후처리**: `_apply_sandbox_mode()`가 `build_cli_command()` 최종 `return cmd` 직전에 완성 argv를 받아 `sandbox_enabled()` 값에 따라 codex는 `--sandbox danger-full-access`(off 시), gemini는 `--sandbox` 제거(off 시, `--approval-mode yolo` 보존 — INV-S7 hang 방지) | Master_Blueprint.md §0 |
 | `core/sandbox_config.py` | sandbox 활성 여부 SSOT. 우선순위: env `AF_SANDBOX` > `~/.af/sandbox.json` > 플랫폼 기본(Windows=False, 그 외=True). `set_sandbox_enabled()`는 `~/.af/sandbox.json` write-through. `core/providers/cli.py`의 `_apply_sandbox_mode()`가 이를 읽어 provider argv를 후처리. | Master_Blueprint.md §0 |
-| `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize | Master_Blueprint.md §0 |
+| `core/providers/session_adapter.py` | CLI 세션 hook 설정·연속성 브리지. **Phase D**: `_write_claude_settings` 본문을 `locked_file(timeout=5)` wrap, `prepare_cli_session`에 `TimeoutError` catch (settings 미작성 후 계속 진행). **Hook Unicode hardening**: hook payload JSON 저장/출력을 ASCII-safe로 escape하고 lone surrogate를 sanitize. **STAGE2 S2-3(2026-06-23)**: `_distill_to_vault(events, repo_root, provider_id)` — `run_bridge` 반환 events(pop)를 증류해 `repo_root/docs/wiki/knowledge`에 best-effort 기록(`finalize_cli_session` codex + `handle_hook_event` SessionEnd/PreCompact, INV-K4 parity). | Master_Blueprint.md §0 |
 | `core/provider_detect.py` | 4-state CLI 프로바이더 감지 + 1h 디스크 캐시 + AF_SKIP_PROVIDER 처리. **RATE_LIMITED 상태 추가(2026-06-10)**: `mark_rate_limited()` + `detect_rate_limit_signal()` + `_apply_rate_limit_override()`로 usage limit 사후 캐시 학습 → fan_out 자동 제외 + 노티. CLI `--mark-rate-limited --until`. force_refresh 시에도 미래 until이면 RATE_LIMITED 유지. ThreadPool race condition 수정. | Master_Blueprint.md §0 |
 | `core/providers/registry.py` | 설치된 CLI 목록 (Unix npm fallback 포함) + 교차검증 provider 선택. 멀티스레드 안전: `_installed_cli_cache_lock` double-checked locking 패턴 | Master_Blueprint.md §0 |
 | `core/research_engine.py` | NotebookLM 통합 엔진 (사서) | Master_Blueprint.md §0 |
@@ -1174,12 +1174,12 @@ sources:
 
 ### `core/providers`
 
-4 modules · 3 classes · 91 functions
+4 modules · 3 classes · 92 functions
 
 - `core/providers/__init__.py` — 0 class / 0 func
 - `core/providers/cli.py` — 2 class / 35 func
 - `core/providers/registry.py` — 0 class / 21 func
-- `core/providers/session_adapter.py` — 1 class / 35 func
+- `core/providers/session_adapter.py` — 1 class / 36 func
 
 ### `core/research`
 
@@ -1798,7 +1798,7 @@ sources:
 
 ### `tests`
 
-230 modules · 424 classes · 1945 functions
+231 modules · 425 classes · 1954 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1853,6 +1853,7 @@ sources:
 - `tests/test_decision_report.py` — 0 class / 4 func
 - `tests/test_default_context_schema.py` — 2 class / 1 func
 - `tests/test_destructive_guard.py` — 0 class / 4 func
+- `tests/test_distill_wiring.py` — 1 class / 8 func
 - `tests/test_documentation_policy.py` — 0 class / 15 func
 - `tests/test_dogfood.py` — 9 class / 142 func
 - `tests/test_dogfood_cli.py` — 0 class / 37 func
@@ -1971,7 +1972,7 @@ sources:
 - `tests/test_safe_optional_id.py` — 0 class / 6 func
 - `tests/test_sandbox_config.py` — 8 class / 2 func
 - `tests/test_scale_aware_decomposition.py` — 5 class / 4 func
-- `tests/test_session_bridge.py` — 0 class / 7 func
+- `tests/test_session_bridge.py` — 0 class / 8 func
 - `tests/test_setup_wizard_gate.py` — 0 class / 27 func
 - `tests/test_signatures.py` — 0 class / 1 func
 - `tests/test_skill_eval_harness.py` — 0 class / 12 func

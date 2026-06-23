@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.session_bridge import get_provider, run_bridge
+from scripts.session_bridge import get_provider, main, run_bridge
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -78,6 +78,43 @@ def test_run_bridge_mirrors_codex_sessions_into_global_memory(tmp_path: Path, mo
     texts = {record["details"]["text"] for record in records}
     assert "[user] hello from codex" in texts
     assert "[assistant] hi from codex" in texts
+
+    # STAGE2 S2-3: run_bridge 가 수집한 raw events 를 반환한다 (증류 입력, 이중 cursor 회피).
+    assert isinstance(result.get("events"), list)
+    assert len(result["events"]) == 2
+    assert {e["text"] for e in result["events"]} == {
+        "[user] hello from codex",
+        "[assistant] hi from codex",
+    }
+
+
+def test_main_cli_output_excludes_raw_events(tmp_path: Path, monkeypatch, capsys):
+    """CLI stdout 요약엔 raw events 를 싣지 않는다 (비대화 방지)."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    sessions_root = tmp_path / "codex-sessions"
+    session_file = sessions_root / "2026" / "03" / "09" / "rollout-x.jsonl"
+    _write_jsonl(
+        session_file,
+        [
+            {
+                "timestamp": "2026-03-09T01:02:03Z",
+                "type": "response_item",
+                "payload": {"role": "user", "content": [{"type": "input_text", "text": "hello"}]},
+            }
+        ],
+    )
+    monkeypatch.setenv("AGENT_GLOBAL_USER_KEY", "hoon_main")
+
+    rc = main(
+        ["--provider", "codex", "--repo-root", str(repo_root), "--sessions-root", str(sessions_root)]
+    )
+
+    assert rc == 0
+    printed = json.loads(capsys.readouterr().out.strip())
+    assert printed["ok"] is True
+    assert printed["written"] == 1
+    assert "events" not in printed
 
 
 def test_run_bridge_recovers_from_stale_cursor(tmp_path: Path, monkeypatch):

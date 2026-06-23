@@ -160,6 +160,27 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _distill_to_vault(events: list[dict], repo_root: Path, provider_id: str) -> None:
+    """raw events → 증류 KnowledgeNote 를 vault(docs/wiki/knowledge)에 best-effort 기록 (STAGE2 S2-3).
+
+    - vault·created_commit 모두 ``repo_root`` 기준 (INV-K1: vault 는 git-tracked 코드 repo;
+      INV-K3/STAGE3: created_commit 이 vault git 히스토리에 있어야 STALE/SKEW 판정 작동).
+    - 증류 실패가 세션 수명주기 hook 을 죽이면 안 됨 → 전 구간 try/except(run_bridge best-effort 패턴).
+    - 지연 import: 매 hook 마다 distill 의존 그래프(control_plane_llm) 로딩 비용 회피 + import 격리.
+    """
+    if not events:
+        return
+    try:
+        from core.knowledge.distill import distill_session
+
+        knowledge_root = repo_root / "docs" / "wiki" / "knowledge"
+        for note in distill_session(events, workspace=str(repo_root), provider_id=provider_id):
+            note.write_to(knowledge_root)
+    except Exception:
+        # raw mirror·resume brief 는 이미 처리됨 — 증류/기록 실패는 무시.
+        return
+
+
 def _is_frozen() -> bool:
     """PyInstaller exe 번들 환경인지 확인."""
     return getattr(sys, "frozen", False)
@@ -580,12 +601,15 @@ def finalize_cli_session(request, prepared: dict[str, Any], result: dict[str, An
             if isinstance(prepared.get("env"), dict)
             else ""
         )
+        bridge_repo_root = _repo_root()
         bridge_result = run_bridge(
             spec.bridge_provider_id,
-            repo_root=_repo_root(),
+            repo_root=bridge_repo_root,
             sessions_root=sessions_root or None,
         )
+        distill_events = bridge_result.pop("events", []) if isinstance(bridge_result, dict) else []
         state["bridge_result"] = bridge_result
+        _distill_to_vault(distill_events, bridge_repo_root, spec.provider_id)
 
     _save_json(state_path, state)
     resume_path = write_resume_brief(request.workspace, trigger="session_finalize")
@@ -693,7 +717,9 @@ def handle_hook_event(
             repo_root=repo_root_path,
             sessions_root=Path(transcript_path).resolve().parent,
         )
+        distill_events = bridge_result.pop("events", []) if isinstance(bridge_result, dict) else []
         state["bridge_result"] = bridge_result
+        _distill_to_vault(distill_events, repo_root_path, provider_id)
 
     state["updated_at"] = _now_iso()
     _save_json(paths["state_path"], state)

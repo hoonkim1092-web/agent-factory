@@ -532,6 +532,9 @@ def run_bridge(
         "memory_dir": str(memory_dir),
         "state_path": str(state_path),
         "sessions_root": str(sessions_root_path),
+        # 이번 run 에서 수집·미러된 raw events (STAGE2 증류 입력, 이중 cursor 회피).
+        # 직렬화 sink(CLI stdout·state file)는 소비 측에서 pop 해 비대화 방지.
+        "events": events,
     }
 
 
@@ -563,7 +566,9 @@ def main(argv: list[str] | None = None, default_provider: str | None = None) -> 
         bootstrap_limit=args.bootstrap_limit,
         max_write=args.max_write,
     )
-    print(json.dumps(result, ensure_ascii=False))
+    # raw events 는 증류 입력 전용 — CLI stdout 요약엔 제외(비대화 방지).
+    printable = {k: v for k, v in result.items() if k != "events"}
+    print(json.dumps(printable, ensure_ascii=False))
     return 0 if result.get("ok", False) else 1
 
 

@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-23T17:53:02+09:00
-source_commit: 6e03a744
+generated_at: 2026-06-23T18:25:52+09:00
+source_commit: 4f4560ed
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4125,6 +4125,7 @@ _(no top-level symbols)_
 - `_prepend_pathext`
 - `get_cli_session_spec`
 - `_repo_root`
+- `_distill_to_vault`
 - `_is_frozen`
 - `_runtime_paths`
 - `_extract_open_todos`
@@ -8120,6 +8121,21 @@ _(no top-level symbols)_
 - `test_write_gemini_destructive_policy_contains_shell_deny_rules`
 - `test_detect_destructive_process_covers_cmd_and_git_paths`
 
+## `tests/test_distill_wiring.py`
+
+**Classes:**
+- `_FakeLLM`
+
+**Functions:**
+- `_patch_distill_llm`
+- `_vault_notes`
+- `test_distill_to_vault_writes_session_note`
+- `test_distill_to_vault_empty_events_noop`
+- `test_distill_to_vault_swallows_distill_failure`
+- `test_handle_hook_event_distills_on_session_end`
+- `test_handle_hook_event_no_distill_on_non_end_event`
+- `test_finalize_cli_session_distills_for_codex`
+
 ## `tests/test_documentation_policy.py`
 
 **Functions:**
@@ -10107,6 +10123,7 @@ _(no top-level symbols)_
 - `_read_json`
 - `test_provider_registry_exposes_codex_claude_and_gemini`
 - `test_run_bridge_mirrors_codex_sessions_into_global_memory`
+- `test_main_cli_output_excludes_raw_events`
 - `test_run_bridge_recovers_from_stale_cursor`
 - `test_run_bridge_supports_generic_role_content_jsonl`
 

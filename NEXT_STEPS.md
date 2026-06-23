@@ -1,24 +1,36 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library STAGE 2 **S2-3 배선** (**Opus**)
+## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library **STAGE 3** (Staleness 점검기) 또는 신규 product work-item
 
-> **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE2 + §12.7. **재설계 금지.**
-> **선행 완료**: STAGE 0(vault)·STAGE 1(스키마)·**STAGE 2 S2-1(증류기 `distill.py`)+S2-2(originating_pc)** 완료. 남은 건 **배선**뿐.
+> **STAGE 2 전체 완료**: S2-1(증류기)·S2-2(originating_pc)·**S2-3 배선** 모두 끝. 증류 파이프라인이 production 세션 종료에 연결됨.
+> **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE3. **재설계 금지.**
 >
-> **S2-3 = 발화점 배선 (Tier-3 고-blast, 가장 신중히)**:
-> - **발화점 = `core/providers/session_adapter.py:690`** — 현재 SessionEnd/PreCompact/PreCompress 에서 `run_bridge(...)` 호출. 여기에 **`distill_session` 보강** 추가:
->   - run_bridge 는 scratch(truncate, Supabase memory) 유지 — §3.2 layering. 증류는 **vault(durable) 기록**.
->   - events 획득: `run_bridge` 가 events 를 안 돌려줌 → `session_bridge.collect_new_events(files, cursor, provider)` 재사용하거나 run_bridge 가 events 반환하도록 보강(둘 중 택1, 배포 동등성).
->   - 증류 노트 기록 위치: `docs/wiki/knowledge/{type}/...`(STAGE1 id 가 곧 상대경로, `KnowledgeNote.write_to(knowledge_root)`). knowledge_root = workspace 의 `docs/wiki/knowledge`.
-> - **배포 동등성 필수**: `session_adapter.py:690` production 경로까지 end-to-end. 픽스처-only 금지(grep 검증). 이 파일은 hook-launcher 경로 = **자동 Tier-3**.
-> - **멀티OS**: hook 환경 stdin NULL → subprocess 류는 `stdin=DEVNULL`(note.py:_git 선례). 절대경로 금지.
-> - **★성공기준(§9)**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율 실측). 이건 배선 후 실측 가능.
-> - ⚠️ 주의: session_adapter 는 CLI 세션 수명주기 핵심 — 증류 실패가 hook 전체를 죽이면 안 됨(best-effort try/except, run_bridge 패턴 따름).
+> **STAGE 3 — `af knowledge doctor` (크로스OS staleness 점검기)**:
+> - 지식 노트가 named한 file:line/심볼/커밋이 현재 코드에 실존하는지 검증. **STALE**(코드 바뀜) vs **SKEW**(이 PC 미pull) 구분.
+> - 판정: `created_commit`이 현재 git 히스토리에 있나? 없음→SKEW(오보 차단) / 있음→git diff 로 file:line 변동 판정→STALE.
+> - 순수 Python 크로스OS (fcntl/flock/launchd 금지). advisory(리포트)만 — 자동 삭제/수정 금지.
+> - 산출물: `scripts/af_knowledge_doctor.py` + `agent_launcher` `af knowledge doctor` dispatch + af.spec hiddenimport.
+> - 의존: STAGE 1(created_commit). STALE/SKEW 분기 단위테스트가 핵심.
+>
+> **대안**: 신규 product work-item 발굴(메인). STAGE 3은 자가진화 인프라 — product value 우선이면 보류 가능.
 >
 > **미결(보류)**:
-> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1·2 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
-> - retrieval(스테이지 R) 상세설계 = 배선 후 별도.
-> - advisory 보류: distill 싱글턴 런타임 교체(WARN#5, DI로 회피됨)·`.gitignore:5` 무확장 dotfile ref 미추출(F4, 드묾).
+> - **★S2-3 성공기준(§9) 실측 미수행**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율). 배선은 됐으나 실측은 실제 세션 종료가 vault에 노트를 쌓은 뒤 가능 — 다음 세션 종료 후 `docs/wiki/knowledge/session/` 확인.
+> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
+> - retrieval(스테이지 R) 상세설계 = 별도.
+> - S2-3 advisory 보류(WARN, correctness 무관): distill `gethostname()` 중복 호출(F7)·ControlPlaneLLM 첫 hook latency(F8) — 둘 다 실질 위험 없음.
+
+## ✅ STAGE 2 S2-3 배선 완료 (2026-06-23, Opus) — 증류 발화점 연결
+
+> - `scripts/session_bridge.py`: `run_bridge` 반환 dict에 `"events": events` 추가(증류 입력, **이중 cursor 회피**). `main()`은 stdout 출력 시 events 제거(비대화 방지).
+> - `core/providers/session_adapter.py`: 신규 `_distill_to_vault(events, repo_root, provider_id)` best-effort 헬퍼(전구간 try/except + 지연 import → 증류 실패가 세션 hook 죽이지 않음). **두 발화점** 배선:
+>   - `:583` `finalize_cli_session`(codex_cli) — **codex는 cli_hook_bridge `--provider`에 없어 hook 미경유, 이게 유일 경로**. :690만 배선하면 codex 영영 증류 안 됨 → INV-K4 parity 위해 두 곳 필수.
+>   - `:691` `handle_hook_event` SessionEnd/PreCompact/PreCompress(claude/gemini hook).
+>   - 양쪽 `bridge_result.pop("events", [])`로 state 비대화 방지.
+> - **vault = `repo_root/docs/wiki/knowledge`** (NEXT_STEPS 초안 "workspace"를 **repo_root로 보정** — workspace는 임의 사용자 프로젝트일 수 있음. INV-K1 vault=git-tracked AF repo, INV-K3 created_commit이 vault git 히스토리 안착해야 STAGE3 STALE/SKEW 작동).
+> - **배포 동등성**: production caller `cli_hook_bridge.py:43`→`handle_hook_event`(:691), `cli.py`→`finalize_cli_session`(:583) 둘 다 grep 확인.
+> - **테스트**: `tests/test_distill_wiring.py` 8건 + `test_session_bridge.py` +2건. 회귀 없음(41 PASS).
+> - **3-Tier**: af-critic **PASS**(발견 0) / af-cross-review **WARN [single-vendor]** BLOCK 0(Advisory Low 2건 보류) / af-test-runner **PASS**(41).
 
 ## ✅ STAGE 2 S2-1+S2-2 완료 (2026-06-23, Opus) — 증류기 + originating_pc
 

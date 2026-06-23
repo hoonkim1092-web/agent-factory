@@ -1,6 +1,6 @@
 ---
 name: project_knowledge_library_design
-description: "자가진화 지식 도서관(Knowledge Library) — git vault + Obsidian + 증류. STAGE 0·1 완료, 다음=STAGE 2 증류기"
+description: "자가진화 지식 도서관 — git vault + Obsidian + 증류. STAGE 0·1·2(S2-1+S2-2) 완료, 다음=S2-3 배선(session_adapter:690)"
 metadata: 
   node_type: memory
   type: project
@@ -37,6 +37,8 @@ metadata:
 
 **STAGE 1 완료** (2026-06-23, Opus): `core/knowledge/note.py` 신규 — `KnowledgeNote`(타입 SSOT) + `to_md`/`from_md` round-trip(json.dumps frontmatter=콜론·따옴표 안전, JSON⊂YAML) + `new_note()`/`make_id()` 자동스탬프. id `{type}/{machine}-{micro시각}-{rand6}-{slug}.md`(마이크로초+rand 무충돌 INV-K11, Windows 금지문자 회피, 한글 slug 보존, `:` 회피). scope(D12)·visibility(D11) seam — enforcement 0건(INV-K6). 테스트 17건 PASS. af.spec+Blueprint §0/§12. 3-Tier: critic BLOCK=오탐(partition 첫콜론만 분리, 테스트로 반증)/cross-review PASS BLOCK0(single-vendor)/test-runner PASS. **미커밋(사용자 명시 요청 대기)**.
 
-**다음 = STAGE 2 증류기** (`core/knowledge/distill.py`): session_bridge 260자 truncate→control_plane_llm 증류. 발화점=`session_adapter.py:690` SessionEnd/PreCompact. 산출=KnowledgeNote+포인터{originating_pc,session_file,line}. INV-K5 verbatim 정밀참조+secret 필터. 성공기준=과거 세션 증류본이 손작성 NEXT_STEPS만큼 풍부(실측).
+**STAGE 2 S2-1+S2-2 완료** (2026-06-23, Opus, 커밋 `4f4560ed`): `core/knowledge/distill.py` 신규 — `mask_secrets`(sk-/sk-proj-/sk-ant-/ghp_/AKIA/Bearer/PEM/라벨=값·JSON→[REDACTED], 정밀참조 보존, 입력·출력·title 마스킹) → `extract_precise_refs`(commit숫자요구/file:line경로prefix/INV명 verbatim·중복제거, INV-K5 LLM paraphrase 방어) → `control_plane_llm.generate_json` 증류(INV-K4, DI) → 포인터{originating_pc,session_file,line}. LLM 실패해도 노트 생성. `session_bridge.py` details에 originating_pc(F3). `note.py` `_git` stdin=DEVNULL(hook WinError6 방어→created_commit 캡처). tests 17. 3-Tier: critic BLOCK2(secret누출 sk-proj-/JSON라벨, 수정)/cross BLOCK High1(test raw subprocess WinError6→_git stdin=DEVNULL 근본수정)+adv/runner PASS. 전부 single-vendor(codex rate-limit 6-25). 보류 advisory: 싱글턴 런타임교체(DI회피)·.gitignore무확장 ref미추출.
+
+**다음 = S2-3 배선** (`session_adapter.py:690` 발화점 → distill_session 보강, Tier-3 고-blast). **핵심 결정**: run_bridge가 collect_new_events로 cursor 전진시키므로 사후 재호출 빈결과 → run_bridge 반환 dict에 events 실어보내 거기서 증류(이중 cursor 회피). 증류노트는 vault `docs/wiki/knowledge/{type}/`에 `KnowledgeNote.write_to`. run_bridge(scratch truncate)는 §3.2 layering 유지. best-effort try/except(hook 안 죽게). 배포동등성 grep. 성공기준 실측은 배선 후.
 
 관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[project_af_gate_efficiency_debate]] [[feedback_design_review_mandatory]] [[feedback_review_verdict_vs_bug_substance]]
