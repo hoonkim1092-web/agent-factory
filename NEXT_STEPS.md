@@ -1,7 +1,13 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library **STAGE 3** (Staleness 점검기) 또는 신규 product work-item
+## ▶ 다음 세션 진입점 (2026-06-24) — Knowledge Library **STAGE 3** (Staleness 점검기) 또는 신규 product work-item
 
+> **STAGE 1+2 심층 분석 완료 (2026-06-24, Sonnet)**: 다른 PC에서 푸시된 3개 커밋(`6e03a744`·`4f4560ed`·`68cd91c2`) 배선·버그 전수 분석. **크리티컬 버그 없음. 46/46 PASS.**
+> - 두 발화점 모두 확인: `finalize_cli_session:583`(codex) + `handle_hook_event:691`(claude/gemini SessionEnd)
+> - `run_bridge`→`"events"` 키 반환(session_bridge.py:537) + CLI stdout 제외(line 570) 확인.
+> - `_distill_to_vault` 전구간 `try/except` — vault 실패가 hook 죽이지 않음 확인.
+> - WARN 2건 advisory(secret masking base64 `=` 누락 / events 최근우선 트런케이션) — correctness 무관.
+>
 > **STAGE 2 전체 완료**: S2-1(증류기)·S2-2(originating_pc)·**S2-3 배선** 모두 끝. 증류 파이프라인이 production 세션 종료에 연결됨.
 > **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE3. **재설계 금지.**
 >
@@ -15,8 +21,8 @@
 > **대안**: 신규 product work-item 발굴(메인). STAGE 3은 자가진화 인프라 — product value 우선이면 보류 가능.
 >
 > **미결(보류)**:
-> - **★S2-3 성공기준(§9) 실측 미수행**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율). 배선은 됐으나 실측은 실제 세션 종료가 vault에 노트를 쌓은 뒤 가능 — 다음 세션 종료 후 `docs/wiki/knowledge/session/` 확인.
-> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
+> - **★S2-3 성공기준(§9) 실측**: 이 세션 종료로 vault 첫 노트가 쌓였을 가능성 있음. 다음 세션 시작 시 `docs/wiki/knowledge/session/` 확인 — 노트 있으면 commit·INV명 보존율 검증.
+> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST) 이후** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
 > - retrieval(스테이지 R) 상세설계 = 별도.
 > - S2-3 advisory 보류(WARN, correctness 무관): distill `gethostname()` 중복 호출(F7)·ControlPlaneLLM 첫 hook latency(F8) — 둘 다 실질 위험 없음.
 
