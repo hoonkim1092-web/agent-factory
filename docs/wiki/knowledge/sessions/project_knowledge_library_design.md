@@ -1,6 +1,6 @@
 ---
 name: project_knowledge_library_design
-description: "자가진화 지식 도서관(Knowledge Library) 설계 — git vault + Obsidian + 증류, 단일사용자·다중PC. R1 BLOCK 흡수 완료"
+description: "자가진화 지식 도서관(Knowledge Library) — git vault + Obsidian + 증류. STAGE 0·1 완료, 다음=STAGE 2 증류기"
 metadata: 
   node_type: memory
   type: project
@@ -33,4 +33,10 @@ metadata:
 
 **메타-재귀 경계**: product 표면(af project wiki 이미 출하)이나 빌드시 과게이트 절제. 작은 STAGE 표적검증, core/만 풀3-Tier.
 
-**다음**: R2 재검증(원하면) 또는 STAGE 0 구현(Sonnet) 진입. 관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[project_af_gate_efficiency_debate]] [[feedback_design_review_mandatory]]
+**STAGE 0 완료** (2026-06-23, Sonnet, `2108d34a`): vault 통합 `docs/wiki/{code,knowledge}` + build_knowledge_wiki.py.
+
+**STAGE 1 완료** (2026-06-23, Opus): `core/knowledge/note.py` 신규 — `KnowledgeNote`(타입 SSOT) + `to_md`/`from_md` round-trip(json.dumps frontmatter=콜론·따옴표 안전, JSON⊂YAML) + `new_note()`/`make_id()` 자동스탬프. id `{type}/{machine}-{micro시각}-{rand6}-{slug}.md`(마이크로초+rand 무충돌 INV-K11, Windows 금지문자 회피, 한글 slug 보존, `:` 회피). scope(D12)·visibility(D11) seam — enforcement 0건(INV-K6). 테스트 17건 PASS. af.spec+Blueprint §0/§12. 3-Tier: critic BLOCK=오탐(partition 첫콜론만 분리, 테스트로 반증)/cross-review PASS BLOCK0(single-vendor)/test-runner PASS. **미커밋(사용자 명시 요청 대기)**.
+
+**다음 = STAGE 2 증류기** (`core/knowledge/distill.py`): session_bridge 260자 truncate→control_plane_llm 증류. 발화점=`session_adapter.py:690` SessionEnd/PreCompact. 산출=KnowledgeNote+포인터{originating_pc,session_file,line}. INV-K5 verbatim 정밀참조+secret 필터. 성공기준=과거 세션 증류본이 손작성 NEXT_STEPS만큼 풍부(실측).
+
+관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[project_af_gate_efficiency_debate]] [[feedback_design_review_mandatory]] [[feedback_review_verdict_vs_bug_substance]]

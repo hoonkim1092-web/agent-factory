@@ -1,5 +1,34 @@
 # NEXT_STEPS — 세션 재개 가이드
 
+## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library STAGE 2 (증류기, **Opus**)
+
+> **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE2 + §12.7. **재설계 금지 — 그 doc만 읽으면 됨.**
+> **선행 완료**: STAGE 0(vault `docs/wiki/`)·STAGE 1(`core/knowledge/note.py` 스키마) 둘 다 완료. STAGE 2 토대 준비됨.
+>
+> **STAGE 2 = 증류기 (`core/knowledge/distill.py` 신규)**:
+> - `session_bridge`의 260자 truncate(§2.3)를, 세션 종료 시점 raw에서 '결정·기각·패턴·정밀참조' 추출하는 **LLM 증류**로 교체/보강
+> - LLM 호출은 `control_plane_llm` SSOT 경유(INV-K4 멀티프로바이더) — `core/control_plane_llm.py` `generate_json()`
+> - 산출 = `KnowledgeNote`(STAGE1 `new_note()` 재사용) + raw 포인터 `{originating_pc, session_file, line}`
+> - **발화점 = `core/providers/session_adapter.py:690` 기존 SessionEnd/PreCompact `run_bridge` 경로 교체/보강** (신규 Stop 분기 불필요, §2.4 정정·INV-K9)
+> - `session_bridge` 레코드 details에 `originating_pc`(`socket.gethostname()`) 필드 추가 (D3 포인터 3요소 완성, F3)
+> - **INV-K5**: 정밀참조(commit/file:line/INV명)는 요약 금지·verbatim 발췌. **secret/token 필터**(평문 vault 보호, 팀 공유 repo 격상)
+> - **배포 동등성**: production caller(`session_adapter.py:690`)까지 end-to-end. 픽스처-only 금지(grep 검증)
+> - **★성공기준(§9)**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율 실측) + claude/codex 동일산출 스냅샷 + secret 마스킹 단위테스트
+>
+> **미결(이번 세션 보류)**:
+> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1 cross-review는 single-vendor. 6-25 이후 cross-vendor 재검증 가능.
+> - retrieval(스테이지 R) 상세설계 = STAGE 2 이후 별도.
+> - NEXT_STEPS.md 슬림화 제안(사용자 인지, 미실행) — 완료 이력은 `docs/wiki/knowledge/sessions/` 중복.
+
+## ✅ STAGE 1 완료 (2026-06-23, Opus) — KnowledgeNote 스키마 (`core/knowledge/note.py`)
+
+> - `core/knowledge/note.py` 신규: `KnowledgeNote` dataclass(타입 SSOT) + `to_md`/`from_md` round-trip(json.dumps 스칼라/links 인코딩=콜론·따옴표 안전, JSON⊂YAML Obsidian 호환) + `new_note()`/`make_id()` 작성 헬퍼(author/source_machine/created_commit/created_at/id 자동 스탬프). `core/knowledge/__init__.py` export.
+> - id 네임스페이스 `{type}/{machine}-{micro시각}-{rand}-{slug}.md` — 마이크로초+6자 rand 무충돌(INV-K11), Windows 금지문자 회피(`_UNSAFE_FILENAME`), 한글 slug 유니코드 보존, `:` 회피(sync_claude_memory:70 선례).
+> - `scope`(기본 project, D12)·`visibility`(기본 private, D11) seam — enforcement 코드 0건(INV-K6 grep 테스트).
+> - 재사용: build_llm_wiki `_git`/`_short_commit`, json.dumps frontmatter 선례.
+> - **테스트 17건 PASS** + test_coding_conventions 2건(타입 SSOT·절대경로) 회귀 없음. af.spec hiddenimport 2줄, Blueprint §0/§12.
+> - **3-Tier**: af-critic BLOCK 1=오탐(`partition(":")` 첫콜론만 분리→timezone 보존, 테스트로 실증 반증)·WARN 2(gethostname 가드 적용/atomic-write 보류) / af-cross-review **PASS BLOCK 0**(single-vendor, codex rate-limit) / af-test-runner **PASS** 커버리지 100%.
+
 ## ✅ STAGE 0 완료 (2026-06-23, Sonnet) — Knowledge Vault Builder (`docs/wiki/`)
 
 > **커밋**: `2108d34a` — memory/*.md를 분류·복사해 Obsidian이 code wiki와 단일 그래프로 볼 수 있는 docs/wiki/ vault 구축.
