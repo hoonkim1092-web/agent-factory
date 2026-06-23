@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import re
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -94,10 +93,13 @@ def test_frontmatter_is_yaml_compatible_inline():
 # new_note 자동 스탬프 — created_commit = HEAD
 # ---------------------------------------------------------------------------
 def test_new_note_created_commit_matches_head():
-    head = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
-        capture_output=True, text=True, cwd=str(REPO_ROOT),
-    ).stdout.strip()
+    # production 헬퍼 재사용(try/except·stdin=DEVNULL 내포) — raw subprocess 의 hook 환경
+    # WinError 6 회피, 멀티OS 안전. git 조회 불가 환경이면 skip.
+    from core.knowledge.note import _short_commit
+
+    head = _short_commit(str(REPO_ROOT))
+    if head == "unknown":
+        pytest.skip("git 커밋 조회 불가 환경")
     note = new_note("테스트 노트", "본문", "decision", workspace=str(REPO_ROOT))
     assert note.created_commit == head
     assert note.created_commit != "unknown"

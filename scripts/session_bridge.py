@@ -3,10 +3,19 @@ import hashlib
 import json
 import os
 import re
+import socket
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
+
+
+# 어느 PC 에서 세션이 났는지 (raw 포인터 3요소 중 pc, §3.3 / F3 / INV-K9).
+# 모듈 로드 시 1회 계산 — gethostname 은 드물게 socket.error.
+try:
+    _ORIGINATING_PC = socket.gethostname() or "unknown"
+except Exception:
+    _ORIGINATING_PC = "unknown"
 
 
 NOISE_PREFIXES = (
@@ -421,6 +430,7 @@ def write_memory_entries(
                 "session_file": str(event.get("file") or ""),
                 "session_line": int(event.get("line") or 0),
                 "provider": provider.provider_id,
+                "originating_pc": _ORIGINATING_PC,
             },
         }
         save_json(memory_dir / file_name, record)

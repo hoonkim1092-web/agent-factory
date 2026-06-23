@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-23T17:17:03+09:00
-source_commit: 0848fc74
+generated_at: 2026-06-23T17:53:02+09:00
+source_commit: 6e03a744
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -68,6 +68,7 @@ sources:
 | `core/config_paths.py` | 경로 상수 중앙화 | Master_Blueprint.md §0 |
 | `core/output_paths.py` | ad-hoc 새 제품/수정 출력 격리 (O-S1, 2026-06-22; in-place 복원 개정) — 일반 폴더는 cwd 그대로 in-place(INV-O3, 기존 프로젝트 수정·분석 보존), AF 소스 repo 안 실행 시에만 `<base_dir>/projects/<slug>` 로 graceful 리다이렉트(INV-O2, 에러 없이 오염 격리). `_is_within`(normcase+realpath, Windows 케이스 비민감)로 BASE_DIR 하위 판정. explicit override(`--workspace`)는 최우선(INV-O5). dogfood worktree 모델은 미적용(INV-O4). 설계: `docs/2026-06-18-product-output-isolation-design.md`. | Master_Blueprint.md §0 |
 | `core/knowledge/note.py` | 자가진화 지식 도서관 STAGE 1 (2026-06-23) — 내구성 지식 노트 단일 타입(frontmatter 계약 SSOT). `to_md`/`from_md` round-trip(json.dumps 스칼라/links 인코딩=콜론·따옴표 안전, JSON⊂YAML Obsidian 호환). `new_note()` 작성 헬퍼=author/source_machine(`socket.gethostname()`)/created_commit(`git rev-parse --short`)/created_at/id 자동 스탬프. id 네임스페이스 `{type}/{machine}-{micro시각}-{rand}-{slug}.md`(마이크로초+6자 rand 무충돌 INV-K11, Windows 안전 §12.9). `scope`(기본 project, D12 seam)/`visibility`(기본 private, D11 seam)는 데이터 seam일 뿐 enforcement 코드 0건(INV-K6). 설계: `docs/2026-06-23-knowledge-library-evolution-design.md`. | Master_Blueprint.md §0 |
+| `core/knowledge/distill.py` | 지식 도서관 STAGE 2 (2026-06-23) — 세션 raw events → 증류 KnowledgeNote (provider-neutral). `mask_secrets`(sk-/ghp_/xox/AKIA/Bearer/PEM/라벨=값 → [REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·순서·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4 멀티프로바이더, 지연 싱글턴 `_get_distill_llm`) → 본문 렌더(출력도 마스킹) → `new_note`. raw 포인터 `{originating_pc, session_file, line}`(§3.3). LLM 의존성 주입(테스트). LLM 실패해도 정밀참조+포인터로 노트 생성. **배선(session_adapter:690)은 S2-3 별도.** 설계 §5 STAGE2. | Master_Blueprint.md §0 |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | Master_Blueprint.md §0 |
 | `core/cross_verification.py:1-758` | 멀티 CLI 교차검증 | Master_Blueprint.md §0 |
 | `core/dashboard.py` | 실행 이력 모니터링 | Master_Blueprint.md §0 |
@@ -1130,9 +1131,10 @@ sources:
 
 ### `core/knowledge`
 
-2 modules · 1 classes · 8 functions
+3 modules · 2 classes · 16 functions
 
 - `core/knowledge/__init__.py` — 0 class / 0 func
+- `core/knowledge/distill.py` — 1 class / 8 func
 - `core/knowledge/note.py` — 1 class / 8 func
 
 ### `core/memory_system`
@@ -1796,7 +1798,7 @@ sources:
 
 ### `tests`
 
-229 modules · 423 classes · 1928 functions
+230 modules · 424 classes · 1945 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1883,6 +1885,7 @@ sources:
 - `tests/test_ise_integration.py` — 0 class / 7 func
 - `tests/test_ise_provider_awareness.py` — 0 class / 6 func
 - `tests/test_key_combos.py` — 0 class / 1 func
+- `tests/test_knowledge_distill.py` — 1 class / 17 func
 - `tests/test_knowledge_note.py` — 0 class / 18 func
 - `tests/test_knowledge_skill.py` — 5 class / 3 func
 - `tests/test_knowledge_wiki_stage0.py` — 6 class / 0 func

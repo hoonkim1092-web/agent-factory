@@ -67,8 +67,15 @@ _FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n(.*)$", re.DOTALL)
 # ---------------------------------------------------------------------------
 def _git(args: list[str], cwd: str, timeout: int = 10) -> str:
     try:
+        # stdin=DEVNULL: hook/detached 컨텍스트(콘솔 stdin 핸들 NULL)에서 Windows
+        # WinError 6("핸들이 잘못되었습니다")로 죽는 것 방지 → created_commit 실제 캡처(INV-K1).
         r = subprocess.run(
-            ["git"] + args, capture_output=True, text=True, cwd=cwd, timeout=timeout,
+            ["git"] + args,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            timeout=timeout,
+            stdin=subprocess.DEVNULL,
         )
         return r.stdout if r.returncode == 0 else ""
     except Exception:

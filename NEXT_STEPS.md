@@ -1,24 +1,32 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library STAGE 2 (증류기, **Opus**)
+## ▶ 다음 세션 진입점 (2026-06-23) — Knowledge Library STAGE 2 **S2-3 배선** (**Opus**)
 
-> **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE2 + §12.7. **재설계 금지 — 그 doc만 읽으면 됨.**
-> **선행 완료**: STAGE 0(vault `docs/wiki/`)·STAGE 1(`core/knowledge/note.py` 스키마) 둘 다 완료. STAGE 2 토대 준비됨.
+> **설계 동결**: `docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE2 + §12.7. **재설계 금지.**
+> **선행 완료**: STAGE 0(vault)·STAGE 1(스키마)·**STAGE 2 S2-1(증류기 `distill.py`)+S2-2(originating_pc)** 완료. 남은 건 **배선**뿐.
 >
-> **STAGE 2 = 증류기 (`core/knowledge/distill.py` 신규)**:
-> - `session_bridge`의 260자 truncate(§2.3)를, 세션 종료 시점 raw에서 '결정·기각·패턴·정밀참조' 추출하는 **LLM 증류**로 교체/보강
-> - LLM 호출은 `control_plane_llm` SSOT 경유(INV-K4 멀티프로바이더) — `core/control_plane_llm.py` `generate_json()`
-> - 산출 = `KnowledgeNote`(STAGE1 `new_note()` 재사용) + raw 포인터 `{originating_pc, session_file, line}`
-> - **발화점 = `core/providers/session_adapter.py:690` 기존 SessionEnd/PreCompact `run_bridge` 경로 교체/보강** (신규 Stop 분기 불필요, §2.4 정정·INV-K9)
-> - `session_bridge` 레코드 details에 `originating_pc`(`socket.gethostname()`) 필드 추가 (D3 포인터 3요소 완성, F3)
-> - **INV-K5**: 정밀참조(commit/file:line/INV명)는 요약 금지·verbatim 발췌. **secret/token 필터**(평문 vault 보호, 팀 공유 repo 격상)
-> - **배포 동등성**: production caller(`session_adapter.py:690`)까지 end-to-end. 픽스처-only 금지(grep 검증)
-> - **★성공기준(§9)**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율 실측) + claude/codex 동일산출 스냅샷 + secret 마스킹 단위테스트
+> **S2-3 = 발화점 배선 (Tier-3 고-blast, 가장 신중히)**:
+> - **발화점 = `core/providers/session_adapter.py:690`** — 현재 SessionEnd/PreCompact/PreCompress 에서 `run_bridge(...)` 호출. 여기에 **`distill_session` 보강** 추가:
+>   - run_bridge 는 scratch(truncate, Supabase memory) 유지 — §3.2 layering. 증류는 **vault(durable) 기록**.
+>   - events 획득: `run_bridge` 가 events 를 안 돌려줌 → `session_bridge.collect_new_events(files, cursor, provider)` 재사용하거나 run_bridge 가 events 반환하도록 보강(둘 중 택1, 배포 동등성).
+>   - 증류 노트 기록 위치: `docs/wiki/knowledge/{type}/...`(STAGE1 id 가 곧 상대경로, `KnowledgeNote.write_to(knowledge_root)`). knowledge_root = workspace 의 `docs/wiki/knowledge`.
+> - **배포 동등성 필수**: `session_adapter.py:690` production 경로까지 end-to-end. 픽스처-only 금지(grep 검증). 이 파일은 hook-launcher 경로 = **자동 Tier-3**.
+> - **멀티OS**: hook 환경 stdin NULL → subprocess 류는 `stdin=DEVNULL`(note.py:_git 선례). 절대경로 금지.
+> - **★성공기준(§9)**: 과거 실제 세션 1건 증류본이 그날 손작성 NEXT_STEPS 항목만큼 풍부한가(commit·결함번호 보존율 실측). 이건 배선 후 실측 가능.
+> - ⚠️ 주의: session_adapter 는 CLI 세션 수명주기 핵심 — 증류 실패가 hook 전체를 죽이면 안 됨(best-effort try/except, run_bridge 패턴 따름).
 >
-> **미결(이번 세션 보류)**:
-> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1 cross-review는 single-vendor. 6-25 이후 cross-vendor 재검증 가능.
-> - retrieval(스테이지 R) 상세설계 = STAGE 2 이후 별도.
-> - NEXT_STEPS.md 슬림화 제안(사용자 인지, 미실행) — 완료 이력은 `docs/wiki/knowledge/sessions/` 중복.
+> **미결(보류)**:
+> - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST)까지 불가** — STAGE 1·2 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
+> - retrieval(스테이지 R) 상세설계 = 배선 후 별도.
+> - advisory 보류: distill 싱글턴 런타임 교체(WARN#5, DI로 회피됨)·`.gitignore:5` 무확장 dotfile ref 미추출(F4, 드묾).
+
+## ✅ STAGE 2 S2-1+S2-2 완료 (2026-06-23, Opus) — 증류기 + originating_pc
+
+> - `core/knowledge/distill.py` 신규: 세션 raw events → 증류 `KnowledgeNote`. `mask_secrets`(secret/token→[REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4, 지연싱글턴+DI) → 본문/title 마스킹 → `new_note`. raw 포인터 `{originating_pc, session_file, line}`. LLM 실패해도 정밀참조+포인터로 노트 생성.
+> - `scripts/session_bridge.py`: details에 `originating_pc`(`_ORIGINATING_PC`=모듈레벨 `socket.gethostname()`, F3).
+> - `core/knowledge/note.py`: `_git`에 `stdin=subprocess.DEVNULL`(hook 환경 Windows WinError 6 방어 → created_commit 실제 캡처, cross-review High 근본수정).
+> - **테스트 17건(distill) PASS** + note 17 + session_bridge 5 회귀 없음. af.spec hiddenimport, Blueprint §0/§12.
+> - **3-Tier**: af-critic BLOCK 2(sk-proj-/sk-ant- 누락·JSON 라벨 누락 = secret 누출, 둘 다 수정)+WARN 3(hex오탐·경로prefix 수정/싱글턴 보류) / af-cross-review **BLOCK High 1**(test raw subprocess WinError 6 → `_git` stdin=DEVNULL 근본수정)+advisory 3(title 마스킹·주석 수정/dotfile 보류) / af-test-runner **PASS**(34). 전부 single-vendor(codex rate-limit).
 
 ## ✅ STAGE 1 완료 (2026-06-23, Opus) — KnowledgeNote 스키마 (`core/knowledge/note.py`)
 

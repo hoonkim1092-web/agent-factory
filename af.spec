@@ -107,6 +107,7 @@ a = Analysis(
         'core.output_paths',
         'core.knowledge',
         'core.knowledge.note',
+        'core.knowledge.distill',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

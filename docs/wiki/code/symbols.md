@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-23T17:17:04+09:00
-source_commit: 0848fc74
+generated_at: 2026-06-23T17:53:02+09:00
+source_commit: 6e03a744
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -3476,6 +3476,21 @@ _(no top-level symbols)_
 ## `core/knowledge/__init__.py`
 
 _(no top-level symbols)_
+
+## `core/knowledge/distill.py`
+
+**Classes:**
+- `_LLMLike`
+
+**Functions:**
+- `mask_secrets`
+- `extract_precise_refs`
+- `_get_distill_llm`
+- `_events_text`
+- `build_distill_prompt`
+- `_render_body`
+- `_pointer`
+- `distill_session`
 
 ## `core/knowledge/note.py`
 
@@ -8782,6 +8797,30 @@ _(no top-level symbols)_
 
 **Functions:**
 - `test_engine_selection_per_key_combination`
+
+## `tests/test_knowledge_distill.py`
+
+**Classes:**
+- `_FakeLLM`
+
+**Functions:**
+- `test_mask_secrets_known_prefixes`
+- `test_mask_secrets_label_value_keeps_label`
+- `test_mask_secrets_hyphenated_modern_keys`
+- `test_mask_secrets_json_serialized_label`
+- `test_mask_secrets_aws_and_bearer`
+- `test_mask_secrets_pem_block`
+- `test_mask_secrets_preserves_precise_refs`
+- `test_extract_precise_refs_verbatim_ordered_deduped`
+- `test_extract_refs_preserves_path_prefix`
+- `test_extract_refs_hex_requires_digit`
+- `test_distill_empty_events_returns_empty`
+- `test_distill_produces_session_note_roundtrips`
+- `test_distill_preserves_verbatim_refs_in_body_INV_K5`
+- `test_distill_masks_secret_in_event_text`
+- `test_distill_multiprovider_identical_body`
+- `test_distill_llm_failure_graceful`
+- `test_write_memory_entries_includes_originating_pc`
 
 ## `tests/test_knowledge_note.py`
 
