@@ -1,20 +1,12 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-24) — **S2-3 precision 실측 완료(PASS)** → 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
+## ▶ 다음 세션 진입점 (2026-06-25) — 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
 
-## ▶ 보류 work-item — review-gate: 외부 프로바이더 없을 때 cross-review 자동 SKIP
+## ✅ 완료 — review-gate: 외부 프로바이더 없을 때 cross-review 자동 SKIP (2026-06-25, Sonnet, `d75f3c49`)
 
-> **배경**: `scripts/af_ponytail.py` 소스 유실 사고(2026-06-24). 3-Tier 중 af-critic/af-test-runner만 미실행인 상태에서 cross-review가 provider=0 → design-review watcher SKIP → code review gate는 "af-cross-review 실행 기록 없음"으로 `BLOCK: missing-tier-1`. 소스를 커밋 못 하고 세션 종료 후 파일 유실.
->
-> **현재 정책 (CLAUDE.md)**: "외부 프로바이더 0개면 자동 SKIP(통과 간주)" — 이 정책이 af-cross-review **에이전트 내부**에만 적용됨. **review-gate pre-commit hook은 af-cross-review가 아예 실행되지 않은 경우를 SKIP으로 인식하지 못함**.
->
-> **원하는 동작**: af-critic + af-test-runner만 완료했고, 외부 프로바이더가 0개(codex unavailable)이면 → review-gate가 af-cross-review를 **SKIP(통과 간주)** 처리해 커밋 허용.
->
-> **구현 위치 후보**:
-> - `scripts/review_gate.py` — `_check_gate()` 또는 `_is_tier_complete()` 내부에서 `provider_detect.py`로 외부 프로바이더 수를 확인 후 cross-review tier를 자동 SKIP 마킹
-> - 또는 `scripts/hook_runner.py` — cross-review 실행 직전에 provider=0 감지 시 SKIP 레코드 자동 기록
->
-> **설계 시 주의**: SKIP은 provider=0일 때만. provider≥1인데 auth_expired면 기존대로 BLOCK + 재인증 안내 유지.
+> provider=0(NOT_INSTALLED/RATE_LIMITED)일 때 af-cross-review 미실행이어도 tier 3 SKIP(통과 간주).
+> AUTH_EXPIRED 프로바이더 1개라도 있으면 기존대로 BLOCK 유지.
+> `_no_external_providers_for_cross_review()` + `effective_tiers` 도입. 테스트 83 PASS.
 
 > **✅ S2-3 실측 — precision 전수 감사 PASS (2026-06-24, Opus)**: vault 첫 증류 노트(`docs/wiki/knowledge/session/DESKTOP-JPHA09P-...ise-자가수정-brain...md`, created_commit `68cd91c2`) 정밀참조 전수 검증.
 > - **commit 20/20 git 실존**(subject 맥락까지 정합) · **file:line 13/13 줄내용 정확** · **INV-1/INV-5 의미 정합** · 테스트참조(`test_ise_provider_awareness.py` 6함수="6 passed") 정합 · `LLMEngine(` 직접생성 grep=0(INV-5) 정합.
