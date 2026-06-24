@@ -1,7 +1,12 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-24) — Knowledge Library **STAGE 3** (Staleness 점검기) 또는 신규 product work-item
+## ▶ 다음 세션 진입점 (2026-06-24) — **1순위 S2-3 실측** → 통과 시 STAGE R(retrieval) → STAGE 3 / product
 
+> **순서 판단 동결 (2026-06-24, Opus — 설명·설계검토 세션, 코드 0변경)**: "NEXT_STEPS ↔ 대화 증류를 연결해야 하나?"를 팩트 검증한 결론.
+> - 연결은 **설계상 이미 존재**: §9#2 성공기준=`증류본이 손작성 NEXT_STEPS 정밀참조 보존`, STAGE 5 승격, INV-K8(NEXT_STEPS=정밀 원장, 퇴역 아님).
+> - 그러나 **§9#2가 한 번도 미측정** + 증류 노트는 retrieval 없어 현재 **고아 아카이브**(써놓고 안 읽힘). NEXT_STEPS만 세션 시작 시 읽힘.
+> - **실행 순서: ① S2-3 실측(증류 vs NEXT_STEPS 보존율 = "연결해도 되나"의 답) → ② 통과 시 STAGE R 검색방향(read-only·advisory, 원장 안 망침) → ③ 자동생성(NEXT_STEPS auto-draft)은 마지막(미검증 lossy로 원장 오염 위험).** 측정 없이 연결 금지.
+>
 > **STAGE 1+2 심층 분석 완료 (2026-06-24, Sonnet)**: 다른 PC에서 푸시된 3개 커밋(`6e03a744`·`4f4560ed`·`68cd91c2`) 배선·버그 전수 분석. **크리티컬 버그 없음. 46/46 PASS.**
 > - 두 발화점 모두 확인: `finalize_cli_session:583`(codex) + `handle_hook_event:691`(claude/gemini SessionEnd)
 > - `run_bridge`→`"events"` 키 반환(session_bridge.py:537) + CLI stdout 제외(line 570) 확인.
@@ -24,6 +29,7 @@
 > - **★S2-3 성공기준(§9) 실측**: 이 세션 종료로 vault 첫 노트가 쌓였을 가능성 있음. 다음 세션 시작 시 `docs/wiki/knowledge/session/` 확인 — 노트 있으면 commit·INV명 보존율 검증.
 > - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST) 이후** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
 > - retrieval(스테이지 R) 상세설계 = 별도.
+> - **★위키 빌더 크로스-PC 비결정성 버그 (2026-06-24 발견, HOON-KIM)**: 이 PC `build_llm_wiki.py` 재생성 시 `symbols.md`가 60,847→10,910줄로 축소(core/·agents/·projects/·skills/·scripts/ 실제 심볼 누락). 집 PC(DESKTOP-JPHA09P)는 완전판 생성. `codebase_symbols.py` AST 스캔이 이 PC에서 일부 경로 누락 → NEXT_STEPS 커밋 시 pre-commit hook이 망가진 위키를 자동 stage(`git checkout`로 복원·회피함). **원인규명 필요**: collect_symbols가 HOON-KIM에서 왜 불완전한가(파싱 실패? 경로? cwd?). 그 전까지 이 PC에서 wiki-trigger 파일(NEXT_STEPS/Blueprint/.py) 커밋 시 `--no-verify` + 위키 수동 복원 권장.
 > - S2-3 advisory 보류(WARN, correctness 무관): distill `gethostname()` 중복 호출(F7)·ControlPlaneLLM 첫 hook latency(F8) — 둘 다 실질 위험 없음.
 
 ## ✅ STAGE 2 S2-3 배선 완료 (2026-06-23, Opus) — 증류 발화점 연결
