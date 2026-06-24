@@ -2,6 +2,15 @@
 
 ## ▶ 다음 세션 진입점 (2026-06-25) — 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
 
+## ✅ 완료 — af provider install/auth/status CLI + Ponytail 활성화 (2026-06-25, Sonnet, `a02e109d`)
+
+> - `scripts/af_provider.py` 신규: claude/gemini/codex 프로바이더 설치·인증·상태 확인 통합 CLI
+> - `agent_launcher.py`: `provider` 서브커맨드 등록
+> - `install-af.sh`, `install-af.ps1`: 완료 안내에 provider 명령 추가
+> - `.claude/settings.json`: `enabledPlugins.ponytail@ponytail=true` 추가 — git pull 후 자동 수신
+> - 회사 PC 최초 1회: `/plugin marketplace add DietrichGebert/ponytail` → `/plugin install ponytail@ponytail`
+> - 테스트 21케이스 PASS. 3-Tier 완주.
+
 ## ✅ 완료 — review-gate: 외부 프로바이더 없을 때 cross-review 자동 SKIP (2026-06-25, Sonnet, `d75f3c49`)
 
 > provider=0(NOT_INSTALLED/RATE_LIMITED)일 때 af-cross-review 미실행이어도 tier 3 SKIP(통과 간주).
