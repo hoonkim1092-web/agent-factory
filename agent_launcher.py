@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution", "ponytail"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution", "ponytail", "provider"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -1051,6 +1051,17 @@ def _build_arg_parser(ad_hoc_mode):
 
         ponytail_parser = subparsers.add_parser("ponytail", help="Ponytail 플러그인 defaultMode 설정")
         ponytail_parser.add_argument("action", choices=["full", "ultra", "lite", "off", "status"], help="full|ultra|lite|off|status")
+
+        provider_parser = subparsers.add_parser("provider", help="Claude·Gemini·Codex 프로바이더 설치·인증 관리")
+        provider_sub = provider_parser.add_subparsers(dest="provider_cmd", metavar="<명령>")
+        prov_status = provider_sub.add_parser("status", help="설치·인증 상태 확인")
+        prov_status.add_argument("--refresh", action="store_true", help="캐시 무시하고 auth ping 수행")
+        prov_status.add_argument("--fast", action="store_true", help="설치 여부만 확인")
+        prov_install = provider_sub.add_parser("install", help="미설치 프로바이더 npm 설치")
+        prov_install.add_argument("provider_name", nargs="?", metavar="<claude|gemini|codex>")
+        prov_install.add_argument("--force", action="store_true", help="이미 설치된 경우도 재설치")
+        prov_auth = provider_sub.add_parser("auth", help="프로바이더 인증 실행")
+        prov_auth.add_argument("provider_name", nargs="?", metavar="<claude|gemini|codex>")
     return parser
 
 
@@ -1252,6 +1263,21 @@ if __name__ == "__main__":
         elif args.subcommand == "ponytail":
             from scripts.af_ponytail import main as ponytail_main
             sys.exit(ponytail_main([args.action]))
+        elif args.subcommand == "provider":
+            from scripts.af_provider import main as provider_main
+            provider_cmd = getattr(args, "provider_cmd", None)
+            if not provider_cmd:
+                sys.exit(provider_main([]))
+            prov_argv = [provider_cmd]
+            if getattr(args, "provider_name", None):
+                prov_argv.append(args.provider_name)
+            if getattr(args, "force", False):
+                prov_argv.append("--force")
+            if getattr(args, "refresh", False):
+                prov_argv.append("--refresh")
+            if getattr(args, "fast", False):
+                prov_argv.append("--fast")
+            sys.exit(provider_main(prov_argv))
         else:
             parser.print_help()
             sys.exit(1)

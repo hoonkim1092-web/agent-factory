@@ -256,6 +256,11 @@ Write-Host "  af --help" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  또는 즉시 실행:"
 Write-Host "  & '$exePath' --help" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  AI 프로바이더(Claude/Gemini/Codex) 설치 및 인증:" -ForegroundColor White
+Write-Host "  af provider install   # npm으로 미설치 프로바이더 자동 설치" -ForegroundColor Yellow
+Write-Host "  af provider auth      # 프로바이더 인증 (계정 로그인)" -ForegroundColor Yellow
+Write-Host "  af provider status    # 설치·인증 상태 확인" -ForegroundColor Yellow
 if (-not $WithGraphify) {
     Write-Host ""
     Write-Host "  graphify 외부 도구도 설치하려면:" -ForegroundColor White

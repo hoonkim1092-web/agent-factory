@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T00:19:14+09:00
-source_commit: d75f3c49
+generated_at: 2026-06-25T01:31:36+09:00
+source_commit: eacd67dc
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4159,6 +4159,16 @@ _(no top-level symbols)_
 - `format_markdown`
 - `main`
 
+## `scripts/af_provider.py`
+
+**Functions:**
+- `_resolve_provider`
+- `_npm_install`
+- `cmd_status`
+- `cmd_install`
+- `cmd_auth`
+- `main`
+
 ## `scripts/af_sandbox.py`
 
 **Functions:**
@@ -5468,6 +5478,17 @@ _(no top-level symbols)_
 - `TestSymbolsOutDir`
 - `TestSymbolsErrorHandling`
 - `TestSymbolsEmptyDir`
+
+**Functions:**
+- `_run`
+
+## `tests/test_af_provider.py`
+
+**Classes:**
+- `TestProviderStatus`
+- `TestProviderInstall`
+- `TestProviderAuth`
+- `TestAliasResolution`
 
 **Functions:**
 - `_run`

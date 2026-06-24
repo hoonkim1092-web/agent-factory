@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T00:19:14+09:00
-source_commit: d75f3c49
+generated_at: 2026-06-25T01:31:36+09:00
+source_commit: eacd67dc
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1000,12 +1000,13 @@ sources:
 
 ### `scripts`
 
-58 modules · 8 classes · 487 functions
+59 modules · 8 classes · 493 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_evolution.py` — 0 class / 4 func
 - `scripts/af_ponytail.py` — 0 class / 6 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
+- `scripts/af_provider.py` — 0 class / 6 func
 - `scripts/af_sandbox.py` — 0 class / 7 func
 - `scripts/af_symbols.py` — 0 class / 2 func
 - `scripts/agent_model_selector.py` — 0 class / 6 func
@@ -1295,7 +1296,7 @@ sources:
 
 ### `tests`
 
-232 modules · 425 classes · 1970 functions
+233 modules · 429 classes · 1971 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1306,6 +1307,7 @@ sources:
 - `tests/test_af_ponytail.py` — 0 class / 9 func
 - `tests/test_af_project_inspect.py` — 11 class / 4 func
 - `tests/test_af_project_symbols.py` — 4 class / 1 func
+- `tests/test_af_provider.py` — 4 class / 1 func
 - `tests/test_af_symbols.py` — 4 class / 1 func
 - `tests/test_agent_launcher_cli_dispatch.py` — 8 class / 0 func
 - `tests/test_agent_model_selector.py` — 4 class / 0 func

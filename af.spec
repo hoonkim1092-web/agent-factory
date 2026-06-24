@@ -118,6 +118,7 @@ a = Analysis(
         'scripts.af_sandbox',
         'scripts.af_evolution',
         'scripts.af_ponytail',
+        'scripts.af_provider',
         'core.sandbox_config',
         'scripts.codebase_symbols',
         'scripts.af_symbols',

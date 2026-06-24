@@ -7590,3 +7590,13 @@ _Review skipped (--no-llm or LLM unavailable)_
 **Changed (5)**: `Master_Blueprint.md, af.spec, agent_launcher.py, scripts/af_ponytail.py, tests/test_af_ponytail.py`
 
 _Review skipped (--no-llm or LLM unavailable)_
+
+---
+
+## 2026-06-25 01:31 — `2026-06-04-right-sized-execution-slice1` (eacd67dc)
+
+**Context**: Claude Code edit session
+
+**Changed (7)**: `Master_Blueprint.md, af.spec, agent_launcher.py, install-af.ps1, install-af.sh, scripts/af_provider.py, tests/test_af_provider.py`
+
+_Review skipped (--no-llm or LLM unavailable)_
