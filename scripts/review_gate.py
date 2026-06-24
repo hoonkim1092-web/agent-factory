@@ -340,6 +340,38 @@ def _log_event(workspace: str, msg: str) -> None:
 
 # ── 공개 API ──────────────────────────────────────────────────────────────────
 
+def _no_external_providers_for_cross_review() -> bool:
+    """외부 프로바이더 수가 0인지 확인 (cross-review tier 자동 SKIP 조건).
+
+    AVAILABLE 또는 AUTH_EXPIRED 외부 프로바이더가 1개라도 있으면 False.
+    모두 NOT_INSTALLED / RATE_LIMITED이면 True.
+    import 실패·예외 → False (fail-closed: 상태 불명이면 SKIP 금지).
+    """
+    try:
+        _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if _root not in sys.path:
+            sys.path.insert(0, _root)
+        from core.provider_detect import detect_provider_states, ProviderState  # type: ignore[import]
+        from core.providers.registry import CLI_PROVIDER_IDS  # type: ignore[import]
+    except ImportError:
+        return False
+
+    try:
+        external_ids = [pid for pid in CLI_PROVIDER_IDS if pid != "claude_cli"]
+        if not external_ids:
+            return True
+        states = detect_provider_states(external_ids, use_cache=True)
+        for pid in external_ids:
+            r = states.get(pid)
+            if r is None:
+                return False  # 탐지 결과 없음 → fail-closed
+            if r.state in (ProviderState.AVAILABLE, ProviderState.AUTH_EXPIRED):
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def _required_tiers_for(state: dict) -> list[int]:
     """Phase 0: blast_tier에 따라 필수 tier 목록을 반환.
 
@@ -461,7 +493,13 @@ def is_gate_blocked(
 
     # 4. 필수 티어 확인 — Phase 0: blast_tier 기반
     required_tiers = _required_tiers_for(state)
-    for tier in required_tiers:
+    # provider=0이면 tier 3 SKIP (외부 프로바이더 없어 cross-review 미실행 허용)
+    effective_tiers = list(required_tiers)
+    if 3 in effective_tiers and _TIER_AGENTS[3] not in reviews:
+        if _no_external_providers_for_cross_review():
+            effective_tiers.remove(3)
+            _log_event(workspace, "[tier3-skipped-no-provider]")
+    for tier in effective_tiers:
         agent = _TIER_AGENTS[tier]
         if agent not in reviews:
             return True, f"missing-tier-{tier}"
@@ -470,7 +508,7 @@ def is_gate_blocked(
     # Phase 0: 필수 tier만 검사 (Tier 1 파일은 af-test-runner만)
     min_completed = min(
         float(reviews[_TIER_AGENTS[tier]].get("completed_at") or 0)
-        for tier in required_tiers
+        for tier in effective_tiers
     )
     if updated_at > min_completed:
         # Phase 0: max_rounds 도달 후엔 stale 차단만 건너뛰고 BLOCK 검사로 fall-through
@@ -479,7 +517,7 @@ def is_gate_blocked(
             return True, "stale-review"
 
     # 6. 신규 파일 추가 체크: 가장 높은 필수 tier의 snapshot 기준
-    highest_tier = max(required_tiers)
+    highest_tier = max(effective_tiers)
     snap_agent = _TIER_AGENTS[highest_tier]
     snap = set(reviews.get(snap_agent, {}).get("files_snapshot") or [])
     new_files = [f for f in py_files if f not in snap]

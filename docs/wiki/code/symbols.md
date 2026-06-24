@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-24T23:58:11+09:00
-source_commit: 25addfba
+generated_at: 2026-06-25T00:18:24+09:00
+source_commit: 34fd81fb
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4651,6 +4651,7 @@ _(no top-level symbols)_
 - `_load_state`
 - `_save_state`
 - `_log_event`
+- `_no_external_providers_for_cross_review`
 - `_required_tiers_for`
 - `_is_staged_review_target`
 - `_staged_review_py_files`
@@ -7768,6 +7769,9 @@ _(no top-level symbols)_
 - `test_required_tiers_blast3_no_telemetry_skip`
 - `test_required_tiers_no_skip_default`
 - `test_required_tiers_blast1`
+- `test_tier3_skip_when_no_external_providers`
+- `test_tier3_not_skip_when_provider_present`
+- `test_tier3_skip_applies_to_always_tier3_files`
 
 ## `tests/test_review_gate_phase0.py`
 

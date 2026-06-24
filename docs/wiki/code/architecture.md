@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-24T23:58:11+09:00
-source_commit: 25addfba
+generated_at: 2026-06-25T00:18:24+09:00
+source_commit: 34fd81fb
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1000,7 +1000,7 @@ sources:
 
 ### `scripts`
 
-58 modules · 8 classes · 486 functions
+58 modules · 8 classes · 487 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_evolution.py` — 0 class / 4 func
@@ -1047,7 +1047,7 @@ sources:
 - `scripts/refresh_lotto_seed.py` — 0 class / 3 func
 - `scripts/replace_react_loop.py` — 0 class / 0 func
 - `scripts/review_consensus.py` — 0 class / 7 func
-- `scripts/review_gate.py` — 0 class / 27 func
+- `scripts/review_gate.py` — 0 class / 28 func
 - `scripts/review_metrics_logger.py` — 0 class / 13 func
 - `scripts/review_metrics_report.py` — 0 class / 2 func
 - `scripts/run.py` — 0 class / 2 func
@@ -1295,7 +1295,7 @@ sources:
 
 ### `tests`
 
-232 modules · 425 classes · 1967 functions
+232 modules · 425 classes · 1970 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1453,7 +1453,7 @@ sources:
 - `tests/test_resume_brief_session_adapter.py` — 0 class / 1 func
 - `tests/test_review_bundle.py` — 0 class / 16 func
 - `tests/test_review_consensus.py` — 9 class / 2 func
-- `tests/test_review_gate.py` — 0 class / 65 func
+- `tests/test_review_gate.py` — 0 class / 68 func
 - `tests/test_review_gate_phase0.py` — 0 class / 22 func
 - `tests/test_review_metrics_logger.py` — 0 class / 54 func
 - `tests/test_review_runner_auth_expired.py` — 0 class / 10 func

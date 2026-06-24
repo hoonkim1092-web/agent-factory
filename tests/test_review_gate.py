@@ -120,8 +120,9 @@ def test_c_missing_tier2_block(ws):
     assert reason == "missing-tier-2"
 
 
-def test_d_missing_tier3_block(ws):
-    """(d) tier 3 누락 → BLOCK(missing-tier-3)."""
+def test_d_missing_tier3_block(ws, monkeypatch):
+    """(d) tier 3 누락 + 외부 프로바이더 있음 → BLOCK(missing-tier-3)."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
     files = ["core/foo.py"]
     completed = time.time() - 5
     state = _base_state(files, updated_at=completed - 1)
@@ -218,8 +219,9 @@ def test_g2_t3_skip_requires_only_tier1_and_tier2(ws):
     assert reason == "all-tiers-passed"
 
 
-def test_g2b_t3_skip_requires_critic_no_advisory(ws):
+def test_g2b_t3_skip_requires_critic_no_advisory(ws, monkeypatch):
     """If af-critic says yes/unknown, deterministic candidate still requires Tier 3."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
     files = ["core/cosmetic.py"]
     completed = time.time() - 5
     state = _base_state(files, updated_at=completed - 1)
@@ -255,8 +257,9 @@ def test_g2b_t3_skip_requires_critic_no_advisory(ws):
     assert reason == "missing-tier-3"
 
 
-def test_g2c_critic_t3_escalation_rearms_pending_prompt(ws):
+def test_g2c_critic_t3_escalation_rearms_pending_prompt(ws, monkeypatch):
     """When T2 escalates a deterministic skip candidate, pending hook must re-fire."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
     files = ["core/cosmetic.py"]
     now = time.time() - 100
     _write_state(ws, {
@@ -286,8 +289,9 @@ def test_g2c_critic_t3_escalation_rearms_pending_prompt(ws):
     assert reason == "missing-tier-3"
 
 
-def test_g3_t3_skip_ignored_for_blast_tier3(ws):
+def test_g3_t3_skip_ignored_for_blast_tier3(ws, monkeypatch):
     """Hard-guard/Tier 3 queues cannot skip Tier 3 even with stale t3_required=false."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
     files = ["scripts/t3_classifier.py"]
     completed = time.time() - 5
     state = _base_state(files, updated_at=completed - 1)
@@ -322,8 +326,9 @@ def test_g3_t3_skip_ignored_for_blast_tier3(ws):
     assert reason == "missing-tier-3"
 
 
-def test_g4_t3_skip_requires_matching_decision_files(ws):
+def test_g4_t3_skip_requires_matching_decision_files(ws, monkeypatch):
     """Stale/mismatched classifier state is fail-closed at gate time."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
     files = ["core/current.py"]
     completed = time.time() - 5
     state = _base_state(files, updated_at=completed - 1)
@@ -961,3 +966,52 @@ def test_required_tiers_no_skip_default():
 
 def test_required_tiers_blast1():
     assert _required_tiers_for({"files": ["core/utils.py"], "blast_tier": 1}) == [1]
+
+
+# ── provider=0 tier 3 자동 SKIP ──────────────────────────────────────────────
+
+def test_tier3_skip_when_no_external_providers(ws, monkeypatch):
+    """tier 3 미완료 + 외부 프로바이더 없음 → PASS(all-tiers-passed)."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: True)
+    files = ["core/foo.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["reviews"] = {
+        "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": files, "completed_at": completed},
+        "af-critic": {"tier": 2, "verdict": "pass", "files_snapshot": files, "completed_at": completed + 1},
+    }
+    _write_state(ws, state)
+    blocked, reason = is_gate_blocked(ws)
+    assert not blocked
+    assert reason == "all-tiers-passed"
+
+
+def test_tier3_not_skip_when_provider_present(ws, monkeypatch):
+    """외부 프로바이더 있으면 tier 3 누락 → BLOCK(missing-tier-3)."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: False)
+    files = ["core/foo.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["reviews"] = {
+        "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": files, "completed_at": completed},
+        "af-critic": {"tier": 2, "verdict": "pass", "files_snapshot": files, "completed_at": completed + 1},
+    }
+    _write_state(ws, state)
+    blocked, reason = is_gate_blocked(ws)
+    assert blocked
+    assert reason == "missing-tier-3"
+
+
+def test_tier3_skip_applies_to_always_tier3_files(ws, monkeypatch):
+    """ALWAYS-Tier-3 파일도 provider=0이면 tier 3 SKIP."""
+    monkeypatch.setattr("scripts.review_gate._no_external_providers_for_cross_review", lambda: True)
+    files = ["scripts/hook_runner.py"]
+    completed = time.time() - 5
+    state = _base_state(files, updated_at=completed - 1)
+    state["reviews"] = {
+        "af-test-runner": {"tier": 1, "verdict": "pass", "files_snapshot": files, "completed_at": completed},
+        "af-critic": {"tier": 2, "verdict": "pass", "files_snapshot": files, "completed_at": completed + 1},
+    }
+    _write_state(ws, state)
+    blocked, reason = is_gate_blocked(ws)
+    assert not blocked
