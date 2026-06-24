@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import ast
 import re
+import subprocess
 import sys
 import tokenize
 from pathlib import Path
@@ -122,18 +123,56 @@ def _extract_path_symbols(path: Path) -> dict:
     return {"classes": [], "functions": []}
 
 
-def collect_symbols(directory) -> dict:
-    """디렉터리를 재귀 walk 하여 posix 상대경로 → 심볼 dict 매핑을 반환한다.
+def _git_tracked_candidates(root: Path) -> list[Path] | None:
+    """git repo 안이면 추적되는 ``.py``/``.cs`` 파일 경로 목록을 반환한다.
 
-    ``.py`` 파일만 대상으로 하며, 파싱 불가 파일은 건너뛰지 않고
-    빈 심볼로 수집한다(크래시 방지). 키는 OS 무관 posix 상대경로다.
+    repo 가 아니거나 git 미설치/오류면 ``None``(→ rglob 폴백). 추적 파일이
+    0건이면 빈 리스트가 아니라 ``None`` 으로 폴백 신호를 준다(빈-추적 repo·
+    untracked-only 디렉터리가 빈 결과로 죽지 않도록).
+
+    rglob 가 작업트리 전체를 훑으면 untracked 잡파일(dogfood 산출물 등)까지
+    수집돼 symbols.md 가 PC마다 달라진다. 추적 파일만 대상으로 해 산출을
+    커밋된 소스의 결정적 함수로 만든다(크로스-PC 결정성).
+    """
+    try:
+        probe = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if probe.returncode != 0 or probe.stdout.strip() != "true":
+            return None
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--", "*.py", "*.cs"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if listed.returncode != 0:
+        return None
+    rels = [r for r in listed.stdout.split("\0") if r]
+    if not rels:
+        return None
+    return [root / r for r in rels]
+
+
+def collect_symbols(directory) -> dict:
+    """디렉터리의 ``.py``/``.cs`` 파일을 분석해 posix 상대경로 → 심볼 dict 매핑을 반환한다.
+
+    git repo 안이면 **추적 파일만** 대상으로 한다(untracked 잡파일 배제 →
+    크로스-PC 결정성). 비-git 디렉터리(외부 프로젝트)는 재귀 rglob walk 로
+    폴백한다. 파싱 불가 파일은 건너뛰지 않고 빈 심볼로 수집한다(크래시 방지).
+    키는 OS 무관 posix 상대경로다.
     """
     root = Path(directory)
     result: dict[str, dict] = {}
-    candidates = sorted(
-        p for suffix in ("*.py", "*.cs")
-        for p in root.rglob(suffix)
-    )
+    tracked = _git_tracked_candidates(root)
+    if tracked is not None:
+        candidates = sorted(set(tracked))
+    else:
+        candidates = sorted(
+            p for suffix in ("*.py", "*.cs")
+            for p in root.rglob(suffix)
+        )
     for path in candidates:
         if not path.is_file():
             continue

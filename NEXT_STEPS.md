@@ -1,7 +1,18 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-24) — Knowledge Library **STAGE 3** (Staleness 점검기) 또는 신규 product work-item
+## ▶ 다음 세션 진입점 (2026-06-24) — **S2-3 precision 실측 완료(PASS)** → 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
 
+> **✅ S2-3 실측 — precision 전수 감사 PASS (2026-06-24, Opus)**: vault 첫 증류 노트(`docs/wiki/knowledge/session/DESKTOP-JPHA09P-...ise-자가수정-brain...md`, created_commit `68cd91c2`) 정밀참조 전수 검증.
+> - **commit 20/20 git 실존**(subject 맥락까지 정합) · **file:line 13/13 줄내용 정확** · **INV-1/INV-5 의미 정합** · 테스트참조(`test_ise_provider_awareness.py` 6함수="6 passed") 정합 · `LLMEngine(` 직접생성 grep=0(INV-5) 정합.
+> - **D5 lossy/precise 분리 실증**: **§정밀참조 섹션(INV-K5 deterministic 추출)=100% precision, 조작 0건** → NEXT_STEPS에 흘러들 채널의 (a)조작 실패모드 **닫힘**. 유일 결함은 **LLM 산문 본문(§패턴)**의 fuzzy 참조 1건(`docs/reviews/2026-06-11-020117-…design-review.md` 말줄임표 truncation, 실재 안 함 — 정밀참조 원장 무관).
+> - **§9 3분할**: precision ✅(100%) / recall(raw 대비 누락) ⏸보류(집 PC raw 필요) / 멀티프로바이더 동일산출 ⏸보류(cross-provider distill 1회) / secret 마스킹 ✅(노출 0).
+> - **판정**: precision PASS → **STAGE R(read-only·advisory) 진입 정당**(STAGE R도 read-only라 recall 미측정이 원장 오염 위험 안 키움). recall·멀티프로바이더는 ③ 자동생성(lossy write) 진입 전에만 닫으면 됨.
+
+> **순서 판단 동결 (2026-06-24, Opus — 설명·설계검토 세션, 코드 0변경)**: "NEXT_STEPS ↔ 대화 증류를 연결해야 하나?"를 팩트 검증한 결론.
+> - 연결은 **설계상 이미 존재**: §9#2 성공기준=`증류본이 손작성 NEXT_STEPS 정밀참조 보존`, STAGE 5 승격, INV-K8(NEXT_STEPS=정밀 원장, 퇴역 아님).
+> - 그러나 **§9#2가 한 번도 미측정** + 증류 노트는 retrieval 없어 현재 **고아 아카이브**(써놓고 안 읽힘). NEXT_STEPS만 세션 시작 시 읽힘.
+> - **실행 순서: ① S2-3 실측(증류 vs NEXT_STEPS 보존율 = "연결해도 되나"의 답) → ② 통과 시 STAGE R 검색방향(read-only·advisory, 원장 안 망침) → ③ 자동생성(NEXT_STEPS auto-draft)은 마지막(미검증 lossy로 원장 오염 위험).** 측정 없이 연결 금지.
+>
 > **STAGE 1+2 심층 분석 완료 (2026-06-24, Sonnet)**: 다른 PC에서 푸시된 3개 커밋(`6e03a744`·`4f4560ed`·`68cd91c2`) 배선·버그 전수 분석. **크리티컬 버그 없음. 46/46 PASS.**
 > - 두 발화점 모두 확인: `finalize_cli_session:583`(codex) + `handle_hook_event:691`(claude/gemini SessionEnd)
 > - `run_bridge`→`"events"` 키 반환(session_bridge.py:537) + CLI stdout 제외(line 570) 확인.
@@ -21,9 +32,10 @@
 > **대안**: 신규 product work-item 발굴(메인). STAGE 3은 자가진화 인프라 — product value 우선이면 보류 가능.
 >
 > **미결(보류)**:
-> - **★S2-3 성공기준(§9) 실측**: 이 세션 종료로 vault 첫 노트가 쌓였을 가능성 있음. 다음 세션 시작 시 `docs/wiki/knowledge/session/` 확인 — 노트 있으면 commit·INV명 보존율 검증.
+> - **S2-3 §9 잔여(precision는 위에서 PASS)**: ① **recall 실측** = 집 PC(DESKTOP-JPHA09P)에서 raw 원문(`ffd644df-...jsonl`) vs 증류본 누락율 측정 — 이 PC에선 raw 부재로 불가. ② **멀티프로바이더 동일산출** = 같은 입력을 claude/codex/gemini 증류로 돌려 산출 동등성 비교. 둘 다 ③ 자동생성(NEXT_STEPS auto-draft, lossy write) 진입 **전에만** 닫으면 됨.
 > - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST) 이후** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
 > - retrieval(스테이지 R) 상세설계 = 별도.
+> - ~~**★위키 빌더 크로스-PC 비결정성 버그**~~ **✅ 해소 (2026-06-24, Opus, Fix B)** — **진단이 거꾸로였음**: 이 PC가 "심볼 누락"한 게 아니라, **집 PC가 symbols.md를 dogfood 잡파일로 오염**시킨 것. 근본 원인 = `collect_symbols`(`scripts/codebase_symbols.py`)가 `rglob`로 **작업트리 전체**(git untracked 포함)를 스캔 → 집 PC `artifacts/af-dogfood-clean-workspace-*/`의 **untracked .py 4,656개**가 symbols.md(60,847줄)에 박힘. 이 PC는 깨끗(8,838줄/789 추적모듈)이 정상. 핵심 dir(core 236·agents 42·projects 124·skills 57·scripts 57) 누락 없었음. **Fix B**: `collect_symbols`가 git repo면 `git ls-files`로 **추적 파일만** 스캔(비-git은 rglob 폴백) → 산출이 커밋된 소스의 결정적 함수가 돼 PC-무관. 재현 테스트 3건(`test_codebase_symbols.py`) + symbols.md 재생성(60,847→8,838). dogfood 잡파일은 untracked-but-not-ignored라 제외목록/.gitignore로는 못 잡혀 추적-only 필터가 유일 근본해법.
 > - S2-3 advisory 보류(WARN, correctness 무관): distill `gethostname()` 중복 호출(F7)·ControlPlaneLLM 첫 hook latency(F8) — 둘 다 실질 위험 없음.
 
 ## ✅ STAGE 2 S2-3 배선 완료 (2026-06-23, Opus) — 증류 발화점 연결

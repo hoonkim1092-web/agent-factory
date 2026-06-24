@@ -16,6 +16,7 @@ symbols.md 마크다운 문자열로 렌더링한다. 원본 코드는 절대 �
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -176,6 +177,58 @@ def test_collect_symbols_skips_runtime_and_cache_directories(tmp_path):
 def test_collect_symbols_empty_directory(tmp_path):
     result = collect_symbols(tmp_path)
     assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# collect_symbols — git 추적 파일만 스캔 (크로스-PC 결정성)
+#
+# 버그: rglob 가 작업트리 전체를 훑어 untracked 잡파일(dogfood 산출물 등)까지
+# 수집 → symbols.md 가 PC마다 달라짐(작업트리 상태에 의존). git repo 안에서는
+# 추적 파일만 대상으로 해 결정적 산출을 보장한다. 비-git 디렉터리(외부 프로젝트)는
+# 기존 rglob walk 로 폴백한다.
+# ---------------------------------------------------------------------------
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "tester"], cwd=path, check=True)
+
+
+def test_collect_symbols_excludes_untracked_in_git_repo(tmp_path):
+    """git repo 안에서는 추적되지 않는 .py(예: dogfood 산출물)를 스캔하지 않는다."""
+    _init_git_repo(tmp_path)
+    (tmp_path / "tracked.py").write_text("class Tracked:\n    pass\n", encoding="utf-8")
+    junk = tmp_path / "artifacts" / "af-dogfood-run"
+    junk.mkdir(parents=True)
+    (junk / "generated.py").write_text("class Junk:\n    pass\n", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked.py"], cwd=tmp_path, check=True)  # artifacts/ 는 untracked
+
+    result = collect_symbols(tmp_path)
+
+    assert "tracked.py" in result
+    assert "artifacts/af-dogfood-run/generated.py" not in result
+
+
+def test_collect_symbols_non_git_dir_falls_back_to_walk(tmp_path):
+    """git repo 가 아니면(외부 프로젝트) 기존 rglob walk 로 폴백한다."""
+    (tmp_path / "standalone.py").write_text("def fn():\n    pass\n", encoding="utf-8")
+    sub = tmp_path / "pkg"
+    sub.mkdir()
+    (sub / "deep.py").write_text("class Deep:\n    pass\n", encoding="utf-8")
+
+    result = collect_symbols(tmp_path)
+
+    assert "standalone.py" in result
+    assert "pkg/deep.py" in result
+
+
+def test_collect_symbols_git_repo_with_no_tracked_falls_back(tmp_path):
+    """추적 파일이 0건인 git repo 는 rglob 폴백 — 빈-추적 repo 가 빈 결과로 죽지 않는다."""
+    _init_git_repo(tmp_path)
+    (tmp_path / "untracked_only.py").write_text("def solo():\n    pass\n", encoding="utf-8")
+
+    result = collect_symbols(tmp_path)
+
+    assert "untracked_only.py" in result
 
 
 def test_collect_symbols_does_not_modify_source(tmp_path):
