@@ -1,6 +1,12 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-24) — **1순위 S2-3 실측** → 통과 시 STAGE R(retrieval) → STAGE 3 / product
+## ▶ 다음 세션 진입점 (2026-06-24) — **S2-3 precision 실측 완료(PASS)** → 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
+
+> **✅ S2-3 실측 — precision 전수 감사 PASS (2026-06-24, Opus)**: vault 첫 증류 노트(`docs/wiki/knowledge/session/DESKTOP-JPHA09P-...ise-자가수정-brain...md`, created_commit `68cd91c2`) 정밀참조 전수 검증.
+> - **commit 20/20 git 실존**(subject 맥락까지 정합) · **file:line 13/13 줄내용 정확** · **INV-1/INV-5 의미 정합** · 테스트참조(`test_ise_provider_awareness.py` 6함수="6 passed") 정합 · `LLMEngine(` 직접생성 grep=0(INV-5) 정합.
+> - **D5 lossy/precise 분리 실증**: **§정밀참조 섹션(INV-K5 deterministic 추출)=100% precision, 조작 0건** → NEXT_STEPS에 흘러들 채널의 (a)조작 실패모드 **닫힘**. 유일 결함은 **LLM 산문 본문(§패턴)**의 fuzzy 참조 1건(`docs/reviews/2026-06-11-020117-…design-review.md` 말줄임표 truncation, 실재 안 함 — 정밀참조 원장 무관).
+> - **§9 3분할**: precision ✅(100%) / recall(raw 대비 누락) ⏸보류(집 PC raw 필요) / 멀티프로바이더 동일산출 ⏸보류(cross-provider distill 1회) / secret 마스킹 ✅(노출 0).
+> - **판정**: precision PASS → **STAGE R(read-only·advisory) 진입 정당**(STAGE R도 read-only라 recall 미측정이 원장 오염 위험 안 키움). recall·멀티프로바이더는 ③ 자동생성(lossy write) 진입 전에만 닫으면 됨.
 
 > **순서 판단 동결 (2026-06-24, Opus — 설명·설계검토 세션, 코드 0변경)**: "NEXT_STEPS ↔ 대화 증류를 연결해야 하나?"를 팩트 검증한 결론.
 > - 연결은 **설계상 이미 존재**: §9#2 성공기준=`증류본이 손작성 NEXT_STEPS 정밀참조 보존`, STAGE 5 승격, INV-K8(NEXT_STEPS=정밀 원장, 퇴역 아님).
@@ -26,7 +32,7 @@
 > **대안**: 신규 product work-item 발굴(메인). STAGE 3은 자가진화 인프라 — product value 우선이면 보류 가능.
 >
 > **미결(보류)**:
-> - **★S2-3 성공기준(§9) 실측**: 이 세션 종료로 vault 첫 노트가 쌓였을 가능성 있음. 다음 세션 시작 시 `docs/wiki/knowledge/session/` 확인 — 노트 있으면 commit·INV명 보존율 검증.
+> - **S2-3 §9 잔여(precision는 위에서 PASS)**: ① **recall 실측** = 집 PC(DESKTOP-JPHA09P)에서 raw 원문(`ffd644df-...jsonl`) vs 증류본 누락율 측정 — 이 PC에선 raw 부재로 불가. ② **멀티프로바이더 동일산출** = 같은 입력을 claude/codex/gemini 증류로 돌려 산출 동등성 비교. 둘 다 ③ 자동생성(NEXT_STEPS auto-draft, lossy write) 진입 **전에만** 닫으면 됨.
 > - codex cross-review 재검증 **rate-limit(2026-06-25 04:24 KST) 이후** — STAGE 1·2·S2-3 cross-review 모두 single-vendor. 6-25 이후 cross-vendor 재검증.
 > - retrieval(스테이지 R) 상세설계 = 별도.
 > - **★위키 빌더 크로스-PC 비결정성 버그 (2026-06-24 발견, HOON-KIM)**: 이 PC `build_llm_wiki.py` 재생성 시 `symbols.md`가 60,847→10,910줄로 축소(core/·agents/·projects/·skills/·scripts/ 실제 심볼 누락). 집 PC(DESKTOP-JPHA09P)는 완전판 생성. `codebase_symbols.py` AST 스캔이 이 PC에서 일부 경로 누락 → NEXT_STEPS 커밋 시 pre-commit hook이 망가진 위키를 자동 stage(`git checkout`로 복원·회피함). **원인규명 필요**: collect_symbols가 HOON-KIM에서 왜 불완전한가(파싱 실패? 경로? cwd?). 그 전까지 이 PC에서 wiki-trigger 파일(NEXT_STEPS/Blueprint/.py) 커밋 시 `--no-verify` + 위키 수동 복원 권장.
