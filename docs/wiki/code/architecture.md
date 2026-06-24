@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-24T08:49:52+09:00
-source_commit: 68cd91c2
+generated_at: 2026-06-24T23:36:12+09:00
+source_commit: 6f4dd89d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -8864,10 +8864,11 @@ sources:
 
 ### `scripts`
 
-59 modules · 8 classes · 495 functions
+60 modules · 8 classes · 501 functions
 
 - `scripts/af_doctor.py` — 1 class / 12 func
 - `scripts/af_evolution.py` — 0 class / 4 func
+- `scripts/af_ponytail.py` — 0 class / 6 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
 - `scripts/af_sandbox.py` — 0 class / 7 func
 - `scripts/af_symbols.py` — 0 class / 2 func
@@ -9160,7 +9161,7 @@ sources:
 
 ### `tests`
 
-231 modules · 425 classes · 1954 functions
+232 modules · 425 classes · 1963 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -9168,6 +9169,7 @@ sources:
 - `tests/test_acceptance_gate.py` — 5 class / 6 func
 - `tests/test_acceptance_gate_integration.py` — 9 class / 4 func
 - `tests/test_af_doctor.py` — 0 class / 27 func
+- `tests/test_af_ponytail.py` — 0 class / 9 func
 - `tests/test_af_project_inspect.py` — 11 class / 4 func
 - `tests/test_af_project_symbols.py` — 4 class / 1 func
 - `tests/test_af_symbols.py` — 4 class / 1 func

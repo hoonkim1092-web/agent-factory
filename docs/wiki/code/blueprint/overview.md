@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-24T08:49:52+09:00
-source_commit: 68cd91c2
+generated_at: 2026-06-24T23:36:12+09:00
+source_commit: 6f4dd89d
 sources:
   - "Master_Blueprint.md"
 ---
@@ -12,7 +12,7 @@ sources:
 
 ````markdown
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-23 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-24 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.

@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution", "ponytail"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -1048,6 +1048,9 @@ def _build_arg_parser(ad_hoc_mode):
         evolution_sub = evolution_parser.add_subparsers(dest="evolution_cmd", required=True)
         evo_list = evolution_sub.add_parser("list", help="반복 BLOCK 패턴 목록 출력")
         evo_list.add_argument("--workspace", "-w", default=None, help="워크스페이스 경로 (기본: git root)")
+
+        ponytail_parser = subparsers.add_parser("ponytail", help="Ponytail 플러그인 defaultMode 설정")
+        ponytail_parser.add_argument("action", choices=["full", "ultra", "lite", "off", "status"], help="full|ultra|lite|off|status")
     return parser
 
 
@@ -1246,6 +1249,9 @@ if __name__ == "__main__":
             if args.evolution_cmd == "list" and getattr(args, "workspace", None):
                 evo_argv += ["--workspace", args.workspace]
             sys.exit(evolution_main(evo_argv))
+        elif args.subcommand == "ponytail":
+            from scripts.af_ponytail import main as ponytail_main
+            sys.exit(ponytail_main([args.action]))
         else:
             parser.print_help()
             sys.exit(1)

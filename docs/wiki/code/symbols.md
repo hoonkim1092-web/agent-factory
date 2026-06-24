@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-24T08:49:52+09:00
-source_commit: 68cd91c2
+generated_at: 2026-06-24T23:36:12+09:00
+source_commit: 6f4dd89d
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -56118,6 +56118,16 @@ _(no top-level symbols)_
 - `list_patterns`
 - `main`
 
+## `scripts/af_ponytail.py`
+
+**Functions:**
+- `_get_config_path`
+- `_load_config`
+- `_save_config`
+- `_cmd_set`
+- `_cmd_status`
+- `main`
+
 ## `scripts/af_project_inspect.py`
 
 **Functions:**
@@ -57424,6 +57434,19 @@ _(no top-level symbols)_
 - `test_exit_code_warn_strict`
 - `test_exit_code_fail_takes_priority_over_warn`
 - `test_run_checks_fast_returns_list`
+
+## `tests/test_af_ponytail.py`
+
+**Functions:**
+- `_write_config`
+- `_read_mode`
+- `test_off_writes_off_not_auto`
+- `test_set_mode_writes_correct_value`
+- `test_on_is_invalid`
+- `test_set_message_mentions_multi_provider`
+- `test_status_shows_provider_note_when_config_exists`
+- `test_status_shows_provider_note_when_no_config`
+- `test_no_args_prints_usage`
 
 ## `tests/test_af_project_inspect.py`
 

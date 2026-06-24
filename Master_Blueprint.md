@@ -1,5 +1,5 @@
 # Agent Factory — Master Blueprint
-<!-- last_updated: 2026-06-23 | version: v1.2.34 -->
+<!-- last_updated: 2026-06-24 | version: v1.2.34 -->
 
 > **사용 목적**: 전체 코드를 다시 읽지 않고 이 파일만으로 수정·유지보수·기능 추가를 수행한다.
 > 코드 수정 시 반드시 해당 섹션을 **같은 커밋**에서 업데이트할 것.
@@ -1701,6 +1701,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-24 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, af_ponytail.py, test_af_ponytail.py |
 | 2026-06-23 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, session_adapter.py, review-block-patterns.jsonl, 2026-06-23-knowledge-library-evolution-design.md (+6) |
 | 2026-06-23 | v1.2.34 | feat(knowledge): STAGE 2 **S2-3 배선** — 증류 발화점 연결. `session_bridge.run_bridge`가 수집한 raw events를 반환(이중 cursor 회피, CLI stdout/state엔 pop). `session_adapter._distill_to_vault(events, repo_root, provider_id)` best-effort 헬퍼가 **두 발화점**(`:583` codex `finalize_cli_session` + `:691` claude/gemini `handle_hook_event` SessionEnd/PreCompact)에서 호출 → `repo_root/docs/wiki/knowledge`에 KnowledgeNote 기록(INV-K1 vault=git-tracked repo, INV-K4 멀티프로바이더 parity). 증류 실패가 hook 죽이지 않음(전구간 try/except). codex는 cli_hook_bridge `--provider` 미포함이라 :583이 유일 경로 → 두 발화점 모두 배선해야 parity 충족. tests 8(wiring)+2(bridge events) 신규, 회귀 없음. — core/providers/session_adapter.py, scripts/session_bridge.py, tests/test_distill_wiring.py, tests/test_session_bridge.py, Master_Blueprint.md |
 | 2026-06-23 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, distill.py, note.py (+8) |
