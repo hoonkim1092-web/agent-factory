@@ -1,6 +1,6 @@
 ---
 name: project_knowledge_library_design
-description: "자가진화 지식 도서관 — git vault + Obsidian + 증류. STAGE 0·1·2 완료 + S2-3 precision PASS + STAGE R 설계+cross-review 완료(2026-06-25). 다음=STAGE R 구현(Sonnet). 또는 STAGE 3/product"
+description: "자가진화 지식 도서관 — git vault + Obsidian + 증류. STAGE 0·1·2·R·3 전부 완료(2026-06-25). 다음=신규 product work-item 또는 codex cross-review 재검증."
 metadata: 
   node_type: memory
   type: project
@@ -41,7 +41,7 @@ metadata:
 
 **STAGE 2 S2-3 배선 완료** (2026-06-23, Opus, 커밋 `68cd91c2`): `session_bridge.run_bridge` 반환에 `events` 추가(이중 cursor 회피, main() stdout엔 pop). `session_adapter._distill_to_vault(events, repo_root, provider_id)` best-effort 헬퍼(전구간 try/except+지연import)가 **두 발화점**에서 호출. **핵심 판단 2건(동결 문구 보정)**: ①두 발화점 필수 — codex는 `cli_hook_bridge --provider`(claude/gemini만)에 없어 `:691`(hook) 미도달, codex 유일 경로=`:583`(`finalize_cli_session`). :690만 배선하면 codex 영영 증류 안 됨 → INV-K4 parity 위해 `:583`+`:691` 둘 다. ②vault=`repo_root`/docs/wiki/knowledge (NEXT_STEPS 초안 "workspace"를 repo_root로 보정 — workspace는 임의 사용자 프로젝트일 수 있음, INV-K1 git-tracked repo·INV-K3 created_commit 정합). tests: test_distill_wiring 8 + test_session_bridge +2(41 PASS). 3-Tier: critic PASS(발견0)/cross WARN[single-vendor] BLOCK0(adv 2 보류:gethostname중복·LLM첫latency)/runner PASS. **★성공기준(§9) 실측 미수행** — 실제 세션 종료가 vault에 노트 쌓은 뒤 `docs/wiki/knowledge/session/`에서 commit·결함번호 보존율 확인.
 
-**다음 = STAGE 3** (`af knowledge doctor` 크로스OS staleness 점검기, 설계 §5 STAGE3): 노트 named file:line/심볼/커밋이 코드에 실존하나 검증. created_commit이 git 히스토리에 있나? 없음→SKEW(미pull, 오보차단)/있음→git diff로 file:line 변동→STALE. 순수Python(fcntl/flock/launchd 금지), advisory만. 산출=`scripts/af_knowledge_doctor.py`+`af knowledge doctor` dispatch+af.spec. 의존=STAGE1 created_commit. **대안**: product work-item 우선이면 STAGE3 보류 가능(자가진화 인프라). codex cross-vendor 재검증은 6-25 이후.
+**STAGE 3 완료** (2026-06-25, Sonnet, 커밋 `6a1c1322`): `scripts/af_knowledge_doctor.py` 신규 — STALE/SKEW staleness 점검기. created_commit 로컬 미보유→SKEW / 있음+file:line 변동→STALE. advisory-only(리포트만, 자동 삭제/수정 금지). `Finding`, `check_note()`, `run_doctor()`, `main()`. `--vault`/`--repo`/`--json` 지원. `agent_launcher.py`+`run_factory_cli.py` doctor dispatch 등록. af.spec hiddenimport. tests 23건 PASS. 3-Tier: critic WARN2 BLOCK0 / cross-review WARN3(F1 startswith:·F2 Path(__file__) 반영) BLOCK0 / test-runner 77 PASS. **다음=신규 product work-item 발굴 또는 codex cross-vendor 재검증(rate-limit 2026-06-25 06:41 KST 이후)**.
 
 **순서 판단 동결** (2026-06-24, Opus — 설명·설계검토 세션, 코드 0변경): "NEXT_STEPS ↔ 대화 증류 연결해야 하나?" 팩트 검증 결론. 연결은 설계상 이미 존재(§9#2=`증류본이 손작성 NEXT_STEPS 정밀참조 보존`, STAGE 5 승격, INV-K8). 그러나 §9#2 한 번도 미측정 + 증류 노트는 retrieval 없어 현재 **고아 아카이브**(써놓고 안 읽힘, NEXT_STEPS만 세션시작 읽힘). **실행순서 = ①S2-3 실측(증류 vs NEXT_STEPS 보존율=연결가부의 답) → ②통과시 STAGE R 검색방향(read-only·advisory, 원장 안 망침) → ③자동생성(NEXT_STEPS auto-draft)은 마지막(미검증 lossy 원장오염 위험)**. 측정 없이 연결 금지. cf. ①번 LLM Wiki(code/)는 커밋마다 재생성=거울이라 낡지 않음 / ②번 knowledge/는 증류·생성이라 STAGE 3 doctor 필요. INV-K7로 두 폴더 물리분리(build_llm_wiki는 code/만 write).
 
