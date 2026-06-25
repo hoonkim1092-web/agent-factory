@@ -110,6 +110,7 @@ a = Analysis(
         'core.knowledge.distill',
         'core.knowledge.retrieve',
         'scripts.af_knowledge_doctor',
+        'scripts.af_knowledge_link',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "e245fb14"
 created_at: "2026-06-25T12:03:25+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]"]
 ---
 
 STAGE R 구현 진입: af knowledge search CLI 배선 완료(agent_launcher.py + af.spec hiddenimport) + cross-review BLOCK 패턴 2건(production_caller_wiring·hiddenimport) data/review-block-patterns.jsonl에 기록.
@@ -57,3 +57,12 @@ STAGE R 구현 진입: af knowledge search CLI 배선 완료(agent_launcher.py +
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T12-02-02-019efcba-33cc-7373-bc97-a0dfe96f5606.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]
+

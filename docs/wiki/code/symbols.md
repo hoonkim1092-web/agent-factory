@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T15:43:56+09:00
-source_commit: 10ff6a75
+generated_at: 2026-06-25T16:38:47+09:00
+source_commit: 7aedfa55
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4169,6 +4169,22 @@ _(no top-level symbols)_
 - `run_doctor`
 - `main`
 
+## `scripts/af_knowledge_link.py`
+
+**Classes:**
+- `LinkChange`
+
+**Functions:**
+- `_load_symbol_files`
+- `_extract_py_refs`
+- `_existing_wikilinks`
+- `_parse_links_list`
+- `_format_links_list`
+- `_update_note`
+- `compute_links`
+- `run_linker`
+- `main`
+
 ## `scripts/af_ponytail.py`
 
 **Functions:**
@@ -6875,6 +6891,31 @@ _(no top-level symbols)_
 - `test_main_ok_no_findings`
 - `test_agent_launcher_knowledge_doctor_registered`
 - `test_run_factory_cli_knowledge_doctor_registered`
+
+## `tests/test_knowledge_link.py`
+
+**Functions:**
+- `_make_note`
+- `test_extract_bare_filename`
+- `test_extract_path_with_slash`
+- `test_extract_unknown_file`
+- `test_extract_multiple`
+- `test_parse_empty`
+- `test_parse_one`
+- `test_parse_two`
+- `test_format_round_trip`
+- `test_existing_wikilinks`
+- `test_load_symbol_files`
+- `test_load_symbol_files_missing`
+- `test_update_note_adds_link`
+- `test_update_note_no_duplicate`
+- `test_update_note_adds_section`
+- `test_update_note_appends_to_existing_section`
+- `test_compute_links_symbols_link`
+- `test_compute_links_session_cross`
+- `test_agent_launcher_knowledge_link_registered`
+- `test_run_factory_cli_knowledge_link_registered`
+- `test_af_spec_hiddenimport`
 
 ## `tests/test_knowledge_note.py`
 

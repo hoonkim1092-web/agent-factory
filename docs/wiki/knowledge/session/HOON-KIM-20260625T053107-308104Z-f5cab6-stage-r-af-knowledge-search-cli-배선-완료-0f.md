@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "a67c19a5"
 created_at: "2026-06-25T14:31:07+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]", "[[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]"]
 ---
 
 STAGE R `af knowledge search` CLI 배선 완료(`0f423389`)하고, `core/output_paths.py:69`·`core/review_runner.py:67`·`sync_claude_memory.py:251` BLOCK 3건 미해소 상태로 커밋(`a67c19a5`)하며 STAGE 2 착수 전 처리 의무를 NEXT_STEPS에 기록.
@@ -53,3 +53,12 @@ STAGE R `af knowledge search` CLI 배선 완료(`0f423389`)하고, `core/output_
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T14-29-38-019efd41-563c-71e3-9a65-f73488670784.jsonl
 - lines: 3-64
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]
+- [[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+

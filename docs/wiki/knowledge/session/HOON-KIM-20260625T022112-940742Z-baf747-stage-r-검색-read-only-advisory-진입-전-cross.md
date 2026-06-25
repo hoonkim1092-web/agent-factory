@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "e3c0fca7"
 created_at: "2026-06-25T11:21:12+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]"]
 ---
 
 STAGE R(검색, read-only·advisory) 진입 전 cross-review 세션 — `scripts/codebase_symbols.py` 코드 리뷰와 `docs/2026-06-25-stage-r-retrieval-design.md` 설계 리뷰를 교차검증으로 수행했고, 직전 커밋들로 review-gate provider=0 SKIP·af provider CLI·Ponytail 활성화가 완료된 상태.
@@ -54,3 +54,7 @@ STAGE R(검색, read-only·advisory) 진입 전 cross-review 세션 — `scripts
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T11-19-54-019efc93-a280-74d1-af78-0d16505b0097.jsonl
 - lines: 3-64
+
+## 관련
+- [[code/symbols]]
+

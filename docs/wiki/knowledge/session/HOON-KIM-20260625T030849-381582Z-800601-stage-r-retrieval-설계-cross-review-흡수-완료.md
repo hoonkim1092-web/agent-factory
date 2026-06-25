@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "e245fb14"
 created_at: "2026-06-25T12:08:49+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/HOON-KIM-20260625T030520-996672Z-7a7ff6-stage-r-설계-완료-e245fb14-후-구현-진입-core-know]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]"]
 ---
 
 STAGE R(retrieval) 설계·cross-review 흡수 완료(e245fb14) 후 구현 진입 직전 상태 — `core/knowledge/retrieve.py` + `tests/test_knowledge_retrieve.py` 신규 생성, af provider CLI 완성(c1d5ecb7), review-gate provider=0 SKIP 처리(eacd67dc·d75f3c49), Ponytail project-scope 활성화(a02e109d).
@@ -47,3 +47,12 @@ STAGE R(retrieval) 설계·cross-review 흡수 완료(e245fb14) 후 구현 진�
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/tests/_tmp/af-test-fd5500e6/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T12-07-54-019efcbf-9424-7042-9a03-0bb99eecada8.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/HOON-KIM-20260625T030520-996672Z-7a7ff6-stage-r-설계-완료-e245fb14-후-구현-진입-core-know]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]
+

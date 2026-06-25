@@ -1,10 +1,36 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 — **신규 product work-item 또는 codex cross-review 재검증** (2026-06-25)
+## ▶ 다음 세션 진입점 — **STAGE 4 auto-link 구현** (2026-06-25 확정)
 
-> STAGE R + STAGE 3 구현 완료. 다음 선택:
-> - **신규 product work-item** 발굴 (메인 트랙) — 자가진화 인프라 0~3단계 완료, product value 우선.
-> - **codex 재검증** (rate-limit 해제 후, 2026-06-25 06:41 KST): STAGE 1·2·R·3 모두 single-vendor. cross-vendor 재검증 필요.
+> 사용자가 Obsidian 그래프에서 노트들이 끊겨 있는 걸 보고 직접 요청. STAGE 0~3·R 완료 상태에서 진입.
+
+### STAGE 4 — `af knowledge link` (auto-wikilink)
+
+**목표**: knowledge 노트들과 code wiki(symbols) 사이 연결을 자동 발견해 Obsidian 그래프를 채운다.
+
+**설계 동결** (`docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE4):
+- **입력**: `docs/wiki/code/symbols.md`(AST 심볼), 각 노트의 `정밀 참조` 섹션, 기존 `[[wikilink]]`
+- **매칭 방식**: 결정론(심볼명/파일명 exact match 우선). LLM은 보조(애매 케이스만, 연기 가능)
+- **출력**: 노트 `links:` frontmatter + 본문에 `[[wikilink]]` 삽입
+- **제약**:
+  - 양방향 링크 (A→B 추가 시 B에도 A 추가)
+  - 기존 수동 링크 보존 (덮어쓰기 금지)
+  - 오탐 < 누락 (보수적 — 확실한 것만)
+  - advisory 먼저: `--dry-run`으로 미리 보고 `--apply`로 실제 적용
+
+**산출물**:
+- `scripts/af_knowledge_link.py` 신규
+- `agent_launcher.py` + `run_factory_cli.py`: `af knowledge link` dispatch
+- `af.spec` hiddenimport
+- `tests/test_knowledge_link.py`
+
+**구현 순서 (Sonnet)**:
+1. 정밀 참조 → symbols.md 매칭 (file:line → 해당 파일 노트 연결)
+2. 세션노트끼리 공통 커밋 해시로 연결
+3. `--dry-run` 리포트 → `--apply` 실제 write
+4. 3-Tier
+
+**모델**: 구현 = Sonnet (feedback_model_per_phase)
 
 ## ✅ 완료 — STAGE 3 구현 (2026-06-25, Sonnet)
 

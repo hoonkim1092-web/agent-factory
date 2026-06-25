@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "e245fb14"
 created_at: "2026-06-25T12:06:56+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]", "[[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]", "[[knowledge/session/HOON-KIM-20260625T030520-996672Z-7a7ff6-stage-r-설계-완료-e245fb14-후-구현-진입-core-know]]", "[[knowledge/session/HOON-KIM-20260625T030849-381582Z-800601-stage-r-retrieval-설계-cross-review-흡수-완료]]", "[[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]"]
 ---
 
 STAGE R(retrieval) `af knowledge search` CLI MVP 구현 진입 — `core/knowledge/retrieve.py` 신설 + `agent_launcher.py` knowledge subcommand 배선 + `af.spec` hiddenimport 추가; cross-review는 codex usage limit으로 single-vendor(Claude 단독) PASS.
@@ -55,3 +55,15 @@ STAGE R(retrieval) `af knowledge search` CLI MVP 구현 진입 — `core/knowled
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T12-05-38-019efcbd-8287-7962-a691-ea31f363e9e9.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]
+- [[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]
+- [[knowledge/session/HOON-KIM-20260625T030520-996672Z-7a7ff6-stage-r-설계-완료-e245fb14-후-구현-진입-core-know]]
+- [[knowledge/session/HOON-KIM-20260625T030849-381582Z-800601-stage-r-retrieval-설계-cross-review-흡수-완료]]
+- [[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]
+

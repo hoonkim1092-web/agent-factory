@@ -134,10 +134,11 @@ def _run_interview_subcommand(rest: list[str]) -> None:
 
 
 def _run_knowledge_subcommand(rest: list[str]) -> None:
-    """knowledge 서브커맨드 (search / doctor 하위 명령 dispatch)."""
+    """knowledge 서브커맨드 (search / doctor / link 하위 명령 dispatch)."""
     if not rest or rest[0] in ("-h", "--help"):
         print("usage: af knowledge search [--query Q] [--files F] [--diff] [--limit N] [--json]")
         print("       af knowledge doctor [--vault PATH] [--repo PATH] [--json]")
+        print("       af knowledge link [--vault PATH] [--repo PATH] [--apply] [--json]")
         return
     if rest[0] == "search":
         from core.knowledge.retrieve import main as _knowledge_search_main
@@ -145,8 +146,11 @@ def _run_knowledge_subcommand(rest: list[str]) -> None:
     elif rest[0] == "doctor":
         from scripts.af_knowledge_doctor import main as _knowledge_doctor_main
         sys.exit(_knowledge_doctor_main(rest[1:]))
+    elif rest[0] == "link":
+        from scripts.af_knowledge_link import main as _knowledge_link_main
+        sys.exit(_knowledge_link_main(rest[1:]))
     else:
-        print(f"[knowledge] 알 수 없는 명령: {rest[0]}\n  지원: search, doctor", file=sys.stderr)
+        print(f"[knowledge] 알 수 없는 명령: {rest[0]}\n  지원: search, doctor, link", file=sys.stderr)
         sys.exit(1)
 
 

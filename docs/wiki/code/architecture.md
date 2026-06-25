@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T15:43:56+09:00
-source_commit: 10ff6a75
+generated_at: 2026-06-25T16:38:47+09:00
+source_commit: 7aedfa55
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1002,11 +1002,12 @@ sources:
 
 ### `scripts`
 
-60 modules · 9 classes · 503 functions
+61 modules · 10 classes · 512 functions
 
 - `scripts/af_doctor.py` — 1 class / 13 func
 - `scripts/af_evolution.py` — 0 class / 4 func
 - `scripts/af_knowledge_doctor.py` — 1 class / 9 func
+- `scripts/af_knowledge_link.py` — 1 class / 9 func
 - `scripts/af_ponytail.py` — 0 class / 6 func
 - `scripts/af_project_inspect.py` — 0 class / 13 func
 - `scripts/af_provider.py` — 0 class / 6 func
@@ -1299,7 +1300,7 @@ sources:
 
 ### `tests`
 
-235 modules · 438 classes · 1996 functions
+236 modules · 438 classes · 2017 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1391,6 +1392,7 @@ sources:
 - `tests/test_key_combos.py` — 0 class / 1 func
 - `tests/test_knowledge_distill.py` — 1 class / 17 func
 - `tests/test_knowledge_doctor.py` — 0 class / 24 func
+- `tests/test_knowledge_link.py` — 0 class / 21 func
 - `tests/test_knowledge_note.py` — 0 class / 18 func
 - `tests/test_knowledge_retrieve.py` — 9 class / 1 func
 - `tests/test_knowledge_skill.py` — 5 class / 3 func

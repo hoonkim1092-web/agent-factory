@@ -1077,6 +1077,11 @@ def _build_arg_parser(ad_hoc_mode):
         know_doctor.add_argument("--vault", default="", help="vault 루트 경로")
         know_doctor.add_argument("--repo", default="", help="git repo 루트")
         know_doctor.add_argument("--json", dest="as_json", action="store_true", help="JSON 출력")
+        know_link = knowledge_sub.add_parser("link", help="knowledge↔code 자동 wikilink 연결")
+        know_link.add_argument("--vault", default="", help="vault 루트 경로")
+        know_link.add_argument("--repo", default="", help="git repo 루트")
+        know_link.add_argument("--apply", action="store_true", help="실제 write (기본 dry-run)")
+        know_link.add_argument("--json", dest="as_json", action="store_true", help="JSON 출력")
     return parser
 
 
@@ -1326,6 +1331,18 @@ if __name__ == "__main__":
                 if getattr(args, "as_json", False):
                     doctor_argv.append("--json")
                 sys.exit(knowledge_doctor_main(doctor_argv))
+            elif knowledge_cmd == "link":
+                from scripts.af_knowledge_link import main as knowledge_link_main
+                link_argv: list[str] = []
+                if getattr(args, "vault", ""):
+                    link_argv += ["--vault", args.vault]
+                if getattr(args, "repo", ""):
+                    link_argv += ["--repo", args.repo]
+                if getattr(args, "apply", False):
+                    link_argv.append("--apply")
+                if getattr(args, "as_json", False):
+                    link_argv.append("--json")
+                sys.exit(knowledge_link_main(link_argv))
             else:
                 print(f"[knowledge] 알 수 없는 명령: {knowledge_cmd}", file=sys.stderr)
                 sys.exit(1)

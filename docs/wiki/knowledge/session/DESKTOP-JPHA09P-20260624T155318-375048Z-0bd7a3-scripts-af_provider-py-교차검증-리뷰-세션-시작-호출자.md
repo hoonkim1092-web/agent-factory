@@ -8,7 +8,7 @@ source_machine: "DESKTOP-JPHA09P"
 created_commit: "eacd67dc"
 created_at: "2026-06-25T00:53:18+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]"]
 ---
 
 scripts/af_provider.py 교차검증 리뷰 세션 시작 — 호출자/피호출자 경계 및 나머지 코드베이스 유지보수 시각 점검
@@ -35,3 +35,8 @@ scripts/af_provider.py 교차검증 리뷰 세션 시작 — 호출자/피호출
 - originating_pc: DESKTOP-JPHA09P
 - session_file: D:/warkSpaces/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T00-51-48-019efa54-95ef-7ab1-bc58-e7c7d406ad21.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/DESKTOP-JPHA09P-20260624T155647-400180Z-a3a557-review-gate가-실제-수정-파일-agent_launcher-py]]
+

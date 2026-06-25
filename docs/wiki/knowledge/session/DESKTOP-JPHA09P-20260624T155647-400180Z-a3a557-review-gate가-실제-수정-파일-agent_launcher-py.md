@@ -8,7 +8,7 @@ source_machine: "DESKTOP-JPHA09P"
 created_commit: "eacd67dc"
 created_at: "2026-06-25T00:56:47+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]", "[[knowledge/session/DESKTOP-JPHA09P-20260624T155318-375048Z-0bd7a3-scripts-af_provider-py-교차검증-리뷰-세션-시작-호출자]]"]
 ---
 
 review-gate가 실제 수정 파일(agent_launcher.py)이 아닌 scripts/af_provider.py를 대상으로 발화하여 빈 diff로 PASS 처리됨 — staged 파일 선택 불일치 버그 확인
@@ -38,3 +38,13 @@ review-gate가 실제 수정 파일(agent_launcher.py)이 아닌 scripts/af_prov
 - originating_pc: DESKTOP-JPHA09P
 - session_file: D:/warkSpaces/agent-factory/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T00-55-09-019efa57-a77b-7a32-9daa-b30c5a77b7e9.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/HOON-KIM-20260625T030325-534798Z-c5822a-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T053107-308104Z-f5cab6-stage-r-af-knowledge-search-cli-배선-완료-0f]]
+- [[knowledge/session/DESKTOP-JPHA09P-20260624T155318-375048Z-0bd7a3-scripts-af_provider-py-교차검증-리뷰-세션-시작-호출자]]
+

@@ -8,7 +8,7 @@ source_machine: "DESKTOP-JPHA09P"
 created_commit: "68cd91c2"
 created_at: "2026-06-24T08:28:18+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]"]
 ---
 
 ISE 자가수정 brain 3개의 LLMEngine→ControlPlaneLLM 교체는 이미 커밋 08e04ebfd7fd133ad1ef98a8148b199efbcc07a9에서 구현·머지됐으며, 설계문서가 이를 모르고 재구현을 제안해 af-critic BLOCK을 받은 stale-baseline 사건.
@@ -69,3 +69,7 @@ ISE 자가수정 brain 3개의 LLMEngine→ControlPlaneLLM 교체는 이미 커�
 - originating_pc: DESKTOP-JPHA09P
 - session_file: C:/Users/HOME/.claude/projects/D--warkSpaces-agent-factory/ffd644df-1fc2-44f5-bf48-eaf395edc36c.jsonl
 - lines: 0-262
+
+## 관련
+- [[code/symbols]]
+

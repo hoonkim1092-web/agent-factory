@@ -1,24 +1,24 @@
 {
   "main": {
-    "id": "64dadad2a0a77e6c",
+    "id": "41225d5c62cfc510",
     "type": "split",
     "children": [
       {
-        "id": "1404c06ee98243d0",
+        "id": "3b186f87783c0150",
         "type": "tabs",
         "children": [
           {
-            "id": "ea53d1e6ea51d563",
+            "id": "c76f002c723405c5",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "code_review/2-11-기타.md",
+                "file": "feedback-codex-reply-for-deliberation.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2-11-기타"
+              "title": "feedback-codex-reply-for-deliberation"
             }
           }
         ]
@@ -27,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "290c62a83a948dce",
+    "id": "4b7afac543674fcf",
     "type": "split",
     "children": [
       {
-        "id": "996f552a073845b8",
+        "id": "e54d8724cc1cfd35",
         "type": "tabs",
         "children": [
           {
-            "id": "ecdd9f5938498408",
+            "id": "60224905becff94a",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -48,7 +48,7 @@
             }
           },
           {
-            "id": "98aad0292257a4a4",
+            "id": "112e9472313cf4de",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -65,7 +65,7 @@
             }
           },
           {
-            "id": "066328a8881d5eb7",
+            "id": "06713edf290bd584",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -81,20 +81,20 @@
     "width": 300
   },
   "right": {
-    "id": "326e6cd2c749f22a",
+    "id": "bb07bd5ec9a94f29",
     "type": "split",
     "children": [
       {
-        "id": "dd8fb034f9e767bf",
+        "id": "5ef4b25ed8fdd4e8",
         "type": "tabs",
         "children": [
           {
-            "id": "ac40eb3f615125f3",
+            "id": "be998420c6e68fec",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "code_review/2-11-기타.md",
+                "file": "feedback-codex-reply-for-deliberation.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,25 +104,25 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "2-11-기타 의 백링크"
+              "title": "feedback-codex-reply-for-deliberation 의 백링크"
             }
           },
           {
-            "id": "db6f0f307b0da384",
+            "id": "ea65143d9e758c8b",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "code_review/2-11-기타.md",
+                "file": "feedback-codex-reply-for-deliberation.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "2-11-기타 의 나가는 링크"
+              "title": "feedback-codex-reply-for-deliberation 의 나가는 링크"
             }
           },
           {
-            "id": "2aeb606d75f4a40f",
+            "id": "723d97354b51143b",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -137,7 +137,7 @@
             }
           },
           {
-            "id": "f848bf12b323548f",
+            "id": "4d8d9a69c1bc3a8f",
             "type": "leaf",
             "state": {
               "type": "all-properties",
@@ -151,18 +151,18 @@
             }
           },
           {
-            "id": "2da8f43dc112594e",
+            "id": "8e91278ec7e59cb6",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "code_review/2-11-기타.md",
+                "file": "feedback-codex-reply-for-deliberation.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "2-11-기타 의 개요"
+              "title": "feedback-codex-reply-for-deliberation 의 개요"
             }
           }
         ]
@@ -183,9 +183,14 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "ea53d1e6ea51d563",
+  "active": "c76f002c723405c5",
   "lastOpenFiles": [
-    "blueprint/12-변경-이력.md.tmp.26340.ccfe6d25fc43",
-    "blueprint/0-빠른-참조-테이블.md.tmp.26340.e2bcda1d85d0"
+    "session/HOON-KIM-20260625T064519-254309Z-af34e2-stage-r-af-knowledge-search-0f423389-sta.md",
+    "feedback-codex-reply-for-deliberation.md",
+    "sessions/phase_a_step1_completion.md",
+    "sessions/phase10_16_completion.md",
+    "patterns/feedback_design_review_rounds_stop_rule.md",
+    "concepts/user_codex_local_config.md",
+    "concepts/feature-driven-workflow.md"
   ]
 }

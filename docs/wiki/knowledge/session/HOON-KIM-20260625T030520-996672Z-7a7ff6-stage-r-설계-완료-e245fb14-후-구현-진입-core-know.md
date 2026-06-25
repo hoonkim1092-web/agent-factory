@@ -8,7 +8,7 @@ source_machine: "HOON-KIM"
 created_commit: "e245fb14"
 created_at: "2026-06-25T12:05:20+09:00"
 visibility: "private"
-links: []
+links: ["[[code/symbols]]", "[[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]", "[[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]", "[[knowledge/session/HOON-KIM-20260625T030849-381582Z-800601-stage-r-retrieval-설계-cross-review-흡수-완료]]", "[[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]"]
 ---
 
 STAGE R 설계 완료(e245fb14) 후 구현 진입 — core/knowledge/retrieve.py + tests/test_knowledge_retrieve.py 언트랙 생성; af provider CLI(c1d5ecb7)·Ponytail 활성화(a02e109d)·review-gate provider=0 SKIP(eacd67dc/d75f3c49) 완료 상태.
@@ -45,3 +45,12 @@ STAGE R 설계 완료(e245fb14) 후 구현 진입 — core/knowledge/retrieve.py
 - originating_pc: HOON-KIM
 - session_file: D:/hoonProJect/worktrees/agent-factory/tests/_tmp/af-test-c96229b3/.af_runtime/codex_home/sessions/2026/06/25/rollout-2026-06-25T12-04-30-019efcbc-7920-7ae2-8827-0789c0d2e0bb.jsonl
 - lines: 3-5
+
+## 관련
+- [[code/symbols]]
+- [[knowledge/session/HOON-KIM-20260625T030653-952713Z-9c3f47-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030656-600032Z-6d99ec-stage-r-retrieval-af-knowledge-search-cl]]
+- [[knowledge/session/HOON-KIM-20260625T030700-329189Z-d72f8e-stage-r-구현-진입-af-knowledge-search-cli-배선]]
+- [[knowledge/session/HOON-KIM-20260625T030849-381582Z-800601-stage-r-retrieval-설계-cross-review-흡수-완료]]
+- [[knowledge/session/HOON-KIM-20260625T031043-991411Z-e1462b-stage-r-retrieval-설계를-e245fb14에-확정하고-구현]]
+
