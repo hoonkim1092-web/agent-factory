@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T14:58:09+09:00
-source_commit: 6a1c1322
+generated_at: 2026-06-25T15:43:56+09:00
+source_commit: 10ff6a75
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1002,9 +1002,9 @@ sources:
 
 ### `scripts`
 
-60 modules · 9 classes · 502 functions
+60 modules · 9 classes · 503 functions
 
-- `scripts/af_doctor.py` — 1 class / 12 func
+- `scripts/af_doctor.py` — 1 class / 13 func
 - `scripts/af_evolution.py` — 0 class / 4 func
 - `scripts/af_knowledge_doctor.py` — 1 class / 9 func
 - `scripts/af_ponytail.py` — 0 class / 6 func

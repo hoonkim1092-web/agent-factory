@@ -167,6 +167,28 @@ def check_dogfood_root() -> DoctorResult:
     )
 
 
+def check_knowledge_vault() -> DoctorResult:
+    """knowledge vault staleness/skew 요약 (af knowledge doctor 결과)."""
+    try:
+        from scripts.af_knowledge_doctor import run_doctor, _DEFAULT_VAULT_RELPATH
+        vault = Path(".") / _DEFAULT_VAULT_RELPATH
+        if not vault.exists():
+            return DoctorResult("knowledge_vault", "warn", "vault 없음 (docs/wiki/knowledge)")
+        notes = list(vault.rglob("*.md"))
+        findings = run_doctor(vault, str(Path(".").resolve()))
+        stale = sum(1 for f in findings if f.status == "STALE")
+        skew = sum(1 for f in findings if f.status == "SKEW")
+        if stale or skew:
+            return DoctorResult(
+                "knowledge_vault", "warn",
+                f"{len(notes)}개 노트 중 STALE {stale} · SKEW {skew}건",
+                "af knowledge doctor 로 상세 확인",
+            )
+        return DoctorResult("knowledge_vault", "ok", f"{len(notes)}개 노트 정상")
+    except Exception as exc:
+        return DoctorResult("knowledge_vault", "warn", f"점검 실패: {exc}")
+
+
 # ---------------------------------------------------------------------------
 # 집계
 # ---------------------------------------------------------------------------
@@ -182,6 +204,7 @@ def run_checks(*, fast: bool = False, refresh: bool = False) -> list[DoctorResul
         check_hooks(),
         check_pytest(),
         check_dogfood_root(),
+        check_knowledge_vault(),
     ])
     return checks
 

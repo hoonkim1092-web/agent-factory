@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T14:58:09+09:00
-source_commit: 6a1c1322
+generated_at: 2026-06-25T15:43:56+09:00
+source_commit: 10ff6a75
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4138,6 +4138,7 @@ _(no top-level symbols)_
 - `check_hooks`
 - `check_pytest`
 - `check_dogfood_root`
+- `check_knowledge_vault`
 - `run_checks`
 - `format_text`
 - `format_json`
