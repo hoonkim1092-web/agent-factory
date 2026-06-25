@@ -1,6 +1,6 @@
 # 자가진화 지식 도서관 (Knowledge Library) 설계
 
-- **Status**: Draft
+- **Status**: Draft — **R2 개정(2026-06-23): §12 참조** (목표 확장: 솔로 단독 → **솔로+팀 연속성**, substrate 아키텍처 확정. §0~§7의 단일-사용자 전제 중 §12가 명시한 부분은 §12가 우선)
 - **작성일**: 2026-06-23
 - **모델**: Opus 4.8 (설계)
 - **한 줄 요약**: 단일 사용자가 여러 PC를 오가며 작업한 맥락(결정·기각·패턴·개념)을 **git 안 마크다운 vault**로 증류·연결·유지하고, Obsidian으로 시각화한다. raw가 아니라 증류본이 흐르며, 코드와 같은 git 히스토리로 묶여 PC 간 드리프트를 원천 제거한다.
@@ -13,7 +13,7 @@
 
 | # | 결정 | 근거 (이 문서 내 위치) |
 |---|------|----------------------|
-| D1 | **단일 사용자·다중 PC** 문제다 (multi-writer 팀 아님) | §1, §3.1 — 동시쓰기 머지·로그인·권한엔진은 비범위(§6) |
+| D1 | **단일 사용자·다중 PC** 문제다 (multi-writer 팀 아님) ⚠️ **R2: §12 D7로 팀 연속성 확장 — multi-writer 안전은 §12.4** | §1, §3.1 — 로그인·권한엔진은 여전히 비범위(§6), 단 동시쓰기 안전은 §12에서 다룸 |
 | D2 | **저장소 = git** (새 DB·SaaS 신설 금지) | §3.2 — 코드와 같은 히스토리 = 드리프트 소멸 + commit핀 공짜 |
 | D3 | **raw 트랜스크립트 미동기화** — 증류본 + 포인터만 | §3.3 — 189MB, 평문 노출, 노이즈. opt-in 아카이브는 비범위(§6) |
 | D4 | **식별·접근제어는 seam만** (enforcement 코드 금지) | §3.4 — `author` frontmatter + `restricted/` 폴더. 실행은 git/GitHub이 나중에 공짜 제공 |
@@ -317,3 +317,105 @@ VAULT (내구성, git-tracked, Obsidian root) ★ 신규 통합
 |------|------|
 | 2026-06-23 | 초안. 2026-06-23 대화 결정(D1~D6) + baseline 실측(§2) 동결. Status=Draft. |
 | 2026-06-23 | af-cross-review R1 BLOCK 흡수: F1(High, Stop hook 자기모순)→§2.4·STAGE2·INV-K9 정정(증류 발화점=SessionEnd/PreCompact, session_adapter.py:690, Stop 아님). F2(§2.2 global_user_key 귀속오류→project_id 정정). F3(originating_pc 필드 미존재→STAGE2 산출물 명시). |
+| 2026-06-23 | **R2 개정(§12)**: 목표 확장 솔로→**솔로+팀 연속성**(공개 퍼블리싱 명시 제외). D7~D11 추가, substrate 아키텍처 확정(git 단일·Supabase durable 제거·id-네임스페이스 멀티작성자 안전·브랜치 모델). STAGE 재배치(연속성 substrate 신규). 멀티PC·멀티작성자 코드 재검증(`sync_claude_memory.py:251` last-write-wins 실증). |
+| 2026-06-23 | **R3 범위 확정(§13)**: D12((a) 프로젝트 vault 우선, 개인 cross-project vault 연기=seam만) + D13(retrieval 일급 스테이지 추가 — 토큰절약 레버는 축적 아닌 검색). 출처 hype(밸런스/자가병합/10x) 기각 유지(§3.7). 두 트랙(A=연속성, B=저비용구현) 공유 토대=STAGE 1+2, 첫 빌드=STAGE 1. |
+| 2026-06-23 | **R2 cross-review BLOCK[single-vendor] 흡수** (codex rate-limited→Claude 단독): High#1(§12.4 파일명 무충돌 단언→마이크로초+rand suffix, "절대" 완화) / High#2(INV-K11 silent유실금지 불변식 과장→git 비폐기 보장+동일hunk surface로 범위 제한, "유실금지"는 운용지침 강등) / Med#3(§12.3 D8 P2 경로=세션종료 commit/push or 승격, STAGE3 배선) / ADV#4(§0 D1에 §12 확장 주석) / ADV#5(§12.7 MVP=솔로연속성+무충돌, 팀 교차공유는 연기). baseline 5주장 코드 대조 전부 확인. ⚠️ codex 재검증은 rate-limit(2026-06-25)까지 불가 — 현재 single-vendor. |
+
+---
+
+## §12 R2 개정 (2026-06-23) — 솔로+팀 연속성 아키텍처
+
+> 이 섹션은 §0~§11의 **단일-사용자 전제를 확장**한다. 충돌 시 §12가 우선. 목표가 "솔로 단독"에서 "솔로 멀티PC + 팀 협업 연속성"으로 바뀌면서 substrate·멀티작성자·브랜치 결정이 §3.2 각주에서 일급 아키텍처로 승격됐다.
+
+### 12.0 이 개정이 동결하는 추가 결정
+| # | 결정 | 근거 (위치) |
+|---|------|------------|
+| D7 | 목표 = **솔로 멀티PC 연속성 + 팀 협업 연속성** (D1 확장) | §12.1 — 공개 퍼블리싱·팀 enforcement 엔진은 비범위 |
+| D8 | **git 단일 durable** — Supabase를 지식 영구경로에서 제거 | §12.3 — 이중관리(§10) 소멸 + 팀에서 git이 충돌 surface |
+| D9 | **멀티작성자 안전 = 2계층 + id-네임스페이스** | §12.4 — scratch append-only 무충돌 / durable git-surface |
+| D10 | **브랜치 모델 = working-branch now, 전용 knowledge 브랜치 연기** | §12.5 — Simplicity First, worktree 복잡성 회피 |
+| D11 | **`visibility`(기본 private) seam** 채택 (Allen 사례 흡수) | §12.6 — 미래 선택공개 0코드 문, enforcement 금지(INV-K6) |
+
+### 12.1 목표 변경 + 새 통증
+- **P5 — 팀 맥락 단절**: 팀원이 같은 repo로 일할 때 결정·교훈이 공유 안 되거나, 현 Supabase 동기화가 같은 노트 동시편집을 **silent 유실**시킨다(검증: §12.2). 솔로 통증 P1~P4는 그대로 유효.
+- **비통증(추가)**: 공개 웹 퍼블리싱(Quartz/GitHub Pages)은 목표 아님 — `visibility` seam만 유지. 팀 enforcement 엔진(로그인/RBAC/동시편집 머지UI)도 아님 — git/GitHub CODEOWNERS·private repo로 상속(D4 유지).
+
+### 12.2 재검증된 제약 (멀티PC·멀티작성자, file:line)
+- **Supabase `claude_memory` = last-write-wins** (`scripts/sync_claude_memory.py:251` `on_conflict=project_id`). 파일머지(`:237 merged={**remote,**local}`)는 **다른 파일명만** 보호 → 같은 노트 두 PC/사용자 동시편집 시 **silent 유실**. = **팀 부적합**.
+- **지식 2채널 분리**: `~/.claude/.../memory/*.md ↔ Supabase`(git 독립) + `docs/wiki/ ↔ git`(브랜치 종속, 154파일 tracked). = §10 이중관리 + P1 드리프트 근원.
+- `scripts/session_bridge.py:408` truncate(260/4000)만, **commit/branch/hostname 필드 없음**. `core/knowledge/` 없음(STAGE 1 백지).
+
+### 12.3 결정 D8 — git 단일 durable, Supabase durable 제거
+- 영구 지식 = `docs/wiki/knowledge/` (git) **단일**. Supabase `claude_memory`를 지식 영구 저장에서 제거 → **이중관리(§10) 소멸 + 팀 안전**(git은 충돌을 silent 덮어쓰기 대신 **surface**).
+- scratch는 **PC-local 미동기화**. keep 가치 생기면 vault로 **승격**(§3.2 layering 유지).
+- 트레이드오프(인지함, **cross-review Medium #3 반영**): Supabase push 제거 후 솔로 **P2(맥락 단절)** 경로 = 세션 종료 시 scratch를 **git commit+push**(working 브랜치)하거나 durable로 **수동 승격**해야 다른 PC가 받음. 즉 "git pull만으로 도착"은 commit된 것에 한함 — 미commit scratch는 PC간 안 따라옴. **이 배선(세션종료→commit/push or 승격)은 STAGE 3에 포함.** Supabase의 **비-지식 scope**(project/global)는 본 설계 밖(별도 트랙, 제거 아님).
+
+### 12.4 결정 D9 — 멀티작성자 안전: 2계층 + id-네임스페이스 (팀 연속성의 심장)
+Supabase가 깨지는 이유 = 같은 키 silent 덮어쓰기. 해결은 **노트 입자성**으로:
+- **scratch 캡처(세션 증류)**: 노트 = 단일작성자·id-네임스페이스 파일·**append-only**. id 스키마 = `{type}/{source_machine}-{created_at}-{rand}-{slug}.md` 여기서 `created_at`은 **마이크로초 해상도**(`20260623T141530-482193Z`)이고 `{rand}` = 짧은 무작위/내용해시 suffix(6자). **(cross-review High #1 반영)** 마이크로초만으로 충돌은 사실상 불가능하나, 만약의 동일-키 충돌 시 `{rand}`로 회피 → 두 작성자가 같은 파일을 만들 확률 **무시가능**, 충돌 시 자동 회피. 결과: **git 머지 무충돌**(서로 다른 파일).
+- **durable 큐레이션 노트**: 주제별 **안정명(stable-name)**, 토픽당 1노트. 팀 공동편집 시 git이 충돌을 **surface**(Supabase처럼 silent 유실 아님) → 사용자가 머지 해소. durable 노트는 적고 토픽-소유라 충돌 드뭄.
+- **폭증 방지**(사용자 우려 반영): append-only는 **scratch에만**. durable은 topic-merge(중복 시 갱신). scratch는 prunable + 승격 게이트가 durable 성장 통제(§3.2 / STAGE 다이어트).
+
+### 12.5 결정 D10 — 브랜치 모델 (working-branch now, 전용 브랜치 연기)
+- **지금**: 노트는 working 브랜치의 `docs/wiki/knowledge/`에 기록 → 일반 머지로 main 흐름. append-only id-네임스페이스라 머지 무충돌. 솔로 연속성(같은 브랜치 재개) 충족. 단순.
+- **알려진 한계**: 교차 패턴(pattern/feedback)이 feature 브랜치에 갇혀 머지 전까지 타 브랜치/PC에 안 보임.
+- **연기(enhancement)**: 전용 `af-knowledge` 브랜치(git worktree)로 교차 노트를 브랜치 독립 공유 — **필요 실증되면**. 지금 안 지음(Simplicity First; AF가 워킹트리 안 깨고 타 브랜치 커밋 = worktree/plumbing 크로스OS 복잡).
+- type별 분기 자리(미래): session/decision=브랜치로컬, pattern/concept=교차(연기된 전용 브랜치 후보).
+
+### 12.6 결정 D11 — 식별·접근 seam (D4 유지·강화)
+- frontmatter `author`/`source_machine`/`created_commit`는 이제 **팀에서 load-bearing**(누가·어느 PC·어느 커밋). git author가 진짜 attribution.
+- **`visibility`(기본 private)** 필드 — Allen 사례에서 흡수한 seam. 미래 선택 공개/`restricted/` 0코드 문. **enforcement 코드 금지**(INV-K6 유지).
+- 팀 접근제어 = private repo + CODEOWNERS 상속(빌드 0).
+
+### 12.7 STAGE 재배치
+| STAGE | 내용 | 비고 |
+|-------|------|------|
+| 0 ✅ | vault 통합(`docs/wiki/`) | 완료 |
+| 1 | KnowledgeNote 스키마 + seam | **+ id-네임스페이스 규칙 + `visibility` 필드** |
+| 2 | 증류기(truncate→LLM, provider-neutral) | **+ commit/branch/source_machine 필드(F3) + secret 필터(팀 공유 repo 격상)** |
+| **3 ★신규** | **연속성 substrate** | git-single 배선 + Supabase durable 제거 + scratch/durable 2계층 + `af knowledge on/off/status` + 멀티작성자 무충돌 실증 |
+| 4 | Staleness/SKEW doctor (크로스OS) | (구 STAGE 3) 팀: 팀원 노트가 가리킨 미보유 커밋도 SKEW |
+| 5 | 자동 링크(knowledge↔code) | (구 STAGE 4) |
+| 6 | NEXT_STEPS 다이어트 + 승격 게이트 | (구 STAGE 5) 폭증 방지 핵심 |
+
+**MVP = STAGE 1+2+3.** ⚠️ **(cross-review Medium #5 반영)** MVP는 **솔로 멀티PC 연속성 + 멀티작성자 안전(무충돌 캡처)**을 달성한다. 단 **팀의 교차패턴 브랜치-독립 공유**(feature 브랜치에 갇힌 pattern/feedback을 즉시 공유)는 D10에서 **연기된 전용 `af-knowledge` 브랜치**에 달려 있어 MVP 범위 밖 — 팀은 일반 git 머지(main 흐름)로 공유되며, 즉시-교차 공유가 필요하면 STAGE 3 이후 전용 브랜치 enhancement 필요.
+
+### 12.8 추가 불변식
+- **INV-K10**: 영구 지식 durable 저장은 **git vault 단일**. Supabase는 지식 영구 저장소 아님(이중관리 금지).
+- **INV-K11**: 멀티작성자 안전 — scratch 노트는 **단일작성자·id-네임스페이스·append-only**(서로 다른 파일이라 동시쓰기 충돌 불가). **(cross-review High #2 반영)** durable 노트: git은 committed 변경을 **silent 폐기하지 않는다**(Supabase last-write-wins와의 핵심 차이) — **같은 region(hunk) 동시수정은 충돌로 surface**, 비중첩 수정은 자동머지(폐기 아님, 단 결합 결과는 미검토). "silent 유실 금지"는 불변식이 아니라 **운용 지침**(durable 공동편집은 PR 리뷰 규율)으로 강등. 자동머지된 노트의 의미 정합성은 STAGE 4 doctor + PR 리뷰가 잡음.
+- **INV-K12**: 브랜치 모델 = working-branch(현재). 전용 knowledge 브랜치는 연기 — 채택 시 크로스OS worktree·워킹트리 비파괴.
+
+### 12.9 검증 (R2 추가, Goal-Driven)
+- **멀티작성자**: 두 PC가 (a) 다른 노트 (b) 같은 토픽 노트 동시 생성 → scratch는 무충돌, durable은 git이 충돌 **surface**(silent 유실 **0**) 실증 테스트.
+- **git-single**: Supabase 미사용 경로에서 솔로 멀티PC 재개가 **`git pull`만으로** 맥락 도착.
+- **크로스OS**: 노트 id/경로가 Windows 파일명 제약 통과 — ⚠️ `created_at` ISO의 `:`는 Windows 파일명 부적합 → **안전 인코딩 필수**(예: `20260623T141530Z`, 기존 `sync_claude_memory.py:70` `_path_to_claude_key`가 `:` 치환하는 선례). STAGE 1 설계 포인트.
+- 기존 §9 표 + 위.
+
+---
+
+## §13 R3 범위 확정 (2026-06-23) — (a) 프로젝트 vault 우선 + retrieval 일급화
+
+### 13.0 추가 결정
+| # | 결정 | 근거 |
+|---|------|------|
+| D12 | **(a) 프로젝트별 vault 먼저** — 개인(범프로젝트) cross-project vault는 **연기**(seam만) | §13.1 — 메타-재귀 비용 회피, 프로젝트 vault+retrieval로 가치 실측 후 확장 |
+| D13 | **retrieval(꺼내기)을 일급 스테이지로 추가** | §13.2 — 토큰 절약의 레버는 *축적*이 아니라 *검색*. 현 설계는 캡처만 있고 retrieval 부재 |
+
+### 13.1 D12 — 프로젝트 vault 우선, 개인 서재 연기
+- **지금**: 지식 vault = 각 프로젝트 repo의 `docs/wiki/` (STAGE 0 기반). 팀 공유·자동 증류.
+- **개인 vault seam**: STAGE 1 스키마에 `scope: project|personal` 필드 자리만(기본 `project`). **라우팅·promote-to-personal·별도 personal repo·Obsidian 상위폴더 통합 = 연기**(0코드 문만 열어둠).
+- **연기 근거**: 개인 서재는 (i) 별도 repo + (ii) 두 번 sync + (iii) Obsidian 교차링크 한계(한 vault만 링크) + (iv) project/personal 분류·승격 머신 = 관리 2배. 프로젝트 vault로 가치 실증 후 얹는다.
+
+### 13.2 D13 — retrieval을 일급 스테이지로
+- **문제**: 지식을 쌓아 컨텍스트에 통째 넣으면 토큰이 **늘어남**. 절약은 **검색**(task에 맞는 작은 조각만 인출)에서만 발생. 현 설계는 캡처(증류/저장/링크/점검)만 있고 *꺼내기*가 비어 있음.
+- **신규 스테이지 R — Retrieval**: "task/변경파일 → 관련 결정·교훈·연관코드 노트 인출". **결정론 우선**(grep + 심볼/파일명 매칭, 기존 `af project symbols`·청킹 규칙 재사용), 임베딩은 보조(애매 케이스). 산출 = 컨텍스트에 넣을 bounded 노트 셋.
+- 상세 설계는 스테이지 도달 시 별도(STAGE 2 이후). 본 R3는 **스테이지 존재·위치·원칙만 동결**.
+
+### 13.3 기각 유지 (출처 hype 회귀 금지)
+- 지식 밸런스("윤리 관점 부족" 등)·자동 자가병합·월간 풀스캔·"10x/100일/자가진화" = **비범위 유지**(§3.7 접지 원칙). 자동병합은 INV-K11 멀티작성자 안전과 정면충돌이라 특히 배제.
+
+### 13.4 두 가치 트랙 (공유 토대)
+- **트랙 A** (멀티PC+팀 연속성): STAGE 1 → 2 → 3(substrate).
+- **트랙 B** (저비용 맥락인지 구현 = 주 목표): STAGE 1 → 2 → **R(retrieval)**.
+- **공유 토대 = STAGE 1(스키마) + 2(증류).** → **첫 빌드 = STAGE 1.**
+- 갱신 단계 순서: 0✅ / 1 스키마(+`scope` seam) / 2 증류 / 3 substrate / **R retrieval** / 4 doctor / 5 링크 / 6 다이어트.
