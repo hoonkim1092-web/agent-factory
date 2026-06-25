@@ -6,6 +6,8 @@
 > - **STAGE 3** (`af knowledge doctor`): 증류 노트가 named한 file:line/커밋이 현재 코드에 실존하는지 점검. `scripts/af_knowledge_doctor.py` + `agent_launcher knowledge doctor` dispatch. 설계 §13.2 참조.
 > - **신규 product work-item** 발굴 (메인 트랙). STAGE 3은 자가진화 인프라.
 > - **codex 재검증** (rate-limit 해제 후): STAGE 1·2·R 모두 single-vendor. cross-vendor 재검증 필요.
+>
+> ⚠️ **STAGE 2(증류기) 구현 착수 전 처리 의무** — design.md BLOCK 3건(`9a3f9fcc` 우회 커밋, 리뷰 `docs/reviews/2026-06-23-153119-...md`): (1) 증류 발화점 `session_adapter.py:690`이 PreCompact(세션 중간·반복) 포함 → "세션 종료 1회" 모순, SessionEnd 단일화 or PreCompact=마커만. (2) 평문 vault secret 필터 미설계 — 탐지방식·fail-closed·pre-commit 2차방벽 승격. (3) `core/knowledge/distill.py` 등 신규 파일 af.spec hiddenimports 등록(M9).
 
 ## ✅ 완료 — STAGE R 구현 (2026-06-25, Sonnet)
 
