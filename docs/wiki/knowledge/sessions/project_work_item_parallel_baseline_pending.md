@@ -81,3 +81,7 @@ af-cross-review subagent로 docs/2026-05-08-work-item-parallel-option-c-design-v
 - v2 / v3 모두 **untracked** (commit 미수행)
 - v3 단독 commit 또는 v2 + cross-review 묶음 commit 결정 필요 (사용자 합의 후 진행)
 - cross-review는 design 문서 commit 후 hook이 자동 발화 또는 직접 af-cross-review spawn
+
+## 관련
+- [[code/symbols]]
+

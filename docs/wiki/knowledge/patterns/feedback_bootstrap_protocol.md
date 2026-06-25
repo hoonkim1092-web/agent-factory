@@ -55,3 +55,7 @@ originSessionId: 1b919e04-75d9-485b-8e36-184b5fa1e525
 - **컴파일러 부트스트랩**: 첫 컴파일러는 다른 언어로 작성, 자기 자신으로 재컴파일은 그다음.
 - **SSOT (Single Source of Truth)**: 같은 사실·숫자·상태·exit code·step 번호는 단 1곳에만 존재.
 - **spec / roadmap / aspiration 분리**: "확정 계약"과 "원하는 UX"와 "후속 아이디어"를 같은 문서에 섞지 않는다.
+
+## 관련
+- [[code/symbols]]
+

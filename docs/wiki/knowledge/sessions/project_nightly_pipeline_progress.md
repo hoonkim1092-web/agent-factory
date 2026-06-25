@@ -76,3 +76,7 @@ originSessionId: 93e5c99d-7ea1-4e04-85d9-8faefaadb5cc
 
 **Why:** 전체 야간 자율 파이프라인 구현 완료. 남은 건 배포 빌드(Windows 전용)뿐.
 **How to apply:** 다음 세션에서 Windows 환경으로 전환 후 빌드 진행.
+
+## 관련
+- [[code/symbols]]
+

@@ -94,3 +94,7 @@ type: project
 
 - `LANGSMITH_API_KEY`: LangSmith API 활성화 (선택사항)
 - `LANGSMITH_PROJECT`: LangSmith 프로젝트 이름 (기본: agent-factory)
+
+## 관련
+- [[code/symbols]]
+

@@ -31,3 +31,7 @@ metadata:
 ## 다음 단계
 
 **신규 product work-item 발굴** (NEXT_STEPS.md 상단) 또는 Review BLOCK Learning Phase 2 진행.
+
+## 관련
+- [[code/symbols]]
+

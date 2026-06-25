@@ -54,3 +54,7 @@ metadata:
 **부수**(2026-06-25): Ponytail 플러그인 이 PC 설치 — `claude plugin marketplace add https://github.com/DietrichGebert/ponytail`(**HTTPS 필수** — `owner/repo` 짧은형식은 SSH clone 시도→known_hosts에 github.com 키 없어 host key verification 실패) → `install ponytail@ponytail` v4.8.3 enabled. `.claude/settings.json` enabledPlugins는 이미 git pull로 수신됨(다음 세션부터 로드).
 
 관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[project_af_gate_efficiency_debate]] [[feedback_design_review_mandatory]] [[feedback_review_verdict_vs_bug_substance]] [[feedback_model_per_phase]]
+
+## 관련
+- [[code/symbols]]
+

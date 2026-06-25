@@ -41,3 +41,7 @@ originSessionId: 0298a7dc-abb2-441c-909b-48c280653b83
 - Phase 4 작업은 Phase 3.5 데이터 없이 진입 금지.
 
 **기준일**: 2026-04-30. Sonnet 4.6에서 발견 → Opus 4.7로 deliberation 후 합의.
+
+## 관련
+- [[code/symbols]]
+

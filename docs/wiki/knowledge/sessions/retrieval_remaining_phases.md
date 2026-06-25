@@ -96,3 +96,7 @@ type: project
 1. `git add` + `git commit`으로 현재 변경사항 커밋 (아직 안 됨)
 2. `git push`로 리모트에 동기화
 3. 다른 PC에서 `git pull`
+
+## 관련
+- [[code/symbols]]
+

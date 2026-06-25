@@ -19,3 +19,7 @@ metadata:
 **Phase 2 진입 = 데이터 대기 (미충족)**: `data/review-block-patterns.jsonl` 아직 미생성 — 커밋 후 자연 BLOCK 발화 0회. 실 데이터(≥3회 재발 패턴)가 쌓여야 Phase 2(재발 감지 + EVP 제안) 설계 의미. P4(novel clustering)는 out-of-scope. 검증은 임시 디렉터리에서만 했으므로 실 데이터는 여전히 0.
 
 관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[feedback_code_review_workflow_v2]]
+
+## 관련
+- [[code/symbols]]
+

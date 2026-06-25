@@ -53,3 +53,7 @@ metadata:
 **Why:** AF는 멀티 프로바이더 하네스를 표방하나 지침은 Claude 전용. 청킹 인프라는 만들었으나 소비 미연결. 둘 다 "만들었지만 연결 안 함" = [[project_model_routing_facts]] WI-2/4와 같은 패턴(정책 있음, 실행 보장 약함).
 
 **How to apply:** 다음 세션 NEXT_STEPS 상단 진입점 + 이 메모리 먼저. WI-A 결정 3개 사용자 합의 후 설계 Opus. 관련: [[feedback_pipeline_deploy_parity]] [[feedback_design_review_mandatory]] [[project_af_codebase_wiki_direction]] [[feedback_no_hardcode_single_type_source]]
+
+## 관련
+- [[code/symbols]]
+

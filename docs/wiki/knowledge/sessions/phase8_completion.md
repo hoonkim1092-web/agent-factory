@@ -26,3 +26,7 @@ Phase 8 (Retrieval Integration Architecture - Phase 1) 완료 (2026-03-16)
 - metadata None 체크 추가
 
 **다음 단계**: Phase 2 - Document Chunking + Hybrid Retrieval
+
+## 관련
+- [[code/symbols]]
+

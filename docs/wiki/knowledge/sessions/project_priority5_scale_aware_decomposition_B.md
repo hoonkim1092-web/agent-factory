@@ -34,3 +34,7 @@ metadata:
 - **gear 승격**: 향후 task 규모 **2번째 소비자**(예산·모델라우팅·머지정책) 생기면 우선순위3 doc 재활용해 라우터 gear 필드로 승격(SSOT). 그 전까지 미구현.
 
 부모 진단: [[project_dogfood_false_success_spin]]. 교차검증 정책: [[feedback_grep_before_rejecting_crossreview]], [[feedback_review_verdict_vs_bug_substance]], [[feedback_cross_review_stale_baseline_repeat]]. 모델: [[feedback_model_per_phase]].
+
+## 관련
+- [[code/symbols]]
+

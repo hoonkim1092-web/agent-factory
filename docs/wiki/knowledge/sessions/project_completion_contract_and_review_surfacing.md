@@ -30,3 +30,7 @@ metadata:
 
 ## 원칙 (동결, §11.0)
 검증=완료-이벤트에 매달린 스테이지, 결함=IMPLEMENT 되먹임(단 dogfood 내 retry는 inv3로 금지 → 상위 재기동). UserPromptSubmit은 폴링이라 틀린 트리거. 연관: [[project_router_research_decoupling]], [[feedback_design_doc_review_pipeline]], [[feedback_workflow_agent_review_gate_gap]].
+
+## 관련
+- [[code/symbols]]
+

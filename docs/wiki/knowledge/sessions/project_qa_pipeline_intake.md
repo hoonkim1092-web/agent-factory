@@ -42,3 +42,7 @@ wiring: `pipeline.execute()` → `render_html()` + `qa_report_path`, `dogfood._r
 QA 파이프라인 Q-S1~Q-S6 전부 완료.
 
 연관: [[project_completion_contract_and_review_surfacing]] [[feedback_analysis_doc_baseline_must_be_real_code]]
+
+## 관련
+- [[code/symbols]]
+

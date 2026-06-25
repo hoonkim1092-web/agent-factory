@@ -18,3 +18,7 @@ originSessionId: d27768c4-68e0-46ea-b4d3-7adcd5ec51b7
 - 분석 문서 §3.1 같은 baseline 다이어그램은 **실제 출력 샘플 코드 블록**으로 작성. 추상 § 표기 금지.
 
 **기준일:** 2026-05-02. OpenCode LSP 분석 작성 시 cross-review BLOCK 3회.
+
+## 관련
+- [[code/symbols]]
+

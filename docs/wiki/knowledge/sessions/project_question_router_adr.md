@@ -96,3 +96,7 @@ ADR 파일에 전부 명시: `docs/decisions/ADR-20260514-133054-question-router
 - BlockCause 5개 → 4개로 시작 가능 (policy_violation + safety 통합)
 - Question schema versioning migration tooling은 P6b 이후
 - Assumption confidence 등급은 MVP 동급
+
+## 관련
+- [[code/symbols]]
+

@@ -33,3 +33,7 @@ Phase 7: 의존성 그래프 위상 정렬 + FSALoop ↔ evolve_skill 자동 연
   - TestFSALoopSkillEvolve: 6개
 
 **How to apply:** 스킬 의존성 관련 작업 시 SkillDependencyGraph 참조. FSALoop 디버깅 시 진화 파이프라인 흐름 참조.
+
+## 관련
+- [[code/symbols]]
+

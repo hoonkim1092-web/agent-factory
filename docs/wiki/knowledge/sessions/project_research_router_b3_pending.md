@@ -21,3 +21,7 @@ Research Router Phase 2 **B-3 완료·push** (2026-05-18, `9eb14577`). B-1~B-3 �
 
 **Why:** capability-gap 분석 경로가 항상 gap=None이어서 死코드 상태였음. B-3으로 end-to-end 연결 완료.
 **How to apply:** NEXT_STEPS.md A Phase 4 섹션 참조. 관련: [[analysis-doc-baseline-must-be-real-code]]
+
+## 관련
+- [[code/symbols]]
+

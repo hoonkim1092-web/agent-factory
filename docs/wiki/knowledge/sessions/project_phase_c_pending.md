@@ -30,3 +30,7 @@ Phase A(Domain Gate) + ADR M1~M5 + Phase B(비교 매트릭스 실측) 완료. 2
 - Phase C 시작 전 `core/utils.py:275~283` 확인 후 `skills/` 경로 추가 먼저 구현
 - Tier 2 파일(core/utils.py)이므로 af-critic → af-cross-review → af-test-runner 순서
 - SKILL.md는 문서 전용, review-gate 자동 통과
+
+## 관련
+- [[code/symbols]]
+

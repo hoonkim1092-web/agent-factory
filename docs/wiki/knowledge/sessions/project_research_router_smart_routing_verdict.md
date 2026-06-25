@@ -35,3 +35,7 @@ Depth=분류기(라우터 맞음), Width=생성 분해기(라우터 아님 — a
 **How to apply:** Step A+B는 설계노트가 baseline 확정 — `collect_project_evidence`를 재정독하지 말 것. 구현 진입 시 `/model` Sonnet 권장. keyword-reuse 안전망 결함은 Step A+B와 무관 — 별도로 재론의.
 
 관련: [[project_research_router_b3_pending]] [[feedback_design_review_mandatory]] [[feedback_pipeline_deploy_parity]] [[feedback_review_verdict_vs_bug_substance]]
+
+## 관련
+- [[code/symbols]]
+

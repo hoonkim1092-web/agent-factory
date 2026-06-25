@@ -9,3 +9,7 @@ originSessionId: e2a681a3-9b63-4d59-919e-9d20ba0435d2
 **Why:** T3-7에서 ApprovalGate.approve(run_id=) 와 set_run_budget(run_id=)를 추가했으나, af-cross-review가 work_item_generator.py, project_pipeline.py, agent_launcher.py 등 실제 호출자가 run_id를 전달하지 않아 이벤트가 no-op임을 발견. 14건 테스트가 전부 직접 kwarg 전달하는 happy path였음.
 
 **How to apply:** 새 kwarg 추가 시 반드시 grep으로 모든 호출자를 확인하고, 값이 있는 상위 컨텍스트(PreparedProject.run_id 등)에서 전파가 이뤄지는지 체크한다. af-cross-review가 "런타임 연결 누락" 패턴을 잘 잡으므로 Tier 3 완료 후 ACCEPT 항목은 즉시 수정한다.
+
+## 관련
+- [[code/symbols]]
+

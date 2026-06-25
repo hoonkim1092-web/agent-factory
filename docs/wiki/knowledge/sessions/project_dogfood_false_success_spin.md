@@ -105,3 +105,7 @@ build(구현+테스트)
 S1~S3 correctness 슬라이스 전부 닫힘. baseline 실코드 동결: `docs/2026-06-20-priority-3-5-baseline-capture.md` (§6.1 right_sized_router `is_light():55-70`/`LIGHT_STAGES:33`/`_FULL_STAGES:104`/Floor2 `_apply_safety_floors:205-227`, §6.2 bootstrap_roles `plan():398`/director프롬프트:400/모듈0금지:465/`_ensure_qa_role:318-396`/규모입력 부재). 두 설계 **각각 전용 dated 문서 분리**(합치면 baseline churn → cross-review BLOCK 진동, 메모리 `cross_review_stale_baseline_repeat`).
 
 연관: [[project_qa_pipeline_intake]] [[project_right_sized_execution]] [[feedback_test_mock_vs_defect]] [[project_model_routing_facts]] [[feedback_model_per_phase]] [[feedback_cross_review_stale_baseline_repeat]] [[feedback_analysis_doc_baseline_must_be_real_code]]
+
+## 관련
+- [[code/symbols]]
+

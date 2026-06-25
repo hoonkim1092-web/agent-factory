@@ -48,3 +48,7 @@ originSessionId: 1b919e04-75d9-485b-8e36-184b5fa1e525
 - **Tarski 메타언어 분리**: 진리 술어는 상위 언어에 있어야 한다.
 - **SSOT**: 같은 사실·숫자·상태는 단 1곳에만 존재.
 - **spec / roadmap / aspiration 분리**: 확정 계약·바라는 UX·후속 아이디어를 같은 문서에 섞지 않는다.
+
+## 관련
+- [[code/symbols]]
+

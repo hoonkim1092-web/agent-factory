@@ -29,3 +29,7 @@ metadata:
 **WI-4** — review_runner → execute_cli_chat 통합.
 
 관련: [[project_dogfood_isolation_leak]], [[feedback_crlf_normalization_separate_commit]], [[project_model_routing_facts]].
+
+## 관련
+- [[code/symbols]]
+

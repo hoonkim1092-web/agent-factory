@@ -80,3 +80,7 @@ originSessionId: 585c206a-cc80-48bd-9c12-d7864c90994a
 
 ### 브랜치 상태
 `af-on-af/round1-hook-fix` (5 commits ahead of origin/main), origin push 완료. main 머지 결정 보류 (사용자 직접 결정).
+
+## 관련
+- [[code/symbols]]
+

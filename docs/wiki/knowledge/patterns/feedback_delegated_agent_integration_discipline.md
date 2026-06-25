@@ -18,3 +18,7 @@ metadata:
 4. **위임 프롬프트 하드닝(표준 문구)**: "기존 파일은 Edit만(Write 금지). 허용목록 밖 파일·허용 함수 밖 코드는 손대지 말 것. 건드려야 하면 멈추고 보고. 변경 파일별 git diff 요지를 최종 보고에 포함."
 
 [[feedback_parallel_agent_shared_worktree_collision]] [[project_qa_pipeline_pending]]
+
+## 관련
+- [[code/symbols]]
+

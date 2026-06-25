@@ -29,3 +29,7 @@ originSessionId: 9027e693-3036-4b9e-a3f7-20643cf194f0
   print(f'{len(json.dumps(snap))/1024/1024:.2f} MB')
   ```
 - 5xx 에러 떴을 때 첫 의심 항목으로 페이로드 크기 체크 (Supabase 장애로 단정 금지)
+
+## 관련
+- [[code/symbols]]
+

@@ -52,3 +52,7 @@ type: project
 - test_phase14: 15개
 - test_phase15: 17개
 - test_phase16: 18개
+
+## 관련
+- [[code/symbols]]
+

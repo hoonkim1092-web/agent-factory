@@ -37,3 +37,7 @@ metadata:
 - 검증 방법: .py 파일 편집 후 pre-commit 자연 발화 → cr_findings.json/cr_evidence.json/cr_consensus.json 생성 확인
 
 **Why**: 5라운드 연속 BLOCK 자기유발 진동(실패 B=캡·수렴, S1~S2) + 증거 미수집(실패 A=합의기, S3~S6).
+
+## 관련
+- [[code/symbols]]
+

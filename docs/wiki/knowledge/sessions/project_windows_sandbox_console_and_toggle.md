@@ -25,3 +25,7 @@ advisory 3건(INV-S6 서술, on 시 stale key, AGENT_CODEX_CLI_COMMAND override 
 
 **Why**: 이 세션 내내 사용자를 괴롭힌 실제 환경 버그. 구현 완료.
 **How to apply**: 완료. 사용자에게 `af sandbox off` + 재시작 안내. [[feedback_workflow_agent_review_gate_gap]]
+
+## 관련
+- [[code/symbols]]
+

@@ -42,3 +42,7 @@ Review-Gate BLOCK 7건 + af-critic BLOCK 2건 + af-cross-review BLOCK 1건 총 1
 ## Phase A 우선순위 정책 (Q2 확정)
 
 ISE → COMPACT → EVOLUTION → MEMORY
+
+## 관련
+- [[code/symbols]]
+

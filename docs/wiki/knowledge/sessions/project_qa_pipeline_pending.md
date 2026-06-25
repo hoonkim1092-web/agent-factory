@@ -38,3 +38,7 @@ Fix 3 worktree 에이전트가 **보고 없이** `_run_provider`를 subprocess �
 ## 잔여
 - 두 설계문서 **Draft → Superseded 표기** 미실시(doc 부채). [[feedback_analysis_doc_baseline_must_be_real_code]] 위반 사례.
 - 미커밋 — staged 6파일에 회귀 포함, Fix 1 후 커밋. [[feedback_commit_staging_hygiene]].
+
+## 관련
+- [[code/symbols]]
+

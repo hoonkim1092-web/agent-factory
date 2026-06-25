@@ -58,3 +58,7 @@ AF의 SaaS 방향은 **AI Software Delivery OS** — 실행 에이전트(Claude 
   5. Pricing model 가설 (seat / accepted-PR / token-passthrough)
 - 그 다음 Step 1: `core/events/run_event.py` 통합 schema 스파이크 (tenant_id/project_id/repo_id/run_id/agent_id/cost_event_id 필수)
 - Manus-like sandbox, Phase 6 Background Maintenance, Phase 7 Marketplace는 PMF 전 보류
+
+## 관련
+- [[code/symbols]]
+

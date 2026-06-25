@@ -36,3 +36,7 @@ CRLF→LF (또는 EOL/whitespace/format 일괄 정규화) 같은 대량 변경�
 - **진단**: 작은 편집인데 `git diff --numstat`가 대량 -/+면 churn. `git ls-files --eol <f>`로 `i/lf w/crlf attr/`(빈 attr) 확인.
 - **처방**: `sed -i 's/\r$//' <f>` → numstat이 순수 추가(N/0)로 줄면 OK → unpushed면 `git commit --amend`. 재발 방지는 해당 glob에 `text eol=lf` 추가(이번에 `.githooks/* text eol=lf` 등록 `be9b8be4`). ⚠️ `.gitattributes` 자신은 아직 self-rule 없음 — 편집 시 또 churn 가능, sed 후 amend 필요.
 - 관련: [[feedback_commit_staging_hygiene]].
+
+## 관련
+- [[code/symbols]]
+

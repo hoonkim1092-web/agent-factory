@@ -16,3 +16,7 @@ mock의 의도와 production 흐름을 분리해서 진단해야 한다.
 - 테스트 실패를 분석할 때 "mock이 X를 반환해서 실패함"이라고 끝내지 말고, "mock 입력 → production 흐름의 어느 분기 → assertion 미충족"의 3단계로 분해
 - mock 자체를 "결함/구조적 문제"로 호명하기 전에, `git blame`/`git log --follow`로 production 코드 변경 이력과 테스트 작성 시점의 의도를 비교
 - 특히 빈 컬렉션 반환(`[]`, `{}`)은 거의 항상 "아무 일도 안 일어나는 케이스"를 검증하기 위한 의도적 입력
+
+## 관련
+- [[code/symbols]]
+

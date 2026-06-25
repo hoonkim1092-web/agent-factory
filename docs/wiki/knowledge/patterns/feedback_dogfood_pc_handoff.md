@@ -25,3 +25,7 @@ PC를 이동하면서 작업할 때 dogfood run을 세션 종료 전에 머지�
 - 룰 영구화: CLAUDE.md "Dogfood Run PC 핸드오프 규칙" (2026-05-27 추가) 참조
 
 관련: [[project_session_2026_04_16_summary]], [[feedback_no_main_merge_suggestion]]
+
+## 관련
+- [[code/symbols]]
+

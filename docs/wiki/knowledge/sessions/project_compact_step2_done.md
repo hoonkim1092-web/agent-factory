@@ -21,3 +21,7 @@ Phase A Step 2 COMPACT 연동 활성화 완료 (2026-04-22).
 - policy.yaml의 context_window.default=8000 (skill_context_config.py 기준), 128000이 아님
 
 **How to apply:** 다음 Phase A Step 3(EVOLUTION) 시작 전 RunBudget이 실제로 작동하는지 확인. dynamic_orchestrator와 fsa_loop 양쪽에 is_exhausted() 체크 완료.
+
+## 관련
+- [[code/symbols]]
+

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "feedback-codex-reply-for-deliberation.md",
+                "file": "patterns/feedback_blueprint_section3_manual.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "feedback-codex-reply-for-deliberation"
+              "title": "feedback_blueprint_section3_manual"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "feedback-codex-reply-for-deliberation.md",
+                "file": "patterns/feedback_blueprint_section3_manual.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "feedback-codex-reply-for-deliberation 의 백링크"
+              "title": "feedback_blueprint_section3_manual 의 백링크"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "feedback-codex-reply-for-deliberation.md",
+                "file": "patterns/feedback_blueprint_section3_manual.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "feedback-codex-reply-for-deliberation 의 나가는 링크"
+              "title": "feedback_blueprint_section3_manual 의 나가는 링크"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "feedback-codex-reply-for-deliberation.md",
+                "file": "patterns/feedback_blueprint_section3_manual.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "feedback-codex-reply-for-deliberation 의 개요"
+              "title": "feedback_blueprint_section3_manual 의 개요"
             }
           }
         ]
@@ -185,8 +185,8 @@
   },
   "active": "c76f002c723405c5",
   "lastOpenFiles": [
-    "session/HOON-KIM-20260625T064519-254309Z-af34e2-stage-r-af-knowledge-search-0f423389-sta.md",
     "feedback-codex-reply-for-deliberation.md",
+    "session/HOON-KIM-20260625T064519-254309Z-af34e2-stage-r-af-knowledge-search-0f423389-sta.md",
     "sessions/phase_a_step1_completion.md",
     "sessions/phase10_16_completion.md",
     "patterns/feedback_design_review_rounds_stop_rule.md",

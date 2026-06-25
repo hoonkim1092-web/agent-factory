@@ -30,3 +30,7 @@ metadata:
 **다음 진입점**: `/model sonnet`으로 구현. **rate-limit S1 먼저 권장**(즉효+이후 모든 cross-review 살림). 각 슬라이스 core/ → test-first + af-critic + af-test-runner (af-cross-review는 codex limit 시 SKIP). 관련 [[project_model_routing_facts]] [[feedback_design_review_mandatory]].
 
 **미정리 항목**: LLM Wiki 52개 파일이 **staged 미커밋** 상태로 남음(이전 세션 Codex 작업, 마지막 커밋 4ca329f1 이후, +2639/-233). NEXT_STEPS.md도 그 일부로 staged. 사용자가 "이번 세션만 커밋" 지시 → 설계문서 2개만 분리 커밋(AF_SKIP_REVIEW_GATE=1, index에 이전 .py 남아 게이트 발동했으나 이번 커밋은 .md만). LLM Wiki 덩어리는 커밋 or 폐기 결정 대기. 관련 [[project_af_codebase_wiki_direction]].
+
+## 관련
+- [[code/symbols]]
+

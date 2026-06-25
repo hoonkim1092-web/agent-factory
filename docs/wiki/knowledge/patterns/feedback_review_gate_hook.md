@@ -14,3 +14,7 @@ PreToolUse hook은 Claude Code가 별도 Python subprocess로 실행한다. 따�
 - `AF_SKIP_REVIEW_GATE=1 git commit ...` — 인라인으로 사용 가능 (수정 후)
 - hook 동작 이상 시 `python3 scripts/review_gate.py --debug` 로 진단
 - Agent 툴(af-test-runner 등)이 hook에 의해 막힐 경우 → hook이 Agent 툴을 가로채는 것이 아니라, 게이트 상태 파일의 stale-review 때문임. 파일 수정 후에는 3-tier 리뷰를 다시 돌려야 함.
+
+## 관련
+- [[code/symbols]]
+
