@@ -134,16 +134,19 @@ def _run_interview_subcommand(rest: list[str]) -> None:
 
 
 def _run_knowledge_subcommand(rest: list[str]) -> None:
-    """knowledge 서브커맨드 (search 하위 명령 dispatch)."""
-    from core.knowledge.retrieve import main as _knowledge_search_main
-
+    """knowledge 서브커맨드 (search / doctor 하위 명령 dispatch)."""
     if not rest or rest[0] in ("-h", "--help"):
         print("usage: af knowledge search [--query Q] [--files F] [--diff] [--limit N] [--json]")
+        print("       af knowledge doctor [--vault PATH] [--repo PATH] [--json]")
         return
     if rest[0] == "search":
+        from core.knowledge.retrieve import main as _knowledge_search_main
         sys.exit(_knowledge_search_main(rest[1:]))
+    elif rest[0] == "doctor":
+        from scripts.af_knowledge_doctor import main as _knowledge_doctor_main
+        sys.exit(_knowledge_doctor_main(rest[1:]))
     else:
-        print(f"[knowledge] 알 수 없는 명령: {rest[0]}\n  지원: search", file=sys.stderr)
+        print(f"[knowledge] 알 수 없는 명령: {rest[0]}\n  지원: search, doctor", file=sys.stderr)
         sys.exit(1)
 
 
@@ -685,7 +688,7 @@ _STAGE1_USAGE = {
     "warning-stats":    "usage: af warning-stats --workspace PATH [--slug SLUG] [--rule RULE] [--top N] [--phase PHASE]    # P3 workspace 전체 분포 통계",
     "warning-export":   "usage: af warning-export --workspace PATH --format {csv,json} [--slug SLUG] [--rule RULE] [--phase PHASE] [--mode {records,summary}] [--out PATH]    # P3 회의용 산출물 추출",
     "interview":         "usage: af interview [--workspace PATH] [--out PATH] [--non-interactive|--deep-skip] TASK...    # 요구사항 딥 인터뷰",
-    "knowledge":         "usage: af knowledge search [--query Q] [--files F,G] [--diff] [--type T] [--limit N] [--json] [--vault PATH]    # knowledge vault 검색 (결정론 sparse, read-only)",
+    "knowledge":         "usage: af knowledge search [--query Q] [--files F,G] [--diff] [--type T] [--limit N] [--json] [--vault PATH]  |  doctor [--vault PATH] [--repo PATH] [--json]",
 }
 
 

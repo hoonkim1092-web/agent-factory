@@ -1702,6 +1702,7 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-25 | v1.2.34 | chore(NEXT_STEPS): code update — NEXT_STEPS.md, af.spec, agent_launcher.py, 224.md", 245.md" (+6) |
 | 2026-06-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, retrieve.py (+7) |
 | 2026-06-25 | v1.2.34 | feat(knowledge): STAGE R — `af knowledge search` 검색 엔진. `core/knowledge/retrieve.py` 신규(read-only 결정론 sparse). `load_notes`(vault glob·관용파싱 3종·파싱실패 본문 포함 INV-R3) + `score_notes`(용어 가중합+파일 exact/basename 매칭, tie-break INV-R5) + `format_results`(사람용표+--json). `extract_precise_refs` SSOT 재사용(INV-R2). write 경로 0(INV-R4). 두 진입점: `agent_launcher.py` `_KNOWN_SUBCOMMANDS`+dispatch + `run_factory_cli._STAGE1_DISPATCH["knowledge"]`. `af.spec` hiddenimport 추가. tests 35건 PASS. — core/knowledge/retrieve.py, agent_launcher.py, run_factory_cli.py, af.spec, tests/test_knowledge_retrieve.py, Master_Blueprint.md |
 | 2026-06-25 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, install-af.ps1, install-af.sh, af_provider.py (+1) |

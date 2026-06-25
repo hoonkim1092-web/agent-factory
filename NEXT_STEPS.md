@@ -1,13 +1,19 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 — **STAGE 3 (`af knowledge doctor`) 또는 신규 product work-item** (2026-06-25)
+## ▶ 다음 세션 진입점 — **신규 product work-item 또는 codex cross-review 재검증** (2026-06-25)
 
-> STAGE R 구현 완료(아래). 다음 선택:
-> - **STAGE 3** (`af knowledge doctor`): 증류 노트가 named한 file:line/커밋이 현재 코드에 실존하는지 점검. `scripts/af_knowledge_doctor.py` + `agent_launcher knowledge doctor` dispatch. 설계 §13.2 참조.
-> - **신규 product work-item** 발굴 (메인 트랙). STAGE 3은 자가진화 인프라.
-> - **codex 재검증** (rate-limit 해제 후): STAGE 1·2·R 모두 single-vendor. cross-vendor 재검증 필요.
->
-> ⚠️ **STAGE 2(증류기) 구현 착수 전 처리 의무** — design.md BLOCK 3건(`9a3f9fcc` 우회 커밋, 리뷰 `docs/reviews/2026-06-23-153119-...md`): (1) 증류 발화점 `session_adapter.py:690`이 PreCompact(세션 중간·반복) 포함 → "세션 종료 1회" 모순, SessionEnd 단일화 or PreCompact=마커만. (2) 평문 vault secret 필터 미설계 — 탐지방식·fail-closed·pre-commit 2차방벽 승격. (3) `core/knowledge/distill.py` 등 신규 파일 af.spec hiddenimports 등록(M9).
+> STAGE R + STAGE 3 구현 완료. 다음 선택:
+> - **신규 product work-item** 발굴 (메인 트랙) — 자가진화 인프라 0~3단계 완료, product value 우선.
+> - **codex 재검증** (rate-limit 해제 후, 2026-06-25 06:41 KST): STAGE 1·2·R·3 모두 single-vendor. cross-vendor 재검증 필요.
+
+## ✅ 완료 — STAGE 3 구현 (2026-06-25, Sonnet)
+
+> - `scripts/af_knowledge_doctor.py` 신규: STALE/SKEW staleness 점검기. created_commit 로컬 미보유→SKEW / 있음+file:line 변동→STALE. advisory-only(리포트만, 자동 삭제/수정 금지). `Finding`, `check_note()`, `run_doctor()`, `main()`.
+> - `agent_launcher.py`: `knowledge doctor` 서브커맨드 parser + dispatch.
+> - `run_factory_cli.py`: `_run_knowledge_subcommand` doctor 분기 추가.
+> - `af.spec`: hiddenimport `scripts.af_knowledge_doctor`.
+> - `tests/test_knowledge_doctor.py`: 23건(SKEW/STALE/OK/unknown/deleted/JSON/dispatch 전 기준) PASS.
+> - **3-Tier**: af-critic WARN 2(URL오탐·혼합경로) BLOCK 0 / af-cross-review WARN 3(startswith SSOT·테스트 상대경로·URL) BLOCK 0 — F1+F2 수정 반영 / af-test-runner 77 PASS.
 
 ## ✅ 완료 — STAGE R 구현 (2026-06-25, Sonnet)
 

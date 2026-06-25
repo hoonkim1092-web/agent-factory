@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T14:19:08+09:00
-source_commit: 9a3f9fcc
+generated_at: 2026-06-25T14:51:10+09:00
+source_commit: a67c19a5
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4152,6 +4152,22 @@ _(no top-level symbols)_
 - `list_patterns`
 - `main`
 
+## `scripts/af_knowledge_doctor.py`
+
+**Classes:**
+- `Finding`
+
+**Functions:**
+- `_git`
+- `_commit_exists`
+- `_line_at_commit`
+- `_current_line`
+- `_parse_created_commit`
+- `_extract_file_line_refs`
+- `check_note`
+- `run_doctor`
+- `main`
+
 ## `scripts/af_ponytail.py`
 
 **Functions:**
@@ -6830,6 +6846,34 @@ _(no top-level symbols)_
 - `test_distill_multiprovider_identical_body`
 - `test_distill_llm_failure_graceful`
 - `test_write_memory_entries_includes_originating_pc`
+
+## `tests/test_knowledge_doctor.py`
+
+**Functions:**
+- `_make_note`
+- `test_parse_created_commit_normal`
+- `test_parse_created_commit_unknown_returns_empty`
+- `test_parse_created_commit_missing_returns_empty`
+- `test_extract_file_line_refs_forward_slash`
+- `test_extract_file_line_refs_backslash`
+- `test_extract_file_line_refs_no_refs`
+- `test_commit_exists_true`
+- `test_commit_exists_false`
+- `test_line_at_commit_returns_correct_line`
+- `test_line_at_commit_out_of_range`
+- `test_line_at_commit_git_fail`
+- `test_current_line_reads_file`
+- `test_current_line_missing_file`
+- `test_check_note_skew`
+- `test_check_note_stale_changed_line`
+- `test_check_note_ok_same_line`
+- `test_check_note_unknown_commit_skipped`
+- `test_check_note_stale_file_deleted`
+- `test_main_json_output`
+- `test_main_no_vault`
+- `test_main_ok_no_findings`
+- `test_agent_launcher_knowledge_doctor_registered`
+- `test_run_factory_cli_knowledge_doctor_registered`
 
 ## `tests/test_knowledge_note.py`
 

@@ -109,6 +109,7 @@ a = Analysis(
         'core.knowledge.note',
         'core.knowledge.distill',
         'core.knowledge.retrieve',
+        'scripts.af_knowledge_doctor',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

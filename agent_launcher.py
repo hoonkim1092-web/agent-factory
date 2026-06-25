@@ -1073,6 +1073,10 @@ def _build_arg_parser(ad_hoc_mode):
         know_search.add_argument("--limit", "-n", type=int, default=8, help="최대 결과 수 (기본 8)")
         know_search.add_argument("--json", dest="as_json", action="store_true", help="JSON 출력")
         know_search.add_argument("--vault", default="", help="vault 루트 경로")
+        know_doctor = knowledge_sub.add_parser("doctor", help="vault staleness/skew 점검 (advisory)")
+        know_doctor.add_argument("--vault", default="", help="vault 루트 경로")
+        know_doctor.add_argument("--repo", default="", help="git repo 루트")
+        know_doctor.add_argument("--json", dest="as_json", action="store_true", help="JSON 출력")
     return parser
 
 
@@ -1312,6 +1316,16 @@ if __name__ == "__main__":
                 if getattr(args, "vault", ""):
                     search_argv += ["--vault", args.vault]
                 sys.exit(knowledge_search_main(search_argv))
+            elif knowledge_cmd == "doctor":
+                from scripts.af_knowledge_doctor import main as knowledge_doctor_main
+                doctor_argv: list[str] = []
+                if getattr(args, "vault", ""):
+                    doctor_argv += ["--vault", args.vault]
+                if getattr(args, "repo", ""):
+                    doctor_argv += ["--repo", args.repo]
+                if getattr(args, "as_json", False):
+                    doctor_argv.append("--json")
+                sys.exit(knowledge_doctor_main(doctor_argv))
             else:
                 print(f"[knowledge] 알 수 없는 명령: {knowledge_cmd}", file=sys.stderr)
                 sys.exit(1)
