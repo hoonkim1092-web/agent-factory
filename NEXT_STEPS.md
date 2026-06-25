@@ -1,36 +1,28 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 — **STAGE 4 auto-link 구현** (2026-06-25 확정)
+## ▶ 다음 세션 진입점 — **신규 product work-item 발굴 또는 codex 재검증** (2026-06-25)
 
-> 사용자가 Obsidian 그래프에서 노트들이 끊겨 있는 걸 보고 직접 요청. STAGE 0~3·R 완료 상태에서 진입.
+> STAGE 0~4·R 전부 완료. 자가진화 knowledge 인프라 완성. 다음은 product value 트랙 or cross-vendor 재검증.
 
-### STAGE 4 — `af knowledge link` (auto-wikilink)
+### 선택지
 
-**목표**: knowledge 노트들과 code wiki(symbols) 사이 연결을 자동 발견해 Obsidian 그래프를 채운다.
+1. **신규 product work-item 발굴** (메인) — 자가진화 인프라 완성 후 사용자 체감 가치 영역
+2. **codex cross-vendor 재검증** — STAGE 1·2·R·3·4 모두 single-vendor(codex rate-limit). rate-limit 해제 후 재검증
+3. **STAGE 5** — NEXT_STEPS 다이어트 + 승격 게이트(완료 이력 → vault/sessions 이관)
 
-**설계 동결** (`docs/2026-06-23-knowledge-library-evolution-design.md` §5 STAGE4):
-- **입력**: `docs/wiki/code/symbols.md`(AST 심볼), 각 노트의 `정밀 참조` 섹션, 기존 `[[wikilink]]`
-- **매칭 방식**: 결정론(심볼명/파일명 exact match 우선). LLM은 보조(애매 케이스만, 연기 가능)
-- **출력**: 노트 `links:` frontmatter + 본문에 `[[wikilink]]` 삽입
-- **제약**:
-  - 양방향 링크 (A→B 추가 시 B에도 A 추가)
-  - 기존 수동 링크 보존 (덮어쓰기 금지)
-  - 오탐 < 누락 (보수적 — 확실한 것만)
-  - advisory 먼저: `--dry-run`으로 미리 보고 `--apply`로 실제 적용
+### 미결(보류)
 
-**산출물**:
-- `scripts/af_knowledge_link.py` 신규
-- `agent_launcher.py` + `run_factory_cli.py`: `af knowledge link` dispatch
-- `af.spec` hiddenimport
-- `tests/test_knowledge_link.py`
+- **S2-3 §9 잔여**: recall 실측(집 PC DESKTOP-JPHA09P raw jsonl 필요) + 멀티프로바이더 동일산출 — ③ 자동생성 진입 전에만 닫으면 됨
+- **codex cross-vendor 재검증**: 2026-06-25 rate-limit 이후. 해제 후 재검증 가능
 
-**구현 순서 (Sonnet)**:
-1. 정밀 참조 → symbols.md 매칭 (file:line → 해당 파일 노트 연결)
-2. 세션노트끼리 공통 커밋 해시로 연결
-3. `--dry-run` 리포트 → `--apply` 실제 write
-4. 3-Tier
+## ✅ 완료 — STAGE 4 구현 (2026-06-25, Sonnet)
 
-**모델**: 구현 = Sonnet (feedback_model_per_phase)
+> - `scripts/af_knowledge_link.py` 신규: 결정론 auto-wikilink. symbols.md 파싱 + `.py` 참조 exact 매칭 + session 노트 공유파일 cross-link. `--dry-run`(기본) / `--apply`. full path 우선·basename fallback(false cross-link 방지), frontmatter 제외 본문만 스캔(오탐 방지), greedy `_LINKS_RE`(중첩 대괄호 처리), `_existing_wikilinks` `[[...]]` 형식 포함.
+> - `agent_launcher.py` + `run_factory_cli.py`: `af knowledge link` dispatch.
+> - `af.spec`: hiddenimport `scripts.af_knowledge_link`.
+> - `tests/test_knowledge_link.py`: 20건 PASS.
+> - **vault 적용**: 71개 노트(`docs/wiki/knowledge/`) `[[code/symbols]]` 연결(커밋 `42d78922`). idempotent 확인.
+> - **3-Tier**: af-critic WARN only(BLOCK 0) / af-cross-review F1(basename 우선 false cross-link) 수정 후 PASS[single-vendor] / af-test-runner 202 PASS.
 
 ## ✅ 완료 — STAGE 3 구현 (2026-06-25, Sonnet)
 

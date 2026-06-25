@@ -43,7 +43,3 @@ cross-review artifact: `docs/reviews/2026-05-11-184118-approval_gate-code-review
 - 다른 PC에서 `auto=True` / `AF_AUTO_APPROVE=1` 사용 시 새 화이트리스트 요구사항 인지 — `AF_AUTO_APPROVE_SLUGS=slug1,slug2` 또는 `AF_AUTO_APPROVE_SLUGS=*` 필요
 - verification_blocked 상태에서 강제 승인 필요 시 `auto=False` + 사용자 명시 호출만 가능
 - 5/13 01:00 KST 이후 Codex cross-review 재실행 → BLOCK 0건 확인 후 자율 모드 단계 다음 옵션 검토
-
-## 관련
-- [[code/symbols]]
-

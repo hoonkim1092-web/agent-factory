@@ -13,7 +13,3 @@ originSessionId: 9ba41419-7b0d-44f3-ba7f-8f5a3641f82f
 - 새 파라미터/기능 추가 후 `grep -rn "함수명"` 으로 production caller 찾아서 연결 확인
 - 테스트 픽스처가 직접 파라미터를 주입하는 패턴이면 특히 주의 — production path에도 동일하게 흘러야 함
 - 예외: 사용자가 명시적으로 "개발 환경 전용" 또는 "추후 연결"을 지시한 경우만
-
-## 관련
-- [[code/symbols]]
-

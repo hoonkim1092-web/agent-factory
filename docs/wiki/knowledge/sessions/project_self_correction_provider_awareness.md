@@ -35,7 +35,3 @@ product-value work-item 신규 선정.
 **How to apply:** RESOLVED — 참고 이력용.
 
 관련: [[project_model_routing_facts]] [[feedback_design_review_mandatory]]
-
-## 관련
-- [[code/symbols]]
-

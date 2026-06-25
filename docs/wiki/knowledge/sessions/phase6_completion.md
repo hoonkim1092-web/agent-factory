@@ -24,7 +24,3 @@ Phase 6: Semantic Matching 구현 완료 (2026-03-14)
 - `core/skill_loader.py` — 수정 (embedder 통합, 가중치 변경)
 - `core/skill_cache.py` — 수정 (_semantic_cache 활성화)
 - `tests/test_phase6_semantic_matching.py` — 신규 (12개 테스트)
-
-## 관련
-- [[code/symbols]]
-

@@ -25,7 +25,3 @@ LLM 문서 생성 파이프라인 P3~P6 완료 (커밋 `a12f4493`, 2026-04-24).
 - `auto_apply_defaults()`는 현재 FSA 경로에서 미연결 (향후 필요 시 `project_pipeline.prepare()`에 삽입)
 
 **How to apply:** 다음 Clarification 관련 작업 시 `core/clarification.py`와 `agent_launcher.py:_run_project_with_approval()`을 함께 읽을 것.
-
-## 관련
-- [[code/symbols]]
-

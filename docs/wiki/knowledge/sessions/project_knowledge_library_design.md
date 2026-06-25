@@ -1,6 +1,6 @@
 ---
 name: project_knowledge_library_design
-description: "자가진화 지식 도서관 — git vault + Obsidian + 증류. STAGE 0·1·2·R·3 전부 완료(2026-06-25). 다음=신규 product work-item 또는 codex cross-review 재검증."
+description: "자가진화 지식 도서관 — git vault + Obsidian + 증류. STAGE 0·1·2·R·3·4 전부 완료(2026-06-25). 다음=신규 product work-item 또는 STAGE 5(NEXT_STEPS 다이어트)."
 metadata: 
   node_type: memory
   type: project
@@ -53,8 +53,6 @@ metadata:
 
 **부수**(2026-06-25): Ponytail 플러그인 이 PC 설치 — `claude plugin marketplace add https://github.com/DietrichGebert/ponytail`(**HTTPS 필수** — `owner/repo` 짧은형식은 SSH clone 시도→known_hosts에 github.com 키 없어 host key verification 실패) → `install ponytail@ponytail` v4.8.3 enabled. `.claude/settings.json` enabledPlugins는 이미 git pull로 수신됨(다음 세션부터 로드).
 
+**STAGE 4 완료** (2026-06-25, Sonnet, 커밋 `4852a753`): `scripts/af_knowledge_link.py` 신규 — knowledge↔code 자동 wikilink. `_load_symbol_files`(symbols.md 파일명 집합·basename 역인덱스) + `_extract_py_refs`(**full path 우선·basename fallback**, 역인덱스 오탐 방지 F1 반영) + `compute_links`(symbols 연결+session 노트 파일 공유 cross-link) + `_update_note`(frontmatter links: append+본문 ## 관련 삽입, idempotent, frontmatter 제외 본문만 스캔). --dry-run(기본)/--apply. agent_launcher+run_factory_cli dispatch. af.spec hiddenimport. tests 20건 PASS. vault 84개 노트 적용(session 13개 cross-link). af-critic W3/W4/W1·af-cross-review F1(basename 우선 → false cross-link) 반영. **다음=신규 product work-item 또는 codex cross-vendor 재검증(rate-limit 해제 후)**.
+
 관련: [[feedback_analysis_doc_baseline_must_be_real_code]] [[project_af_gate_efficiency_debate]] [[feedback_design_review_mandatory]] [[feedback_review_verdict_vs_bug_substance]] [[feedback_model_per_phase]]
-
-## 관련
-- [[code/symbols]]
-

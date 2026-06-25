@@ -31,7 +31,3 @@ metadata:
 - Phase A 작업 순서: Step A-1(work_kind 정정) → A-2(5/13 v2) → A-3(domain-review.md) → A-4(verification schema 명문화) → A-5(systematic_debugging SKILL.md) → A-6(TDD/worktree gate 연결)
 - Phase B는 Step A 완료 + 회귀 안정화 후 별도 design doc 작성 후 진입
 - 관련: [[project-auto-approve-block-followup]] — ApprovalGate 흡수 5건은 5/11 v2 별도 트랙
-
-## 관련
-- [[code/symbols]]
-

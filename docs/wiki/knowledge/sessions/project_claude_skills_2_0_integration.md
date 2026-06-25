@@ -94,7 +94,3 @@ LANGSMITH_API_KEY=test python -c "from core.hooks.event_bus import HookEventBus;
 | LangSmith API 지연 | fire-and-forget 비동기 처리 |
 | Checkpoint 오염 | 직렬화 가능한 필드만 저장 |
 | 12-cap으로 필수 스킬 잘림 | agent yaml의 skills 순서 = 우선순위 (앞 12개 보장) |
-
-## 관련
-- [[code/symbols]]
-

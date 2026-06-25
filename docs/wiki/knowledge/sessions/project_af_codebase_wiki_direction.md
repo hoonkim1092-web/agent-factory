@@ -71,7 +71,3 @@ AF = Manus류 **범용 에이전틱 시스템** + **기존 대규모 프로젝�
 - `af project inspect` 외부 프로젝트 정확도 fix 3건 (`865fef9c`): doctor cwd 누수(_DOCTOR_CWD_GIT_CHECKS 제외)/하위 디렉터리 test 감지(_find_nested_test_file)/entrypoint test 제외 + pyproject pytest섹션만 indicator. 외부 3개(codex_parent_test/stock-analyzer/afb) 실측으로 발견. 테스트 47→76. 3-Tier PASS/WARN(BLOCK0)/PASS. + _recommend_next_steps 테스트 9건.
 
 관련: [[project_right_sized_execution]] [[project_saas_strategy_position]] [[feedback_design_review_mandatory]] [[feedback_grep_before_rejecting_crossreview]]
-
-## 관련
-- [[code/symbols]]
-

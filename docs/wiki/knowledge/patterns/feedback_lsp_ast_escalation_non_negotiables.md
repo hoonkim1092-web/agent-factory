@@ -59,7 +59,6 @@ trigger = (work_kind == "refactor") OR (blast_radius in {cross_module, system_wi
 
 ## 관련
 
-- [[code/symbols]]
 - [[project-question-router-adr]] — 진행 중 ADR (Stage 0 v4)
 - [[project-saas-strategy-position]] — AF SaaS 포지셔닝
 - [[feedback-tier3-no-sycophancy]] — 동조 금지 원칙 (본 분석의 메타 토대)

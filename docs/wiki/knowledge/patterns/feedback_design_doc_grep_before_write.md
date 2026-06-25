@@ -32,7 +32,3 @@ metadata:
 - 정정 응답에 grep 명령 + 결과를 첨부하면 cross-review가 즉시 evidence로 인정
 - 식별자 grep 단계를 건너뛰면 같은 BLOCK이 또 발생함 — 시간 절약 ❌, 시간 손해 ✅
 - 관련: [[feedback-test-mock-vs-defect]] (production 흐름 먼저 확인 원칙과 같은 정신)
-
-## 관련
-- [[code/symbols]]
-

@@ -62,7 +62,3 @@ metadata:
 - **✅ STEP4 4차 측정 — [§5 채워짐 + codex 활성] 동시조건 첫 성립 (2026-06-22 Opus, output-isolation O-S2 vehicle)**: `agent_launcher.py`(caller-rich Tier3) 변경을 staged → `build_review_bundle.py .`로 **§5 Direct Callers=7/7 채움** + codex_cli AVAILABLE(login OK). 이전 3회는 매번 한 변수 어긋남(1차 §5빈+codex有 / 2차 §5stale+codex有 / 3차 §5채움+codex無). **이번이 둘 다 성립한 첫 측정.** 결과: af-cross-review **81.9k토큰 / 10.1분 / WARN(BLOCK0)**, **Extension Log 비어있음**(§5 7/7을 1차 근거로 사용, 자율 재탐색 0). codex는 **CLI fallback(no-MCP)**으로 외부검증 유지(single-vendor 아님 — `7570cdf6` 2b-fallback 메커니즘 작동 실증). 실질 finding 1건 산출(--out/--workspace 메시지 불일치, 내가 수정) = rubber-stamp 아님. **깨끗하게 입증된 것**: §5 채우면 외부검증자가 자율탐색 안 함(Extension Log 0) = STEP2 메커니즘. **여전히 미측정(overclaim 금지)**: 32분→10분은 [§5 fill benefit] + [codex CLI 단일라운드 vs codex MCP 다라운드 deliberation] 혼입 — codex MCP는 Windows shell 버그("batch file arguments are invalid", dogfood Bug0)로 이 환경에서 못 돎. 순수 §5 fill의 시간효과를 codex MCP와 분리하려면 MCP 정상 환경 필요. **STEP2 방향성 4회 연속 유효 재확인.**
 
 관련: [[feedback_reverse_sycophancy_balance]] [[feedback_review_verdict_vs_bug_substance]] [[project_right_sized_execution]] [[project_gitnexus_adoption_review]] [[project_provider_instruction_parity]] [[project_model_routing_facts]]
-
-## 관련
-- [[code/symbols]]
-

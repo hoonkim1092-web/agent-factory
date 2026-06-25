@@ -77,7 +77,3 @@ v1 6건을 코드 대조 재검증 후 5건으로 축소·재번호. **HIGH-3는
 - detect_complexity_gaps escalation이 실제 발동하는지 단위 테스트
 - evidence_bundle의 web_references 비어있지 않은지 통합 테스트
 - TAVILY_API_KEY 미설정 환경에서도 fallback path 검증
-
-## 관련
-- [[code/symbols]]
-

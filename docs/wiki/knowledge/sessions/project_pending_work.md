@@ -53,7 +53,3 @@ git ls-files | grep -E "auth\.json|\.af_runtime/cli_sessions|\.system_generated/
 ### 우선순위 4: 기존 테스트 실패 (별도 이슈)
 
 - `tests/test_requirement_llm.py` 2건 — 커밋 `a517e419` 이후 발생, 오늘 작업과 무관
-
-## 관련
-- [[code/symbols]]
-

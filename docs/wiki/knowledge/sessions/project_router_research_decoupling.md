@@ -56,7 +56,3 @@ metadata:
 **How to apply:** 클리어 후 이 메모리+NEXT_STEPS 먼저. 팩트는 동결됨(재grep 불요, 단 구현 직전 line만 재확인). 설계 Opus, 구현 Sonnet.
 
 관련: [[project_af_codebase_wiki_direction]] [[project_right_sized_execution]] [[feedback_design_review_mandatory]] [[feedback_no_hardcode_single_type_source]] [[feedback_reverse_sycophancy_balance]]
-
-## 관련
-- [[code/symbols]]
-

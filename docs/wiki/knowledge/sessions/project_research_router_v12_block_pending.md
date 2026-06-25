@@ -25,7 +25,3 @@ originSessionId: ee6a7612-e8b6-418b-94f9-bb75e4141b16
 - 다음 작업: T3 exe 빌드 (`python build_exe.py` → `dist/af-1.2.22.zip` → `gh release create`)
 - 또는 Phase 1b: structured evidence + deterministic 4-metric verifier
 - Phase 4 (Smart routing + Tier 3 조건부 발화): 2시간 예상
-
-## 관련
-- [[code/symbols]]
-

@@ -12,7 +12,3 @@ metadata:
 **Why:** 여러 파일에 같은 타입을 재정의하면 스키마 불일치 버그가 생기고 유지보수가 어려워진다.
 
 **How to apply:** 새 dataclass/TypedDict/Protocol 작성 시 기존 코드에서 같은 이름이 있으면 import로 교체. 기존 grandfathered 예외(RouteDecision/LedgerEntry/VerificationResult/StrategyLedger)는 KNOWN_TYPE_DUPLICATES 허용 목록에만 등록. 위반 탐지: tests/test_coding_conventions.py::test_no_duplicate_type_names.
-
-## 관련
-- [[code/symbols]]
-

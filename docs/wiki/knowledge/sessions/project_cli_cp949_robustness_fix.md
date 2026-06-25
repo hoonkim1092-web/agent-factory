@@ -20,7 +20,3 @@ metadata:
 **과장 정정 이력**: 최초 "gemini 라우팅 전체 마비"로 진단했으나 1차 원인은 인증(환경), 2차가 인코딩(코드). A는 robustness 보강 수준(긴급도 중).
 
 관련: [[project_router_research_decoupling]] [[project_model_routing_facts]] [[feedback_crlf_normalization_separate_commit]]
-
-## 관련
-- [[code/symbols]]
-

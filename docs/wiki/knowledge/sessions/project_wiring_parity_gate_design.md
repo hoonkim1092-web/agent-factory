@@ -28,7 +28,3 @@ metadata:
 **✅ 구현 완료 (2026-06-12, Sonnet, `5a16df39`)** — 메모리 stale 정정(2026-06-21 재확인). 6개 심볼 `scripts/test_gap_analyzer.py`에 실재: `_WIRING_EXEMPT_PATHS`(L61, `frozenset({"core/utils.py"})`)·`_WIRING_DEFERRED_MARKER`(L62)·`_extract_wiring_candidates`(L303)·`_find_production_callers`(L350)·`_any_caller_passes_param`(L403)·`_has_deferred_marker`(L420). `analyze_diff()`(L512-544)에 **WARN-only** 배선(verdict 미영향, `warnings.append("[wiring] ...")` 채널만). `tests/test_wiring_parity.py` 11케이스 PASS. af-test-runner가 `test_gap_analyzer.py --workspace .`로 호출.
 
 **잔여 = 선택적 advisory 2건(의무 아님)**: ① `_any_caller_passes_param` file-level false-negative 정밀화(`sym(` 라인 한정 스캔) ② dead-parameter WARN→BLOCK 승격(false-positive 실측 N≥10 누적 선행 필요, 현재 미실행). 관련: [[feedback_pipeline_deploy_parity]] [[project_af_gate_efficiency_debate]] [[feedback_no_hardcode_single_type_source]]
-
-## 관련
-- [[code/symbols]]
-

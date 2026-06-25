@@ -48,7 +48,3 @@ originSessionId: 9bec23b4-54e8-405d-8fc1-bae170472146
 **Why:** 이번 세션에서 "빨리 고치자"에 집중하면서 교차검증/Blueprint/코드리뷰 프로세스를 반복 누락. 다음 세션에서는 코드 수정 → 교차검증 → Blueprint → 커밋 순서를 엄격히 준수해야 함.
 
 **How to apply:** 다음 세션 시작 시 미완료 항목부터 처리. 특히 Blueprint 업데이트와 기존 테스트 수정이 우선.
-
-## 관련
-- [[code/symbols]]
-

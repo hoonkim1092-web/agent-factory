@@ -38,7 +38,3 @@ metadata:
 ## 참고
 
 P0-B 해소로 `compute_report()` 출력은 이제 신뢰 가능. 단 **A Phase 4(스마트 라우팅)는 여전히 1주 실측 데이터 수집 후** 진입 — 데이터 부족 게이트는 코드가 아니라 수집 기간 문제. [[project_dev_workflow_paradigm_shift]]
-
-## 관련
-- [[code/symbols]]
-

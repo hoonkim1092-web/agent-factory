@@ -23,7 +23,3 @@ dogfood Option 2 T3 acceptance(2026-06-03) = **pipeline codegen 성공 / isolati
 **부수 수정 완료**: `AF_SKIP_DOMAIN_REVIEW`(`0806ca1c`), DEVELOP git status fallback(`5d0da24f`), provider_detect codex ping `login status`(`aefa8797`). provider는 CLI 세션 로그인 방식(API KEY 아님). 자세히는 NEXT_STEPS.md 상단.
 
 관련: [[project_model_routing_facts]] (provider 라우팅 WI 큐)
-
-## 관련
-- [[code/symbols]]
-

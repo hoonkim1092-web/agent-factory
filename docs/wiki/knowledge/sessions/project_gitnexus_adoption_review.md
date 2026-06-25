@@ -26,7 +26,3 @@ GitNexus = 코드베이스를 쿼리 가능한 지식 그래프로 만드는 도
 **다음 단계 = Step 0 PoC (미실행)**: 격리 임시폴더 복제 → `npx gitnexus@1.6.7 analyze` → 인덱싱 시간·DB생성·impact정확도 측정. ⚠️ analyze가 AGENTS.md/CLAUDE.md/hook 자동 덮어쓰기 위험 → AF 루트 직접 실행 금지, 격리 필수. 이후 Step1(wrapper)→Step2(opt-in env 통합)→Step3(graphify 폐기 결정)→Step4(MCP 사용자채널).
 
 **산출물**: 회사 회의 논의용 문서 `docs/2026-06-11-gitnexus-code-intelligence-도입검토.md`(`1eed96ee`, AF 용어 제거한 일반 독자용). 사용자가 회사 RAG 논의와 합쳐 사용 예정. 관련: [[project_af_codebase_wiki_direction]].
-
-## 관련
-- [[code/symbols]]
-

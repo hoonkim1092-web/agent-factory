@@ -27,7 +27,3 @@ Phase 5a/5b 구현 완료 (2026-03-13)
 ## 테스트
 - 15개 신규 테스트 (7 ContextFork + 8 Preflight)
 - 전체 245개 테스트 통과
-
-## 관련
-- [[code/symbols]]
-

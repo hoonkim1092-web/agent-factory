@@ -24,7 +24,3 @@ P1+P2+P3+P4a 완료. v1.2.27 (main `d61b1d68`, 2026-05-10).
 1. P3 measurement 데이터(`af warning-stats --rule owner_role_mismatch`) 충분히 수집 후 진입
 2. `config/escalation_policy.yaml`: owner_role_mismatch + evidence_quality_warn `mode: "observation" → "enforce"` toggle + repeat_count_min/count_per_run_min 측정 기반 값으로 갱신
 3. `runtime/warnings/_index.json`: evidence_quality_warn `mode` 필드 동기 (P4a에서 yaml만, _index.json은 P4b)
-
-## 관련
-- [[code/symbols]]
-

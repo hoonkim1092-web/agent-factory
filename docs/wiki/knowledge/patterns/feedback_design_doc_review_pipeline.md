@@ -21,7 +21,3 @@ originSessionId: 67d6486b-f778-4b6a-a162-2852377a775d
 - BLOCK만 수정 의무, WARN/advisory는 선택([[feedback_review_verdict_vs_bug_substance]]). 수용 전에도 grep 재확인([[feedback_grep_before_rejecting_crossreview]]).
 
 **Why:** CLAUDE.md 텍스트 규칙만으론 누락 가능 → 파이프라인화. 폴링 자동발화는 완료 이벤트와 디커플돼 틀린 트리거라 제거. [[feedback_code_review_workflow_v2]] [[feedback_design_review_mandatory]]
-
-## 관련
-- [[code/symbols]]
-

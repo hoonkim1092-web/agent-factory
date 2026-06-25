@@ -33,7 +33,3 @@ metadata:
 **Why:** 정책(escalation 매트릭스)·의도(provider 다양성)는 코드에 조각으로 존재하나 runtime 연결이 끊김 = "정책 있음, 실행 보장 약함". 단일 provider가 배포 다수면 두 품질 레버 모두 죽은 게 기본 경험 → 배포 동등성 위험([[feedback_pipeline_deploy_parity]]).
 
 **How to apply:** 구현 시점에만 재개(추가 재분석은 메타-재귀, [[project_dev_workflow_paradigm_shift]]). 모델 단계 전환은 [[feedback_model_per_phase]] 따름. NEXT_STEPS 상단 STREAM 블록에 동일 큐 등록됨.
-
-## 관련
-- [[code/symbols]]
-

@@ -41,7 +41,3 @@ P1-C(`bcc4c223`)의 bypass된 변경을 사용자 지적으로 재검증하다 �
 `core/dynamic_orchestrator.py` `_lilith_decide_next`의 LLM 프롬프트 JSON 예시 `"task_id"` 값(현재 커밋 상태: `<board task_id, blank if not a board task>`)은 문구만으로 안전 보장 불가 — LLM이 예시를 리터럴 echo하면 무효 task_id가 됨. 코드 레벨 화이트리스트(위 P1-C-rv WIP)가 정답이며 본 work-item에 포함.
 
 [[dogfooding-hygiene-sprint]]
-
-## 관련
-- [[code/symbols]]
-
