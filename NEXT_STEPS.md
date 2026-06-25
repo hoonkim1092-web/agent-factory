@@ -1,6 +1,25 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-25) — 1순위 **STAGE R(retrieval, read-only)** → STAGE 3 / product
+## ▶ 다음 세션 진입점 (2026-06-25) — **STAGE R 구현 (Sonnet)** — 설계 PASS, `af knowledge search`
+
+> **설계+교차검증 완료. 다음 = 코드 구현(Sonnet, `feedback_model_per_phase`).** 재분석 금지 — 설계문서 `docs/2026-06-25-stage-r-retrieval-design.md`만 읽으면 됨.
+>
+> **구현 대상** (§5 산출물):
+> - `core/knowledge/retrieve.py` 신규 — `load_notes`(glob `docs/wiki/knowledge/**/*.md`, 관용 frontmatter 파싱)·`score_notes`(결정론 sparse)·`format_results` + `main(argv)`
+> - `agent_launcher.py` — `knowledge` 서브커맨드 dispatch **+ `_KNOWN_SUBCOMMANDS`(`:31`)에 `"knowledge"` 추가**(누락 시 격리 PROJECT_ROOT 오실행, cross-review F3)
+> - `run_factory_cli.py` — `_STAGE1_DISPATCH["knowledge"]` + `_STAGE1_USAGE` (배포 동등성 = 두 진입점)
+> - `af.spec` hiddenimport `core.knowledge.retrieve` / `tests/test_knowledge_retrieve.py` / Blueprint §0·§12
+> - **재사용 SSOT**: `distill.extract_precise_refs(text)`(`:80`) 정밀참조 정규식 / `note._git`(stdin=DEVNULL) git 호출
+> - **핵심 결정(동결)**: 결정론 전용(임베딩 0)·2모드(`--query`+`--files`/`--diff`)·read-only·관용파싱(3종 frontmatter)·bounded(`--limit` 기본 8)
+> - **검증**: §9 7개 성공기준(키워드 top-3 / 파일모드 exact·합성 fixture / 3종 포맷 / 결정론 바이트동일 / read-only grep / 두 진입점 / Windows 한글경로)
+> - **3-Tier**: af-critic → af-cross-review → af-test-runner. ⚠️ codex usage-limit 해제 후 cross-vendor 재검증.
+
+## ✅ 완료 — STAGE R 상세 설계 + 교차검증 (2026-06-25, Opus)
+
+> - `docs/2026-06-25-stage-r-retrieval-design.md` 신규(부모 §13.2 D13 상세화). MVP=`af knowledge search` 명령어-only(자동주입 연기, 사용자 확정).
+> - **결정론 전용**(임베딩/Gemini 연기) — 멀티OS·멀티프로바이더·크로스PC 재현성. **2모드**: `--query`(키워드) + `--files`/`--diff`(변경파일↔정밀참조 exact, S2-3 100% precision 계승).
+> - **af-cross-review WARN[single-vendor]** BLOCK 0 — 5건 전부 grep 사실확인 후 반영(session/ 4→5·총117, 시그니처 `(text)`, `_KNOWN_SUBCOMMANDS` 명시, fixture 전제·레거시 recall 위험).
+> - **부수**: Ponytail 플러그인 이 PC 설치(`marketplace add https://github.com/DietrichGebert/ponytail` HTTPS — SSH host key 회피 / `install ponytail@ponytail` v4.8.3 enabled).
 
 ## ✅ 완료 — af provider install/auth/status CLI + Ponytail 활성화 (2026-06-25, Sonnet, `a02e109d`)
 

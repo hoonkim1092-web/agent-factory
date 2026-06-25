@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T02:36:16+09:00
-source_commit: a02e109d
+generated_at: 2026-06-25T11:46:45+09:00
+source_commit: e3c0fca7
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -4984,8 +4984,9 @@ _(no top-level symbols)_
 ## `skills/dp/skill.py`
 
 **Functions:**
-- `_validate`
-- `_norm`
+- `_safe_get`
+- `_join`
+- `_normalize_constraints`
 - `propose`
 - `apply`
 - `test`
