@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T11:46:45+09:00
-source_commit: e3c0fca7
+generated_at: 2026-06-25T12:18:55+09:00
+source_commit: e245fb14
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -69,6 +69,7 @@ sources:
 | `core/output_paths.py` | ad-hoc 새 제품/수정 출력 격리 (O-S1, 2026-06-22; in-place 복원 개정) — 일반 폴더는 cwd 그대로 in-place(INV-O3, 기존 프로젝트 수정·분석 보존), AF 소스 repo 안 실행 시에만 `<base_dir>/projects/<slug>` 로 graceful 리다이렉트(INV-O2, 에러 없이 오염 격리). `_is_within`(normcase+realpath, Windows 케이스 비민감)로 BASE_DIR 하위 판정. explicit override(`--workspace`)는 최우선(INV-O5). dogfood worktree 모델은 미적용(INV-O4). 설계: `docs/2026-06-18-product-output-isolation-design.md`. | Master_Blueprint.md §0 |
 | `core/knowledge/note.py` | 자가진화 지식 도서관 STAGE 1 (2026-06-23) — 내구성 지식 노트 단일 타입(frontmatter 계약 SSOT). `to_md`/`from_md` round-trip(json.dumps 스칼라/links 인코딩=콜론·따옴표 안전, JSON⊂YAML Obsidian 호환). `new_note()` 작성 헬퍼=author/source_machine(`socket.gethostname()`)/created_commit(`git rev-parse --short`)/created_at/id 자동 스탬프. id 네임스페이스 `{type}/{machine}-{micro시각}-{rand}-{slug}.md`(마이크로초+6자 rand 무충돌 INV-K11, Windows 안전 §12.9). `scope`(기본 project, D12 seam)/`visibility`(기본 private, D11 seam)는 데이터 seam일 뿐 enforcement 코드 0건(INV-K6). 설계: `docs/2026-06-23-knowledge-library-evolution-design.md`. | Master_Blueprint.md §0 |
 | `core/knowledge/distill.py` | 지식 도서관 STAGE 2 (2026-06-23) — 세션 raw events → 증류 KnowledgeNote (provider-neutral). `mask_secrets`(sk-/ghp_/xox/AKIA/Bearer/PEM/라벨=값 → [REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·순서·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4 멀티프로바이더, 지연 싱글턴 `_get_distill_llm`) → 본문 렌더(출력도 마스킹) → `new_note`. raw 포인터 `{originating_pc, session_file, line}`(§3.3). LLM 의존성 주입(테스트). LLM 실패해도 정밀참조+포인터로 노트 생성. **S2-3 배선 완료(2026-06-23)**: `session_adapter._distill_to_vault`가 두 발화점(`:583` codex finalize·`:691` claude/gemini hook SessionEnd/PreCompact)에서 호출, vault=`repo_root/docs/wiki/knowledge`(INV-K1). 설계 §5 STAGE2. | Master_Blueprint.md §0 |
+| `core/knowledge/retrieve.py` | 지식 도서관 STAGE R (2026-06-25) — `af knowledge search` read-only 검색 엔진. 순수 Python 결정론 sparse (임베딩 0, INV-R1). `load_notes`(vault_root glob `**/*.md`, 관용 frontmatter 3종 파싱·파싱실패도 본문 포함 INV-R3) + `score_notes`(용어 빈도 가중합 title=3/desc=2/정밀참조섹션=2/본문=1 + 파일 exact=5/basename=3, tie-break created_at desc→path INV-R5) + `format_results`(사람용 표+`--json`). `extract_precise_refs` SSOT 재사용(INV-R2). write/create/delete 경로 0(INV-R4 grep 테스트). vault=`<repo_root>/docs/wiki/knowledge`(절대경로 하드코딩 금지). 두 진입점: `agent_launcher.py` + `run_factory_cli._STAGE1_DISPATCH["knowledge"]`. last_updated: 2026-06-25 | Master_Blueprint.md §0 |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | Master_Blueprint.md §0 |
 | `core/cross_verification.py:1-758` | 멀티 CLI 교차검증 | Master_Blueprint.md §0 |
 | `core/dashboard.py` | 실행 이력 모니터링 | Master_Blueprint.md §0 |
@@ -245,7 +246,7 @@ sources:
 
 ### `(root)`
 
-30 modules · 3 classes · 120 functions
+30 modules · 3 classes · 121 functions
 
 - `af.py` — 0 class / 2 func
 - `agent_launcher.py` — 1 class / 9 func
@@ -266,7 +267,7 @@ sources:
 - `project_orchestrator.py` — 0 class / 6 func
 - `repo_shortcuts.py` — 0 class / 3 func
 - `run_eval_loop.py` — 0 class / 2 func
-- `run_factory_cli.py` — 0 class / 29 func
+- `run_factory_cli.py` — 0 class / 30 func
 - `set_utf8.py` — 0 class / 1 func
 - `setup-dev.py` — 0 class / 0 func
 - `setup_dev.py` — 0 class / 2 func
@@ -639,11 +640,12 @@ sources:
 
 ### `core/knowledge`
 
-3 modules · 2 classes · 16 functions
+4 modules · 3 classes · 28 functions
 
 - `core/knowledge/__init__.py` — 0 class / 0 func
 - `core/knowledge/distill.py` — 1 class / 8 func
 - `core/knowledge/note.py` — 1 class / 8 func
+- `core/knowledge/retrieve.py` — 1 class / 12 func
 
 ### `core/memory_system`
 
@@ -1296,7 +1298,7 @@ sources:
 
 ### `tests`
 
-233 modules · 429 classes · 1971 functions
+234 modules · 438 classes · 1972 functions
 
 - `tests/check_models.py` — 0 class / 0 func
 - `tests/conftest.py` — 0 class / 4 func
@@ -1388,6 +1390,7 @@ sources:
 - `tests/test_key_combos.py` — 0 class / 1 func
 - `tests/test_knowledge_distill.py` — 1 class / 17 func
 - `tests/test_knowledge_note.py` — 0 class / 18 func
+- `tests/test_knowledge_retrieve.py` — 9 class / 1 func
 - `tests/test_knowledge_skill.py` — 5 class / 3 func
 - `tests/test_knowledge_wiki_stage0.py` — 6 class / 0 func
 - `tests/test_korean_encoding.py` — 0 class / 1 func

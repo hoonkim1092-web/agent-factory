@@ -84,6 +84,7 @@
 | `core/output_paths.py` | ad-hoc 새 제품/수정 출력 격리 (O-S1, 2026-06-22; in-place 복원 개정) — 일반 폴더는 cwd 그대로 in-place(INV-O3, 기존 프로젝트 수정·분석 보존), AF 소스 repo 안 실행 시에만 `<base_dir>/projects/<slug>` 로 graceful 리다이렉트(INV-O2, 에러 없이 오염 격리). `_is_within`(normcase+realpath, Windows 케이스 비민감)로 BASE_DIR 하위 판정. explicit override(`--workspace`)는 최우선(INV-O5). dogfood worktree 모델은 미적용(INV-O4). 설계: `docs/2026-06-18-product-output-isolation-design.md`. | `resolve_product_output_dir` |
 | `core/knowledge/note.py` | 자가진화 지식 도서관 STAGE 1 (2026-06-23) — 내구성 지식 노트 단일 타입(frontmatter 계약 SSOT). `to_md`/`from_md` round-trip(json.dumps 스칼라/links 인코딩=콜론·따옴표 안전, JSON⊂YAML Obsidian 호환). `new_note()` 작성 헬퍼=author/source_machine(`socket.gethostname()`)/created_commit(`git rev-parse --short`)/created_at/id 자동 스탬프. id 네임스페이스 `{type}/{machine}-{micro시각}-{rand}-{slug}.md`(마이크로초+6자 rand 무충돌 INV-K11, Windows 안전 §12.9). `scope`(기본 project, D12 seam)/`visibility`(기본 private, D11 seam)는 데이터 seam일 뿐 enforcement 코드 0건(INV-K6). 설계: `docs/2026-06-23-knowledge-library-evolution-design.md`. | `KnowledgeNote`, `new_note`, `make_id` |
 | `core/knowledge/distill.py` | 지식 도서관 STAGE 2 (2026-06-23) — 세션 raw events → 증류 KnowledgeNote (provider-neutral). `mask_secrets`(sk-/ghp_/xox/AKIA/Bearer/PEM/라벨=값 → [REDACTED], 정밀참조 보존) → `extract_precise_refs`(commit/file:line/INV명 verbatim·순서·중복제거, INV-K5) → `control_plane_llm.generate_json` 증류(INV-K4 멀티프로바이더, 지연 싱글턴 `_get_distill_llm`) → 본문 렌더(출력도 마스킹) → `new_note`. raw 포인터 `{originating_pc, session_file, line}`(§3.3). LLM 의존성 주입(테스트). LLM 실패해도 정밀참조+포인터로 노트 생성. **S2-3 배선 완료(2026-06-23)**: `session_adapter._distill_to_vault`가 두 발화점(`:583` codex finalize·`:691` claude/gemini hook SessionEnd/PreCompact)에서 호출, vault=`repo_root/docs/wiki/knowledge`(INV-K1). 설계 §5 STAGE2. | `distill_session`, `mask_secrets`, `extract_precise_refs` |
+| `core/knowledge/retrieve.py` | 지식 도서관 STAGE R (2026-06-25) — `af knowledge search` read-only 검색 엔진. 순수 Python 결정론 sparse (임베딩 0, INV-R1). `load_notes`(vault_root glob `**/*.md`, 관용 frontmatter 3종 파싱·파싱실패도 본문 포함 INV-R3) + `score_notes`(용어 빈도 가중합 title=3/desc=2/정밀참조섹션=2/본문=1 + 파일 exact=5/basename=3, tie-break created_at desc→path INV-R5) + `format_results`(사람용 표+`--json`). `extract_precise_refs` SSOT 재사용(INV-R2). write/create/delete 경로 0(INV-R4 grep 테스트). vault=`<repo_root>/docs/wiki/knowledge`(절대경로 하드코딩 금지). 두 진입점: `agent_launcher.py` + `run_factory_cli._STAGE1_DISPATCH["knowledge"]`. last_updated: 2026-06-25 | `NoteDoc`, `load_notes`, `score_notes`, `format_results`, `main` |
 | `core/control_plane_llm.py` | Control-plane CLI-first LLM | `ControlPlaneLLM` |
 | `core/cross_verification.py:1-758` | 멀티 CLI 교차검증 | `CrossVerificationLoop` |
 | `core/dashboard.py` | 실행 이력 모니터링 | `append_dashboard_run()` |
@@ -1147,13 +1148,13 @@ run_factory_cli.main()
 
 <!-- AUTO:SECTION3_CORE_UPDATES START -->
 ### §3.12 자동 Core 변경 요약
-<!-- last_updated: 2026-06-23; generated_by: scripts/blueprint_updater.py -->
+<!-- last_updated: 2026-06-25; generated_by: scripts/blueprint_updater.py -->
 
-최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, session_adapter.py, review-block-patterns.jsonl, 2026-06-23-knowledge-library-evolution-design.md (+6)
+최근 자동 갱신 컨텍스트: chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, retrieve.py (+7)
 
 | 파일 | 역할/계약 요약 | 주요 심볼 |
 |------|----------------|-----------|
-| `core/providers/session_adapter.py` | session adapter | `finalize_cli_session()`, `handle_hook_event()` |
+| `core/knowledge/retrieve.py` | STAGE R — af knowledge search 검색 엔진 (read-only, 결정론 sparse). | `NoteDoc`, `load_notes()`, `score_notes()`, `format_results()`, `main()` |
 <!-- AUTO:SECTION3_CORE_UPDATES END -->
 
 ---
@@ -1701,6 +1702,8 @@ model_utils.py (독립 모듈)
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2026-06-25 | v1.2.34 | chore(Master_Blueprint): code update — Master_Blueprint.md, NEXT_STEPS.md, af.spec, agent_launcher.py, retrieve.py (+7) |
+| 2026-06-25 | v1.2.34 | feat(knowledge): STAGE R — `af knowledge search` 검색 엔진. `core/knowledge/retrieve.py` 신규(read-only 결정론 sparse). `load_notes`(vault glob·관용파싱 3종·파싱실패 본문 포함 INV-R3) + `score_notes`(용어 가중합+파일 exact/basename 매칭, tie-break INV-R5) + `format_results`(사람용표+--json). `extract_precise_refs` SSOT 재사용(INV-R2). write 경로 0(INV-R4). 두 진입점: `agent_launcher.py` `_KNOWN_SUBCOMMANDS`+dispatch + `run_factory_cli._STAGE1_DISPATCH["knowledge"]`. `af.spec` hiddenimport 추가. tests 35건 PASS. — core/knowledge/retrieve.py, agent_launcher.py, run_factory_cli.py, af.spec, tests/test_knowledge_retrieve.py, Master_Blueprint.md |
 | 2026-06-25 | v1.2.34 | chore(af): code update — af.spec, agent_launcher.py, install-af.ps1, install-af.sh, af_provider.py (+1) |
 | 2026-06-24 | v1.2.34 | feat(ponytail): Ponytail 플러그인 defaultMode 설정 CLI. `scripts/af_ponytail.py` 신규(full/ultra/lite/off/status, 크로스OS config 경로). `agent_launcher.py` ponytail dispatch + `_KNOWN_SUBCOMMANDS`. `af.spec` hiddenimport. tests 13건 PASS. 3-Tier PASS. — scripts/af_ponytail.py, tests/test_af_ponytail.py, agent_launcher.py, af.spec |
 | 2026-06-24 | v1.2.34 | fix(codebase-symbols): 위키 빌더 크로스-PC 비결정성 버그 수정(Fix B). `collect_symbols`가 `rglob`로 작업트리 전체(git untracked 포함)를 스캔해 PC마다 떠 있는 dogfood 잡파일(`artifacts/af-dogfood-*/`)까지 symbols.md에 박혀 산출이 PC별로 달라지던 것(집 PC 60,847줄 vs 이 PC 8,838줄). 신규 `_git_tracked_candidates(root)`로 git repo면 `git ls-files`로 **추적 파일만** 수집(비-git 외부 프로젝트는 rglob 폴백, 추적0건도 폴백) → 산출이 커밋된 소스의 결정적 함수가 돼 PC-무관. untracked-but-not-ignored 잡파일은 제외목록/.gitignore로 못 잡아 추적-only 필터가 유일 근본해법. symbols.md 재생성(789 추적모듈). 3-Tier: af-critic PASS / af-test-runner PASS(119) / af-cross-review 보류(codex rate-limit, 6-25 이후 cross-vendor). tests 3건 신규. — scripts/codebase_symbols.py, tests/test_codebase_symbols.py, docs/wiki/code/*, NEXT_STEPS.md, Master_Blueprint.md |

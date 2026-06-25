@@ -28,7 +28,7 @@ import getpass
 # core/registry_manager.py 의 _env_flag("AF_DISABLE_REGISTRY_WRITE") 가드.
 
 # subcommand allowlist — isolation guard 와 아래 _detect_mode 양쪽이 공유 (single source of truth)
-_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution", "ponytail", "provider"}
+_KNOWN_SUBCOMMANDS = {"project", "dogfood", "doctor", "symbols", "sandbox", "evolution", "ponytail", "provider", "knowledge"}
 
 
 def _configure_cli_text_streams() -> None:
@@ -1062,6 +1062,17 @@ def _build_arg_parser(ad_hoc_mode):
         prov_install.add_argument("--force", action="store_true", help="이미 설치된 경우도 재설치")
         prov_auth = provider_sub.add_parser("auth", help="프로바이더 인증 실행")
         prov_auth.add_argument("provider_name", nargs="?", metavar="<claude|gemini|codex>")
+
+        knowledge_parser = subparsers.add_parser("knowledge", help="지식 vault 관리 (검색·점검)")
+        knowledge_sub = knowledge_parser.add_subparsers(dest="knowledge_cmd", metavar="<명령>")
+        know_search = knowledge_sub.add_parser("search", help="vault 키워드/파일 검색")
+        know_search.add_argument("--query", "-q", default="", help="키워드 쿼리")
+        know_search.add_argument("--files", "-f", default="", help="변경 파일 목록 (콤마 구분)")
+        know_search.add_argument("--diff", action="store_true", help="현재 git diff 변경 파일 자동 수집")
+        know_search.add_argument("--type", dest="note_type", default="", help="노트 타입 필터 (decision/concept/pattern/session)")
+        know_search.add_argument("--limit", "-n", type=int, default=8, help="최대 결과 수 (기본 8)")
+        know_search.add_argument("--json", dest="as_json", action="store_true", help="JSON 출력")
+        know_search.add_argument("--vault", default="", help="vault 루트 경로")
     return parser
 
 
@@ -1278,6 +1289,32 @@ if __name__ == "__main__":
             if getattr(args, "fast", False):
                 prov_argv.append("--fast")
             sys.exit(provider_main(prov_argv))
+        elif args.subcommand == "knowledge":
+            from core.knowledge.retrieve import main as knowledge_search_main
+            knowledge_cmd = getattr(args, "knowledge_cmd", None)
+            if not knowledge_cmd:
+                print("usage: af knowledge search [--query Q] [--files F] [--diff] [--limit N] [--json]", file=sys.stderr)
+                sys.exit(0)
+            elif knowledge_cmd == "search":
+                search_argv: list[str] = []
+                if getattr(args, "query", ""):
+                    search_argv += ["--query", args.query]
+                if getattr(args, "files", ""):
+                    search_argv += ["--files", args.files]
+                if getattr(args, "diff", False):
+                    search_argv.append("--diff")
+                if getattr(args, "note_type", ""):
+                    search_argv += ["--type", args.note_type]
+                if getattr(args, "limit", 8) != 8:
+                    search_argv += ["--limit", str(args.limit)]
+                if getattr(args, "as_json", False):
+                    search_argv.append("--json")
+                if getattr(args, "vault", ""):
+                    search_argv += ["--vault", args.vault]
+                sys.exit(knowledge_search_main(search_argv))
+            else:
+                print(f"[knowledge] 알 수 없는 명령: {knowledge_cmd}", file=sys.stderr)
+                sys.exit(1)
         else:
             parser.print_help()
             sys.exit(1)

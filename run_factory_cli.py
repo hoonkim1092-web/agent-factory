@@ -133,6 +133,20 @@ def _run_interview_subcommand(rest: list[str]) -> None:
     cli_main(rest)
 
 
+def _run_knowledge_subcommand(rest: list[str]) -> None:
+    """knowledge 서브커맨드 (search 하위 명령 dispatch)."""
+    from core.knowledge.retrieve import main as _knowledge_search_main
+
+    if not rest or rest[0] in ("-h", "--help"):
+        print("usage: af knowledge search [--query Q] [--files F] [--diff] [--limit N] [--json]")
+        return
+    if rest[0] == "search":
+        sys.exit(_knowledge_search_main(rest[1:]))
+    else:
+        print(f"[knowledge] 알 수 없는 명령: {rest[0]}\n  지원: search", file=sys.stderr)
+        sys.exit(1)
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase 2 — STAGE 1/2/3 진입점 통합 (설계문서 §4.5)
@@ -622,6 +636,7 @@ _STAGE1_DISPATCH: dict[str, "callable[[list[str]], None]"] = {
     "warning-stats":    _run_warning_stats_subcommand,
     "warning-export":   _run_warning_export_subcommand,
     "interview":         _run_interview_subcommand,
+    "knowledge":         _run_knowledge_subcommand,
 }
 
 
@@ -670,6 +685,7 @@ _STAGE1_USAGE = {
     "warning-stats":    "usage: af warning-stats --workspace PATH [--slug SLUG] [--rule RULE] [--top N] [--phase PHASE]    # P3 workspace 전체 분포 통계",
     "warning-export":   "usage: af warning-export --workspace PATH --format {csv,json} [--slug SLUG] [--rule RULE] [--phase PHASE] [--mode {records,summary}] [--out PATH]    # P3 회의용 산출물 추출",
     "interview":         "usage: af interview [--workspace PATH] [--out PATH] [--non-interactive|--deep-skip] TASK...    # 요구사항 딥 인터뷰",
+    "knowledge":         "usage: af knowledge search [--query Q] [--files F,G] [--diff] [--type T] [--limit N] [--json] [--vault PATH]    # knowledge vault 검색 (결정론 sparse, read-only)",
 }
 
 

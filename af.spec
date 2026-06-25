@@ -108,6 +108,7 @@ a = Analysis(
         'core.knowledge',
         'core.knowledge.note',
         'core.knowledge.distill',
+        'core.knowledge.retrieve',
         'core.review_skill_router',
         'core.express_router',
         'core.right_sized_router',

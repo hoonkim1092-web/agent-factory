@@ -1,6 +1,6 @@
 ---
-generated_at: 2026-06-25T11:46:45+09:00
-source_commit: e3c0fca7
+generated_at: 2026-06-25T12:18:55+09:00
+source_commit: e245fb14
 sources:
   - "Master_Blueprint.md"
   - "docs/code_review/code-review.md"
@@ -1447,6 +1447,25 @@ _(no top-level symbols)_
 - `_micro_stamp`
 - `make_id`
 - `new_note`
+
+## `core/knowledge/retrieve.py`
+
+**Classes:**
+- `NoteDoc`
+
+**Functions:**
+- `_git_call`
+- `_parse_frontmatter`
+- `_extract_title`
+- `_extract_precise_ref_section`
+- `load_notes`
+- `_term_score`
+- `_file_score`
+- `score_notes`
+- `_excerpt`
+- `format_results`
+- `_find_repo_root`
+- `main`
 
 ## `core/knowledge_skill.py`
 
@@ -4084,6 +4103,7 @@ _(no top-level symbols)_
 - `_run_skill_eval`
 - `_run_skill_promote`
 - `_run_interview_subcommand`
+- `_run_knowledge_subcommand`
 - `_run_setup_subcommand`
 - `_run_worker_subcommand`
 - `_run_nlm_subcommand`
@@ -6832,6 +6852,22 @@ _(no top-level symbols)_
 - `test_korean_title_slug_preserved`
 - `test_write_to_lands_at_id_path`
 - `test_no_access_enforcement_code`
+
+## `tests/test_knowledge_retrieve.py`
+
+**Classes:**
+- `TestLoadNotes`
+- `TestScoreNotesQuery`
+- `TestScoreNotesFiles`
+- `TestDeterminism`
+- `TestReadOnly`
+- `TestTwoEntrypoints`
+- `TestCrossOS`
+- `TestFormatResults`
+- `TestMain`
+
+**Functions:**
+- `vault_dir`
 
 ## `tests/test_knowledge_skill.py`
 

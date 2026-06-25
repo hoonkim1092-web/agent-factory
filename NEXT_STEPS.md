@@ -1,18 +1,21 @@
 # NEXT_STEPS — 세션 재개 가이드
 
-## ▶ 다음 세션 진입점 (2026-06-25) — **STAGE R 구현 (Sonnet)** — 설계 PASS, `af knowledge search`
+## ▶ 다음 세션 진입점 — **STAGE 3 (`af knowledge doctor`) 또는 신규 product work-item** (2026-06-25)
 
-> **설계+교차검증 완료. 다음 = 코드 구현(Sonnet, `feedback_model_per_phase`).** 재분석 금지 — 설계문서 `docs/2026-06-25-stage-r-retrieval-design.md`만 읽으면 됨.
->
-> **구현 대상** (§5 산출물):
-> - `core/knowledge/retrieve.py` 신규 — `load_notes`(glob `docs/wiki/knowledge/**/*.md`, 관용 frontmatter 파싱)·`score_notes`(결정론 sparse)·`format_results` + `main(argv)`
-> - `agent_launcher.py` — `knowledge` 서브커맨드 dispatch **+ `_KNOWN_SUBCOMMANDS`(`:31`)에 `"knowledge"` 추가**(누락 시 격리 PROJECT_ROOT 오실행, cross-review F3)
-> - `run_factory_cli.py` — `_STAGE1_DISPATCH["knowledge"]` + `_STAGE1_USAGE` (배포 동등성 = 두 진입점)
-> - `af.spec` hiddenimport `core.knowledge.retrieve` / `tests/test_knowledge_retrieve.py` / Blueprint §0·§12
-> - **재사용 SSOT**: `distill.extract_precise_refs(text)`(`:80`) 정밀참조 정규식 / `note._git`(stdin=DEVNULL) git 호출
-> - **핵심 결정(동결)**: 결정론 전용(임베딩 0)·2모드(`--query`+`--files`/`--diff`)·read-only·관용파싱(3종 frontmatter)·bounded(`--limit` 기본 8)
-> - **검증**: §9 7개 성공기준(키워드 top-3 / 파일모드 exact·합성 fixture / 3종 포맷 / 결정론 바이트동일 / read-only grep / 두 진입점 / Windows 한글경로)
-> - **3-Tier**: af-critic → af-cross-review → af-test-runner. ⚠️ codex usage-limit 해제 후 cross-vendor 재검증.
+> STAGE R 구현 완료(아래). 다음 선택:
+> - **STAGE 3** (`af knowledge doctor`): 증류 노트가 named한 file:line/커밋이 현재 코드에 실존하는지 점검. `scripts/af_knowledge_doctor.py` + `agent_launcher knowledge doctor` dispatch. 설계 §13.2 참조.
+> - **신규 product work-item** 발굴 (메인 트랙). STAGE 3은 자가진화 인프라.
+> - **codex 재검증** (rate-limit 해제 후): STAGE 1·2·R 모두 single-vendor. cross-vendor 재검증 필요.
+
+## ✅ 완료 — STAGE R 구현 (2026-06-25, Sonnet)
+
+> - `core/knowledge/retrieve.py` 신규: `load_notes`(vault glob·관용파싱 3종·파싱실패 본문포함 INV-R3) + `score_notes`(결정론 sparse, 가중합 + 파일 exact/basename, tie-break INV-R5) + `format_results`(사람용 표+`--json`) + `main(argv)`.
+> - `agent_launcher.py`: `_KNOWN_SUBCOMMANDS`에 `"knowledge"` 추가 + parser + dispatch 블록.
+> - `run_factory_cli.py`: `_run_knowledge_subcommand` + `_STAGE1_DISPATCH["knowledge"]` + `_STAGE1_USAGE`.
+> - `af.spec`: hiddenimport `core.knowledge.retrieve`.
+> - `tests/test_knowledge_retrieve.py`: 35건(§9 7개 성공기준 전부 커버) PASS.
+> - **3-Tier**: af-critic WARN 2(BLOCK 0) / af-cross-review PASS[single-vendor](BLOCK 0) / af-test-runner 109 PASS.
+> - WARN #1(git_cwd robust화) 반영. WARN #2(YAML 중첩 관용파싱)·advisory 3건은 보류.
 
 ## ✅ 완료 — STAGE R 상세 설계 + 교차검증 (2026-06-25, Opus)
 
