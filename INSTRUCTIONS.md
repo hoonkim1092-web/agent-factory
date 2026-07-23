@@ -1,170 +1,90 @@
 <!-- 이 파일이 공통 실무 규칙의 SSOT입니다. 편집 후 scripts/sync_provider_instructions.py 또는 pre-commit이 CLAUDE/AGENTS/GEMINI에 전파합니다. -->
 
-<!-- KARPATHY-PRINCIPLES-START (실험 2026-05-04 ~ 2026-05-11, 제거 시 이 마커 사이 전부 삭제) -->
-## LLM 행동 원칙 (Karpathy)
+# 공통 코딩 지침
 
-> 출처: [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
-> **트레이드오프**: 속도보다 신중함을 택한다. trivial한 작업에는 판단해서 적용.
+> 단순성 우선, 수술적 변경, 목표 기반 검증 원칙은 [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)에서 영감을 받았다.
 
-### 1. Think Before Coding — 가정하지 말고, 혼란을 숨기지 말고, 트레이드오프를 드러내라
+## 1. 구현 전 판단
 
-구현 전에:
-- 가정을 명시한다. 불확실하면 묻는다.
-- 해석이 여럿이면 모두 제시한다. 조용히 고르지 않는다.
-- 더 단순한 방법이 있으면 말한다. 정당하면 반박한다.
-- 모르겠으면 멈추고 무엇이 혼란스러운지 명시하고 묻는다.
-- 명령이 모호하면 추측하지 않고 사용자에게 의도를 먼저 묻는다.
-- 단계별로 생각을 먼저한다.
-- 불필요한 확장성이나 복잡한 코드를 배제하고 간결하게 모듈화로 작성한다.
-- 멀쩡한 함수나 주석을 건드리지 않고, 수정이 필요한 부분만 수술하듯 접근한다.
-- 버그 수정 전 테스트 코드를 먼저 짜고, 이를 통과할 때까지 반복 검증한다.
+- 구현 전에 요청 범위, 필요한 가정, 성공 기준을 확인한다.
+- 결과나 부작용이 의미 있게 달라지는 모호성이 있으면 사용자에게 질문한다.
+- 저위험이고 쉽게 되돌릴 수 있는 사소한 모호성은 가장 단순한 해석을 명시하고 진행한다.
+- 중요한 해석이 여러 개라면 선택지와 트레이드오프를 짧게 제시한다.
+- 더 단순한 방법이 있으면 알리고, 과도하거나 위험한 요구에는 근거를 들어 이의를 제기한다.
+- 내부 추론을 장황하게 출력하지 말고 가정, 결정, 검증 계획만 필요한 만큼 제시한다.
 
+## 2. 단순성 우선
 
-### 2. Simplicity First — 문제를 푸는 최소 코드. 추측성 코드 금지.
+- 요청을 충족하는 최소한의 코드를 작성한다.
+- 요청하지 않은 기능, 추측성 확장성, 설정 가능성, 추상화를 추가하지 않는다.
+- 일회성 구현을 위해 불필요한 프레임워크나 계층을 만들지 않는다.
+- 같은 명확성, 안정성, 테스트 가능성을 유지하면서 더 단순하게 구현할 수 있다면 단순한 방식을 선택한다.
+- 외부 입력, 파일 I/O, 네트워크, subprocess, 데이터 손실 경계의 현실적인 실패는 처리하되 추측성 방어 코드는 추가하지 않는다.
 
-- 요청하지 않은 기능 추가 금지.
-- 일회성 코드에 추상화 금지.
-- 요청하지 않은 "유연성/설정 가능성" 금지.
-- 일어날 수 없는 시나리오의 에러 처리 금지.
-- 200줄을 50줄로 줄일 수 있으면 다시 써라.
+## 3. 수술적 변경
 
-자문: "시니어 엔지니어가 이걸 보면 과설계라고 할까?" YES면 단순화.
+- 사용자 요청에 필요한 부분만 수정한다.
+- 기존 코드 스타일과 구조를 존중한다.
+- 관련 없는 리팩터링, 포맷 변경, 이름 변경, 주석 수정, 죽은 코드 삭제를 하지 않는다.
+- 이번 변경으로 새롭게 미사용 상태가 된 import, 변수, 함수만 정리한다.
+- 기존부터 존재하던 별도 문제는 임의로 수정하지 말고 필요하면 보고한다.
+- 변경된 모든 줄은 사용자 요청 또는 그 검증에 직접 연결되어야 한다.
 
-### 3. Surgical Changes — 꼭 필요한 곳만 만져라. 자기 흔적만 정리해라.
+## 4. 목표 기반 실행과 검증
 
-기존 코드를 편집할 때:
-- 인접한 코드/주석/포맷을 "개선"하지 않는다.
-- 깨지지 않은 것을 리팩토링하지 않는다.
-- 기존 스타일을 유지한다 — 본인 취향과 달라도.
-- 무관한 죽은 코드를 발견하면 언급만 한다 — 삭제 X.
+- 작업을 검증 가능한 성공 기준으로 변환한다.
+- 다단계 작업은 다음 형식의 짧은 계획을 사용한다.
 
-본인 변경으로 고아가 된 것만 제거:
-- 본인이 미사용으로 만든 import/변수/함수만 제거.
-- 기존부터 죽어있던 코드는 요청 없이 제거 X.
+  1. `[작업]` → 검증: `[방법]`
+  2. `[작업]` → 검증: `[방법]`
 
-검증: 변경된 모든 줄이 사용자 요청에 직접 추적되어야 한다.
+- 재현 가능한 버그는 가능하면 실패하는 회귀 테스트를 먼저 작성한다.
+- 자동 테스트 작성이 비현실적이면 최소 재현 명령, 로그 또는 수동 검증 절차를 먼저 확립한다.
+- 변경 후 관련 테스트, 타입 검사, 린트, 빌드 또는 실제 실행을 수행한다.
+- 테스트 픽스처나 단위 함수만 확인하지 말고 실제 사용자가 거치는 호출 경로까지 연결되었는지 확인한다.
+- 검증하지 못한 결과를 성공으로 보고하지 않는다.
+- 외부 요인으로 검증할 수 없다면 차단 요인과 미검증 범위를 명시한다.
 
-### 4. Goal-Driven Execution — 성공 기준 정의. 검증될 때까지 반복.
+## 5. 타입 SSOT
 
-작업을 검증 가능한 목표로 변환:
-- "검증 추가" → "잘못된 입력 테스트 작성 후 통과시키기"
-- "버그 수정" → "버그 재현 테스트 작성 후 통과시키기"
-- "X 리팩토링" → "전후 테스트 통과 보장"
+- dataclass, TypedDict, Protocol 등 공유 타입은 하나의 원천 파일에서만 선언한다.
+- 동일한 타입을 다른 파일에 복사하거나 재선언하지 않고 원천 파일에서 import한다.
+- 기존 중복 타입을 발견해도 현재 요청과 무관하면 임의로 정리하지 않는다.
+- 프로젝트에 기존 예외 목록이나 호환성 정책이 있다면 이를 따르며, 새 예외는 사용자 승인 없이 추가하지 않는다.
 
-다단계 작업은 간단한 계획 제시:
-```
-1. [단계] → 검증: [체크]
-2. [단계] → 검증: [체크]
-```
+## 6. 경로 이식성
 
-강한 성공 기준은 독립 반복을 가능하게 한다. "그냥 동작하게 해" 같은 약한 기준은 매번 명확화가 필요하다.
+- 사용자나 머신에 종속된 절대경로를 코드에 하드코딩하지 않는다.
+- 프로젝트 루트, 현재 파일 위치, 환경변수, 설정값 또는 함수 파라미터로 경로를 구성한다.
+- 경로 결합에는 해당 언어의 표준 경로 API를 사용한다.
+- 테스트 데이터의 의도적인 플랫폼별 경로 문자열은 실제 파일 접근 코드와 구분한다.
 
-**효과 측정**: 불필요한 변경 감소, 과설계로 인한 재작성 감소, 구현 후가 아닌 구현 전 명확화 질문 증가.
-<!-- KARPATHY-PRINCIPLES-END -->
+## 7. 멀티 OS
 
----
+- 공통 기능은 Windows, macOS, Linux에서 동일한 사용자 결과를 제공하는 것을 기본 목표로 한다.
+- 셸, 경로 구분자, 인코딩, 권한, 시그널 등 OS별 동작을 무조건 같다고 가정하지 않는다.
+- OS 고유 기능은 명시적인 어댑터 또는 capability detection 뒤에 격리한다.
+- 특정 OS에서 지원할 수 없는 기능은 명확한 오류나 대체 경로를 제공한다.
+- 변경과 관련된 플랫폼별 테스트가 있다면 실행하고, 실행하지 못한 플랫폼은 명시한다.
 
-## 필수 규칙
-### 구현 규칙 (2026-06-20 추가)
-- 멀티 OS 에서 구동이 되도록 한다, Windows, Mac, Linux 어느 OS 에서도 작동하도록 해야한다.
-- 멀티프로바이더, LLM 모델은 언제든 교체가 될수 있으며, Claude, Codex, Gemini 어떤 모델에서도 똑같은 규칙이 적용되어야 한다.
+## 8. 멀티 프로바이더와 모델
 
-### 타입 SSOT 규칙 (2026-06-05 추가)
-- **타입(dataclass, TypedDict, Protocol)은 한 파일에서만 선언한다.** 다른 파일에서 같은 이름의 타입이 필요하면 원천 파일에서 import한다.
-- 재선언 금지: 같은 클래스 이름을 여러 파일에 복사-붙여넣기 하지 않는다.
-- 위반 탐지: `tests/test_coding_conventions.py`의 `test_no_duplicate_type_names`가 자동으로 검출한다.
-- 기존 grandfathered 예외는 `KNOWN_TYPE_DUPLICATES` 허용 목록에만 등록하고 새 예외 추가는 사용자 승인 필요.
+- 핵심 동작 계약과 성공 기준은 특정 LLM 프로바이더나 모델에 종속시키지 않는다.
+- Claude, Codex, Gemini 등 모델별 출력 형식과 capability 차이는 어댑터 계층에서 처리한다.
+- 특정 모델의 비공개 프롬프트 형식, 도구 이름 또는 응답 습관에 핵심 로직을 의존시키지 않는다.
+- 필요한 capability가 없는 모델에서는 조용히 잘못 동작하지 말고 명확한 제한이나 대체 경로를 제공한다.
 
-### 절대경로 하드코딩 금지 규칙 (2026-06-05 추가)
-- **`/Users/`, `/home/`, `C:\`, `/root/`로 시작하는 절대경로를 코드에 직접 쓰지 않는다.**
-- `open()`, `Path()`, `os.path.*`, `os.makedirs()`, `shutil.*` 등 파일 조작 함수의 인자로 절대경로 리터럴 전달 금지.
-- 대신 `os.getcwd()`, `Path(__file__).parent`, 환경변수, 함수 파라미터를 사용한다.
-- 위반 탐지: `tests/test_coding_conventions.py`의 `test_no_hardcoded_abspath`가 자동으로 검출한다.
+## 9. Git과 외부 반영
 
-### 파이프라인 배포 동등성 규칙 (2026-05-13 추가)
-- **파이프라인 관련 기능은 배포 사용자 환경과 개발 환경에서 동일하게 동작해야 한다.**
-- 구현 완료 기준: API/함수 레이어가 아니라 **production 호출 경로** (`project_pipeline.py`, `agent_launcher.py` 등) 까지 end-to-end로 파라미터가 흘러들어가는지 반드시 확인
-- 테스트 픽스처만 통과하는 구현은 미완료 — 테스트가 직접 파라미터를 주입하는 방식이라면 production caller도 동일하게 주입하는지 추가로 grep 확인
-- 확인 방법: `grep -rn "함수명\|클래스명"` 으로 production caller를 찾고, 새 파라미터가 전달되는지 검증
-- 예외: 사용자가 **명시적으로** "개발 환경 전용" 또는 "추후 연결"을 지시한 경우에만 미연결 허용
+- 사용자가 요청하지 않은 commit, push, release, 배포를 자동으로 수행하지 않는다.
+- commit이나 원격 반영이 작업 범위에 포함되었는지 확인한다.
+- 다른 사람이 만든 기존 변경을 임의로 되돌리거나 commit에 섞지 않는다.
+- commit 전 diff와 검증 결과를 확인한다.
+- 프로젝트별 review gate, 문서 동기화, 브랜치 및 release 정책은 해당 프로젝트의 로컬 지침을 따른다.
 
-### 세션 연속성 규칙 (2026-04-23 추가)
-- **세션 시작 시**: `NEXT_STEPS.md`를 먼저 읽어 현재 진행 중인 작업과 우선순위를 파악한다
-- **작업 완료 또는 세션 종료 전**: `NEXT_STEPS.md` 상태 업데이트 → `git commit` → `git push` → `python end_db.py agent-factory` (메모리 Supabase 동기화)
-- **다른 PC에서 재개 시**: `git pull` → `python start_db.py agent-factory` (Supabase → 로컬 메모리 pull)
-- Claude Code 메모리(`memory/`)는 PC별 로컬 저장 — `sync_claude_memory.py`가 Supabase `claude_memory` 테이블을 통해 동기화
-- Supabase 미설정 시 `start_db`/`end_db` 실패하지 않고 경고만 출력하고 진행
+## 10. 프로젝트별 규칙과의 관계
 
-### Dogfood Run PC 핸드오프 규칙 (2026-05-27 추가)
-- **dogfood run의 worktree·state·dogfood_commit은 `~/.af-dogfood/<run_id>/`에 PC-로컬 저장** — git/Supabase 동기화 대상 아님. PC 이동 시 그 PC를 떠나면 회수 불가.
-- **세션 종료 전 진행 중인 dogfood run은 둘 중 하나로 처리 의무**:
-  1. **머지까지 완료**: `python agent_launcher.py dogfood merge <run_id>` → `git push` (권장)
-  2. **명시 보류**: NEXT_STEPS.md에 `보류 dogfood run: <run_id>`, `발생 PC: $(hostname)`, `worktree 경로: ~/.af-dogfood/<run_id>/worktree` 3줄 기록. 다른 PC 재개 시 회수 불가는 사용자가 사전 인지.
-- 미완료 머지 + PC 식별자 기록 누락 = 해당 라운드 산출물 회수 불가능 (Windows R1 11차 `1779867851-3611529e`가 그 사례).
-
-### Master_Blueprint.md 참조 의무
-- **코드 수정 전**: `Master_Blueprint.md`의 해당 §섹션을 먼저 읽어 의존성과 영향 범위를 파악한다
-- **코드 수정 후**: 변경된 파일에 해당하는 섹션(§0~§11)과 §12 변경 이력을 **같은 커밋**에서 업데이트한다
-- 전체 코드를 다시 읽지 않는다. Blueprint가 최신이면 Blueprint만으로 판단한다
-
-### Blueprint 업데이트 트리거
-| 이벤트 | 업데이트 대상 |
-|--------|-------------|
-| 새 `.py` 파일 생성 | §0 빠른 참조 테이블 |
-| 클래스·메서드 변경 | §3 해당 서브시스템 + `last_updated` |
-| 새 버그 수정 | §11 에러 코드 해설, §12 이력 |
-| 배포(버전 bump) | §8 빌드, §12 이력 |
-| 의존성 변경 | §10 Blast Radius 테이블 |
-
-### LLM Wiki 청킹 활용 규칙 (2026-06-11 추가, 2026-06-23 경로 이행)
-- **Blueprint 탐색 시 `docs/wiki/code/blueprint/N-*.md` 청킹 섹션만 read** — `Master_Blueprint.md` 원본 통째 read 금지
-- **`symbols.md`는 grep 전용** — 통째 read 금지 (8204줄)
-- **code-review 탐색 시 `docs/wiki/code/code_review/` 청킹 섹션만 read** — `docs/code_review/code-review.md` 원본 통째 read 금지 (7302줄 → 청킹 28줄, 260배 절감)
-- 재생성: `python scripts/build_llm_wiki.py` (code wiki) / `python scripts/build_knowledge_wiki.py` (knowledge vault) — pre-commit에서 소스 파일 변경 시 자동 갱신
-- Obsidian vault root: `docs/wiki/` (code/ + knowledge/ 한 그래프)
-
-### 버전 및 빌드
-- 버전 파일: `version.py` (`__version__`)
-- 설치 스크립트: `install-af.ps1` (버전 문자열 3곳 동시 수정)
-- 빌드: `python build_exe.py` → `dist/af-{version}.zip`
-- 새 `core/*.py` 파일은 `af.spec` `hiddenimports`에 반드시 추가
-
-### 문서 파일명 규칙
-- **code-review.md**: 날짜 없음 (살아있는 단일 문서, in-place 갱신)
-- **기타 모든 문서**: 파일명에 날짜 포함 필수 — `YYYY-MM-DD-제목.md`
-  - 예: `2026-04-03-cross-cli-skill-discovery.md`
-  - Feature 문서, 버그픽스 문서, 설계 문서, 플랜 등 전부 해당
-
-### ADR 명명 규칙 (M2, 2026-05-13 추가)
-- **저장 위치**: `docs/decisions/`
-- **파일명**: `ADR-YYYYMMDD-HHMMSS-<slug>.md` (초 단위 — 야간 파이프라인 동시 생성 충돌 방지)
-  - 예: `ADR-20260513-225000-domain-gate-verdict-parser.md`
-- **Git workflow**: feature 브랜치에서 직접 commit. 별도 PR 불필요. ADR은 결정 기록이므로 동일 작업 커밋에 포함.
-- **Status 필드**: `Draft` → `Accepted` → `Superseded` / `Resolved` 순서로 갱신
-
-### 스킬 흡수 귀속 정책 (M4, 2026-05-13 추가)
-- **외부 소스 흡수 시**: SKILL.md 파일 상단 프론트매터에 `inspired_by:` 메타 필드 추가
-  - 형식: `inspired_by: <출처-패키지>/<스킬-ID>` (예: `superpowers/brainstorming`)
-  - MIT 라이선스 기반 흡수 시 본 메타로 attribution 의무 이행
-- **AF 자체 스킬**: `inspired_by:` 필드 없음 (생략)
-
-### Review-Gate 규칙 (Phase 0 갱신 2026-05-13)
-- `.py` 파일 수정 후 `git commit` 전 코드 리뷰 필수. `.githooks/pre-commit`의 review-gate가 이를 강제.
-- **Tier 분류**: Tier 1 파일 (docs/, README, 단순 설정): 경량 review만. Tier 2~3 파일 (core/, scripts/, 일반 코드): review-first 순서.
-  - 분류는 `scripts/blast_radius.py`가 결정 (`subprocess`, `shell=True`, hook launcher 등은 자동 Tier 3)
-- **max_rounds=5 캡** (코드 수정) — 같은 큐는 최대 5라운드까지만 자동 발화. 이후엔 사용자가 수동 결정 (재리뷰 vs 우회)
-- **게이트 우회** (긴급·부트스트랩 시): `AF_SKIP_REVIEW_GATE=1 git commit ...` (hook_events.log에 기록)
-- `.py` 없는 커밋(문서·설정만)은 게이트 자동 통과
-- 진단: `python3 scripts/review_gate.py --debug`
-
-### 커밋 규칙
-- 코드 수정 + Blueprint 업데이트는 같은 커밋
-- 빌드 zip은 **GitHub Release로 배포**: `gh release create af-fsa_v{version} dist/af-{version}.zip --notes ...` (2026-04-14 정책 변경: LFS 미구성 환경에서 ~91MB zip이 GitHub 100MB 한계로 push 실패한 사례 이후. `dist/*.zip`은 `.gitignore` 처리)
-- 태그 형식: `af-fsa_v{version}`
-
-## 프로젝트 개요
-- **위치**: `C:\Project\agent-factory`
-- **퍼블릭 레포**: `origin` = `https://github.com/hoonkim1092-web/af-fsa.git`
-- **소스 레포**: `agent-factory` remote = `https://github.com/hoonkim1092-web/agent-factory.git`
-- **현재 브랜치**: `2026-04-01-super-harness`
-- **아키텍처 문서**: `Master_Blueprint.md` (845줄, 12섹션)
+- 이 문서는 모든 프로젝트에 적용되는 공통 원칙만 정의한다.
+- 빌드 명령, 테스트 경로, 브랜치, 문서 구조, 배포 절차, 저장소 경로 등 프로젝트 고유 정보는 각 프로젝트의 로컬 지침에 둔다.
+- 공통 규칙과 프로젝트 규칙이 충돌하면 사용자 요청과 더 구체적인 프로젝트 규칙을 우선한다.
+- 단, 안전, 보안, 데이터 손실 위험이 있으면 실행 전에 사용자에게 확인한다.
