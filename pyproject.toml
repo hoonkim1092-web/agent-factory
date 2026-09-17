@@ -5,6 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-factory"
 version = "0.1.0"
+description = "Project-scoped multi-agent orchestration and verification for AI-assisted software work."
+readme = "README.md"
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
