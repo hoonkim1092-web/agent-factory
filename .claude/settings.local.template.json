@@ -1,21 +1,32 @@
 {
   "_comment": [
     "settings.local.json is machine-local and gitignored.",
-    "Copy this file to settings.local.json — no OS-specific changes needed.",
+    "Copy this file to settings.local.json and expand permissions only for commands you explicitly trust.",
+    "Shared project defaults intentionally avoid auto-allowing destructive Git, arbitrary shell/Python, package installs, or remote mutations.",
     "hooks use 'sh scripts/hookpy.sh' which auto-detects python3 or python."
   ],
   "permissions": {
+    "defaultMode": "default",
     "allow": [
-      "Bash(git *)",
-      "Bash(python *)",
-      "Bash(python3 *)",
-      "Bash(echo *)"
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(python --version)",
+      "Bash(python3 --version)",
+      "Bash(echo:*)"
     ],
     "deny": [
       "Bash(rm:*)",
       "Bash(del:*)",
+      "Bash(erase:*)",
+      "Bash(Remove-Item:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git checkout --:*)"
+      "Bash(git clean:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git restore --worktree:*)",
+      "Bash(git restore --staged:*)"
     ]
   },
   "hooks": {
