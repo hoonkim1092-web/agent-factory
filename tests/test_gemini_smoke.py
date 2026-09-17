@@ -18,8 +18,16 @@ import os
 import pytest
 
 
-_HAS_GENAI_NEW = importlib.util.find_spec("google.genai") is not None
-_HAS_GENAI_OLD = importlib.util.find_spec("google.generativeai") is not None
+def _module_available(name: str) -> bool:
+    """Return False when an optional package (or its parent) is absent."""
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ModuleNotFoundError, AttributeError):
+        return False
+
+
+_HAS_GENAI_NEW = _module_available("google.genai")
+_HAS_GENAI_OLD = _module_available("google.generativeai")
 
 # conftest.py가 GOOGLE_API_KEY를 "test-key" 더미로 채우므로 단순 truthy 검사로는
 # 항상 True가 되어 skip이 발화하지 않는다. 실제 키 prefix("AIza...") 또는 명시적
@@ -73,6 +81,10 @@ def test_gemini_old_sdk_embedding():
     assert isinstance(embedding, list) and len(embedding) == 768
 
 
+@pytest.mark.skipif(
+    not (_HAS_GENAI_NEW and _HAS_GENAI_OLD),
+    reason="Gemini SDKs not installed",
+)
 def test_discovery_cache_not_required_by_import():
     """import 시점에 discovery_cache/documents/를 강제로 읽지 않아야 한다.
 

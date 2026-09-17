@@ -1,550 +1,142 @@
-# AI Agent Factory
-
-프로젝트 단위로 에이전트를 실행/진화시키는 시스템입니다.
+# Agent Factory
 
-## Windows UTF-8 주의사항
+**Project-scoped multi-agent orchestration and verification for AI-assisted software work.**
 
-- 이 저장소의 텍스트 파일은 UTF-8 기준입니다.
-- Windows PowerShell 5.1에서는 BOM 없는 UTF-8 파일을 기본 `Get-Content`로 읽으면 한글이 깨질 수 있습니다.
-- PowerShell 스크립트에서 저장소 텍스트 파일을 읽거나 쓸 때는 항상 `-Encoding utf8`을 명시하세요.
-- Codex 실행 시에는 저장소의 `cdx.cmd` 래퍼를 우선 사용하세요. 이 래퍼는 UTF-8 코드페이지와 Python UTF-8 환경 변수를 설정합니다.
-
-## 🌟 비전 및 철학 (Vision & Philosophy)
-
-`Agent Factory`는 단순한 자동화 도구를 넘어, 사용자의 의도를 계승하는 **'초개인화된 에이전트 군단'**을 구축하는 것을 목표로 합니다.
-
-- **나만의 에이전트들 (Personalized Squads)**: 팩토리에서 생산된 모든 에이전트는 사용자의 고유한 비즈니스 로직과 작업 스타일을 학습하여 세상에 단 하나뿐인 파트너로 진화합니다.
-- **기획 우선 (Planning-First)**: 인공지능이 무분별하게 코드를 작성하는 것을 방지하고, 철저한 기획과 설계 승인 후에만 구현을 시작하여 아키텍처의 무결성을 보장합니다.
-- **하이브리드 지능 (Hybrid Intelligence)**: 정적인 지식 창고와 동적인 웹 정보를 융합하여 가장 정확하고 상세한 해결책을 제시합니다.
-
-## 사용 방법
-
-`--project`는 필수입니다.
-
-### 단일 실행
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python run_factory_cli.py --project logistics_v1 --role "Backend Architect" --task "주문 API 설계"
-
-
-
-
-
-
-
-
-
-
-```
-
-### 워크플로우 실행
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python run_factory_cli.py --project logistics_v1 --workflow workflows/two_week_webapp_delivery.yaml --agents "Lilith,Himari" --task "2주 데모 플랜 실행"
-
-
-
-
-
-
-
-
-
-
-```
-
-## 구조
-
-- `run_factory_cli.py`: 프로젝트 단위 실행 진입점
-
-- `agent_launcher.py`: 에이전트/스킬/워크플로우 오케스트레이션
-
-- `projects/<project_id>/`: 프로젝트별 `agents/`, `data/`, `artifacts/`, `runs/`, `policies.yaml`, `skill-lock.yaml`, `context_schema.yaml`, `dashboard.json`
-
-- `skills/`: 전역 재사용 스킬 저장소
-
-## 회사/집 PC 동기화 (프로젝트/에이전트별)
-
-Git(권장) 또는 Supabase로 스냅샷을 `push/pull` 하여 회사/집 PC를 이어서 사용할 수 있습니다.
-
-프로젝트 전체 스코프와 에이전트 스코프를 각각 분리해 동기화할 수 있습니다.
-
-### 가장 쉬운 명령 (추천)
-
-루트에서 아래처럼만 실행하면 됩니다.
-
-```bat
-
-
-
-
-
-
-
-
-
-
-start_sync
-
-
-
-
-
-
-
-
-
-
-:: 작업
-
-
-
-
-
-
-
-
-
-
-end_sync
-
-
-
-
-
-
-
-
-
-
-```
-
-내부 동작:
-
-- `start_sync` -> `sync down git all` + `sync down db all`
-
-- `end_sync` -> `sync up db all` + `sync up git all`
-
-단일 프로젝트:
-
-- `start_sync agent-factory`
-
-- `end_sync agent-factory`
-
-단일 프로젝트 + 에이전트:
-
-- `start_sync agent-factory lilith`
-
-- `end_sync agent-factory lilith`
-
-직접 명령이 필요하면:
-
-```bat
-
-
-
-
-
-
-
-
-
-
-sync up git all
-
-
-
-
-
-
-
-
-
-
-sync down git all
-
-
-
-
-
-
-
-
-
-
-sync up db all
-
-
-
-
-
-
-
-
-
-
-sync down db all
-
-
-
-
-
-
-
-
-
-
-```
-
-의미:
-
-- `up` = push
-
-- `down` = pull
-
-- `git` = Git 원격 저장소로 동기화
-
-- `db` = Supabase DB로 동기화
-
-- `all` = `logi-mind-v22` + `agent-factory`
-
-특정 프로젝트/에이전트:
-
-```bat
-
-
-
-
-
-
-
-
-
-
-sync up git agent-factory
-
-
-
-
-
-
-
-
-
-
-sync down db logi-mind-v22
-
-
-
-
-
-
-
-
-
-
-sync up git agent-factory lilith
-
-
-
-
-
-
-
-
-
-
-```
-
-### Git 기반 동기화 (권장)
-
-원격 Git 저장소를 "DB처럼" 사용해서 회사/집 PC를 동기화합니다.
-
-프로젝트 전체 동기화:
-
-```powershell
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode push -Project logi-mind-v22
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode pull -Project logi-mind-v22
-
-
-
-
-
-
-
-
-
-
-```
-
-에이전트별 동기화:
-
-```powershell
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode push -Project logi-mind-v22 -Agent lilith
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode pull -Project logi-mind-v22 -Agent lilith
-
-
-
-
-
-
-
-
-
-
-```
-
-옵션:
-
-- `-Branch main` : 특정 브랜치로 pull/push
-
-- `-Message "sync: logi-mind-v22"` : 커밋 메시지 지정
-
-- `-Projects "logi-mind-v22,agent-factory"` : 여러 프로젝트 일괄 동기화
-
-요청하신 두 프로젝트 일괄 예시:
-
-```powershell
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode push -Projects "logi-mind-v22,agent-factory"
-
-
-
-
-
-
-
-
-
-
-powershell -ExecutionPolicy Bypass -File scripts/project_context_git_sync.ps1 -Mode pull -Projects "logi-mind-v22,agent-factory"
-
-
-
-
-
-
-
-
-
-
-```
-
-1. Supabase SQL Editor에서 `artifacts/context_sync_schema.sql` 실행
-
-2. `.env`에 `SUPABASE_URL`, `SUPABASE_KEY` 설정
-
-3. 회사 PC에서 업로드 (프로젝트 전체):
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --project logi_mind_v22 --mode push
-
-
-
-
-
-
-
-
-
-
-```
-
-1. 집 PC에서 다운로드 (프로젝트 전체):
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --project logi_mind_v22 --mode pull
-
-
-
-
-
-
-
-
-
-
-```
-
-1. 에이전트별 업로드/다운로드:
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --project logi_mind_v22 --agent lilith --mode push
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --project logi_mind_v22 --agent lilith --mode pull
-
-
-
-
-
-
-
-
-
-
-```
-
-여러 프로젝트 일괄(DB) 동기화:
-
-```bash
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --projects "logi-mind-v22,agent-factory" --mode push
-
-
-
-
-
-
-
-
-
-
-python scripts/project_context_sync.py --projects "logi-mind-v22,agent-factory" --mode pull
-
-
-
-
-
-
-
-
-
-
-```
-
-프로젝트 이름 호환:
-
-- `logi-mind-v22`, `logi_mind_v22`, `logi_mind_v22+` 형태를 같은 프로젝트로 매칭해서 동기화합니다.
-
-기본 포함 항목:
-
-- `projects/<project_id>/data/memory/**/*.json` (에이전트 스코프는 해당 에이전트 메모리 우선)
-
-- `projects/<project_id>/runs/*/chat_trace.json` (에이전트 스코프는 최신 100개, 프로젝트 스코프는 전체)
-
-- `projects/<project_id>/runs/*/state.json`
-
-- `dashboard.json`, `policies.yaml`, `settings.yaml`, `skill-lock.yaml`, `workflow.yaml`, `context_schema.yaml`
-
-- 프로젝트 스코프(`--agent` 없음)에서는 `agents/*`, `artifacts/*`, `runs/*`의 주요 텍스트 산출물도 함께 동기화
-
-참고:
-
-- `core_memory`는 기본 저장 위치가 `data/memory/<agent_id>/...`로 분리되어 에이전트별 메모리가 섞이지 않습니다.
+Agent Factory is a Python-based harness for running role-based AI agents against a project, composing them into repeatable workflows, and putting planning, review, tests, and evidence around agent-generated changes.
+
+It can work with multiple CLI providers, including **Codex CLI, Claude CLI, and Gemini CLI**, while keeping project context, skills, workflows, and runtime state separated by project.
+
+> **Maintenance status — September 2026**
+>
+> Major feature development is currently paused. This repository is undergoing a maintenance refresh focused on public documentation, repository hygiene, CI recovery, and compatibility validation. This is intentionally not a claim of continuous active development.
+
+## What is implemented
+
+- **Project-scoped execution** — run agents against an explicit project rather than a single global context.
+- **Multi-provider CLI support** — provider discovery and adapters for `codex_cli`, `claude_cli`, and `gemini_cli`.
+- **Role-based agents** — reusable agent definitions for architecture, planning, research, frontend/backend work, and design-oriented tasks.
+- **Workflow orchestration** — YAML workflows can coordinate multiple agents around one task.
+- **Planning-first execution** — the system is designed to separate planning/specification from implementation instead of immediately generating code.
+- **Skill lifecycle tooling** — commands exist for skill creation, specification, preflight checks, evaluation, and promotion.
+- **Review and verification plumbing** — test/review gates, warning registries, evidence-oriented checks, and dogfooding workflows are part of the codebase.
+- **Optional autonomous maintenance loops** — nightly start/stop/status/tick commands exist for explicitly enabled unattended runs.
+- **Project sync helpers** — Git- and DB-oriented helpers are included for moving project state between environments.
+
+## Quick start
+
+### Requirements
+
+- Python **3.9+**
+- One or more supported AI CLIs if you want live model execution
+- Provider authentication configured separately for the CLI(s) you use
+
+Create an environment and install dependencies:
+
+```bash
+python -m venv .venv
+```
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+python run_factory_cli.py --help
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python run_factory_cli.py --help
+```
+
+### Run one role against a project
+
+```bash
+python run_factory_cli.py \
+  --project logistics_v1 \
+  --role "Backend Architect" \
+  --task "Design an order API"
+```
+
+### Run a workflow
+
+```bash
+python run_factory_cli.py \
+  --project logistics_v1 \
+  --workflow workflows/two_week_webapp_delivery.yaml \
+  --agents "Lilith,Himari" \
+  --task "Run a two-week demo plan"
+```
+
+Provider availability is detected at runtime. If a supported CLI is not installed or authenticated, live provider-backed tasks may not run.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `run_factory_cli.py` | Main CLI and subcommand entry point |
+| `agent_launcher.py` | Agent, skill, and workflow orchestration |
+| `core/` | Orchestration, review, verification, state, and runtime logic |
+| `agents/` | Role/agent definitions |
+| `skills/` | Reusable skill definitions and skill tooling |
+| `workflows/` | Multi-agent workflow definitions |
+| `projects/` | Project-scoped configuration and checked-in project data |
+| `tests/` | Automated tests |
+| `.github/workflows/` | CI configuration |
+
+## Design principles
+
+### 1. Planning before implementation
+
+The harness is designed to make specification and planning explicit before code-writing stages. The goal is not to maximize autonomous code generation; it is to make agent work easier to inspect and verify.
+
+### 2. Evidence over blind autonomy
+
+Review, tests, warnings, and generated evidence are first-class parts of the repository. An agent completing a task is not, by itself, treated as proof that the task is correct.
+
+### 3. Project isolation
+
+Project state is organized under project scopes so different workspaces can keep their own agents, policies, artifacts, runs, and context.
+
+### 4. Provider flexibility
+
+Agent Factory is not intended to depend on a single model vendor. Provider-specific CLIs are treated as execution backends behind a common orchestration layer where possible.
+
+## Safety and secrets
+
+- Never commit `.env`, API keys, access tokens, auth caches, or provider credentials.
+- Review generated code before merging or executing it in a sensitive environment.
+- Autonomous/nightly modes should be enabled only in a workspace whose permissions and blast radius you understand.
+- Checked-in provider configuration is intended to be a **least-privilege baseline**, not a request for unrestricted machine access. The Codex MCP configuration uses `workspace-write` with `on-request` approval, and the shared Claude configuration does not auto-allow destructive Git operations, arbitrary shell/Python execution, package installation, or remote mutations.
+- If you deliberately need broader automation, put those permissions in machine-local configuration rather than widening the repository-wide defaults. `.claude/settings.local.json` is gitignored; `.claude/settings.local.template.json` shows a conservative starting point.
+- The repository may contain provider or MCP configuration intended for development environments. Review those permissions before reuse.
+- See [`SECURITY.md`](SECURITY.md) for reporting security problems.
+
+## Development and verification
+
+The repository includes a pytest configuration and GitHub Actions CI. During the current maintenance refresh, the blocking syntax and non-slow/non-e2e pytest baseline is green on Python 3.10 and 3.11. Formatting and type-checking debt remain visible as non-blocking audits and are being treated as separate maintenance work.
+
+Typical local checks:
+
+```bash
+python -m pytest -m "not slow and not e2e" -q
+black --check config core utils
+mypy core/ config/ utils/ --ignore-missing-imports
+```
+
+Slow and end-to-end tests are marked separately in `pytest.ini`.
+
+## Contributing
+
+Contributions that improve reliability, documentation, provider compatibility, tests, and reproducibility are welcome during the maintenance phase. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+
+## Project history
+
+This codebase went through substantial iterative development and dogfooding before the current maintenance phase. The Git history contains the implementation and review trail; the current goal is to make the public repository easier to understand, test, and maintain without pretending that feature development never paused.
+
+## License
+
+**No explicit open-source license has been declared for this repository yet.** Until the repository owner adds one, default copyright rules apply. A license decision is tracked as a maintenance item before presenting the project as formally open source.

@@ -657,8 +657,11 @@ class PDCACommandRegistry:
                         "patterns": judgment.failure_patterns,
                     })
                 if ok:
-                    print(f"\n  {_c(f'교차검증 판정: {judgment.verdict.upper()} '
-                                   f'(신뢰도 {judgment.confidence:.0%})', '32')}")
+                    verdict_text = (
+                        f"교차검증 판정: {judgment.verdict.upper()} "
+                        f"(신뢰도 {judgment.confidence:.0%})"
+                    )
+                    print(f"\n  {_c(verdict_text, '32')}")
                 else:
                     print(_c(f"\n  교차검증 판정: {judgment.verdict.upper()}", "33"))
                     if judgment.feedback:

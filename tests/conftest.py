@@ -50,6 +50,50 @@ def _af_isolate_skill_registry_writes(monkeypatch):
     monkeypatch.setenv("AF_DISABLE_REGISTRY_WRITE", "1")
 
 
+@pytest.fixture(autouse=True)
+def _af_cli_provider_test_path_shims(monkeypatch, request):
+    """CLI provider 단위 테스트를 CI 호스트의 설치 상태와 분리한다.
+
+    tests/test_cli_providers.py 는 실제 subprocess 대신 주입된 runner를 검증한다.
+    인증 preflight가 그 runner에 도달하기 전에 shutil.which()에서 탈락하지 않도록
+    테스트 전용 실행 파일 shim만 PATH에 노출한다. 실제 CLI나 네트워크는 실행하지 않는다.
+    """
+    if Path(str(request.fspath)).name != "test_cli_providers.py":
+        yield
+        return
+
+    shim_dir = (Path(__file__).parent / "_tmp" / "cli_shims").resolve()
+    shim_dir.mkdir(parents=True, exist_ok=True)
+    if os.name == "nt":
+        for name in ("codex", "claude", "gemini"):
+            (shim_dir / f"{name}.cmd").write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        for name in ("codex", "claude", "gemini"):
+            path = shim_dir / name
+            path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            path.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{shim_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _af_project_pipeline_no_real_engine_calls(monkeypatch, request):
+    """ProjectPipeline 단위 테스트에서 placeholder API key의 실제 네트워크 사용을 막는다."""
+    if Path(str(request.fspath)).name == "test_project_pipeline.py":
+        monkeypatch.setenv("AGENT_DISABLE_ENGINE_API_KEYS", "1")
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _af_research_web_branch_contract(monkeypatch, request):
+    """G2 web-branch 회귀 테스트가 환경 변수 유무가 아닌 branch 계약만 검증하게 한다."""
+    if request.node.name == "test_g2_fast_synthesis_secondary_fresh_lookup":
+        # _collect_web_references 자체는 해당 테스트에서 mock 처리되므로 외부 호출은 발생하지 않는다.
+        monkeypatch.setenv("TAVILY_API_KEY", "test-key")
+    yield
+
+
 @pytest.fixture
 def tmp_path():
     root = Path(__file__).parent / "_tmp"  # conftest 위치 기준 — CWD 독립

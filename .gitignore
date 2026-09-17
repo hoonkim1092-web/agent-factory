@@ -1,5 +1,4 @@
-﻿
-# --- 🔐 보안 파일 (절대 올리지 마세요) ---
+﻿# --- 🔐 보안 파일 (절대 올리지 마세요) ---
 .env
 .env.local
 **/.env
@@ -86,6 +85,9 @@ data/evolution/
 skills/**/skill-eval-report.json
 skills/**/skill-promotion.json
 
+# --- External skill checkout/cache (generated, never source-controlled) ---
+skills/_external_cache/
+
 # --- Runtime/Test Artifacts ---
 /runs/
 projects/*/runs/
@@ -106,6 +108,23 @@ tmp*/
 .tmp_review_importer/
 .tmp_review_sync/
 .tmp_smoke_projects/
+
+# --- Public repository hygiene: local debug/test output ---
+/crash.log
+/debug.log
+/debug_log*.txt
+/error.log
+/err.txt
+/out.txt
+/run_output.txt
+/st_out.txt
+/status.txt
+/status_short.txt
+/pytest.log
+/pytest_err.log
+/final_test_log.txt
+/nlm_answer.txt
+*.bak
 
 # --- 🎯 Developer Context Rules (DO NOT DEPLOY) ---
 .gemini_dev_rules.md
