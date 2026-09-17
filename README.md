@@ -110,12 +110,14 @@ Agent Factory is not intended to depend on a single model vendor. Provider-speci
 - Never commit `.env`, API keys, access tokens, auth caches, or provider credentials.
 - Review generated code before merging or executing it in a sensitive environment.
 - Autonomous/nightly modes should be enabled only in a workspace whose permissions and blast radius you understand.
+- Checked-in provider configuration is intended to be a **least-privilege baseline**, not a request for unrestricted machine access. The Codex MCP configuration uses `workspace-write` with `on-request` approval, and the shared Claude configuration does not auto-allow destructive Git operations, arbitrary shell/Python execution, package installation, or remote mutations.
+- If you deliberately need broader automation, put those permissions in machine-local configuration rather than widening the repository-wide defaults. `.claude/settings.local.json` is gitignored; `.claude/settings.local.template.json` shows a conservative starting point.
 - The repository may contain provider or MCP configuration intended for development environments. Review those permissions before reuse.
 - See [`SECURITY.md`](SECURITY.md) for reporting security problems.
 
 ## Development and verification
 
-The repository includes a pytest configuration and GitHub Actions CI. The current maintenance refresh is explicitly tracking restoration of a clean CI baseline; do not infer that every historical configuration is currently green.
+The repository includes a pytest configuration and GitHub Actions CI. During the current maintenance refresh, the blocking syntax and non-slow/non-e2e pytest baseline is green on Python 3.10 and 3.11. Formatting and type-checking debt remain visible as non-blocking audits and are being treated as separate maintenance work.
 
 Typical local checks:
 
