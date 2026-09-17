@@ -85,6 +85,9 @@ data/evolution/
 skills/**/skill-eval-report.json
 skills/**/skill-promotion.json
 
+# --- External skill checkout/cache (generated, never source-controlled) ---
+skills/_external_cache/
+
 # --- Runtime/Test Artifacts ---
 /runs/
 projects/*/runs/
