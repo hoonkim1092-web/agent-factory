@@ -6,9 +6,9 @@
       "args": [
         "mcp-server",
         "-c",
-        "sandbox_mode=\"danger-full-access\"",
+        "sandbox_mode=\"workspace-write\"",
         "-c",
-        "approval_policy=\"untrusted\""
+        "approval_policy=\"on-request\""
       ],
       "env": {}
     }
