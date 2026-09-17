@@ -3,6 +3,9 @@ langchain-core>=1.0,<2.0
 langgraph>=1.0,<2.0
 langsmith>=0.3.0
 
+# Gemini SDK used by core/llm_engine.py for provider-backed release/output agents.
+google-genai>=1.0,<2.0
+
 # ── External research (2026-04-11 추가: docs/features/2026-04-10-setup-wizard-tavily-notebooklm-integration.md) ──
 notebooklm-cli>=0.1.12,<0.2      # NotebookLM CLI (import name: nlm)
 tavily-python                    # Tavily 웹 검색 클라이언트
